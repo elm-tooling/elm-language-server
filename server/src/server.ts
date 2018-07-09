@@ -1,6 +1,6 @@
 'use strict';
 import * as cp from 'child_process';
-import Uri from 'vscode-uri'
+import Uri from 'vscode-uri/lib/umd'
 const Compiler = require('node-elm-compiler');
 import {
 	createConnection,
@@ -18,6 +18,8 @@ import {
 	Position,
 	TextEdit
 } from 'vscode-languageserver';
+import { runLinter, IElmIssue } from './elmLinter';
+// import { ElmAnalyse } from './elmAnalyse';
 
 // Create a connection for the server. The connection uses Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -29,9 +31,11 @@ let documents: TextDocuments = new TextDocuments();
 
 let hasConfigurationCapability: boolean = false;
 let hasWorkspaceFolderCapability: boolean = false;
+let rootPath: string = undefined;
 
 connection.onInitialize((params: InitializeParams) => {
 	let capabilities = params.capabilities;
+	this.rootPath = params.rootPath;
 
 	// Does the client support the `workspace/configuration` request?
 	// If not, we will fall back using global settings
@@ -66,12 +70,20 @@ connection.onInitialized(() => {
 	}
 });
 
+
 documents.onDidOpen(params => {
-	validateTextDocument(params.document);
+	const elmAnalyseIssues: IElmIssue[] = [];
+	// const elmAnalyse = new ElmAnalyse(elmAnalyseIssues);
+	runLinter(connection, this.rootPath, params.document);
+	// validateTextDocument(params.document);
 });
 
 documents.onDidSave(params => {
-	validateTextDocument(params.document);
+	// const elmAnalyseIssues: IElmIssue[] = [];
+	// const elmAnalyse = new ElmAnalyse(elmAnalyseIssues);
+	runLinter(connection, this.rootPath, params.document);
+
+	// validateTextDocument(params.document);
 });
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
@@ -81,7 +93,10 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	let diagnostics: Diagnostic[] = []
 	try {
 		await Compiler.compileToString(uri.fsPath, { report: 'json' })
-		
+
+		var x = await Compiler.findAllDependencies(uri.fsPath);
+			connection.console.log(x);
+			
 	} catch (err) {
 		const issues = JSON.parse(err.message.split('\n')[1]);
 		const byFile = issues.reduce((acc: any, issue: any) => {

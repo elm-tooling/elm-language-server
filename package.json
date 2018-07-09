@@ -18,7 +18,7 @@
         "vscode": "^1.25.0"
     },
     "activationEvents": [
-        "onLanguage:plaintext"
+        "onLanguage:elm"
     ],
     "main": "./client/out/extension",
     "contributes": {
