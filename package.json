@@ -1,0 +1,78 @@
+{
+    "name": "elm-language-server",
+    "displayName": "Elm",
+    "description": "A language server for Elm",
+    "author": "Kolja Lampe",
+    "license": "MIT",
+    "version": "1.0.0",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Microsoft/vscode-extension-samples"
+    },
+    "publisher": "vscode",
+    "categories": [],
+    "keywords": [
+        "multi-root ready"
+    ],
+    "engines": {
+        "vscode": "^1.25.0"
+    },
+    "activationEvents": [
+        "onLanguage:plaintext"
+    ],
+    "main": "./client/out/extension",
+    "contributes": {
+        "languages": [
+            {
+                "id": "elm",
+                "aliases": [
+                    "Elm",
+                    "elm"
+                ],
+                "extensions": [
+                    ".elm"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "elm",
+                "scopeName": "source.elm",
+                "path": "./syntaxes/elm.tmLanguage"
+            }
+        ],
+        "configuration": {
+            "type": "object",
+            "title": "Example configuration",
+            "properties": {
+                "languageServerExample.trace.server": {
+                    "scope": "window",
+                    "type": "string",
+                    "enum": [
+                        "off",
+                        "messages",
+                        "verbose"
+                    ],
+                    "default": "off",
+                    "description": "Traces the communication between VS Code and the language server."
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "cd client && npm run update-vscode && cd .. && npm run compile",
+        "compile:client": "tsc -p ./client/tsconfig.json",
+        "compile:server": "tsc -p ./server/tsconfig.json",
+        "watch:client": "tsc -w -p ./client/tsconfig.json",
+        "watch:server": "tsc -w -p ./server/tsconfig.json",
+        "compile": "npm run compile:client && npm run compile:server",
+        "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
+        "test": "sh ./scripts/e2e.sh"
+    },
+    "devDependencies": {
+        "@types/mocha": "^5.2.0",
+        "@types/node": "^8.0.0",
+        "typescript": "2.8.3"
+    }
+}

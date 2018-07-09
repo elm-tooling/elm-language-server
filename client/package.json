@@ -1,0 +1,23 @@
+{
+	"name": "elm-language-server-client",
+	"description": "VSCode client for the elm language server",
+	"author": "Kolja Lampe",
+	"license": "MIT",
+	"publisher": "Kolja Lampe",
+	"version": "0.0.1",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/razzeee/elm-language-server"
+	},
+	"engines": {
+		"vscode": "^1.23.0"
+	},
+	"scripts": {
+		"update-vscode": "node ./node_modules/vscode/bin/install",
+		"postinstall": "node ./node_modules/vscode/bin/install"
+	},
+	"dependencies": {
+		"vscode": "^1.1.18",
+		"vscode-languageclient": "^4.2.1"
+	}
+}
