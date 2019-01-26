@@ -1,10 +1,9 @@
 {
 	"name": "elm-language-server",
-	"description": "Implementation of a elm language server in node.",
+	"description": "Implementation of an elm language server in node.",
 	"version": "1.0.0",
 	"author": "Kolja Lampe",
 	"license": "MIT",
-	"publisher": "Kolja Lampe",
 	"engines": {
 		"node": "*"
 	},
@@ -13,9 +12,8 @@
 		"url": "https://github.com/razzeee/elm-language-server"
 	},
 	"dependencies": {
-		"vscode-languageserver": "^4.2.1",
-		"node-elm-compiler": "^4.5.0",
-		"vscode-uri": "^1.0.5"
+		"vscode-languageserver": "^5.2.1",
+		"vscode-uri": "^1.0.6"
 	},
 	"scripts": {}
 }

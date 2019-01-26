@@ -13,11 +13,11 @@
 		"vscode": "^1.23.0"
 	},
 	"scripts": {
-		"update-vscode": "node ./node_modules/vscode/bin/install",
-		"postinstall": "node ./node_modules/vscode/bin/install"
+		"update-vscode": "vscode-install",
+		"postinstall": "vscode-install"
 	},
 	"dependencies": {
-		"vscode": "^1.1.18",
-		"vscode-languageclient": "^4.2.1"
+		"vscode": "^1.1.28",
+		"vscode-languageclient": "^5.2.1"
 	}
 }

@@ -9,10 +9,9 @@
         "type": "git",
         "url": "https://github.com/Microsoft/vscode-extension-samples"
     },
-    "publisher": "vscode",
     "categories": [],
     "keywords": [
-        "multi-root ready"
+        "elm"
     ],
     "engines": {
         "vscode": "^1.25.0"
@@ -44,7 +43,7 @@
         ],
         "configuration": {
             "type": "object",
-            "title": "Example configuration",
+            "title": "Debug configuration",
             "properties": {
                 "languageServerExample.trace.server": {
                     "scope": "window",
@@ -62,17 +61,15 @@
     },
     "scripts": {
         "vscode:prepublish": "cd client && npm run update-vscode && cd .. && npm run compile",
-        "compile:client": "tsc -p ./client/tsconfig.json",
-        "compile:server": "tsc -p ./server/tsconfig.json",
-        "watch:client": "tsc -w -p ./client/tsconfig.json",
-        "watch:server": "tsc -w -p ./server/tsconfig.json",
-        "compile": "npm run compile:client && npm run compile:server",
+        "compile": "tsc -b",
+        "watch": "tsc -b -w",
         "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
         "test": "sh ./scripts/e2e.sh"
     },
     "devDependencies": {
-        "@types/mocha": "^5.2.0",
-        "@types/node": "^8.0.0",
-        "typescript": "2.8.3"
+        "@types/mocha": "^5.2.5",
+        "@types/node": "^10.12.18",
+        "tslint": "^5.12.1",
+        "typescript": "3.2.4"
     }
 }

@@ -1,7 +1,6 @@
 'use strict';
 import * as cp from 'child_process';
 import Uri from 'vscode-uri/lib/umd'
-const Compiler = require('node-elm-compiler');
 import {
 	createConnection,
 	TextDocuments,
@@ -18,7 +17,6 @@ import {
 	Position,
 	TextEdit
 } from 'vscode-languageserver';
-import { runLinter, IElmIssue } from './elmLinter';
 // import { ElmAnalyse } from './elmAnalyse';
 
 // Create a connection for the server. The connection uses Node's IPC as a transport.
@@ -72,70 +70,70 @@ connection.onInitialized(() => {
 
 
 documents.onDidOpen(params => {
-	const elmAnalyseIssues: IElmIssue[] = [];
+	// const elmAnalyseIssues: IElmIssue[] = [];
 	// const elmAnalyse = new ElmAnalyse(elmAnalyseIssues);
-	runLinter(connection, this.rootPath, params.document);
-	// validateTextDocument(params.document);
+	// runLinter(connection, this.rootPath, params.document);
+	validateTextDocument(params.document);
 });
 
 documents.onDidSave(params => {
 	// const elmAnalyseIssues: IElmIssue[] = [];
 	// const elmAnalyse = new ElmAnalyse(elmAnalyseIssues);
-	runLinter(connection, this.rootPath, params.document);
+	// runLinter(connection, this.rootPath, params.document);
 
-	// validateTextDocument(params.document);
+	validateTextDocument(params.document);
 });
 
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 	connection.console.log('Validate text');
-	let uri = Uri.parse(textDocument.uri);
+	// let uri = Uri.parse(textDocument.uri);
 
-	let diagnostics: Diagnostic[] = []
-	try {
-		await Compiler.compileToString(uri.fsPath, { report: 'json' })
+	// let diagnostics: Diagnostic[] = []
+	// try {
+	// 	await Compiler.compileToString(uri.fsPath, { report: 'json' })
 
-		var x = await Compiler.findAllDependencies(uri.fsPath);
-			connection.console.log(x);
+	// 	var x = await Compiler.findAllDependencies(uri.fsPath);
+	// 		connection.console.log(x);
 			
-	} catch (err) {
-		const issues = JSON.parse(err.message.split('\n')[1]);
-		const byFile = issues.reduce((acc: any, issue: any) => {
-			if (acc[issue.file]) {
-				acc[issue.file].push(issue);
-			} else {
-				acc[issue.file] = [issue];
-			}
+	// } catch (err) {
+	// 	const issues = JSON.parse(err.message.split('\n')[1]);
+	// 	const byFile = issues.reduce((acc: any, issue: any) => {
+	// 		if (acc[issue.file]) {
+	// 			acc[issue.file].push(issue);
+	// 		} else {
+	// 			acc[issue.file] = [issue];
+	// 		}
 	
-			return acc;
-		}, {});
+	// 		return acc;
+	// 	}, {});
 	
-		Object.keys(byFile).forEach((file: string) => {
-			byFile[file].map((issue: any) => {
-				diagnostics.push( {
-					severity: DiagnosticSeverity.Error,
-					source: "Elm",
-					message: issue.details,
-					range: {
-						start: {
-							line: issue.region.start.line - 1,
-							character: issue.region.start.column - 1,
-						},
-						end: {
-							line: issue.region.end.line - 1,
-							character: issue.region.end.column - 1,
-						},
-					},
-				});
-			});
+	// 	Object.keys(byFile).forEach((file: string) => {
+	// 		byFile[file].map((issue: any) => {
+	// 			diagnostics.push( {
+	// 				severity: DiagnosticSeverity.Error,
+	// 				source: "Elm",
+	// 				message: issue.details,
+	// 				range: {
+	// 					start: {
+	// 						line: issue.region.start.line - 1,
+	// 						character: issue.region.start.column - 1,
+	// 					},
+	// 					end: {
+	// 						line: issue.region.end.line - 1,
+	// 						character: issue.region.end.column - 1,
+	// 					},
+	// 				},
+	// 			});
+	// 		});
 	
-		});
-	}
-	finally {
-		connection.sendDiagnostics({
-			uri: textDocument.uri,
-			diagnostics: diagnostics,
-		});
-	}
+	// 	});
+	// }
+	// finally {
+	// 	connection.sendDiagnostics({
+	// 		uri: textDocument.uri,
+	// 		diagnostics: diagnostics,
+	// 	});
+	// }
 
 };
 
