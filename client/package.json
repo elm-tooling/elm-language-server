@@ -10,7 +10,7 @@
 		"url": "https://github.com/razzeee/elm-language-server"
 	},
 	"engines": {
-		"vscode": "^1.23.0"
+		"vscode": "^1.30.0"
 	},
 	"scripts": {
 		"update-vscode": "vscode-install",
