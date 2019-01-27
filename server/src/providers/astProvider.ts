@@ -33,14 +33,16 @@ export class ASTProvider {
 	}
 
 	protected handleOpenTextDocument = async (params: DidOpenTextDocumentParams): Promise<void> => {
+		this.connection.console.log('Opened text document, going to parse it');
 		const document: TextDocumentItem = params.textDocument;
 		const tree: Tree = this.parser.parse(document.text);
 		this.forest.setTree(document.uri, tree);
 	};
-
+	
 	protected handleChangeTextDocument = async (
 		params: DidChangeTextDocumentParams
-	): Promise<void> => {
+		): Promise<void> => {
+		this.connection.console.log('Changed text document, going to parse it');
 		const document: VersionedTextDocumentIdentifier = params.textDocument;
 		let tree: Tree = this.forest.getTree(document.uri);
 		if (tree !== undefined) {
