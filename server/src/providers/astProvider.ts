@@ -55,13 +55,20 @@ export class ASTProvider {
                     const startIndex: number = range.start.line * range.start.character;
                     const oldEndIndex: number = startIndex + rangeLength - 1;
                     tree.edit({
-                        startIndex, // index in old doc the change started
-                        oldEndIndex, // end index for old version of text
-                        newEndIndex: range.end.line * range.end.character - 1, // end index for new version of text
+                        // end index for new version of text
+                        newEndIndex: range.end.line * range.end.character - 1,
+                        // position in new doc change ended
+                        newEndPosition: Position.FROM_VS_POSITION(range.end).toTSPosition(),
 
-                        startPosition: Position.FROM_VS_POSITION(range.start).toTSPosition(), // position in old doc change started
-                        oldEndPosition: this.computeEndPosition(startIndex, oldEndIndex, tree), // position in old doc change ended.
-                        newEndPosition: Position.FROM_VS_POSITION(range.end).toTSPosition(), // position in new doc change ended
+                        // end index for old version of text
+                        oldEndIndex,
+                        // position in old doc change ended.
+                        oldEndPosition: this.computeEndPosition(startIndex, oldEndIndex, tree),
+
+                        // index in old doc the change started
+                        startIndex,
+                        // position in old doc change started
+                        startPosition: Position.FROM_VS_POSITION(range.start).toTSPosition(),
                     });
                     tree = this.parser.parse(text, tree);
                 } else {

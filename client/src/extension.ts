@@ -11,7 +11,7 @@ import {
 
 import * as path from "path";
 
-let client: LanguageClient;
+let languageClient: LanguageClient;
 
 export async function activate(context: ExtensionContext) {
     // We get activated if there is one or more elm.json file in the workspace
@@ -66,7 +66,7 @@ function startClient(dir: string, context: ExtensionContext) {
     };
 
     // Create the language client and start the client.
-    client = new LanguageClient(
+    languageClient = new LanguageClient(
         "elmLanguageServer",
         "Elm Language Server",
         serverOptions,
@@ -74,9 +74,9 @@ function startClient(dir: string, context: ExtensionContext) {
     );
 
     // Start the client. This will also launch the server
-    client.start();
-    client.info(`Starting language server for ${dir}`);
-    clients.set(dir, client);
+    languageClient.start();
+    languageClient.info(`Starting language server for ${dir}`);
+    clients.set(dir, languageClient);
 }
 
 export function deactivate(): Thenable<void> {
