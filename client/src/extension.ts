@@ -1,6 +1,5 @@
 'use strict';
 
-import * as path from 'path';
 import { workspace, ExtensionContext } from 'vscode';
 
 import {
@@ -10,10 +9,30 @@ import {
 	TransportKind
 } from 'vscode-languageclient';
 
+import * as path from 'path';
+
 let client: LanguageClient;
 
-export function activate(context: ExtensionContext) {
-	// The server is implemented in node
+export async function activate(context: ExtensionContext) {
+	// We get activated if there is one or more elm.json file in the workspace
+	// Start one server for each directory with an elm.json
+	// and watch Elm files in those directories.
+	let elmJsons = await workspace.findFiles('**/elm.json');
+	for (let uri of elmJsons) {
+		startClient(path.dirname(uri.fsPath), context);
+	}
+	// TODO: watch for addition and removal of 'elm.json' files
+	// and start and stop clients for those directories.
+}
+
+
+let clients: Map<string, LanguageClient> = new Map();
+function startClient(dir: string, context: ExtensionContext) {
+	if (clients.has(dir)) {
+		// Client was already started for this directory
+		return;
+	}
+
 	let serverModule = context.asAbsolutePath(
 		path.join('server', 'out', 'server.js')
 	);
@@ -34,10 +53,16 @@ export function activate(context: ExtensionContext) {
 
 	// Options to control the language client
 	let clientOptions: LanguageClientOptions = {
-		documentSelector: [{ scheme: 'file', language: 'elm' }],
+		// Register the server for Elm documents in the directory
+		documentSelector: [
+			{
+				scheme: 'file',
+				pattern: path.join(dir, '**', '*.elm')
+			}
+		],
+		// Notify the server about file changes to 'elm.json'
 		synchronize: {
-			// Notify the server about file changes to '.clientrc files contained in the workspace
-			fileEvents: workspace.createFileSystemWatcher('**/.clientrc')
+			fileEvents: workspace.createFileSystemWatcher(path.join(dir, 'elm.json'))
 		}
 	};
 
@@ -51,11 +76,14 @@ export function activate(context: ExtensionContext) {
 
 	// Start the client. This will also launch the server
 	client.start();
+	client.info(`Starting language server for ${dir}`);
+	clients.set(dir, client);
 }
 
 export function deactivate(): Thenable<void> {
-	if (!client) {
-		return undefined;
+	let promises: Thenable<void>[] = [];
+	for (let client of clients.values()) {
+		promises.push(client.stop());
 	}
-	return client.stop();
+	return Promise.all(promises).then(() => undefined);
 }
