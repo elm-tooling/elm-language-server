@@ -21,7 +21,7 @@ It also includes an End-to-End test.
 ├── package.json // The extension manifest.
 └── server // Language Server
     └── src
-        └── server.ts // Language Server entry point
+        └── index.ts // Language Server entry point
 ```
 
 ## Running the Sample

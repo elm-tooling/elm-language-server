@@ -34,7 +34,7 @@ function startClient(dir: string, context: ExtensionContext) {
 	}
 
 	let serverModule = context.asAbsolutePath(
-		path.join('server', 'out', 'server.js')
+		path.join('server', 'out', 'index.js')
 	);
 	// The debug options for the server
 	// --inspect=6009: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
