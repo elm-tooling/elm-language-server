@@ -1,7 +1,7 @@
 import { Connection, InitializeParams, InitializeResult } from 'vscode-languageserver';
 
 import { CapabilityCalculator } from './capabilityCalculator';
-import { Forest } from './Forest';
+import { Forest } from './forest';
 import { ASTProvider } from './providers/astProvider';
 
 export interface ILanguageServer {

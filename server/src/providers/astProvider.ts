@@ -13,8 +13,8 @@ import {
 	VersionedTextDocumentIdentifier,
 } from 'vscode-languageserver';
 
-import { IForest } from '../Forest';
-import { Position } from '../Position';
+import { IForest } from '../forest';
+import { Position } from '../position';
 
 export class ASTProvider {
 	private connection: IConnection;

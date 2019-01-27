@@ -5,7 +5,7 @@ import {
 	ProposedFeatures,
 } from 'vscode-languageserver';
 
-import { ILanguageServer } from './Server';
+import { ILanguageServer } from './server';
 import { rebuildTreeSitter } from './util/rebuilder';
 
 const connection: IConnection = createConnection(ProposedFeatures.all);
@@ -25,7 +25,7 @@ connection.onInitialize(async (params: InitializeParams) => {
 	}
 	connection.console.info('Rebuild succeeded!');
 
-	const { Server } = await import('./Server');
+	const { Server } = await import('./server');
 	const server: ILanguageServer = new Server(connection, params);
 
 	return server.capabilities;
