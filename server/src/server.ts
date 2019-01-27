@@ -27,6 +27,7 @@ export class Server implements ILanguageServer {
     }
 
     private registerProviders(): void {
+        // tslint:disable-next-line:no-unused-expression
         new ASTProvider(this.connection, this.forest);
         // new DocumentHighlightProvider(this.connection, this.forest);
         // new FoldingRangeProvider(this.connection, this.forest);
