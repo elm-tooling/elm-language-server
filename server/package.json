@@ -1,25 +1,25 @@
 {
-	"name": "elm-language-server",
-	"description": "Implementation of an elm language server in node.",
-	"version": "1.0.0",
-	"author": "Kolja Lampe",
-	"license": "MIT",
-	"engines": {
-		"node": "*"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/razzeee/elm-language-server"
-	},
-	"dependencies": {
-		"prebuild-install": "^5.2.2",
-		"tree-sitter": "^0.13.23",
-		"tree-sitter-elm": "^1.0.1",
-		"vscode-languageserver": "^5.2.1",
-		"vscode-uri": "^1.0.6"
-	},
-	"devDependencies": {
-		"prebuild": "^8.1.2"
-	},
-	"scripts": {}
+  "name": "elm-language-server",
+  "description": "Implementation of an elm language server in node.",
+  "version": "1.0.0",
+  "author": "Kolja Lampe",
+  "license": "MIT",
+  "engines": {
+    "node": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/razzeee/elm-language-server"
+  },
+  "dependencies": {
+    "prebuild-install": "^5.2.2",
+    "tree-sitter": "^0.13.23",
+    "tree-sitter-elm": "^1.0.2",
+    "vscode-languageserver": "^5.2.1",
+    "vscode-uri": "^1.0.6"
+  },
+  "devDependencies": {
+    "prebuild": "^8.1.2"
+  },
+  "scripts": {}
 }
