@@ -34,7 +34,6 @@ export function activate(context: ExtensionContext) {
 
 	// Options to control the language client
 	let clientOptions: LanguageClientOptions = {
-		// Register the server for plain text documents
 		documentSelector: [{ scheme: 'file', language: 'elm' }],
 		synchronize: {
 			// Notify the server about file changes to '.clientrc files contained in the workspace
@@ -45,7 +44,7 @@ export function activate(context: ExtensionContext) {
 	// Create the language client and start the client.
 	client = new LanguageClient(
 		'elmLanguageServer',
-		'ELM Language Server',
+		'Elm Language Server',
 		serverOptions,
 		clientOptions
 	);
