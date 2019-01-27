@@ -15,6 +15,7 @@ export class Server implements ILanguageServer {
 
     constructor(connection: Connection, params: InitializeParams) {
         this.connection = connection;
+        this.calculator = new CapabilityCalculator(params.capabilities);
         this.forest = new Forest();
 
         this.registerProviders();

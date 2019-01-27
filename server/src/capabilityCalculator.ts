@@ -12,6 +12,7 @@ export class CapabilityCalculator {
     }
 
     get capabilities(): ServerCapabilities {
+        // tslint:disable-next-line:no-unused-expression
         this.clientCapabilities;
 
         return {
