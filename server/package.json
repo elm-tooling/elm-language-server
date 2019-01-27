@@ -14,7 +14,7 @@
 	"dependencies": {
 		"prebuild-install": "^5.2.2",
 		"tree-sitter": "^0.13.23",
-		"tree-sitter-elm": "^1.0.0",
+		"tree-sitter-elm": "^1.0.1",
 		"vscode-languageserver": "^5.2.1",
 		"vscode-uri": "^1.0.6"
 	},
