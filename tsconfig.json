@@ -4,7 +4,9 @@
 		"target": "es6",
 		"outDir": "out",
 		"rootDir": "src",
-		"lib": [ "es6" ],
+		"lib": [
+			"es6"
+		],
 		"sourceMap": true
 	},
 	"include": [
@@ -15,7 +17,11 @@
 		".vscode-test"
 	],
 	"references": [
-		{ "path": "./client" },
-		{ "path": "./server" }
+		{
+			"path": "./client"
+		},
+		{
+			"path": "./server"
+		}
 	]
 }
