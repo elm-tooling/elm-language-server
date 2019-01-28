@@ -4,6 +4,7 @@ import { CapabilityCalculator } from "./capabilityCalculator";
 import { Forest } from "./forest";
 import { ASTProvider } from "./providers/astProvider";
 import { CompletionProvider } from "./providers/completionProvider";
+import { DiagnosticsProvider } from "./providers/diagnosticsProvider";
 import { FoldingRangeProvider } from "./providers/foldingProvider";
 
 export interface ILanguageServer {
@@ -34,5 +35,6 @@ export class Server implements ILanguageServer {
         new ASTProvider(this.connection, this.forest);
         new FoldingRangeProvider(this.connection, this.forest);
         new CompletionProvider(this.connection, this.forest);
+        new DiagnosticsProvider(this.connection);
     }
 }
