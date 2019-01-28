@@ -14,6 +14,7 @@ export class FoldingRangeProvider {
     private readonly FOLD_CONSTRUCTS: Set<string> = new Set([
         "if",
         "case",
+        "func_statement",
     ]);
 
     constructor(connection: IConnection, forest: IForest) {

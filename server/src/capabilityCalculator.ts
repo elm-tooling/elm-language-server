@@ -20,6 +20,9 @@ export class CapabilityCalculator {
             // Incremental sync is disabled for now due to not being able to get the
             // old text in ASTProvider
             // textDocumentSync: TextDocumentSyncKind.Incremental,
+            completionProvider: {
+                triggerCharacters: ["."],
+            },
             foldingRangeProvider: true,
             textDocumentSync: TextDocumentSyncKind.Full,
         };

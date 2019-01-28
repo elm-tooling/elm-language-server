@@ -3,6 +3,7 @@ import { Connection, InitializeParams, InitializeResult } from "vscode-languages
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { Forest } from "./forest";
 import { ASTProvider } from "./providers/astProvider";
+import { CompletionProvider } from "./providers/completionProvider";
 import { FoldingRangeProvider } from "./providers/foldingProvider";
 
 export interface ILanguageServer {
@@ -32,5 +33,6 @@ export class Server implements ILanguageServer {
         // tslint:disable:no-unused-expression
         new ASTProvider(this.connection, this.forest);
         new FoldingRangeProvider(this.connection, this.forest);
+        new CompletionProvider(this.connection, this.forest);
     }
 }
