@@ -3,6 +3,7 @@ import { Connection, InitializeParams, InitializeResult } from "vscode-languages
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { Forest } from "./forest";
 import { ASTProvider } from "./providers/astProvider";
+import { FoldingRangeProvider } from "./providers/foldingProvider";
 
 export interface ILanguageServer {
     readonly capabilities: InitializeResult;
@@ -28,9 +29,8 @@ export class Server implements ILanguageServer {
     }
 
     private registerProviders(): void {
-        // tslint:disable-next-line:no-unused-expression
+        // tslint:disable:no-unused-expression
         new ASTProvider(this.connection, this.forest);
-        // new DocumentHighlightProvider(this.connection, this.forest);
-        // new FoldingRangeProvider(this.connection, this.forest);
+        new FoldingRangeProvider(this.connection, this.forest);
     }
 }
