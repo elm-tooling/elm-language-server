@@ -5,16 +5,15 @@ import {
   ProposedFeatures,
   WorkspaceFolder,
 } from "vscode-languageserver";
-
 import { ILanguageServer } from "./server";
 import { rebuildTreeSitter } from "./util/rebuilder";
 
 const connection: IConnection = createConnection(ProposedFeatures.all);
-let workspaceFolders: WorkspaceFolder[];
+let workspaceFolder: WorkspaceFolder;
 
 connection.onInitialize(async (params: InitializeParams) => {
-  workspaceFolders = params.workspaceFolders;
-  connection.console.info("Initializing Elm language server...");
+  workspaceFolder = params.workspaceFolders[0];
+  connection.console.info(`Initializing Elm language server for ${workspaceFolder}...`);
 
   connection.console.info("Rebuilding tree-sitter for local Electron version");
   const rebuildResult: [void | Error, void | Error] = await rebuildTreeSitter();
@@ -31,7 +30,7 @@ connection.onInitialize(async (params: InitializeParams) => {
   const { Server } = await import("./server");
   const server: ILanguageServer = new Server(
     connection,
-    workspaceFolders,
+    workspaceFolder,
     params,
   );
 
