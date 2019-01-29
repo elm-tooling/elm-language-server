@@ -11,18 +11,15 @@ export async function activate(context: ExtensionContext) {
     // Start one server for each directory with an elm.json
     // and watch Elm files in those directories.
     // TODO we can't have multiple instances
-    let elmJsons = await workspace.findFiles("**/elm.json");
-    elmJsons = elmJsons.filter((a) => !(a.fsPath.includes("node_modules") || a.fsPath.includes("elm-stuff")));
-    elmJsons.forEach(
-        (uri, index) =>
-        startClient(path.dirname(uri.fsPath), context, index),
-    );
+    const elmJsons = await workspace.findFiles("**/elm.json");
+    const elmJson = elmJsons.find((a) => !(a.fsPath.includes("node_modules") || a.fsPath.includes("elm-stuff")));
+    startClient(path.dirname(elmJson.fsPath), context);
     // TODO: watch for addition and removal of 'elm.json' files
     // and start and stop clients for those directories.
 }
 
 const clients: Map<string, LanguageClient> = new Map();
-function startClient(dir: string, context: ExtensionContext, index: number) {
+function startClient(dir: string, context: ExtensionContext) {
     if (clients.has(dir)) {
         // Client was already started for this directory
         return;
@@ -32,10 +29,8 @@ function startClient(dir: string, context: ExtensionContext, index: number) {
         path.join("server", "out", "index.js"),
     );
     // The debug options for the server
-    // --inspect=6067: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
-    const startPort = 6009;
-    const port = startPort + index;
-    const debugOptions = { execArgv: ["--nolazy", `--inspect=${port}`] };
+    // --inspect=6009: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
+    const debugOptions = { execArgv: ["--nolazy", "--inspect=6009"] };
 
     // If the extension is launched in debug mode then the debug server options are used
     // Otherwise the run options are used

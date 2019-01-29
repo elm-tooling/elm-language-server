@@ -14,7 +14,6 @@ export interface ILanguageServer {
 export class Server implements ILanguageServer {
   public connection: Connection;
   public workspaceFolder: WorkspaceFolder;
-  public elmWorkspaceFolder: URI;
   private calculator: CapabilityCalculator;
   private forest: Forest;
 
@@ -42,6 +41,6 @@ export class Server implements ILanguageServer {
     new ASTProvider(this.connection, this.forest);
     new FoldingRangeProvider(this.connection, this.forest);
     new CompletionProvider(this.connection, this.forest);
-    new DiagnosticsProvider(this.connection, this.elmWorkspaceFolder);
+    new DiagnosticsProvider(this.connection, URI.parse(this.workspaceFolder.uri));
   }
 }
