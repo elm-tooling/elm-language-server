@@ -3,8 +3,9 @@ import URI from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { Forest } from "./forest";
 import { ASTProvider } from "./providers/astProvider";
-
-import fs = require("fs");
+import { CompletionProvider } from "./providers/completionProvider";
+import { DiagnosticsProvider } from "./providers/diagnosticsProvider";
+import { FoldingRangeProvider } from "./providers/foldingProvider";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -39,8 +40,8 @@ export class Server implements ILanguageServer {
   private registerProviders(): void {
     // tslint:disable:no-unused-expression
     new ASTProvider(this.connection, this.forest);
-    // new FoldingRangeProvider(this.connection, this.forest);
-    // new CompletionProvider(this.connection, this.forest);
-    // new DiagnosticsProvider(this.connection, this.elmWorkspaceFolder);
+    new FoldingRangeProvider(this.connection, this.forest);
+    new CompletionProvider(this.connection, this.forest);
+    new DiagnosticsProvider(this.connection, this.elmWorkspaceFolder);
   }
 }

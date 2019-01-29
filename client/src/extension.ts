@@ -1,15 +1,8 @@
 "use strict";
 
-import { ExtensionContext, workspace } from "vscode";
-
-import {
-    LanguageClient,
-    LanguageClientOptions,
-    ServerOptions,
-    TransportKind,
-} from "vscode-languageclient";
-
 import * as path from "path";
+import { ExtensionContext, workspace } from "vscode";
+import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from "vscode-languageclient";
 
 let languageClient: LanguageClient;
 
@@ -17,16 +10,19 @@ export async function activate(context: ExtensionContext) {
     // We get activated if there is one or more elm.json file in the workspace
     // Start one server for each directory with an elm.json
     // and watch Elm files in those directories.
-    const elmJsons = await workspace.findFiles("**/elm.json");
-    for (const uri of elmJsons) {
-        startClient(path.dirname(uri.fsPath), context);
-    }
+    // TODO we can't have multiple instances
+    let elmJsons = await workspace.findFiles("**/elm.json");
+    elmJsons = elmJsons.filter((a) => !(a.fsPath.includes("node_modules") || a.fsPath.includes("elm-stuff")));
+    elmJsons.forEach(
+        (uri, index) =>
+        startClient(path.dirname(uri.fsPath), context, index),
+    );
     // TODO: watch for addition and removal of 'elm.json' files
     // and start and stop clients for those directories.
 }
 
 const clients: Map<string, LanguageClient> = new Map();
-function startClient(dir: string, context: ExtensionContext) {
+function startClient(dir: string, context: ExtensionContext, index: number) {
     if (clients.has(dir)) {
         // Client was already started for this directory
         return;
@@ -36,8 +32,10 @@ function startClient(dir: string, context: ExtensionContext) {
         path.join("server", "out", "index.js"),
     );
     // The debug options for the server
-    // --inspect=6009: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
-    const debugOptions = { execArgv: ["--nolazy", "--inspect=6009"] };
+    // --inspect=6067: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
+    const startPort = 6009;
+    const port = startPort + index;
+    const debugOptions = { execArgv: ["--nolazy", `--inspect=${port}`] };
 
     // If the extension is launched in debug mode then the debug server options are used
     // Otherwise the run options are used
