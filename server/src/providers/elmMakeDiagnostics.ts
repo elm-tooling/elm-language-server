@@ -1,19 +1,9 @@
-import { IElmIssue } from "./diagnosticsProvider";
-
 import * as cp from "child_process";
 import * as readline from "readline";
-import * as utils from "../util/elmUtils";
-
+import { Diagnostic, DiagnosticSeverity, IConnection, Range } from "vscode-languageserver";
 import URI from "vscode-uri";
-
-import {
-    Diagnostic,
-    DiagnosticSeverity,
-    DidSaveTextDocumentParams,
-    IConnection,
-    PublishDiagnosticsParams,
-    Range,
-} from "vscode-languageserver";
+import * as utils from "../util/elmUtils";
+import { IElmIssue } from "./diagnosticsProvider";
 
 export class ElmMakeDiagnostics {
     private connection: IConnection;
@@ -24,38 +14,13 @@ export class ElmMakeDiagnostics {
         this.elmWorkspaceFolder = elmWorkspaceFolder;
     }
 
-    public createDiagnostics = async (param: DidSaveTextDocumentParams): Promise<PublishDiagnosticsParams[]> => {
-        const uri: URI = URI.parse(param.textDocument.uri);
-        const compileErrors: PublishDiagnosticsParams[] = [];
-
-        const compilerErrors: IElmIssue[] = await this.checkForErrors(
+    public createDiagnostics = async (filePath: URI): Promise<IElmIssue[]> => {
+        return await this.checkForErrors(
             this.connection,
             this.elmWorkspaceFolder.fsPath,
-            uri.fsPath,
+            filePath.fsPath,
         );
 
-        const cwd: string = this.elmWorkspaceFolder.fsPath;
-        const splitCompilerErrors: Map<string, IElmIssue[]> = new Map();
-
-        compilerErrors.forEach((issue: IElmIssue) => {
-            // If provided path is relative, make it absolute
-            if (issue.file.startsWith(".")) {
-                issue.file = cwd + issue.file.slice(1);
-            }
-            if (splitCompilerErrors.has(issue.file)) {
-                splitCompilerErrors.get(issue.file).push(issue);
-            } else {
-                splitCompilerErrors.set(issue.file, [issue]);
-            }
-        });
-        // Turn split arrays into diagnostics and associate them with correct files in VS
-        splitCompilerErrors.forEach((issue: IElmIssue[], issuePath: string) => {
-            compileErrors.push({
-                diagnostics: issue.map((error) => this.elmMakeIssueToDiagnostic(error)),
-                uri: URI.file(issuePath).toString(),
-            });
-        });
-        return compileErrors;
     }
 
     private checkForErrors(

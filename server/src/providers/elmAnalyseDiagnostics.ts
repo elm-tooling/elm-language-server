@@ -1,10 +1,6 @@
 import * as path from "path";
 import request = require("request");
-import {
-    Diagnostic,
-    DiagnosticSeverity, DidSaveTextDocumentParams,
-    IConnection, PublishDiagnosticsParams, Range,
-} from "vscode-languageserver";
+import { IConnection } from "vscode-languageserver";
 import URI from "vscode-uri";
 import WebSocket = require("ws");
 import { execCmd, IExecutingCmd } from "../util/elmUtils";
@@ -30,13 +26,6 @@ interface IElmAnalyseMessageData {
     | { ranges: number[][] };
 }
 
-interface IElmAnalyseMessageParseResult {
-    success: boolean;
-    issues: IElmIssue[];
-    reason: string;
-    messageType: string;
-}
-
 export class ElmAnalyseDiagnostics {
 
     private connection: IConnection;
@@ -50,7 +39,7 @@ export class ElmAnalyseDiagnostics {
     }
 
     public execActivateAnalyseProcesses =
-        async (param: DidSaveTextDocumentParams): Promise<PublishDiagnosticsParams[]> => {
+        async (filePath: URI): Promise<IElmIssue[]> => {
             try {
                 const processReady = await this.startAnalyseProcess();
 
@@ -61,62 +50,12 @@ export class ElmAnalyseDiagnostics {
 
                         compilerErrors.push(...this.parseMessage(this.elmWorkspaceFolder, element));
                     });
-                    const splitCompilerErrors: Map<string, IElmIssue[]> = new Map();
-
-                    compilerErrors.forEach((issue: IElmIssue) => {
-                        // If provided path is relative, make it absolute
-                        if (issue.file.startsWith(".")) {
-                            issue.file = this.elmWorkspaceFolder + issue.file.slice(1);
-                        }
-                        if (splitCompilerErrors.has(issue.file)) {
-                            splitCompilerErrors.get(issue.file).push(issue);
-                        } else {
-                            splitCompilerErrors.set(issue.file, [issue]);
-                        }
-                    });
-                    const result: PublishDiagnosticsParams[] = [];
-                    splitCompilerErrors.forEach((issue: IElmIssue[], issuePath: string) => {
-                        result.push({
-                            diagnostics: issue.map((error) => this.elmMakeIssueToDiagnostic(error)),
-                            uri: URI.file(issuePath).toString(),
-                        });
-                    });
-                    return result;
+                    return compilerErrors;
                 }
             } catch (e) {
                 this.connection.console.error("Running Elm-analyse command failed");
             }
         }
-
-    // todo this is a duplicated for now
-    private elmMakeIssueToDiagnostic(issue: IElmIssue): Diagnostic {
-        const lineRange: Range = Range.create(
-            issue.region.start.line - 1,
-            issue.region.start.column - 1,
-            issue.region.end.line - 1,
-            issue.region.end.column - 1,
-        );
-        return Diagnostic.create(
-            lineRange,
-            issue.overview + " - " + issue.details.replace(/\[\d+m/g, ""),
-            this.severityStringToDiagnosticSeverity(issue.type),
-            null,
-            "Elm",
-        );
-    }
-
-    private severityStringToDiagnosticSeverity(
-        severity: string,
-    ): DiagnosticSeverity {
-        switch (severity) {
-            case "error":
-                return DiagnosticSeverity.Error;
-            case "warning":
-                return DiagnosticSeverity.Warning;
-            default:
-                return DiagnosticSeverity.Error;
-        }
-    }
 
     private initSocketClient(): Promise<IElmAnalyseMessage[]> {
         return new Promise<IElmAnalyseMessage[]>((resolve, reject) => {
@@ -167,7 +106,7 @@ export class ElmAnalyseDiagnostics {
         messageInfoFileRegions.forEach((messageInfoFileRegion) => {
             const issue: IElmIssue = {
                 details: message.data.description,
-                file: path.join(cwd.path, message.file),
+                file: path.join(cwd.fsPath, message.file),
                 overview: message.type,
                 region: messageInfoFileRegion,
                 subregion: "",
@@ -242,8 +181,8 @@ export class ElmAnalyseDiagnostics {
 function checkElmAnalyseServerState(
 ): Thenable<ElmAnalyseServerState> {
     const result = getElmAnalyseServerInfo("http://localhost:6010").then(
-        (info) => {
-            if (info.match(/Elm Analyse/)) {
+        (info: string) => {
+            if (info.startsWith("Elm Analyse")) {
                 return ElmAnalyseServerState.Running;
             } else {
                 return ElmAnalyseServerState.PortInUse;
@@ -257,23 +196,22 @@ function checkElmAnalyseServerState(
 }
 
 function getElmAnalyseServerInfo(url: string): Thenable<any> {
-    const titleRegex = /(<\s*title[^>]*>(.+?)<\s*\/\s*title)>/gi;
+    const titleRegex = /(<title\>(.+?)<\/title)\>/gi;
     return new Promise((resolve, reject) => {
         request(url, (err, _, body) => {
             if (err) {
                 reject(err);
             } else {
-                let info = "";
                 try {
+                    let info = "";
                     const match = titleRegex.exec(body);
                     if (match && match[2]) {
-                        this.connection.console.log(match[2]);
                         info = match[2];
+                        resolve(info);
                     }
                 } catch (e) {
                     reject(e);
                 }
-                resolve(info);
             }
         });
     });
