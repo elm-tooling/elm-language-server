@@ -13,19 +13,21 @@ export let documentEol: string;
 export let platformEol: string;
 
 /**
- * Activates the vscode.lsp-sample extension
+ * Activates the vscode.elm-lsp extension
  */
 export async function activate(docUri: vscode.Uri) {
     // The extensionId is `publisher.name` from package.json
-    const ext = vscode.extensions.getExtension("vscode.lsp-sample");
-    await ext.activate();
-    try {
-        doc = await vscode.workspace.openTextDocument(docUri);
-        editor = await vscode.window.showTextDocument(doc);
-        await sleep(2000); // Wait for server activation
-    } catch (e) {
-        // tslint:disable-next-line:no-console
-        console.error(e);
+    const ext = vscode.extensions.getExtension("vscode.elm-lsp");
+    if (ext) {
+        await ext.activate();
+        try {
+            doc = await vscode.workspace.openTextDocument(docUri);
+            editor = await vscode.window.showTextDocument(doc);
+            await sleep(2000); // Wait for server activation
+        } catch (e) {
+            // tslint:disable-next-line:no-console
+            console.error(e);
+        }
     }
 }
 

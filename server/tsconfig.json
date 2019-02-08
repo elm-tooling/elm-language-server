@@ -1,11 +1,14 @@
 {
 	"compilerOptions": {
+        "baseUrl": ".",
+        "paths": { "*": ["types/*"] },
 		"target": "es6",
 		"module": "commonjs",
 		"moduleResolution": "node",
 		"sourceMap": true,
 		"outDir": "out",
 		"rootDir": "src",
+		"strict": true,
 		"lib": [
 			"es6"
 		]

@@ -1,11 +1,6 @@
 import { SyntaxNode, Tree } from "tree-sitter";
-import {
-    FoldingRange,
-    FoldingRangeKind,
-    FoldingRangeRequest,
-    FoldingRangeRequestParam,
-    IConnection,
-} from "vscode-languageserver";
+import { FoldingRange, FoldingRangeKind, FoldingRangeRequest,
+     FoldingRangeRequestParam, IConnection } from "vscode-languageserver";
 import { IForest } from "../forest";
 
 export class FoldingRangeProvider {
@@ -29,10 +24,10 @@ export class FoldingRangeProvider {
     ): Promise<FoldingRange[]> => {
         const folds: FoldingRange[] = [];
 
-        const tree: Tree = this.forest.getTree(param.textDocument.uri);
+        const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
         const traverse: (node: SyntaxNode) => void = (node: SyntaxNode): void => {
-            if (!node.isNamed && this.FOLD_CONSTRUCTS.has(node.type)) {
+            if (node.parent && node.parent.lastChild && !node.isNamed && this.FOLD_CONSTRUCTS.has(node.type)) {
                 const endNode: SyntaxNode = node.parent.lastChild;
                 folds.push({
                     endCharacter: node.endPosition.column,
@@ -46,7 +41,9 @@ export class FoldingRangeProvider {
                 traverse(childNode);
             }
         };
-        traverse(tree.rootNode);
+        if (tree) {
+            traverse(tree.rootNode);
+        }
 
         return folds;
     }

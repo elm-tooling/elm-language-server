@@ -13,7 +13,9 @@ export async function activate(context: ExtensionContext) {
     // TODO we can't have multiple instances
     const elmJsons = await workspace.findFiles("**/elm.json");
     const elmJson = elmJsons.find((a) => !(a.fsPath.includes("node_modules") || a.fsPath.includes("elm-stuff")));
-    startClient(path.dirname(elmJson.fsPath), context);
+    if (elmJson) {
+        startClient(path.dirname(elmJson.fsPath), context);
+    }
     // TODO: watch for addition and removal of 'elm.json' files
     // and start and stop clients for those directories.
 }

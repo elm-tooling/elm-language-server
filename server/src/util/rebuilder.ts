@@ -1,6 +1,5 @@
 import * as path from "path";
 import * as prebuildInstall from "prebuild-install";
-import { RemoteClient, RemoteConsole } from "vscode-languageserver";
 
 function packageToGithubRepo(name: string): string {
     let repo: string;

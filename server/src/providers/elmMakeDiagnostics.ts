@@ -62,11 +62,11 @@ export class ElmMakeDiagnostics {
                 const errorObject = JSON.parse(line);
 
                 if (errorObject.type === "compile-errors") {
-                    errorObject.errors.forEach((error) => {
-                        const problems = error.problems.map((problem) => ({
+                    errorObject.errors.forEach((error: any) => {
+                        const problems = error.problems.map((problem: any) => ({
                             details: problem.message
                                 .map(
-                                    (message) =>
+                                    (message: any) =>
                                         typeof message === "string"
                                             ? message
                                             : "#" + message.string + "#",
@@ -86,7 +86,7 @@ export class ElmMakeDiagnostics {
                     const problem = {
                         details: errorObject.message
                             .map(
-                                (message) => (typeof message === "string" ? message : message.string),
+                                (message: any) => (typeof message === "string" ? message : message.string),
                             )
                             .join(""),
                         file: errorObject.path,
@@ -152,7 +152,7 @@ export class ElmMakeDiagnostics {
             lineRange,
             issue.overview + " - " + issue.details.replace(/\[\d+m/g, ""),
             this.severityStringToDiagnosticSeverity(issue.type),
-            null,
+            undefined,
             "Elm",
         );
     }

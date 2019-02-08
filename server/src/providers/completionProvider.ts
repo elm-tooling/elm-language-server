@@ -1,10 +1,5 @@
 import { SyntaxNode, Tree } from "tree-sitter";
-import {
-    CompletionItem,
-    CompletionParams,
-    CompletionRequest,
-    IConnection,
-} from "vscode-languageserver";
+import { CompletionItem, CompletionParams, CompletionRequest, IConnection } from "vscode-languageserver";
 import { IForest } from "../forest";
 
 export class CompletionProvider {
@@ -23,7 +18,7 @@ export class CompletionProvider {
     ): Promise<CompletionItem[]> => {
         const completions: CompletionItem[] = [];
 
-        const tree: Tree = this.forest.getTree(param.textDocument.uri);
+        const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
         const traverse: (node: SyntaxNode) => void = (node: SyntaxNode): void => {
             if (node.type === "func_identifier" && !completions.some((a) => a.label === node.text)) {
@@ -41,7 +36,9 @@ export class CompletionProvider {
                 traverse(childNode);
             }
         };
-        traverse(tree.rootNode);
+        if (tree) {
+            traverse(tree.rootNode);
+        }
 
         return completions;
     }

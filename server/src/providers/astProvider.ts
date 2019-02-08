@@ -2,17 +2,8 @@ import * as Parser from "tree-sitter";
 // tslint:disable-next-line no-duplicate-imports
 import { Point, SyntaxNode, Tree } from "tree-sitter";
 import * as TreeSitterElm from "tree-sitter-elm";
-
-import {
-    DidChangeTextDocumentParams,
-    DidCloseTextDocumentParams,
-    DidOpenTextDocumentParams,
-    IConnection,
-    TextDocumentIdentifier,
-    TextDocumentItem,
-    VersionedTextDocumentIdentifier,
-} from "vscode-languageserver";
-
+import { DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams, IConnection,
+     TextDocumentIdentifier, TextDocumentItem, VersionedTextDocumentIdentifier } from "vscode-languageserver";
 import { IForest } from "../forest";
 import { Position } from "../position";
 
@@ -44,7 +35,7 @@ export class ASTProvider {
     ): Promise<void> => {
         this.connection.console.info("Changed text document, going to parse it");
         const document: VersionedTextDocumentIdentifier = params.textDocument;
-        let tree: Tree = this.forest.getTree(document.uri);
+        let tree: Tree | undefined = this.forest.getTree(document.uri);
         if (tree !== undefined) {
             for (const changeEvent of params.contentChanges) {
                 if (changeEvent.range && changeEvent.rangeLength) {
@@ -54,22 +45,24 @@ export class ASTProvider {
                     const { range, rangeLength, text } = changeEvent;
                     const startIndex: number = range.start.line * range.start.character;
                     const oldEndIndex: number = startIndex + rangeLength - 1;
-                    tree.edit({
-                        // end index for new version of text
-                        newEndIndex: range.end.line * range.end.character - 1,
-                        // position in new doc change ended
-                        newEndPosition: Position.FROM_VS_POSITION(range.end).toTSPosition(),
+                    if (tree) {
+                        tree.edit({
+                            // end index for new version of text
+                            newEndIndex: range.end.line * range.end.character - 1,
+                            // position in new doc change ended
+                            newEndPosition: Position.FROM_VS_POSITION(range.end).toTSPosition(),
 
-                        // end index for old version of text
-                        oldEndIndex,
-                        // position in old doc change ended.
-                        oldEndPosition: this.computeEndPosition(startIndex, oldEndIndex, tree),
+                            // end index for old version of text
+                            oldEndIndex,
+                            // position in old doc change ended.
+                            oldEndPosition: this.computeEndPosition(startIndex, oldEndIndex, tree),
 
-                        // index in old doc the change started
-                        startIndex,
-                        // position in old doc change started
-                        startPosition: Position.FROM_VS_POSITION(range.start).toTSPosition(),
-                    });
+                            // index in old doc the change started
+                            startIndex,
+                            // position in old doc change started
+                            startPosition: Position.FROM_VS_POSITION(range.start).toTSPosition(),
+                        });
+                    }
                     tree = this.parser.parse(text, tree);
                 } else {
                     tree = this.buildTree(changeEvent.text);
@@ -85,7 +78,7 @@ export class ASTProvider {
         this.forest.removeTree(document.uri);
     }
 
-    private buildTree = (text: string): Tree => {
+    private buildTree = (text: string): Tree | undefined => {
         return this.parser.parse(text);
     }
 

@@ -3,7 +3,7 @@ import request = require("request");
 import { IConnection } from "vscode-languageserver";
 import URI from "vscode-uri";
 import WebSocket = require("ws");
-import { execCmd, IExecutingCmd } from "../util/elmUtils";
+import { execCmd } from "../util/elmUtils";
 import { IElmIssue, IElmIssueRegion } from "./diagnosticsProvider";
 
 enum ElmAnalyseServerState {
@@ -30,8 +30,8 @@ export class ElmAnalyseDiagnostics {
 
     private connection: IConnection;
     private elmWorkspaceFolder: URI;
-    private analyseSocket: WebSocket;
-    private analyse: IExecutingCmd;
+    private wsPath = "ws://localhost:6010/state";
+    private analyseSocket: WebSocket = new WebSocket(this.wsPath);
 
     constructor(connection: IConnection, elmWorkspaceFolder: URI) {
         this.connection = connection;
@@ -40,31 +40,30 @@ export class ElmAnalyseDiagnostics {
 
     public execActivateAnalyseProcesses =
         async (filePath: URI): Promise<IElmIssue[]> => {
+            const compilerErrors: IElmIssue[] = [];
             try {
                 const processReady = await this.startAnalyseProcess();
 
                 if (processReady) {
                     const analyseMessage = await this.initSocketClient();
-                    const compilerErrors: IElmIssue[] = [];
                     analyseMessage.forEach((element) => {
 
                         compilerErrors.push(...this.parseMessage(this.elmWorkspaceFolder, element));
                     });
-                    return compilerErrors;
                 }
             } catch (e) {
                 this.connection.console.error("Running Elm-analyse command failed");
             }
+            return compilerErrors;
         }
 
     private initSocketClient(): Promise<IElmAnalyseMessage[]> {
         return new Promise<IElmAnalyseMessage[]>((resolve, reject) => {
             try {
-                const wsPath = "ws://localhost:6010/state";
                 if (this.analyseSocket) {
                     this.analyseSocket.close();
                 }
-                this.analyseSocket = new WebSocket(wsPath);
+                this.analyseSocket = new WebSocket(this.wsPath);
                 this.analyseSocket.on("message", (stateJson) => {
                     try {
                         const state = JSON.parse(stateJson.toString());
@@ -163,12 +162,12 @@ export class ElmAnalyseDiagnostics {
  process or select another port for elm-analyse.`);
             return false;
         } else {
-            this.analyse = execCmd("elm-analyse", {
+            const analyse = execCmd("elm-analyse", {
                 cmdArguments: ["-s", "-p", "6010"],
                 notFoundText: "Install Elm-analyse using npm i elm-analyse -g",
                 showMessageOnError: true,
 
-                onStart: () => this.analyse.stdin.write.bind(this.analyse.stdin),
+                onStart: () => analyse.stdin.write.bind(analyse.stdin),
             },
                 this.elmWorkspaceFolder,
                 this.connection,

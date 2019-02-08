@@ -31,7 +31,7 @@ export interface IExecutingCmd
     /** The process's stdin */
     stdin: NodeJS.WritableStream;
     /** End the process */
-    kill();
+    kill(): void;
     /** Is the process running */
     isRunning: boolean; // tslint:disable-line
 }
@@ -49,7 +49,7 @@ export function execCmd(
         onStderr,
         onExit,
     } = options;
-    let childProcess;
+    let childProcess: cp.ChildProcess;
     let firstResponse = true;
     let wasKilledbyUs = false;
 
@@ -79,20 +79,20 @@ export function execCmd(
             }
         });
 
-        function handleExit(err: Error, stdout: string, stderr: string) {
+        function handleExit(error: cp.ExecException | null, stdout: string | Buffer, stderr: string | Buffer) {
             IexecutingCmd.isRunning = false;
             if (onExit) {
                 onExit();
             }
             if (!wasKilledbyUs) {
-                if (err) {
+                if (error) {
                     if (options.showMessageOnError) {
                         const cmdName = cmd.split(" ", 1)[0];
                         const cmdWasNotFound =
                             // Windows method apparently still works on non-English systems
                             (isWindows &&
-                                err.message.includes(`'${cmdName}' is not recognized`)) ||
-                            (!isWindows && (err as any).code === 127);
+                                error.message.includes(`'${cmdName}' is not recognized`)) ||
+                            (!isWindows && (error as any).code === 127);
 
                         if (cmdWasNotFound) {
                             const notFoundText = options ? options.notFoundText : "";
@@ -100,10 +100,10 @@ export function execCmd(
                                 `${cmdName} is not available in your path. ` + notFoundText,
                             );
                         } else {
-                            connection.window.showErrorMessage(err.message);
+                            connection.window.showErrorMessage(error.message);
                         }
                     } else {
-                        reject(err);
+                        reject(error);
                     }
                 } else {
                     resolve({ stdout, stderr });
@@ -111,6 +111,7 @@ export function execCmd(
             }
         }
     });
+    // @ts-ignore
     IexecutingCmd.stdin = childProcess.stdin;
     IexecutingCmd.kill = killProcess;
     IexecutingCmd.isRunning = true;

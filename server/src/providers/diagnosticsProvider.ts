@@ -1,5 +1,5 @@
 import { Diagnostic, DiagnosticSeverity, DidOpenTextDocumentParams,
-  DidSaveTextDocumentParams, IConnection, PublishDiagnosticsParams, Range } from "vscode-languageserver";
+   DidSaveTextDocumentParams, IConnection, PublishDiagnosticsParams, Range } from "vscode-languageserver";
 import URI from "vscode-uri";
 import { ElmAnalyseDiagnostics } from "./elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
@@ -56,7 +56,10 @@ export class DiagnosticsProvider {
         issue.file = this.elmWorkspaceFolder + issue.file.slice(1);
       }
       if (splitCompilerErrors.has(issue.file)) {
-        splitCompilerErrors.get(issue.file).push(issue);
+        const issuesForFile = splitCompilerErrors.get(issue.file);
+        if (issuesForFile) {
+          issuesForFile.push(issue);
+        }
       } else {
         splitCompilerErrors.set(issue.file, [issue]);
       }
@@ -84,7 +87,7 @@ export class DiagnosticsProvider {
             lineRange,
             issue.overview + " - " + issue.details.replace(/\[\d+m/g, ""),
             this.severityStringToDiagnosticSeverity(issue.type),
-            null,
+            undefined,
             "Elm",
         );
     }
