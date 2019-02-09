@@ -23,6 +23,7 @@ export class CapabilityCalculator {
             completionProvider: {
                 triggerCharacters: ["."],
             },
+            documentFormattingProvider: true,
             foldingRangeProvider: true,
             textDocumentSync: TextDocumentSyncKind.Full,
         };

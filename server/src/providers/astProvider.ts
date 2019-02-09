@@ -2,8 +2,10 @@ import * as Parser from "tree-sitter";
 // tslint:disable-next-line no-duplicate-imports
 import { Point, SyntaxNode, Tree } from "tree-sitter";
 import * as TreeSitterElm from "tree-sitter-elm";
-import { DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams, IConnection,
-     TextDocumentIdentifier, TextDocumentItem, VersionedTextDocumentIdentifier } from "vscode-languageserver";
+import {
+    DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidOpenTextDocumentParams, IConnection,
+    TextDocumentIdentifier, TextDocumentItem, VersionedTextDocumentIdentifier,
+} from "vscode-languageserver";
 import { IForest } from "../forest";
 import { Position } from "../position";
 

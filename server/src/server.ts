@@ -5,6 +5,7 @@ import { Forest } from "./forest";
 import { ASTProvider } from "./providers/astProvider";
 import { CompletionProvider } from "./providers/completionProvider";
 import { DiagnosticsProvider } from "./providers/diagnosticsProvider";
+import { ElmFormatProvider } from "./providers/elmFormatProvider";
 import { FoldingRangeProvider } from "./providers/foldingProvider";
 
 export interface ILanguageServer {
@@ -42,5 +43,6 @@ export class Server implements ILanguageServer {
     new FoldingRangeProvider(this.connection, this.forest);
     new CompletionProvider(this.connection, this.forest);
     new DiagnosticsProvider(this.connection, URI.parse(this.workspaceFolder.uri));
+    new ElmFormatProvider(this.connection, URI.parse(this.workspaceFolder.uri));
   }
 }
