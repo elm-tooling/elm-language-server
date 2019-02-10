@@ -1,28 +1,60 @@
 "use strict";
 
 import * as path from "path";
-import { ExtensionContext, workspace } from "vscode";
+import { ExtensionContext, RelativePattern, Uri, workspace } from "vscode";
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from "vscode-languageclient";
 
 let languageClient: LanguageClient;
 
 export async function activate(context: ExtensionContext) {
     // We get activated if there is one or more elm.json file in the workspace
-    // Start one server for each directory with an elm.json
+    // Start one server for each workspace with at least one elm.json
     // and watch Elm files in those directories.
-    // TODO we can't have multiple instances
-    const elmJsons = await workspace.findFiles("**/elm.json");
-    const elmJson = elmJsons.find((a) => !(a.fsPath.includes("node_modules") || a.fsPath.includes("elm-stuff")));
-    if (elmJson) {
-        startClient(path.dirname(elmJson.fsPath), context);
+
+    const elmJsons = await workspace.findFiles("**/elm.json", "**/@(node_modules|elm-stuff)/**");
+    elmJsons.forEach((uri) => {
+        const workspaceFolder = workspace.getWorkspaceFolder(uri);
+        if (workspaceFolder) {
+            startClient(workspaceFolder.uri.fsPath, context);
+        }
+    });
+
+    const watcher = workspace.createFileSystemWatcher("**/elm.json", false, true, false);
+    watcher.onDidCreate((uri) => {
+        const workspaceFolder = workspace.getWorkspaceFolder(uri);
+        if (workspaceFolder) {
+            startClient(workspaceFolder.uri.fsPath, context);
+        }
+    });
+    watcher.onDidDelete((uri) => {
+        const workspaceFolder = workspace.getWorkspaceFolder(uri);
+        if (workspaceFolder) {
+            stopClient(workspaceFolder.uri);
+        }
+    });
+}
+
+async function stopClient(workspaceUri: Uri) {
+    const client = clients.get(workspaceUri.fsPath);
+
+    if (client) {
+        const pattern = new RelativePattern(workspaceUri.fsPath, "**/elm.json");
+        const files = await workspace.findFiles(pattern, "**/@(node_modules|elm-stuff)/**");
+        if (files.length === 0) {
+            languageClient.info("Found the client shutting it down.");
+            client.stop();
+            clients.delete(workspaceUri.fsPath);
+        } else {
+            languageClient.info("There are still elm.json files in this workspace, not stopping the client.");
+        }
+    } else {
+        languageClient.info("Could not find the client that we want to shutdown.");
     }
-    // TODO: watch for addition and removal of 'elm.json' files
-    // and start and stop clients for those directories.
 }
 
 const clients: Map<string, LanguageClient> = new Map();
-function startClient(dir: string, context: ExtensionContext) {
-    if (clients.has(dir)) {
+function startClient(clientWorkspace: string, context: ExtensionContext) {
+    if (clients.has(clientWorkspace)) {
         // Client was already started for this directory
         return;
     }
@@ -50,13 +82,13 @@ function startClient(dir: string, context: ExtensionContext) {
         // Register the server for Elm documents in the directory
         documentSelector: [
             {
-                pattern: path.join(dir, "**", "*.elm"),
+                pattern: path.join(clientWorkspace, "**", "*.elm"),
                 scheme: "file",
             },
         ],
         // Notify the server about file changes to 'elm.json'
         synchronize: {
-            fileEvents: workspace.createFileSystemWatcher(path.join(dir, "elm.json")),
+            fileEvents: workspace.createFileSystemWatcher(path.join(clientWorkspace, "**/elm.json")),
         },
     };
 
@@ -70,8 +102,8 @@ function startClient(dir: string, context: ExtensionContext) {
 
     // Start the client. This will also launch the server
     languageClient.start();
-    languageClient.info(`Starting language server for ${dir}`);
-    clients.set(dir, languageClient);
+    languageClient.info(`Starting language server for ${clientWorkspace}`);
+    clients.set(clientWorkspace, languageClient);
 }
 
 export function deactivate(): Thenable<void> {
