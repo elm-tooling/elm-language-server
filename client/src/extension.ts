@@ -15,7 +15,7 @@ export async function activate(context: ExtensionContext) {
     elmJsons.forEach((uri) => {
         const workspaceFolder = workspace.getWorkspaceFolder(uri);
         if (workspaceFolder) {
-            startClient(workspaceFolder.uri.fsPath, context);
+            startClient(workspaceFolder.uri.fsPath, context, uri);
         }
     });
 
@@ -23,7 +23,7 @@ export async function activate(context: ExtensionContext) {
     watcher.onDidCreate((uri) => {
         const workspaceFolder = workspace.getWorkspaceFolder(uri);
         if (workspaceFolder) {
-            startClient(workspaceFolder.uri.fsPath, context);
+            startClient(workspaceFolder.uri.fsPath, context, uri);
         }
     });
     watcher.onDidDelete((uri) => {
@@ -53,7 +53,7 @@ async function stopClient(workspaceUri: Uri) {
 }
 
 const clients: Map<string, LanguageClient> = new Map();
-function startClient(clientWorkspace: string, context: ExtensionContext) {
+function startClient(clientWorkspace: string, context: ExtensionContext, elmJson: Uri) {
     if (clients.has(clientWorkspace)) {
         // Client was already started for this directory
         return;
@@ -86,6 +86,7 @@ function startClient(clientWorkspace: string, context: ExtensionContext) {
                 scheme: "file",
             },
         ],
+        initializationOptions: { elmJson: elmJson.fsPath },
         // Notify the server about file changes to 'elm.json'
         synchronize: {
             fileEvents: workspace.createFileSystemWatcher(path.join(clientWorkspace, "**/elm.json")),

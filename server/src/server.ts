@@ -13,22 +13,23 @@ export interface ILanguageServer {
 }
 
 export class Server implements ILanguageServer {
-  public connection: Connection;
-  public workspaceFolder: WorkspaceFolder;
   private calculator: CapabilityCalculator;
-  private forest: Forest;
 
   constructor(
     connection: Connection,
-    workspaceFolder: WorkspaceFolder,
     params: InitializeParams,
   ) {
-    this.connection = connection;
-    this.workspaceFolder = workspaceFolder;
     this.calculator = new CapabilityCalculator(params.capabilities);
-    this.forest = new Forest();
-
-    this.registerProviders();
+    if (params.workspaceFolders && params.workspaceFolders.length > 0) {
+      const elmWorkspace = URI.parse(params.initializationOptions.elmJson);
+      const forest = new Forest();
+      const workspaceFolder = params.workspaceFolders[0];
+      connection.console.info(`Initializing Elm language server for workspace
+ ${workspaceFolder.uri} using ${elmWorkspace}`);
+      this.registerProviders(connection, forest, elmWorkspace);
+    } else {
+      connection.console.info(`No workspace.`);
+    }
   }
 
   get capabilities(): InitializeResult {
@@ -37,12 +38,12 @@ export class Server implements ILanguageServer {
     };
   }
 
-  private registerProviders(): void {
+  private registerProviders(connection: Connection, forest: Forest, elmWorkspace: URI): void {
     // tslint:disable:no-unused-expression
-    new ASTProvider(this.connection, this.forest);
-    new FoldingRangeProvider(this.connection, this.forest);
-    new CompletionProvider(this.connection, this.forest);
-    new DiagnosticsProvider(this.connection, URI.parse(this.workspaceFolder.uri));
-    new ElmFormatProvider(this.connection, URI.parse(this.workspaceFolder.uri));
+    new ASTProvider(connection, forest);
+    new FoldingRangeProvider(connection, forest);
+    new CompletionProvider(connection, forest);
+    new DiagnosticsProvider(connection, elmWorkspace);
+    new ElmFormatProvider(connection, elmWorkspace);
   }
 }
