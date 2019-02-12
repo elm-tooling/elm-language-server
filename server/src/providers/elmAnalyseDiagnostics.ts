@@ -1,16 +1,8 @@
 import * as path from "path";
-import request = require("request");
 import { IConnection } from "vscode-languageserver";
 import URI from "vscode-uri";
-import WebSocket = require("ws");
 import { execCmd } from "../util/elmUtils";
 import { IElmIssue, IElmIssueRegion } from "./diagnosticsProvider";
-
-enum ElmAnalyseServerState {
-    NotRunning = 1,
-    PortInUse,
-    Running,
-}
 
 interface IElmAnalyseMessage {
     type: string;
@@ -30,8 +22,6 @@ export class ElmAnalyseDiagnostics {
 
     private connection: IConnection;
     private elmWorkspaceFolder: URI;
-    private wsPath = "ws://localhost:6010/state";
-    private analyseSocket: WebSocket = new WebSocket(this.wsPath);
 
     constructor(connection: IConnection, elmWorkspaceFolder: URI) {
         this.connection = connection;
@@ -42,57 +32,18 @@ export class ElmAnalyseDiagnostics {
         async (filePath: URI): Promise<IElmIssue[]> => {
             const compilerErrors: IElmIssue[] = [];
             try {
-                const processReady = await this.startAnalyseProcess();
+                const analyseMessage = await this.startAnalyseProcess();
 
-                if (processReady) {
-                    const analyseMessage = await this.initSocketClient();
-                    analyseMessage.forEach((element) => {
+                analyseMessage.forEach((element) => {
 
-                        compilerErrors.push(...this.parseMessage(this.elmWorkspaceFolder, element));
-                    });
-                }
+                    compilerErrors.push(...this.parseMessage(this.elmWorkspaceFolder, element));
+                });
+
             } catch (e) {
                 this.connection.console.error("Running Elm-analyse command failed");
             }
             return compilerErrors;
         }
-
-    private initSocketClient(): Promise<IElmAnalyseMessage[]> {
-        return new Promise<IElmAnalyseMessage[]>((resolve, reject) => {
-            try {
-                if (this.analyseSocket) {
-                    this.analyseSocket.close();
-                }
-                this.analyseSocket = new WebSocket(this.wsPath);
-                this.analyseSocket.on("message", (stateJson) => {
-                    try {
-                        const state = JSON.parse(stateJson.toString());
-                        const messages: IElmAnalyseMessage[] = state.messages;
-                        resolve(messages);
-                    } catch (e) {
-                        this.connection.window.showErrorMessage(
-                            "Running websocket against Elm-analyse failed. " +
-                            "Check if elm-analyse has been configured correctly.",
-                        );
-                        reject();
-                    }
-                });
-                this.analyseSocket.on("error", (e) => {
-                    this.connection.window.showErrorMessage(
-                        "Running websocket against Elm-analyse failed." +
-                        " Check if elm-analyse has been configured correctly.",
-                    );
-                    reject();
-                });
-            } catch (e) {
-                this.connection.window.showErrorMessage(
-                    "Running websocket against Elm-analyse failed. " +
-                    "If set to external - check if elm-analyse has been started in separate console.",
-                );
-                reject();
-            }
-        });
-    }
 
     private parseMessage(
         cwd: URI,
@@ -105,7 +56,7 @@ export class ElmAnalyseDiagnostics {
         messageInfoFileRegions.forEach((messageInfoFileRegion) => {
             const issue: IElmIssue = {
                 details: message.data.description,
-                file: path.join(cwd.fsPath, message.file),
+                file: path.join(cwd.toString(true), message.file),
                 overview: message.type,
                 region: messageInfoFileRegion,
                 subregion: "",
@@ -154,64 +105,22 @@ export class ElmAnalyseDiagnostics {
 
     private async startAnalyseProcess(
     ) {
-        const state = await checkElmAnalyseServerState();
-        if (state === ElmAnalyseServerState.Running) {
-            return true;
-        } else if (state === ElmAnalyseServerState.PortInUse) {
-            this.connection.window.showErrorMessage(`Port already in use by another process. Please stop the running
- process or select another port for elm-analyse.`);
-            return false;
-        } else {
-            const analyse = execCmd("elm-analyse", {
-                cmdArguments: ["-s", "-p", "6010"],
+        return new Promise<IElmAnalyseMessage[]>((resolve, reject) => {
+            return execCmd("elm-analyse", {
+                cmdArguments: ["--format=json"],
                 notFoundText: "Install Elm-analyse using npm i elm-analyse -g",
                 showMessageOnError: true,
 
-                onStart: () => analyse.stdin.write.bind(analyse.stdin),
+                onStdout: (data) => {
+                    const state = JSON.parse(data.toString());
+                    const messages: IElmAnalyseMessage[] = state.messages;
+                    resolve(messages);
+                },
             },
                 this.elmWorkspaceFolder,
                 this.connection,
             );
-            return true;
-        }
-    }
-}
-
-function checkElmAnalyseServerState(
-): Thenable<ElmAnalyseServerState> {
-    const result = getElmAnalyseServerInfo("http://localhost:6010").then(
-        (info: string) => {
-            if (info.startsWith("Elm Analyse")) {
-                return ElmAnalyseServerState.Running;
-            } else {
-                return ElmAnalyseServerState.PortInUse;
-            }
-        },
-        (err) => {
-            return ElmAnalyseServerState.NotRunning;
-        },
-    );
-    return result;
-}
-
-function getElmAnalyseServerInfo(url: string): Thenable<any> {
-    const titleRegex = /(<title\>(.+?)<\/title)\>/gi;
-    return new Promise((resolve, reject) => {
-        request(url, (err, _, body) => {
-            if (err) {
-                reject(err);
-            } else {
-                try {
-                    let info = "";
-                    const match = titleRegex.exec(body);
-                    if (match && match[2]) {
-                        info = match[2];
-                        resolve(info);
-                    }
-                } catch (e) {
-                    reject(e);
-                }
-            }
         });
-    });
+    }
+
 }

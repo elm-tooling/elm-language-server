@@ -14,24 +14,29 @@ export async function activate(context: ExtensionContext) {
     const elmJsons = await workspace.findFiles("**/elm.json", "**/@(node_modules|elm-stuff)/**");
     elmJsons.forEach((uri) => {
         const workspaceFolder = workspace.getWorkspaceFolder(uri);
+        const elmJsonFolder = getElmJsonFolder(uri);
         if (workspaceFolder) {
-            startClient(workspaceFolder.uri.fsPath, context, uri);
+            startClient(workspaceFolder.uri.fsPath, context, elmJsonFolder);
         }
     });
 
     const watcher = workspace.createFileSystemWatcher("**/elm.json", false, true, false);
     watcher.onDidCreate((uri) => {
         const workspaceFolder = workspace.getWorkspaceFolder(uri);
+        const elmJsonFolder = getElmJsonFolder(uri);
         if (workspaceFolder) {
-            startClient(workspaceFolder.uri.fsPath, context, uri);
+            startClient(workspaceFolder.uri.fsPath, context, elmJsonFolder);
         }
     });
     watcher.onDidDelete((uri) => {
-        const workspaceFolder = workspace.getWorkspaceFolder(uri);
-        if (workspaceFolder) {
+        const workspaceFolder = workspace.getWorkspaceFolder(uri); if (workspaceFolder) {
             stopClient(workspaceFolder.uri);
         }
     });
+}
+
+function getElmJsonFolder(uri: Uri): Uri {
+    return Uri.parse(uri.fsPath.replace("elm.json", ""));
 }
 
 async function stopClient(workspaceUri: Uri) {
@@ -53,7 +58,7 @@ async function stopClient(workspaceUri: Uri) {
 }
 
 const clients: Map<string, LanguageClient> = new Map();
-function startClient(clientWorkspace: string, context: ExtensionContext, elmJson: Uri) {
+function startClient(clientWorkspace: string, context: ExtensionContext, elmWorkspace: Uri) {
     if (clients.has(clientWorkspace)) {
         // Client was already started for this directory
         return;
@@ -86,7 +91,7 @@ function startClient(clientWorkspace: string, context: ExtensionContext, elmJson
                 scheme: "file",
             },
         ],
-        initializationOptions: { elmJson: elmJson.fsPath },
+        initializationOptions: { elmWorkspace: elmWorkspace.toString() },
         // Notify the server about file changes to 'elm.json'
         synchronize: {
             fileEvents: workspace.createFileSystemWatcher(path.join(clientWorkspace, "**/elm.json")),

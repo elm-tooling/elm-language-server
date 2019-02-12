@@ -21,7 +21,7 @@ export class Server implements ILanguageServer {
   ) {
     this.calculator = new CapabilityCalculator(params.capabilities);
     if (params.workspaceFolders && params.workspaceFolders.length > 0) {
-      const elmWorkspace = URI.parse(params.initializationOptions.elmJson);
+      const elmWorkspace = URI.parse(params.initializationOptions.elmWorkspace);
       const forest = new Forest();
       const workspaceFolder = params.workspaceFolders[0];
       connection.console.info(`Initializing Elm language server for workspace
