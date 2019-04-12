@@ -1,4 +1,8 @@
-import { Connection, InitializeParams, InitializeResult, WorkspaceFolder } from "vscode-languageserver";
+import {
+  Connection,
+  InitializeParams,
+  InitializeResult,
+} from "vscode-languageserver";
 import URI from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { Forest } from "./forest";
@@ -15,10 +19,7 @@ export interface ILanguageServer {
 export class Server implements ILanguageServer {
   private calculator: CapabilityCalculator;
 
-  constructor(
-    connection: Connection,
-    params: InitializeParams,
-  ) {
+  constructor(connection: Connection, params: InitializeParams) {
     this.calculator = new CapabilityCalculator(params.capabilities);
     if (params.workspaceFolders && params.workspaceFolders.length > 0) {
       const elmWorkspace = URI.parse(params.initializationOptions.elmWorkspace);
@@ -38,7 +39,11 @@ export class Server implements ILanguageServer {
     };
   }
 
-  private registerProviders(connection: Connection, forest: Forest, elmWorkspace: URI): void {
+  private registerProviders(
+    connection: Connection,
+    forest: Forest,
+    elmWorkspace: URI,
+  ): void {
     // tslint:disable:no-unused-expression
     new ASTProvider(connection, forest);
     new FoldingRangeProvider(connection, forest);

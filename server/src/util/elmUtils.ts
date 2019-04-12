@@ -41,7 +41,7 @@ export function execCmd(
   cmd: string,
   options: IExecCmdOptions = {},
   elmRootPath: URI,
-  connection: IConnection
+  connection: IConnection,
 ): IExecutingCmd {
   const { onStart, onStdout, onStderr, onExit } = options;
   let childProcess: cp.ChildProcess;
@@ -55,7 +55,7 @@ export function execCmd(
     childProcess = cp.exec(
       fullCommand,
       { cwd: elmRootPath.fsPath },
-      handleExit
+      handleExit,
     );
 
     if (!childProcess.stdout) {
@@ -88,7 +88,7 @@ export function execCmd(
     function handleExit(
       error: cp.ExecException | null,
       stdout: string | Buffer,
-      stderr: string | Buffer
+      stderr: string | Buffer,
     ) {
       IexecutingCmd.isRunning = false;
       if (onExit) {
@@ -107,7 +107,7 @@ export function execCmd(
             if (cmdWasNotFound) {
               const notFoundText = options ? options.notFoundText : "";
               connection.window.showErrorMessage(
-                `${cmdName} is not available in your path. ` + notFoundText
+                `${cmdName} is not available in your path. ` + notFoundText,
               );
             } else {
               connection.window.showErrorMessage(error.message);

@@ -4,7 +4,7 @@ import {
   FoldingRangeKind,
   FoldingRangeRequest,
   FoldingRangeRequestParam,
-  IConnection
+  IConnection,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
 
@@ -17,7 +17,7 @@ export class FoldingRangeProvider {
     "func_statement",
     "block_comment",
     "record_type",
-    "record_expr"
+    "record_expr",
   ]);
 
   constructor(connection: IConnection, forest: IForest) {
@@ -26,12 +26,12 @@ export class FoldingRangeProvider {
 
     this.connection.onRequest(
       FoldingRangeRequest.type,
-      this.handleFoldingRange
+      this.handleFoldingRange,
     );
   }
 
   protected handleFoldingRange = async (
-    param: FoldingRangeRequestParam
+    param: FoldingRangeRequestParam,
   ): Promise<FoldingRange[]> => {
     const folds: FoldingRange[] = [];
 
@@ -50,7 +50,7 @@ export class FoldingRangeProvider {
           endLine: endNode.endPosition.row,
           kind: FoldingRangeKind.Region,
           startCharacter: node.startPosition.column,
-          startLine: node.startPosition.row
+          startLine: node.startPosition.row,
         });
       }
       for (const childNode of node.children) {
