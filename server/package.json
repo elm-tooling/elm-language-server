@@ -13,19 +13,19 @@
   },
   "dependencies": {
     "fast-diff": "^1.2.0",
-    "prebuild-install": "^5.2.4",
+    "prebuild-install": "^5.2.5",
     "request": "^2.88.0",
-    "tree-sitter": "^0.13.23",
-    "tree-sitter-elm": "^1.0.2",
+    "tree-sitter": "^0.14.0",
+    "tree-sitter-elm": "^2.0.0",
     "vscode-languageserver": "^5.2.1",
     "vscode-uri": "^1.0.6",
-    "ws": "^6.1.3"
+    "ws": "^6.2.1"
   },
   "devDependencies": {
-    "@types/node": "10.12.23",
+    "@types/node": "11.13.4",
     "@types/request": "^2.48.1",
     "@types/ws": "^6.0.1",
-    "prebuild": "^8.1.2"
+    "prebuild": "^8.2.1"
   },
   "scripts": {}
 }
