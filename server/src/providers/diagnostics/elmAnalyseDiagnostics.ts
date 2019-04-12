@@ -1,7 +1,7 @@
 import * as path from "path";
 import { IConnection } from "vscode-languageserver";
 import URI from "vscode-uri";
-import { execCmd } from "../util/elmUtils";
+import { execCmd } from "../../util/elmUtils";
 import { IElmIssue, IElmIssueRegion } from "./diagnosticsProvider";
 
 interface IElmAnalyseMessage {

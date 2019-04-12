@@ -30,7 +30,7 @@ export class CompletionProvider {
 
     const traverse: (node: SyntaxNode) => void = (node: SyntaxNode): void => {
       if (
-        node.type === "func_identifier" &&
+        node.type === "exposed_value" &&
         !completions.some(a => a.label === node.text)
       ) {
         completions.push({
@@ -38,11 +38,19 @@ export class CompletionProvider {
           label: node.text,
         });
       } else if (
-        node.type === "custom_type_identifier" &&
+        node.type === "exposed_type" &&
         !completions.some(a => a.label === node.text)
       ) {
         completions.push({
           kind: 22,
+          label: node.text,
+        });
+      } else if (
+        node.type === "exposed_operator" &&
+        !completions.some(a => a.label === node.text)
+      ) {
+        completions.push({
+          kind: 24,
           label: node.text,
         });
       }

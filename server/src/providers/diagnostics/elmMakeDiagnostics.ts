@@ -7,7 +7,7 @@ import {
   Range,
 } from "vscode-languageserver";
 import URI from "vscode-uri";
-import * as utils from "../util/elmUtils";
+import * as utils from "../../util/elmUtils";
 import { IElmIssue } from "./diagnosticsProvider";
 
 export class ElmMakeDiagnostics {

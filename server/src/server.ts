@@ -8,7 +8,7 @@ import { CapabilityCalculator } from "./capabilityCalculator";
 import { Forest } from "./forest";
 import { ASTProvider } from "./providers/astProvider";
 import { CompletionProvider } from "./providers/completionProvider";
-import { DiagnosticsProvider } from "./providers/diagnosticsProvider";
+import { DiagnosticsProvider } from "./providers/diagnostics/diagnosticsProvider";
 import { ElmFormatProvider } from "./providers/elmFormatProvider";
 import { FoldingRangeProvider } from "./providers/foldingProvider";
 
