@@ -1,88 +1,92 @@
 {
-    "name": "elm-vscode-ls",
-    "displayName": "Elm",
-    "description": "VSCode plugin using the elm-language-server",
-    "author": "Kolja Lampe",
-    "license": "MIT",
-    "version": "1.0.0",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/razzeee/elm-language-server"
-    },
-    "categories": [
-        "Programming Languages"
-    ],
-    "keywords": [
-        "elm"
-    ],
-    "engines": {
-        "vscode": "^1.30.0"
-    },
-    "activationEvents": [
-        "workspaceContains:**/elm.json"
-    ],
-    "main": "./client/out/extension",
-    "contributes": {
-        "languages": [
-            {
-                "id": "elm",
-                "aliases": [
-                    "Elm",
-                    "elm"
-                ],
-                "extensions": [
-                    ".elm"
-                ],
-                "configuration": "./language-configuration.json"
-            }
+  "name": "elm-vscode-ls",
+  "displayName": "Elm",
+  "description": "VSCode plugin using the elm-language-server",
+  "author": "Kolja Lampe",
+  "license": "MIT",
+  "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/razzeee/elm-language-server"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "elm"
+  ],
+  "engines": {
+    "vscode": "^1.30.0"
+  },
+  "activationEvents": [
+    "workspaceContains:**/elm.json"
+  ],
+  "main": "./client/out/extension",
+  "contributes": {
+    "languages": [
+      {
+        "id": "elm",
+        "aliases": [
+          "Elm",
+          "elm"
         ],
-        "grammars": [
-            {
-                "scopeName": "markdown.elm.codeblock",
-                "path": "./syntaxes/codeblock.json",
-                "injectTo": [
-                    "text.html.markdown"
-                ],
-                "embeddedLanguages": {
-                    "meta.embedded.block.elm": "elm",
-                    "meta.embedded.block.glsl": "glsl"
-                }
-            },
-            {
-                "language": "elm",
-                "scopeName": "source.elm",
-                "path": "./syntaxes/elm.json"
-            }
+        "extensions": [
+          ".elm"
         ],
-        "configuration": {
-            "type": "object",
-            "title": "Debug configuration",
-            "properties": {
-                "elmLS.trace.server": {
-                    "scope": "window",
-                    "type": "string",
-                    "enum": [
-                        "off",
-                        "messages",
-                        "verbose"
-                    ],
-                    "default": "off",
-                    "description": "Traces the communication between VS Code and the language server."
-                }
-            }
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "scopeName": "markdown.elm.codeblock",
+        "path": "./syntaxes/codeblock.json",
+        "injectTo": [
+          "text.html.markdown"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.elm": "elm",
+          "meta.embedded.block.glsl": "glsl"
         }
-    },
-    "scripts": {
-        "vscode:prepublish": "cd client && npm run update-vscode && cd .. && npm run compile",
-        "compile": "tsc -b",
-        "watch": "tsc -b -w",
-        "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
-        "test": "sh ./scripts/e2e.sh"
-    },
-    "devDependencies": {
-        "@types/mocha": "^5.2.6",
-        "@types/node": "^11.13.4",
-        "tslint": "^5.15.0",
-        "typescript": "3.4.3"
+      },
+      {
+        "language": "elm",
+        "scopeName": "source.elm",
+        "path": "./syntaxes/elm.json"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Debug configuration",
+      "properties": {
+        "elmLS.trace.server": {
+          "scope": "window",
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Traces the communication between VS Code and the language server."
+        }
+      }
     }
+  },
+  "scripts": {
+    "vscode:prepublish": "cd client && npm run update-vscode && cd .. && npm run compile",
+    "compile": "tsc -b",
+    "watch": "tsc -b -w",
+    "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
+    "test": "sh ./scripts/e2e.sh",
+    "lint": "tslint -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/mocha": "^5.2.6",
+    "@types/node": "^11.13.4",
+    "prettier": "^1.16.4",
+    "tslint": "^5.15.0",
+    "tslint-config-prettier": "^1.18.0",
+    "tslint-plugin-prettier": "^2.0.1",
+    "typescript": "3.4.3"
+  }
 }

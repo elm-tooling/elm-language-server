@@ -48,13 +48,11 @@ export class ElmMakeDiagnostics {
             } else {
                 make = cp.spawn(makeCommand, args, { cwd });
             }
-            // output is actually optional
-            // (fixed in https://github.com/Microsoft/vscode/commit/b4917afe9bdee0e9e67f4094e764f6a72a997c70,
-            // but unreleased at this time)
+
+            if (!make.stderr) { return; }
             const errorLinesFromElmMake: readline.ReadLine = readline.createInterface(
                 {
                     input: make.stderr,
-                    output: undefined,
                 },
             );
             const lines: IElmIssue[] = [];
