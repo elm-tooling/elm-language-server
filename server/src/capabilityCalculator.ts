@@ -25,6 +25,7 @@ export class CapabilityCalculator {
       },
       documentFormattingProvider: true,
       foldingRangeProvider: true,
+      hoverProvider: true,
       textDocumentSync: TextDocumentSyncKind.Full,
     };
   }

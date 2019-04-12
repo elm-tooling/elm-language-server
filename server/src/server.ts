@@ -11,6 +11,7 @@ import { CompletionProvider } from "./providers/completionProvider";
 import { DiagnosticsProvider } from "./providers/diagnostics/diagnosticsProvider";
 import { ElmFormatProvider } from "./providers/elmFormatProvider";
 import { FoldingRangeProvider } from "./providers/foldingProvider";
+import { HoverProvider } from "./providers/hoverProvider";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -48,6 +49,7 @@ export class Server implements ILanguageServer {
     new ASTProvider(connection, forest);
     new FoldingRangeProvider(connection, forest);
     new CompletionProvider(connection, forest);
+    new HoverProvider(connection, forest);
     new DiagnosticsProvider(connection, elmWorkspace);
     new ElmFormatProvider(connection, elmWorkspace);
   }
