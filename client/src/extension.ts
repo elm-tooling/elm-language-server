@@ -1,7 +1,14 @@
 "use strict";
 
 import * as path from "path";
-import { ExtensionContext, RelativePattern, Uri, workspace } from "vscode";
+import {
+  ExtensionContext,
+  RelativePattern,
+  Uri,
+  workspace,
+  OutputChannel,
+  window as Window,
+} from "vscode";
 import {
   LanguageClient,
   LanguageClientOptions,
@@ -92,7 +99,9 @@ function startClient(
   );
   // The debug options for the server
   // --inspect=6009: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
-  const debugOptions = { execArgv: ["--nolazy", "--inspect=6009"] };
+  let debugOptions = {
+    execArgv: ["--nolazy", `--inspect=${6010 + clients.size}`],
+  };
 
   // If the extension is launched in debug mode then the debug server options are used
   // Otherwise the run options are used
@@ -104,6 +113,7 @@ function startClient(
     },
     run: { module: serverModule, transport: TransportKind.ipc },
   };
+  let outputChannel: OutputChannel = Window.createOutputChannel("elm-lsp");
 
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
@@ -121,6 +131,8 @@ function startClient(
         path.join(clientWorkspace, "**/elm.json"),
       ),
     },
+    diagnosticCollectionName: "elm-lsp",
+    outputChannel: outputChannel,
   };
 
   // Create the language client and start the client.
@@ -137,7 +149,7 @@ function startClient(
   clients.set(clientWorkspace, languageClient);
 }
 
-export function deactivate(): Thenable<void> {
+export function deactivate(): Thenable<void> | undefined {
   const promises: Array<Thenable<void>> = [];
   for (const client of clients.values()) {
     promises.push(client.stop());
