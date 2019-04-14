@@ -23,7 +23,11 @@ export class ASTProvider {
     this.connection = connection;
     this.forest = forest;
     this.parser = new Parser();
-    this.parser.setLanguage(TreeSitterElm);
+    try {
+      this.parser.setLanguage(TreeSitterElm);
+    } catch (error) {
+      this.connection.console.info(error.toString());
+    }
 
     this.connection.onDidOpenTextDocument(this.handleOpenTextDocument);
     this.connection.onDidChangeTextDocument(this.handleChangeTextDocument);
