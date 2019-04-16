@@ -46,7 +46,7 @@ export class Server implements ILanguageServer {
     elmWorkspace: URI,
   ): void {
     // tslint:disable:no-unused-expression
-    new ASTProvider(connection, forest);
+    new ASTProvider(connection, forest, elmWorkspace);
     new FoldingRangeProvider(connection, forest);
     new CompletionProvider(connection, forest);
     new HoverProvider(connection, forest);

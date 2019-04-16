@@ -1,3 +1,4 @@
+var glob = require("glob");
 import * as Parser from "tree-sitter";
 // tslint:disable-next-line no-duplicate-imports
 import { Point, SyntaxNode, Tree } from "tree-sitter";
@@ -5,12 +6,11 @@ import * as TreeSitterElm from "tree-sitter-elm";
 import {
   DidChangeTextDocumentParams,
   DidCloseTextDocumentParams,
-  DidOpenTextDocumentParams,
   IConnection,
   TextDocumentIdentifier,
-  TextDocumentItem,
   VersionedTextDocumentIdentifier,
 } from "vscode-languageserver";
+import URI from "vscode-uri";
 import { IForest } from "../forest";
 import { Position } from "../position";
 
@@ -18,10 +18,12 @@ export class ASTProvider {
   private connection: IConnection;
   private forest: IForest;
   private parser: Parser;
+  private elmWorkspace: URI;
 
-  constructor(connection: IConnection, forest: IForest) {
+  constructor(connection: IConnection, forest: IForest, elmWorkspace: URI) {
     this.connection = connection;
     this.forest = forest;
+    this.elmWorkspace = elmWorkspace;
     this.parser = new Parser();
     try {
       this.parser.setLanguage(TreeSitterElm);
@@ -29,18 +31,33 @@ export class ASTProvider {
       this.connection.console.info(error.toString());
     }
 
-    this.connection.onDidOpenTextDocument(this.handleOpenTextDocument);
     this.connection.onDidChangeTextDocument(this.handleChangeTextDocument);
     this.connection.onDidCloseTextDocument(this.handleCloseTextDocument);
+
+    this.initalizeWorkspace();
   }
 
-  protected handleOpenTextDocument = async (
-    params: DidOpenTextDocumentParams,
-  ): Promise<void> => {
-    this.connection.console.info("Opened text document, going to parse it");
-    const document: TextDocumentItem = params.textDocument;
-    const tree: Tree = this.parser.parse(document.text);
-    this.forest.setTree(document.uri, tree);
+  protected initalizeWorkspace = async (): Promise<void> => {
+    try {
+      const path = this.elmWorkspace.toString(true) + "elm.json";
+      this.connection.console.info(path); // output 'testing'
+      const elmJson = require(path);
+      const source_dirs = elmJson["source-directories"];
+      source_dirs.forEach(element => {
+        // Find elm files and feed them to tree sitter
+      });
+    } catch (error) {
+      this.connection.console.info(error.toString());
+    }
+    // this.connection.console.info("Initializing workspace");
+    // glob("**/*.elm", function(er, files) {
+    //   // files is an array of filenames.
+    //   // If the `nonull` option is set, and nothing
+    //   // was found, then files is ["**/*.js"]
+    //   // er is an error object or null.
+    //   const tree: Tree = this.parser.parse(document.text);
+    //   this.forest.setTree(document.uri, tree);
+    // });
   };
 
   protected handleChangeTextDocument = async (
