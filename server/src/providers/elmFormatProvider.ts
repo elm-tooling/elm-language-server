@@ -1,4 +1,4 @@
-import * as diff from "fast-diff";
+import diff from "fast-diff";
 import * as fs from "fs";
 import {
   DocumentFormattingParams,

@@ -1,5 +1,12 @@
-var glob = require("glob");
-import * as Parser from "tree-sitter";
+const glob = require("glob");
+const fs = require("fs");
+const util = require("util");
+
+// Convert fs.readFile into Promise version of same
+const readFile = util.promisify(fs.readFile);
+const globPromise = util.promisify(glob);
+
+import Parser from "tree-sitter";
 // tslint:disable-next-line no-duplicate-imports
 import { Point, SyntaxNode, Tree } from "tree-sitter";
 import * as TreeSitterElm from "tree-sitter-elm";
@@ -43,8 +50,20 @@ export class ASTProvider {
       this.connection.console.info(path); // output 'testing'
       const elmJson = require(path);
       const source_dirs = elmJson["source-directories"];
-      source_dirs.forEach(element => {
+      source_dirs.forEach(async (_element: string) => {
         // Find elm files and feed them to tree sitter
+
+        const files = await globPromise(
+          this.elmWorkspace.toString(true) + "**/*.elm",
+          {},
+        );
+
+        files.forEach(async (a: string) => {
+          const fileContent: string = await readFile(a.toString(), "utf8");
+          let tree: Tree | undefined = undefined;
+          tree = this.parser.parse(fileContent);
+          this.forest.setTree(URI.file(a).toString(), tree);
+        });
       });
     } catch (error) {
       this.connection.console.info(error.toString());
