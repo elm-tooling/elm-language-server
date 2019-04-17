@@ -26,6 +26,14 @@ export class CapabilityCalculator {
       documentFormattingProvider: true,
       foldingRangeProvider: true,
       hoverProvider: true,
+      definitionProvider: true,
+      referencesProvider: true,
+      documentSymbolProvider: true,
+      workspaceSymbolProvider: true,
+      codeLensProvider: {
+        resolveProvider: true,
+      },
+      renameProvider: true,
       textDocumentSync: TextDocumentSyncKind.Full,
     };
   }

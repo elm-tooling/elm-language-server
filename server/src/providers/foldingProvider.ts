@@ -14,7 +14,7 @@ export class FoldingRangeProvider {
   private readonly FOLD_CONSTRUCTS: Set<string> = new Set([
     "if",
     "case",
-    "func_statement",
+    "value_declaration",
     "block_comment",
     "record_type",
     "record_expr",

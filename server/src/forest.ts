@@ -1,13 +1,14 @@
 import { Tree } from "tree-sitter";
 
 export interface IForest {
+  trees: Map<string, Tree | undefined>;
   getTree(uri: string): Tree | undefined;
   setTree(uri: string, tree: Tree | undefined): void;
   removeTree(uri: string): boolean;
 }
 
 export class Forest implements IForest {
-  private trees: Map<string, Tree | undefined>;
+  public trees: Map<string, Tree | undefined>;
 
   constructor() {
     this.trees = new Map();

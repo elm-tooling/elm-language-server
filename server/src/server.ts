@@ -2,6 +2,7 @@ import {
   Connection,
   InitializeParams,
   InitializeResult,
+  CodeLens,
 } from "vscode-languageserver";
 import URI from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
@@ -12,6 +13,12 @@ import { DiagnosticsProvider } from "./providers/diagnostics/diagnosticsProvider
 import { ElmFormatProvider } from "./providers/elmFormatProvider";
 import { FoldingRangeProvider } from "./providers/foldingProvider";
 import { HoverProvider } from "./providers/hoverProvider";
+import { DefinitionProvider } from "./providers/definitionProvider";
+import { ReferencesProvider } from "./providers/referencesProvider";
+import { DocumentSymbolProvider } from "./providers/documentSymbolProvider";
+import { WorkspaceSymbolProvider } from "./providers/workspaceSymbolProvider";
+import { CodeLensProvider } from "./providers/codeLensProvider";
+import { RenameProvider } from "./providers/renameProvider";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -52,5 +59,11 @@ export class Server implements ILanguageServer {
     new HoverProvider(connection, forest);
     new DiagnosticsProvider(connection, elmWorkspace);
     new ElmFormatProvider(connection, elmWorkspace);
+    new DefinitionProvider(connection, forest);
+    new ReferencesProvider(connection, forest);
+    new DocumentSymbolProvider(connection, forest);
+    new WorkspaceSymbolProvider(connection, forest);
+    new CodeLensProvider(connection, forest);
+    new RenameProvider(connection, forest);
   }
 }

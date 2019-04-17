@@ -153,7 +153,6 @@ export class ASTProvider {
     endIndex: number,
     tree: Tree,
   ): Point => {
-    // TODO handle case where this method call fails for whatever reason
     const node: SyntaxNode = tree.rootNode.descendantForIndex(
       startIndex,
       endIndex,
