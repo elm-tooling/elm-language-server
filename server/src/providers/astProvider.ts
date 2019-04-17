@@ -6,10 +6,8 @@ const util = require("util");
 const readFile = util.promisify(fs.readFile);
 const globPromise = util.promisify(glob);
 
-import Parser from "tree-sitter";
-// tslint:disable-next-line no-duplicate-imports
-import { Point, SyntaxNode, Tree } from "tree-sitter";
-import * as TreeSitterElm from "tree-sitter-elm";
+import Parser, { Point, SyntaxNode, Tree } from "tree-sitter";
+import TreeSitterElm from "tree-sitter-elm";
 import {
   DidChangeTextDocumentParams,
   DidCloseTextDocumentParams,
@@ -41,42 +39,37 @@ export class ASTProvider {
     this.connection.onDidChangeTextDocument(this.handleChangeTextDocument);
     this.connection.onDidCloseTextDocument(this.handleCloseTextDocument);
 
-    this.initalizeWorkspace();
+    this.initializeWorkspace();
   }
 
-  protected initalizeWorkspace = async (): Promise<void> => {
+  protected initializeWorkspace = async (): Promise<void> => {
     try {
       const path = this.elmWorkspace.toString(true) + "elm.json";
-      this.connection.console.info(path); // output 'testing'
+      this.connection.console.info("Reading elm.json from " + path); // output 'testing'
+      // Find elm files and feed them to tree sitter
       const elmJson = require(path);
-      const source_dirs = elmJson["source-directories"];
-      source_dirs.forEach(async (_element: string) => {
-        // Find elm files and feed them to tree sitter
-
-        const files = await globPromise(
-          this.elmWorkspace.toString(true) + "**/*.elm",
-          {},
-        );
-
-        files.forEach(async (a: string) => {
-          const fileContent: string = await readFile(a.toString(), "utf8");
-          let tree: Tree | undefined = undefined;
-          tree = this.parser.parse(fileContent);
-          this.forest.setTree(URI.file(a).toString(), tree);
-        });
+      const sourceDirs = elmJson["source-directories"];
+      const elmFolders: string[] = [];
+      sourceDirs.forEach(async (folder: string) => {
+        elmFolders.push(this.elmWorkspace.toString(true) + folder);
       });
+      this.connection.console.info(elmFolders.toString()); // output 'testing'
+      const elmFilePaths = await this.findElmFilesInFolders(elmFolders);
+      this.connection.console.info(
+        "Found " +
+          elmFilePaths.length.toString() +
+          " files to add to the project",
+      );
+
+      for (const filePath of elmFilePaths) {
+        const fileContent: string = await readFile(filePath.toString(), "utf8");
+        let tree: Tree | undefined;
+        tree = this.parser.parse(fileContent);
+        this.forest.setTree(URI.file(filePath).toString(), tree);
+      }
     } catch (error) {
       this.connection.console.info(error.toString());
     }
-    // this.connection.console.info("Initializing workspace");
-    // glob("**/*.elm", function(er, files) {
-    //   // files is an array of filenames.
-    //   // If the `nonull` option is set, and nothing
-    //   // was found, then files is ["**/*.js"]
-    //   // er is an error object or null.
-    //   const tree: Tree = this.parser.parse(document.text);
-    //   this.forest.setTree(document.uri, tree);
-    // });
   };
 
   protected handleChangeTextDocument = async (
@@ -136,6 +129,20 @@ export class ASTProvider {
     const document: TextDocumentIdentifier = params.textDocument;
     this.forest.removeTree(document.uri);
   };
+
+  private async findElmFilesInFolders(elmFolders: string[]): Promise<string[]> {
+    let elmFilePaths: string[] = [];
+    for (const element of elmFolders) {
+      elmFilePaths = elmFilePaths.concat(
+        await this.findElmFilesInFolder(element),
+      );
+    }
+    return elmFilePaths;
+  }
+
+  private async findElmFilesInFolder(path: string): Promise<string[]> {
+    return await globPromise(path + "/**/*.elm", {});
+  }
 
   private buildTree = (text: string): Tree | undefined => {
     return this.parser.parse(text);
