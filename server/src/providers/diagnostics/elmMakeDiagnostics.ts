@@ -115,7 +115,7 @@ export class ElmMakeDiagnostics {
       make.on("error", (err: Error) => {
         errorLinesFromElmMake.close();
         if (err && (err as any).code === "ENOENT") {
-          connection.console.log(
+          connection.window.showErrorMessage(
             "The 'elm make' compiler is not available.  Install Elm from http://elm-lang.org/.",
           );
           resolve([]);
