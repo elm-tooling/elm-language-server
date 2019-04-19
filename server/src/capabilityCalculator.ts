@@ -20,21 +20,21 @@ export class CapabilityCalculator {
       // Incremental sync is disabled for now due to not being able to get the
       // old text in ASTProvider
       // textDocumentSync: TextDocumentSyncKind.Incremental,
-      completionProvider: {
-        triggerCharacters: ["."],
-      },
-      documentFormattingProvider: true,
-      foldingRangeProvider: true,
-      hoverProvider: true,
-      definitionProvider: true,
-      referencesProvider: true,
-      documentSymbolProvider: true,
-      workspaceSymbolProvider: true,
       codeLensProvider: {
         resolveProvider: true,
       },
+      completionProvider: {
+        triggerCharacters: ["."],
+      },
+      definitionProvider: true,
+      documentFormattingProvider: true,
+      documentSymbolProvider: true,
+      foldingRangeProvider: true,
+      hoverProvider: true,
+      referencesProvider: true,
       renameProvider: true,
       textDocumentSync: TextDocumentSyncKind.Full,
+      workspaceSymbolProvider: true,
     };
   }
 }

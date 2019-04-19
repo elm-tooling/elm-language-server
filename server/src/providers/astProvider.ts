@@ -65,7 +65,7 @@ export class ASTProvider {
         const fileContent: string = await readFile(filePath.toString(), "utf8");
         let tree: Tree | undefined;
         tree = this.parser.parse(fileContent);
-        this.forest.setTree(URI.file(filePath).toString(), tree);
+        this.forest.setTree(URI.file(filePath).toString(), true, true, tree);
       }
     } catch (error) {
       this.connection.console.info(error.toString());
@@ -78,49 +78,46 @@ export class ASTProvider {
     this.connection.console.info("Changed text document, going to parse it");
     const document: VersionedTextDocumentIdentifier = params.textDocument;
     let tree: Tree | undefined = this.forest.getTree(document.uri);
-    if (tree !== undefined) {
-      for (const changeEvent of params.contentChanges) {
-        if (changeEvent.range && changeEvent.rangeLength) {
-          // range is range of the change. end is exclusive
-          // rangeLength is length of text removed
-          // text is new text
-          const { range, rangeLength, text } = changeEvent;
-          const startIndex: number = range.start.line * range.start.character;
-          const oldEndIndex: number = startIndex + rangeLength - 1;
-          if (tree) {
-            tree.edit({
-              // end index for new version of text
-              newEndIndex: range.end.line * range.end.character - 1,
-              // position in new doc change ended
-              newEndPosition: Position.FROM_VS_POSITION(
-                range.end,
-              ).toTSPosition(),
+    if (tree === undefined) return;
 
-              // end index for old version of text
-              oldEndIndex,
-              // position in old doc change ended.
-              oldEndPosition: this.computeEndPosition(
-                startIndex,
-                oldEndIndex,
-                tree,
-              ),
+    for (const changeEvent of params.contentChanges) {
+      if (changeEvent.range && changeEvent.rangeLength) {
+        // range is range of the change. end is exclusive
+        // rangeLength is length of text removed
+        // text is new text
+        const { range, rangeLength, text } = changeEvent;
+        const startIndex: number = range.start.line * range.start.character;
+        const oldEndIndex: number = startIndex + rangeLength - 1;
+        if (tree) {
+          tree.edit({
+            // end index for new version of text
+            newEndIndex: range.end.line * range.end.character - 1,
+            // position in new doc change ended
+            newEndPosition: Position.FROM_VS_POSITION(range.end).toTSPosition(),
 
-              // index in old doc the change started
+            // end index for old version of text
+            oldEndIndex,
+            // position in old doc change ended.
+            oldEndPosition: this.computeEndPosition(
               startIndex,
-              // position in old doc change started
-              startPosition: Position.FROM_VS_POSITION(
-                range.start,
-              ).toTSPosition(),
-            });
-          }
-          tree = this.parser.parse(text, tree);
-        } else {
-          tree = this.buildTree(changeEvent.text);
+              oldEndIndex,
+              tree,
+            ),
+
+            // index in old doc the change started
+            startIndex,
+            // position in old doc change started
+            startPosition: Position.FROM_VS_POSITION(
+              range.start,
+            ).toTSPosition(),
+          });
         }
+        tree = this.parser.parse(text, tree);
+      } else {
+        tree = this.buildTree(changeEvent.text);
       }
     }
-
-    this.forest.setTree(document.uri, tree);
+    if (tree) this.forest.setTree(document.uri, true, true, tree);
   };
 
   protected handleCloseTextDocument = async (

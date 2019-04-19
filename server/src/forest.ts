@@ -1,28 +1,51 @@
-import { Tree } from "tree-sitter";
+import { elmTree } from "./elmTree";
 
 export interface IForest {
-  trees: Map<string, Tree | undefined>;
-  getTree(uri: string): Tree | undefined;
-  setTree(uri: string, tree: Tree | undefined): void;
-  removeTree(uri: string): boolean;
+  treeIndex: {
+    uri: string;
+    writeable: boolean;
+    referenced: boolean;
+    tree: elmTree;
+  }[];
+  getTree(uri: string): elmTree | undefined;
+  setTree(
+    uri: string,
+    writeable: boolean,
+    referenced: boolean,
+    tree: elmTree,
+  ): void;
+  removeTree(uri: string): void;
 }
 
 export class Forest implements IForest {
-  public trees: Map<string, Tree | undefined>;
+  public treeIndex: {
+    uri: string;
+    writeable: boolean;
+    referenced: boolean;
+    tree: elmTree;
+  }[] = [];
 
   constructor() {
-    this.trees = new Map();
+    this.treeIndex = new Array();
   }
 
-  public getTree(uri: string): Tree | undefined {
-    return this.trees.get(uri);
+  public getTree(uri: string): elmTree | undefined {
+    let result = this.treeIndex.find(tree => tree.uri === uri);
+    if (result) return result.tree;
+    else return undefined;
   }
 
-  public setTree(uri: string, tree: Tree | undefined): void {
-    this.trees.set(uri, tree);
+  public setTree(
+    uri: string,
+    writeable: boolean,
+    referenced: boolean,
+    tree: elmTree,
+  ): void {
+    this.treeIndex.push({ uri, writeable, referenced, tree });
   }
 
-  public removeTree(uri: string): boolean {
-    return this.trees.delete(uri);
+  public removeTree(uri: string): void {
+    // Not sure this is the best way to do this...
+    this.treeIndex = this.treeIndex.filter(tree => tree.uri !== uri);
   }
 }

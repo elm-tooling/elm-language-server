@@ -25,7 +25,7 @@ export class WorkspaceSymbolProvider {
   ): Promise<SymbolInformation[] | null | undefined> => {
     const symbolInformation: SymbolInformation[] = [];
 
-    for (const [path, tree] of this.forest.trees) {
+    this.forest.treeIndex.forEach(tree => {
       const traverse: (node: SyntaxNode) => void = (node: SyntaxNode): void => {
         if (node.type === "value_declaration") {
           symbolInformation.push(
@@ -39,7 +39,7 @@ export class WorkspaceSymbolProvider {
                 ),
                 Position.create(node.endPosition.row, node.endPosition.column),
               ),
-              path,
+              tree.uri,
             ),
           );
         }
@@ -48,9 +48,9 @@ export class WorkspaceSymbolProvider {
         }
       };
       if (tree) {
-        traverse(tree.rootNode);
+        traverse(tree.tree.rootNode);
       }
-    }
+    });
 
     return symbolInformation;
   };
