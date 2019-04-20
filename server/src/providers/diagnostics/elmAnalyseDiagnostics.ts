@@ -106,7 +106,8 @@ export class ElmAnalyseDiagnostics {
         "elm-analyse",
         {
           cmdArguments: ["--format=json"],
-          notFoundText: "Install Elm-analyse using npm i elm-analyse -g",
+          notFoundText:
+            "Install Elm-analyse using 'npm install -g elm-analyse'",
           showMessageOnError: true,
 
           onStdout: data => {

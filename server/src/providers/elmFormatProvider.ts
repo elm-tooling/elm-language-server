@@ -27,8 +27,7 @@ export class ElmFormatProvider {
       const text = fs.readFileSync(URI.parse(params.textDocument.uri).fsPath);
       const options = {
         cmdArguments: ["--stdin", "--elm-version 0.19", "--yes"],
-        notFoundText:
-          "Install Elm-format from https://github.com/avh4/elm-format",
+        notFoundText: "Install Elm-format via 'npm install -g elm-format",
       };
       const format = execCmd(
         "elm-format",
@@ -51,8 +50,8 @@ export class ElmFormatProvider {
             "Running elm-format failed. Check the file for syntax errors.",
           )
         : this.connection.window.showErrorMessage(
-            "Running elm-format failed. Install from " +
-              "https://github.com/avh4/elm-format and make sure it's on your path",
+            "Running elm-format failed. Install via " +
+              "'npm install -g elm-format' and make sure it's on your path",
           );
     }
   };
