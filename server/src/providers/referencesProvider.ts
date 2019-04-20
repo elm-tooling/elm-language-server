@@ -22,49 +22,59 @@ export class ReferencesProvider {
   protected handleReferencesRequest = async (
     param: ReferenceParams,
   ): Promise<Location[] | null | undefined> => {
-    const location: Location[] = [
-      Location.create(
-        "",
-        Range.create(Position.create(0, 0), Position.create(0, 0)),
-      ),
-    ];
-
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
-    const traverse: (node: SyntaxNode) => void = (node: SyntaxNode): void => {
-      //   if (
-      //     node.type === "exposed_value" &&
-      //     !completions.some(a => a.label === node.text)
-      //   ) {
-      //     completions.push({
-      //       kind: 3,
-      //       label: node.text,
-      //     });
-      //   } else if (
-      //     node.type === "exposed_type" &&
-      //     !completions.some(a => a.label === node.text)
-      //   ) {
-      //     completions.push({
-      //       kind: 22,
-      //       label: node.text,
-      //     });
-      //   } else if (
-      //     node.type === "exposed_operator" &&
-      //     !completions.some(a => a.label === node.text)
-      //   ) {
-      //     completions.push({
-      //       kind: 24,
-      //       label: node.text,
-      //     });
-      //   }
-      for (const childNode of node.children) {
-        traverse(childNode);
-      }
-    };
     if (tree) {
-      traverse(tree.rootNode);
+      let nodeAtPosition = tree.rootNode.namedDescendantForPosition({
+        row: param.position.line,
+        column: param.position.character,
+      });
+
+      // let nameNode: SyntaxNode | null = null;
+      // if (nodeAtPosition.type === "function_call_expr") {
+      //   nameNode = nodeAtPosition.firstNamedChild;
+      // } else if (nodeAtPosition.type === "lower_case_identifier") {
+      //   nameNode = nodeAtPosition;
+      // }
+
+      if (nodeAtPosition) {
+        let references = tree.rootNode
+          .descendantsOfType("value_expr")
+          .filter(
+            a =>
+              a.firstNamedChild !== null &&
+              a.firstNamedChild.type === "value_qid" &&
+              a.firstNamedChild.lastNamedChild !== null &&
+              a.firstNamedChild.lastNamedChild.text === nodeAtPosition.text,
+          );
+
+        let declaration = tree.rootNode
+          .descendantsOfType("function_declaration_left")
+          .find(
+            a =>
+              a.firstNamedChild !== null &&
+              a.firstNamedChild.type === "lower_case_identifier" &&
+              a.firstNamedChild.text === nodeAtPosition.text,
+          );
+
+        if (declaration) {
+          references.push(declaration);
+        }
+
+        if (references) {
+          return references.map(a =>
+            Location.create(
+              param.textDocument.uri,
+              Range.create(
+                Position.create(a.startPosition.row, a.startPosition.column),
+                Position.create(a.endPosition.row, a.endPosition.column),
+              ),
+            ),
+          );
+        }
+      }
     }
 
-    return location;
+    return undefined;
   };
 }

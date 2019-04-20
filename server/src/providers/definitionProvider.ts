@@ -30,7 +30,6 @@ export class DefinitionProvider {
         row: param.position.line,
         column: param.position.character,
       });
-      this.connection.console.log(node.toString());
 
       let declaration = tree.rootNode
         .descendantsOfType("function_declaration_left")
