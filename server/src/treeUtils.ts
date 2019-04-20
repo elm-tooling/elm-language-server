@@ -16,4 +16,28 @@ export class treeUtils {
   ): SyntaxNode[] | undefined {
     return node.children.filter(child => child.type === type);
   }
+
+  public static isExposedFunction(tree: Tree, functionName: string) {
+    let module = treeUtils.findFirstNamedChildOfType(
+      "module_declaration",
+      tree.rootNode,
+    );
+    if (module) {
+      let descendants = module.descendantsOfType("exposed_value");
+      return descendants.some(desc => desc.text === functionName);
+    }
+    return false;
+  }
+
+  public static isExposedType(tree: Tree, typeName: string) {
+    let module = treeUtils.findFirstNamedChildOfType(
+      "module_declaration",
+      tree.rootNode,
+    );
+    if (module) {
+      let descendants = module.descendantsOfType("exposed_type");
+      return descendants.some(desc => desc.text.startsWith(typeName));
+    }
+    return false;
+  }
 }

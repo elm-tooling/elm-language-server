@@ -40,15 +40,7 @@ export class CodeLensProvider {
           );
           if (declaration && declaration.firstNamedChild) {
             let functionName = declaration.firstNamedChild.text;
-
-            let module = treeUtils.findFirstNamedChildOfType(
-              "module_declaration",
-              tree.rootNode,
-            );
-            if (module) {
-              let descendants = module.descendantsOfType("exposed_value");
-              exposed = descendants.some(desc => desc.text === functionName);
-            }
+            exposed = treeUtils.isExposedFunction(tree, functionName);
           }
           if (
             node.previousNamedSibling &&
@@ -86,6 +78,34 @@ export class CodeLensProvider {
               ),
             );
           }
+        } else if (
+          node.type === "type_declaration" ||
+          node.type === "type_alias_declaration"
+        ) {
+          let exposed = false;
+          let typeNode = treeUtils.findFirstNamedChildOfType(
+            "upper_case_identifier",
+            node,
+          );
+          if (typeNode) {
+            exposed = treeUtils.isExposedType(tree, typeNode.text);
+
+            codeLens.push(
+              CodeLens.create(
+                Range.create(
+                  Position.create(
+                    node.startPosition.row,
+                    node.startPosition.column,
+                  ),
+                  Position.create(
+                    node.endPosition.row,
+                    node.endPosition.column,
+                  ),
+                ),
+                exposed,
+              ),
+            );
+          }
         }
       });
     }
@@ -99,7 +119,7 @@ export class CodeLensProvider {
     let codelens = param;
     codelens.command = codelens.data
       ? Command.create("exposed", "")
-      : Command.create("local", "elm-lsp.toggleExposed");
+      : Command.create("local", "");
 
     return codelens;
   };
