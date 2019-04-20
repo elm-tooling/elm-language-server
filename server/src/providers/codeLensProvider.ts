@@ -34,23 +34,46 @@ export class CodeLensProvider {
     ): void => {
       nodes.forEach(node => {
         if (node.type === "value_declaration") {
-          let name = node.child(0);
-          if (name) {
-          }
-
-          // Do we have a type annotation?
-
-          codeLens.push(
-            CodeLens.create(
-              Range.create(
-                Position.create(
-                  node.startPosition.row,
-                  node.startPosition.column,
-                ),
-                Position.create(node.endPosition.row, node.endPosition.column),
-              ),
-            ),
+          let declaration = node.children.find(
+            child => child.type === "function_declaration_left",
           );
+          if (declaration && declaration.firstNamedChild) {
+            let functionName = declaration.firstNamedChild.text;
+          }
+          if (
+            node.previousNamedSibling &&
+            node.previousNamedSibling.type === "type_annotation"
+          ) {
+            codeLens.push(
+              CodeLens.create(
+                Range.create(
+                  Position.create(
+                    node.previousNamedSibling.startPosition.row,
+                    node.previousNamedSibling.startPosition.column,
+                  ),
+                  Position.create(
+                    node.previousNamedSibling.endPosition.row,
+                    node.previousNamedSibling.endPosition.column,
+                  ),
+                ),
+              ),
+            );
+          } else {
+            codeLens.push(
+              CodeLens.create(
+                Range.create(
+                  Position.create(
+                    node.startPosition.row,
+                    node.startPosition.column,
+                  ),
+                  Position.create(
+                    node.endPosition.row,
+                    node.endPosition.column,
+                  ),
+                ),
+              ),
+            );
+          }
         }
       });
     };
@@ -66,6 +89,7 @@ export class CodeLensProvider {
   ): Promise<CodeLens> => {
     let codelens = param;
     codelens.command = Command.create("exposed", "elm-lsp.toggleExposed");
+    // codelens.command = Command.create("local", "elm-lsp.toggleExposed");
 
     return codelens;
   };
