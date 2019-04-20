@@ -4,6 +4,7 @@ import {
   CompletionParams,
   CompletionRequest,
   IConnection,
+  SymbolKind,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
 
@@ -34,7 +35,7 @@ export class CompletionProvider {
         !completions.some(a => a.label === node.text)
       ) {
         completions.push({
-          kind: 3,
+          kind: SymbolKind.Function,
           label: node.text,
         });
       } else if (
@@ -42,7 +43,7 @@ export class CompletionProvider {
         !completions.some(a => a.label === node.text)
       ) {
         completions.push({
-          kind: 22,
+          kind: SymbolKind.Struct,
           label: node.text,
         });
       } else if (
@@ -50,7 +51,7 @@ export class CompletionProvider {
         !completions.some(a => a.label === node.text)
       ) {
         completions.push({
-          kind: 24,
+          kind: SymbolKind.Operator,
           label: node.text,
         });
       }
