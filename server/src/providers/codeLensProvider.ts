@@ -9,6 +9,7 @@ import {
   Command,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
+import { treeUtils } from "../treeUtils";
 
 export class CodeLensProvider {
   private connection: IConnection;
@@ -29,16 +30,25 @@ export class CodeLensProvider {
 
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
-    const traverse: (nodes: SyntaxNode[]) => void = (
-      nodes: SyntaxNode[],
-    ): void => {
-      nodes.forEach(node => {
+    if (tree) {
+      tree.rootNode.children.forEach(node => {
         if (node.type === "value_declaration") {
-          let declaration = node.children.find(
-            child => child.type === "function_declaration_left",
+          let exposed = false;
+          let declaration = treeUtils.findFirstNamedChildOfType(
+            "function_declaration_left",
+            node,
           );
           if (declaration && declaration.firstNamedChild) {
             let functionName = declaration.firstNamedChild.text;
+
+            let module = treeUtils.findFirstNamedChildOfType(
+              "module_declaration",
+              tree.rootNode,
+            );
+            if (module) {
+              let descendants = module.descendantsOfType("exposed_value");
+              exposed = descendants.some(desc => desc.text === functionName);
+            }
           }
           if (
             node.previousNamedSibling &&
@@ -56,6 +66,7 @@ export class CodeLensProvider {
                     node.previousNamedSibling.endPosition.column,
                   ),
                 ),
+                exposed,
               ),
             );
           } else {
@@ -71,14 +82,12 @@ export class CodeLensProvider {
                     node.endPosition.column,
                   ),
                 ),
+                exposed,
               ),
             );
           }
         }
       });
-    };
-    if (tree) {
-      traverse(tree.rootNode.children);
     }
 
     return codeLens;
@@ -88,8 +97,9 @@ export class CodeLensProvider {
     param: CodeLens,
   ): Promise<CodeLens> => {
     let codelens = param;
-    codelens.command = Command.create("exposed", "elm-lsp.toggleExposed");
-    // codelens.command = Command.create("local", "elm-lsp.toggleExposed");
+    codelens.command = codelens.data
+      ? Command.create("exposed", "")
+      : Command.create("local", "elm-lsp.toggleExposed");
 
     return codelens;
   };

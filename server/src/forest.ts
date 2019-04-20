@@ -1,18 +1,18 @@
-import { elmTree } from "./elmTree";
+import { Tree } from "tree-sitter";
 
 export interface IForest {
   treeIndex: {
     uri: string;
     writeable: boolean;
     referenced: boolean;
-    tree: elmTree;
+    tree: Tree;
   }[];
-  getTree(uri: string): elmTree | undefined;
+  getTree(uri: string): Tree | undefined;
   setTree(
     uri: string,
     writeable: boolean,
     referenced: boolean,
-    tree: elmTree,
+    tree: Tree,
   ): void;
   removeTree(uri: string): void;
 }
@@ -22,14 +22,14 @@ export class Forest implements IForest {
     uri: string;
     writeable: boolean;
     referenced: boolean;
-    tree: elmTree;
+    tree: Tree;
   }[] = [];
 
   constructor() {
     this.treeIndex = new Array();
   }
 
-  public getTree(uri: string): elmTree | undefined {
+  public getTree(uri: string): Tree | undefined {
     let result = this.treeIndex.find(tree => tree.uri === uri);
     if (result) return result.tree;
     else return undefined;
@@ -39,7 +39,7 @@ export class Forest implements IForest {
     uri: string,
     writeable: boolean,
     referenced: boolean,
-    tree: elmTree,
+    tree: Tree,
   ): void {
     this.treeIndex.push({ uri, writeable, referenced, tree });
   }
