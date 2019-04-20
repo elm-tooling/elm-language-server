@@ -16,56 +16,78 @@ export class HoverProvider {
     this.connection = connection;
     this.forest = forest;
 
-    this.connection.onRequest(HoverRequest.type, this.handleHoverRequest);
+    this.connection.onHover(this.handleHoverRequest);
   }
 
-  protected handleHoverRequest = async (
-    param: TextDocumentPositionParams,
-  ): Promise<Hover> => {
-    const hover: Hover = {
-      contents: {
-        kind: MarkupKind.PlainText,
-        value: "test",
-      },
-      //   range: Range.create(Position.create(0, 0), Position.create(100, 0)),
-    };
+  private wrapCodeInMarkdown(code: string): string {
+    return `\`\`\`elm\n${code}\n\`\`\`\n`;
+  }
 
+  protected handleHoverRequest = (
+    param: TextDocumentPositionParams,
+  ): Hover | null | undefined => {
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
-    const traverse: (node: SyntaxNode) => void = (node: SyntaxNode): void => {
-      //   if (
-      //     node.type === "exposed_value" &&
-      //     !completions.some(a => a.label === node.text)
-      //   ) {
-      //     completions.push({
-      //       kind: 3,
-      //       label: node.text,
-      //     });
-      //   } else if (
-      //     node.type === "exposed_type" &&
-      //     !completions.some(a => a.label === node.text)
-      //   ) {
-      //     completions.push({
-      //       kind: 22,
-      //       label: node.text,
-      //     });
-      //   } else if (
-      //     node.type === "exposed_operator" &&
-      //     !completions.some(a => a.label === node.text)
-      //   ) {
-      //     completions.push({
-      //       kind: 24,
-      //       label: node.text,
-      //     });
-      //   }
-      for (const childNode of node.children) {
-        traverse(childNode);
-      }
-    };
     if (tree) {
-      traverse(tree.rootNode);
+      let nodeAtPosition = tree.rootNode.namedDescendantForPosition({
+        row: param.position.line,
+        column: param.position.character,
+      });
+
+      let declaration = tree.rootNode
+        .descendantsOfType("value_declaration")
+        .find(
+          a =>
+            a.firstNamedChild !== null &&
+            a.firstNamedChild.type === "function_declaration_left" &&
+            a.firstNamedChild.firstNamedChild !== null &&
+            a.firstNamedChild.firstNamedChild.type ===
+              "lower_case_identifier" &&
+            a.firstNamedChild.firstNamedChild.text === nodeAtPosition.text,
+        );
+
+      if (declaration) {
+        let comment: string = "";
+        let annotation: string = "";
+        if (declaration.previousNamedSibling) {
+          if (declaration.previousNamedSibling.type === "type_annotation") {
+            annotation = declaration.previousNamedSibling.text;
+            if (
+              declaration.previousNamedSibling.previousNamedSibling &&
+              declaration.previousNamedSibling.previousNamedSibling.type ===
+                "block_comment"
+            ) {
+              comment =
+                declaration.previousNamedSibling.previousNamedSibling.text;
+            }
+          } else if (
+            declaration.previousNamedSibling.type === "block_comment"
+          ) {
+            comment = declaration.previousNamedSibling.text;
+          }
+        }
+        let value = "";
+        if (comment) {
+          value += this.wrapCodeInMarkdown(comment);
+        }
+        if (annotation) {
+          if (value.length > 0) {
+            value += "---\n";
+          }
+
+          value += this.wrapCodeInMarkdown(annotation);
+        }
+
+        return {
+          contents: {
+            kind: MarkupKind.Markdown,
+            value: value,
+          },
+          //   range: Range.create(Position.create(0, 0), Position.create(100, 0)),
+        };
+      }
     }
 
-    return hover;
+    return undefined;
   };
 }
