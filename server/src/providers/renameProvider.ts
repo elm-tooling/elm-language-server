@@ -26,52 +26,72 @@ export class RenameProvider {
   protected handleRenameRequest = async (
     param: RenameParams,
   ): Promise<WorkspaceEdit | null | undefined> => {
-    const workspaceEdit: WorkspaceEdit = {};
-    workspaceEdit.changes = {
-      "": [
-        TextEdit.replace(
-          Range.create(Position.create(0, 0), Position.create(0, 0)),
-          param.newName,
-        ),
-      ],
-    };
-
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
-    const traverse: (node: SyntaxNode) => void = (node: SyntaxNode): void => {
-      //   if (
-      //     node.type === "exposed_value" &&
-      //     !completions.some(a => a.label === node.text)
-      //   ) {
-      //     completions.push({
-      //       kind: 3,
-      //       label: node.text,
-      //     });
-      //   } else if (
-      //     node.type === "exposed_type" &&
-      //     !completions.some(a => a.label === node.text)
-      //   ) {
-      //     completions.push({
-      //       kind: 22,
-      //       label: node.text,
-      //     });
-      //   } else if (
-      //     node.type === "exposed_operator" &&
-      //     !completions.some(a => a.label === node.text)
-      //   ) {
-      //     completions.push({
-      //       kind: 24,
-      //       label: node.text,
-      //     });
-      //   }
-      for (const childNode of node.children) {
-        traverse(childNode);
-      }
-    };
     if (tree) {
-      traverse(tree.rootNode);
+      let nodeAtPosition = tree.rootNode.namedDescendantForPosition({
+        row: param.position.line,
+        column: param.position.character,
+      });
+
+      if (nodeAtPosition) {
+        let references = tree.rootNode
+          .descendantsOfType("value_expr")
+          .filter(
+            a =>
+              a.firstNamedChild !== null &&
+              a.firstNamedChild.type === "value_qid" &&
+              a.firstNamedChild.lastNamedChild !== null &&
+              a.firstNamedChild.lastNamedChild.text === nodeAtPosition.text,
+          );
+
+        let declaration = tree.rootNode
+          .descendantsOfType("function_declaration_left")
+          .find(
+            a =>
+              a.firstNamedChild !== null &&
+              a.firstNamedChild.type === "lower_case_identifier" &&
+              a.firstNamedChild.text === nodeAtPosition.text,
+          );
+
+        if (declaration && declaration.firstNamedChild) {
+          references.push(declaration.firstNamedChild);
+        }
+
+        let annotation = tree.rootNode
+          .descendantsOfType("type_annotation")
+          .find(
+            a =>
+              a.firstNamedChild !== null &&
+              a.firstNamedChild.type === "lower_case_identifier" &&
+              a.firstNamedChild.text === nodeAtPosition.text,
+          );
+
+        if (annotation && annotation.firstNamedChild) {
+          references.push(annotation.firstNamedChild);
+        }
+
+        if (references) {
+          return {
+            changes: {
+              [param.textDocument.uri]: references.map(a =>
+                TextEdit.replace(
+                  Range.create(
+                    Position.create(
+                      a.startPosition.row,
+                      a.startPosition.column,
+                    ),
+                    Position.create(a.endPosition.row, a.endPosition.column),
+                  ),
+                  param.newName,
+                ),
+              ),
+            },
+          };
+        }
+      }
     }
 
-    return workspaceEdit;
+    return undefined;
   };
 }
