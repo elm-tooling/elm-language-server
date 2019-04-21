@@ -9,7 +9,7 @@
       "runtimeExecutable": "${execPath}",
       "args": [
         // Needs to be set to your vscode path, for arch this works
-        // "/usr/lib/code",
+        "/usr/lib/code",
         "--extensionDevelopmentPath=${workspaceRoot}"
       ],
       "sourceMaps": true,

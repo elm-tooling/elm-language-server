@@ -19,8 +19,23 @@ export class HoverProvider {
     this.connection.onHover(this.handleHoverRequest);
   }
 
+  private stripComment(comment: string): string {
+    let newComment = comment;
+    if (newComment.startsWith("{-|")) {
+      newComment = newComment.slice(3);
+    }
+    if (newComment.startsWith("{-")) {
+      newComment = newComment.slice(2);
+    }
+    if (newComment.endsWith("-}")) {
+      newComment = newComment.slice(0, -2);
+    }
+
+    return newComment.trim();
+  }
+
   private wrapCodeInMarkdown(code: string): string {
-    return `\`\`\`elm\n${code}\n\`\`\`\n`;
+    return `\n\`\`\`elm\n${code}\n\`\`\`\n`;
   }
 
   protected handleHoverRequest = (
@@ -68,13 +83,9 @@ export class HoverProvider {
         }
         let value = "";
         if (comment) {
-          value += this.wrapCodeInMarkdown(comment);
+          value += this.stripComment(comment);
         }
         if (annotation) {
-          if (value.length > 0) {
-            value += "---\n";
-          }
-
           value += this.wrapCodeInMarkdown(annotation);
         }
 
@@ -83,7 +94,6 @@ export class HoverProvider {
             kind: MarkupKind.Markdown,
             value: value,
           },
-          //   range: Range.create(Position.create(0, 0), Position.create(100, 0)),
         };
       }
     }
