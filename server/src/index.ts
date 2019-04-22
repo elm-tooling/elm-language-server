@@ -20,7 +20,7 @@ connection.onInitialize(
         const rebuildResult: [
           void | Error,
           void | Error
-        ] = await rebuildTreeSitter();
+        ] = await rebuildTreeSitter(connection.console);
         for (const result of rebuildResult) {
           if (result) {
             connection.console.error("Rebuild failed!");

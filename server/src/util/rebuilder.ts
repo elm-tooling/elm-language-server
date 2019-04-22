@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as prebuildInstall from "prebuild-install";
+import { RemoteClient, RemoteConsole } from "vscode-languageserver";
 
 function packageToGithubRepo(name: string): string {
   let repo: string;
@@ -34,7 +35,9 @@ function downloadUrl(
 function fetchPrebuild(
   name: string,
   treeSitterRepo: boolean,
+  console: RemoteConsole,
 ): Promise<void | Error> {
+  console.info(`Fetching ${name}`);
   const pkgRoot: string = path.resolve(
     path.join(__dirname, "../../node_modules", name),
   );
@@ -44,6 +47,7 @@ function fetchPrebuild(
     version: string;
   } = require(`${pkgRoot}/package.json`);
   const url: string = downloadUrl(pkg.name, pkg.version, treeSitterRepo);
+  console.info(`Downloading from ${url}`);
 
   return new Promise((res, rej) => {
     prebuildInstall.download(url, { pkg, path: pkgRoot }, (err: Error) => {
@@ -52,9 +56,11 @@ function fetchPrebuild(
   });
 }
 
-export function rebuildTreeSitter(): Promise<[void | Error, void | Error]> {
+export function rebuildTreeSitter(
+  console: RemoteConsole,
+): Promise<[void | Error, void | Error]> {
   return Promise.all([
-    fetchPrebuild("tree-sitter", true),
-    fetchPrebuild("tree-sitter-elm", false),
+    fetchPrebuild("tree-sitter", true, console),
+    fetchPrebuild("tree-sitter-elm", false, console),
   ]);
 }
