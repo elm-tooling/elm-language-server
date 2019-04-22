@@ -19,37 +19,18 @@ export class HoverProvider {
     this.connection.onHover(this.handleHoverRequest);
   }
 
-  private stripComment(comment: string): string {
-    let newComment = comment;
-    if (newComment.startsWith("{-|")) {
-      newComment = newComment.slice(3);
-    }
-    if (newComment.startsWith("{-")) {
-      newComment = newComment.slice(2);
-    }
-    if (newComment.endsWith("-}")) {
-      newComment = newComment.slice(0, -2);
-    }
-
-    return newComment.trim();
-  }
-
-  private wrapCodeInMarkdown(code: string): string {
-    return `\n\`\`\`elm\n${code}\n\`\`\`\n`;
-  }
-
   protected handleHoverRequest = (
     param: TextDocumentPositionParams,
   ): Hover | null | undefined => {
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
     if (tree) {
-      let nodeAtPosition = tree.rootNode.namedDescendantForPosition({
-        row: param.position.line,
+      const nodeAtPosition = tree.rootNode.namedDescendantForPosition({
         column: param.position.character,
+        row: param.position.line,
       });
 
-      let declaration = tree.rootNode
+      const declaration = tree.rootNode
         .descendantsOfType("value_declaration")
         .find(
           a =>
@@ -82,17 +63,20 @@ export class HoverProvider {
           }
         }
         let value = "";
-        if (comment) {
-          value += this.stripComment(comment);
-        }
         if (annotation) {
           value += this.wrapCodeInMarkdown(annotation);
+        }
+        if (comment) {
+          if (value.length > 0) {
+            value += "\n\n---\n\n";
+          }
+          value += this.stripComment(comment);
         }
 
         return {
           contents: {
             kind: MarkupKind.Markdown,
-            value: value,
+            value,
           },
         };
       }
@@ -100,4 +84,23 @@ export class HoverProvider {
 
     return undefined;
   };
+
+  private stripComment(comment: string): string {
+    let newComment = comment;
+    if (newComment.startsWith("{-|")) {
+      newComment = newComment.slice(3);
+    }
+    if (newComment.startsWith("{-")) {
+      newComment = newComment.slice(2);
+    }
+    if (newComment.endsWith("-}")) {
+      newComment = newComment.slice(0, -2);
+    }
+
+    return newComment.trim();
+  }
+
+  private wrapCodeInMarkdown(code: string): string {
+    return `\n\`\`\`elm\n${code}\n\`\`\`\n`;
+  }
 }
