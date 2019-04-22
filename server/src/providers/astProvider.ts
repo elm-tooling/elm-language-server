@@ -44,16 +44,18 @@ export class ASTProvider {
 
   protected initializeWorkspace = async (): Promise<void> => {
     try {
-      const path = this.elmWorkspace.toString(true) + "elm.json";
+      const path = this.elmWorkspace.fsPath + "elm.json";
       this.connection.console.info("Reading elm.json from " + path); // output 'testing'
       // Find elm files and feed them to tree sitter
       const elmJson = require(path);
       const sourceDirs = elmJson["source-directories"];
       const elmFolders: string[] = [];
       sourceDirs.forEach(async (folder: string) => {
-        elmFolders.push(this.elmWorkspace.toString(true) + folder);
+        elmFolders.push(this.elmWorkspace.fsPath + folder);
       });
-      this.connection.console.info(elmFolders.toString()); // output 'testing'
+      this.connection.console.info(
+        "source-dirs found: " + elmFolders.toString(),
+      ); // output 'testing'
       const elmFilePaths = await this.findElmFilesInFolders(elmFolders);
       this.connection.console.info(
         "Found " +

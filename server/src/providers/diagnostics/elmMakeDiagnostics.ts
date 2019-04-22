@@ -22,7 +22,7 @@ export class ElmMakeDiagnostics {
   public createDiagnostics = async (filePath: URI): Promise<IElmIssue[]> => {
     return await this.checkForErrors(
       this.connection,
-      this.elmWorkspaceFolder.toString(true),
+      this.elmWorkspaceFolder.fsPath,
       filePath.fsPath,
     );
   };
