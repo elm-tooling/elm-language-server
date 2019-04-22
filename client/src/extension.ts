@@ -27,7 +27,7 @@ export async function activate(context: ExtensionContext) {
     "**/elm.json",
     "**/@(node_modules|elm-stuff)/**",
   );
-  elmJsons.forEach(uri => {
+  elmJsons.forEach((uri: Uri) => {
     const workspaceFolder = workspace.getWorkspaceFolder(uri);
     const elmJsonFolder = getElmJsonFolder(uri);
     if (workspaceFolder) {
@@ -57,7 +57,7 @@ export async function activate(context: ExtensionContext) {
 }
 
 function getElmJsonFolder(uri: Uri): Uri {
-  return Uri.parse(uri.fsPath.replace("elm.json", ""));
+  return Uri.parse(uri.toString().replace("elm.json", ""));
 }
 
 async function stopClient(workspaceUri: Uri) {
