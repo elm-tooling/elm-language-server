@@ -1,6 +1,6 @@
-const glob = require("glob");
-const fs = require("fs");
-const util = require("util");
+import fs from "fs";
+import glob from "glob";
+import util from "util";
 
 // Convert fs.readFile into Promise version of same
 const readFile = util.promisify(fs.readFile);
@@ -78,7 +78,9 @@ export class ASTProvider {
     this.connection.console.info("Changed text document, going to parse it");
     const document: VersionedTextDocumentIdentifier = params.textDocument;
     let tree: Tree | undefined = this.forest.getTree(document.uri);
-    if (tree === undefined) return;
+    if (tree === undefined) {
+      return;
+    }
 
     for (const changeEvent of params.contentChanges) {
       if (changeEvent.range && changeEvent.rangeLength) {
@@ -117,7 +119,9 @@ export class ASTProvider {
         tree = this.buildTree(changeEvent.text);
       }
     }
-    if (tree) this.forest.setTree(document.uri, true, true, tree);
+    if (tree) {
+      this.forest.setTree(document.uri, true, true, tree);
+    }
   };
 
   protected handleCloseTextDocument = async (
