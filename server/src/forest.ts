@@ -61,14 +61,28 @@ export class Forest implements IForest {
     const moduleResult = TreeUtils.getModuleName(tree);
     if (moduleResult) {
       const { moduleName, exposing } = moduleResult;
-      this.treeIndex.push({
-        exposing,
-        moduleName,
-        referenced,
-        tree,
-        uri,
-        writeable,
-      });
+
+      const existingTree = this.treeIndex.findIndex(a => a.uri === uri);
+
+      if (existingTree !== -1) {
+        this.treeIndex[existingTree] = {
+          exposing,
+          moduleName,
+          referenced,
+          tree,
+          uri,
+          writeable,
+        };
+      } else {
+        this.treeIndex.push({
+          exposing,
+          moduleName,
+          referenced,
+          tree,
+          uri,
+          writeable,
+        });
+      }
     }
   }
 
