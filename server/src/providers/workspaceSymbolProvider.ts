@@ -1,14 +1,14 @@
-import { SyntaxNode, Tree } from "tree-sitter";
+import { SyntaxNode } from "tree-sitter";
 import {
   IConnection,
-  Range,
   Position,
+  Range,
   SymbolInformation,
   SymbolKind,
   WorkspaceSymbolParams,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
-import { treeUtils } from "../treeUtils";
+import { TreeUtils } from "../util/treeUtils";
 
 export class WorkspaceSymbolProvider {
   private connection: IConnection;
@@ -38,7 +38,7 @@ export class WorkspaceSymbolProvider {
     );
   }
 
-  protected workspaceSymbolRequest = async (
+  private workspaceSymbolRequest = async (
     param: WorkspaceSymbolParams,
   ): Promise<SymbolInformation[] | null | undefined> => {
     const symbolInformation: SymbolInformation[] = [];
@@ -64,7 +64,7 @@ export class WorkspaceSymbolProvider {
             ),
           );
         } else if (node.type === "module_declaration") {
-          const nameNode = treeUtils.findFirstNamedChildOfType(
+          const nameNode = TreeUtils.findFirstNamedChildOfType(
             "upper_case_qid",
             node,
           );
@@ -79,7 +79,7 @@ export class WorkspaceSymbolProvider {
             );
           }
         } else if (node.type === "type_declaration") {
-          const nameNode = treeUtils.findFirstNamedChildOfType(
+          const nameNode = TreeUtils.findFirstNamedChildOfType(
             "upper_case_identifier",
             node,
           );
@@ -94,7 +94,7 @@ export class WorkspaceSymbolProvider {
             );
           }
         } else if (node.type === "type_alias_declaration") {
-          const nameNode = treeUtils.findFirstNamedChildOfType(
+          const nameNode = TreeUtils.findFirstNamedChildOfType(
             "upper_case_identifier",
             node,
           );

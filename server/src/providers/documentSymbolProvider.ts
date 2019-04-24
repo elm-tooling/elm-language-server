@@ -1,15 +1,15 @@
 import { SyntaxNode, Tree } from "tree-sitter";
 import {
-  IConnection,
-  Range,
-  Position,
-  DocumentSymbolParams,
-  SymbolInformation,
   DocumentSymbol,
+  DocumentSymbolParams,
+  IConnection,
+  Position,
+  Range,
+  SymbolInformation,
   SymbolKind,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
-import { treeUtils } from "../treeUtils";
+import { TreeUtils } from "../util/treeUtils";
 
 export class DocumentSymbolProvider {
   private connection: IConnection;
@@ -37,7 +37,7 @@ export class DocumentSymbolProvider {
     );
   }
 
-  protected handleDocumentSymbolRequest = async (
+  private handleDocumentSymbolRequest = async (
     param: DocumentSymbolParams,
   ): Promise<SymbolInformation[] | DocumentSymbol[] | null | undefined> => {
     const symbolInformation: SymbolInformation[] = [];
@@ -58,7 +58,7 @@ export class DocumentSymbolProvider {
           ),
         );
       } else if (node.type === "module_declaration") {
-        const nameNode = treeUtils.findFirstNamedChildOfType(
+        const nameNode = TreeUtils.findFirstNamedChildOfType(
           "upper_case_qid",
           node,
         );
@@ -72,7 +72,7 @@ export class DocumentSymbolProvider {
           );
         }
       } else if (node.type === "type_declaration") {
-        const nameNode = treeUtils.findFirstNamedChildOfType(
+        const nameNode = TreeUtils.findFirstNamedChildOfType(
           "upper_case_identifier",
           node,
         );
@@ -82,7 +82,7 @@ export class DocumentSymbolProvider {
           );
         }
       } else if (node.type === "type_alias_declaration") {
-        const nameNode = treeUtils.findFirstNamedChildOfType(
+        const nameNode = TreeUtils.findFirstNamedChildOfType(
           "upper_case_identifier",
           node,
         );

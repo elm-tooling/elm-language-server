@@ -1,15 +1,14 @@
 import { SyntaxNode, Tree } from "tree-sitter";
 import {
-  IConnection,
-  LocationLink,
-  Range,
-  Position,
-  CodeLensParams,
   CodeLens,
+  CodeLensParams,
   Command,
+  IConnection,
+  Position,
+  Range,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
-import { treeUtils } from "../treeUtils";
+import { TreeUtils } from "../util/treeUtils";
 
 export class CodeLensProvider {
   private connection: IConnection;
@@ -34,13 +33,13 @@ export class CodeLensProvider {
       tree.rootNode.children.forEach(node => {
         if (node.type === "value_declaration") {
           let exposed = false;
-          let declaration = treeUtils.findFirstNamedChildOfType(
+          const declaration = TreeUtils.findFirstNamedChildOfType(
             "function_declaration_left",
             node,
           );
           if (declaration && declaration.firstNamedChild) {
-            let functionName = declaration.firstNamedChild.text;
-            exposed = treeUtils.isExposedFunction(tree, functionName);
+            const functionName = declaration.firstNamedChild.text;
+            exposed = TreeUtils.isExposedFunction(tree, functionName);
           }
           if (
             node.previousNamedSibling &&
@@ -83,12 +82,12 @@ export class CodeLensProvider {
           node.type === "type_alias_declaration"
         ) {
           let exposed = false;
-          let typeNode = treeUtils.findFirstNamedChildOfType(
+          const typeNode = TreeUtils.findFirstNamedChildOfType(
             "upper_case_identifier",
             node,
           );
           if (typeNode) {
-            exposed = treeUtils.isExposedType(tree, typeNode.text);
+            exposed = TreeUtils.isExposedType(tree, typeNode.text);
 
             codeLens.push(
               CodeLens.create(
@@ -116,7 +115,7 @@ export class CodeLensProvider {
   protected handleCodeLensResolveRequest = async (
     param: CodeLens,
   ): Promise<CodeLens> => {
-    let codelens = param;
+    const codelens = param;
     codelens.command = codelens.data
       ? Command.create("exposed", "")
       : Command.create("local", "");

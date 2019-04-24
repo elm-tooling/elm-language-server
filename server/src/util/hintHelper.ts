@@ -1,6 +1,6 @@
 import { SyntaxNode } from "tree-sitter";
 
-export class hintHelper {
+export class HintHelper {
   public static createHintFromValueDeclaration(
     declaration: SyntaxNode | undefined,
   ) {

@@ -2,14 +2,13 @@ import { SyntaxNode, Tree } from "tree-sitter";
 import {
   CompletionItem,
   CompletionParams,
-  CompletionRequest,
   IConnection,
-  SymbolKind,
   MarkupKind,
+  SymbolKind,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
-import { hintHelper } from "../util/hintHelper";
-import { treeUtils } from "../treeUtils";
+import { HintHelper } from "../util/hintHelper";
+import { TreeUtils } from "../util/treeUtils";
 
 export class CompletionProvider {
   private connection: IConnection;
@@ -20,10 +19,9 @@ export class CompletionProvider {
     this.forest = forest;
 
     this.connection.onCompletion(this.handleCompletionRequest);
-    this.connection.onCompletionResolve(this.handleCompletionResolveRequest);
   }
 
-  protected handleCompletionRequest = (
+  private handleCompletionRequest = (
     param: CompletionParams,
   ): CompletionItem[] | null | undefined => {
     const completions: CompletionItem[] = [];
@@ -31,7 +29,7 @@ export class CompletionProvider {
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
     if (tree) {
-      const functions = treeUtils.findAllNamedChildsOfType(
+      const functions = TreeUtils.findAllNamedChildsOfType(
         "value_declaration",
         tree.rootNode,
       );
@@ -46,15 +44,15 @@ export class CompletionProvider {
         );
 
         for (const declaration of declarations) {
-          const value = hintHelper.createHintFromValueDeclaration(declaration);
+          const value = HintHelper.createHintFromValueDeclaration(declaration);
           if (value !== undefined) {
             completions.push({
-              kind: SymbolKind.Function,
-              label: declaration.firstNamedChild!.firstNamedChild!.text,
               documentation: {
                 kind: MarkupKind.Markdown,
                 value,
               },
+              kind: SymbolKind.Function,
+              label: declaration.firstNamedChild!.firstNamedChild!.text,
             });
           }
         }
@@ -66,19 +64,19 @@ export class CompletionProvider {
       );
 
       for (const declaration of typeDeclarations) {
-        const value = hintHelper.createHintFromValueDeclaration(declaration);
-        const name = treeUtils.findFirstNamedChildOfType(
+        const value = HintHelper.createHintFromValueDeclaration(declaration);
+        const name = TreeUtils.findFirstNamedChildOfType(
           "upper_case_identifier",
           declaration,
         );
         if (value !== undefined && name) {
           completions.push({
-            kind: SymbolKind.Enum,
-            label: name.text,
             documentation: {
               kind: MarkupKind.Markdown,
               value,
             },
+            kind: SymbolKind.Enum,
+            label: name.text,
           });
         }
       }
@@ -86,7 +84,7 @@ export class CompletionProvider {
       const unionVariants = tree.rootNode.descendantsOfType("union_variant");
 
       for (const declaration of unionVariants) {
-        const name = treeUtils.findFirstNamedChildOfType(
+        const name = TreeUtils.findFirstNamedChildOfType(
           "upper_case_identifier",
           declaration,
         );
@@ -104,19 +102,19 @@ export class CompletionProvider {
       );
 
       for (const declaration of typeAliasDeclarations) {
-        const value = hintHelper.createHintFromValueDeclaration(declaration);
-        const name = treeUtils.findFirstNamedChildOfType(
+        const value = HintHelper.createHintFromValueDeclaration(declaration);
+        const name = TreeUtils.findFirstNamedChildOfType(
           "upper_case_identifier",
           declaration,
         );
         if (value !== undefined && name) {
           completions.push({
-            kind: SymbolKind.Struct,
-            label: name.text,
             documentation: {
               kind: MarkupKind.Markdown,
               value,
             },
+            kind: SymbolKind.Struct,
+            label: name.text,
           });
         }
       }
@@ -124,19 +122,4 @@ export class CompletionProvider {
 
     return completions;
   };
-
-  handleCompletionResolveRequest(item: CompletionItem): CompletionItem {
-    const param = item.data;
-    const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
-    // item.detail
-    // item.documentation
-
-    if (tree) {
-      let newItem = item;
-
-      return newItem;
-    }
-
-    return item;
-  }
 }

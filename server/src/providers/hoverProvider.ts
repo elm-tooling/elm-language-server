@@ -6,7 +6,7 @@ import {
   TextDocumentPositionParams,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
-import { hintHelper } from "../util/hintHelper";
+import { HintHelper } from "../util/hintHelper";
 
 export class HoverProvider {
   private connection: IConnection;
@@ -42,7 +42,7 @@ export class HoverProvider {
             a.firstNamedChild.firstNamedChild.text === nodeAtPosition.text,
         );
 
-      const value = hintHelper.createHintFromValueDeclaration(declaration);
+      const value = HintHelper.createHintFromValueDeclaration(declaration);
 
       if (value) {
         return {

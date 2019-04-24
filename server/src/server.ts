@@ -2,23 +2,22 @@ import {
   Connection,
   InitializeParams,
   InitializeResult,
-  CodeLens,
 } from "vscode-languageserver";
 import URI from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { Forest } from "./forest";
 import { ASTProvider } from "./providers/astProvider";
+import { CodeLensProvider } from "./providers/codeLensProvider";
 import { CompletionProvider } from "./providers/completionProvider";
+import { DefinitionProvider } from "./providers/definitionProvider";
 import { DiagnosticsProvider } from "./providers/diagnostics/diagnosticsProvider";
+import { DocumentSymbolProvider } from "./providers/documentSymbolProvider";
 import { ElmFormatProvider } from "./providers/elmFormatProvider";
 import { FoldingRangeProvider } from "./providers/foldingProvider";
 import { HoverProvider } from "./providers/hoverProvider";
-import { DefinitionProvider } from "./providers/definitionProvider";
 import { ReferencesProvider } from "./providers/referencesProvider";
-import { DocumentSymbolProvider } from "./providers/documentSymbolProvider";
-import { WorkspaceSymbolProvider } from "./providers/workspaceSymbolProvider";
-import { CodeLensProvider } from "./providers/codeLensProvider";
 import { RenameProvider } from "./providers/renameProvider";
+import { WorkspaceSymbolProvider } from "./providers/workspaceSymbolProvider";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
