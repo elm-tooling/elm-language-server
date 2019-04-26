@@ -95,6 +95,22 @@ export class SymbolInformationTranslator {
           SymbolKind.Operator,
           uri,
         );
+      case "list_expr":
+        return this.createSymbolInformation(
+          node.text,
+          node,
+          SymbolKind.Array,
+          uri,
+        );
+      case "upper_case_identifier":
+        if (node.text === "True" || node.text === "False") {
+          return this.createSymbolInformation(
+            node.text,
+            node,
+            SymbolKind.Boolean,
+            uri,
+          );
+        }
       default:
         break;
     }
