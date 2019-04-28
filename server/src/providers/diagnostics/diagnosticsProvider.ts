@@ -1,10 +1,9 @@
 import {
   Diagnostic,
   DiagnosticSeverity,
-  DidOpenTextDocumentParams,
-  DidSaveTextDocumentParams,
   IConnection,
-  PublishDiagnosticsParams,
+  TextDocuments,
+  TextDocumentChangeEvent,
   Range,
 } from "vscode-languageserver";
 import URI from "vscode-uri";
@@ -27,75 +26,93 @@ export interface IElmIssue {
 }
 
 export class DiagnosticsProvider {
+  private documents: TextDocuments = new TextDocuments();
   private elmMakeDiagnostics: ElmMakeDiagnostics;
   private elmAnalyseDiagnostics: ElmAnalyseDiagnostics;
   private connection: IConnection;
   private elmWorkspaceFolder: URI;
+  private currentDiagnostics: {
+    elmMake: Map<string, Diagnostic[]>;
+    elmAnalyse: Map<string, Diagnostic[]>;
+  };
 
   constructor(connection: IConnection, elmWorkspaceFolder: URI) {
+    this.getDiagnostics = this.getDiagnostics.bind(this);
+    this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
+    this.elmMakeIssueToDiagnostic = this.elmMakeIssueToDiagnostic.bind(this);
+
     this.connection = connection;
     this.elmWorkspaceFolder = elmWorkspaceFolder;
     this.elmMakeDiagnostics = new ElmMakeDiagnostics(
       connection,
       elmWorkspaceFolder,
     );
+
     this.elmAnalyseDiagnostics = new ElmAnalyseDiagnostics(
       connection,
       elmWorkspaceFolder,
+      this.newElmAnalyseDiagnostics,
     );
 
-    connection.onDidOpenTextDocument(
-      async (didTextOpenParams: DidOpenTextDocumentParams) => {
-        const uri: URI = URI.parse(didTextOpenParams.textDocument.uri);
-        this.getDiagnostics(uri);
-      },
-    );
+    this.currentDiagnostics = { elmMake: new Map(), elmAnalyse: new Map() };
 
-    connection.onDidSaveTextDocument(
-      async (didTextSaveParams: DidSaveTextDocumentParams) => {
-        const uri: URI = URI.parse(didTextSaveParams.textDocument.uri);
-        this.getDiagnostics(uri);
-      },
-    );
+    this.documents.listen(connection);
+
+    this.documents.onDidOpen(this.getDiagnostics);
+    this.documents.onDidChangeContent(this.getDiagnostics);
+    this.documents.onDidSave(this.getDiagnostics);
   }
 
-  private async getDiagnostics(fileUri: URI) {
+  private newElmAnalyseDiagnostics(diagnostics: Map<string, Diagnostic[]>) {
+    this.currentDiagnostics.elmAnalyse = diagnostics;
+    this.sendDiagnostics();
+  }
+
+  private sendDiagnostics() {
+    const allDiagnostics: Map<string, Diagnostic[]> = new Map();
+    for (let [uri, diagnostics] of this.currentDiagnostics.elmAnalyse) {
+      allDiagnostics.set(uri, diagnostics);
+    }
+    for (let [uri, diagnostics] of this.currentDiagnostics.elmMake) {
+      allDiagnostics.set(
+        uri,
+        (allDiagnostics.get(uri) || []).concat(diagnostics),
+      );
+    }
+
+    for (let [uri, diagnostics] of allDiagnostics) {
+      this.connection.sendDiagnostics({ uri, diagnostics });
+    }
+  }
+
+  private async getDiagnostics(change: TextDocumentChangeEvent): Promise<void> {
+    const uri = URI.parse(change.document.uri);
+    const text = change.document.getText();
+
+    this.elmAnalyseDiagnostics.updateFile(uri, text);
+
     const compilerErrors: IElmIssue[] = [];
     compilerErrors.push(
-      ...(await this.elmMakeDiagnostics.createDiagnostics(fileUri)),
+      ...(await this.elmMakeDiagnostics.createDiagnostics(uri)),
     );
 
-    compilerErrors.push(
-      ...(await this.elmAnalyseDiagnostics.execActivateAnalyseProcesses(
-        fileUri,
-      )),
-    );
-
-    const splitCompilerErrors: Map<string, IElmIssue[]> = new Map();
-
-    compilerErrors.forEach((issue: IElmIssue) => {
-      // If provided path is relative, make it absolute
-      if (issue.file.startsWith(".")) {
-        issue.file = this.elmWorkspaceFolder + issue.file.slice(1);
-      }
-      if (splitCompilerErrors.has(issue.file)) {
-        const issuesForFile = splitCompilerErrors.get(issue.file);
-        if (issuesForFile) {
-          issuesForFile.push(issue);
+    const diagnostics: Map<string, Diagnostic[]> = compilerErrors.reduce(
+      (acc, issue) => {
+        // If provided path is relative, make it absolute
+        if (issue.file.startsWith(".")) {
+          issue.file = this.elmWorkspaceFolder + issue.file.slice(1);
         }
-      } else {
-        splitCompilerErrors.set(issue.file, [issue]);
-      }
-    });
-    const result: PublishDiagnosticsParams[] = [];
-    splitCompilerErrors.forEach((issue: IElmIssue[], issuePath: string) => {
-      result.push({
-        diagnostics: issue.map(error => this.elmMakeIssueToDiagnostic(error)),
-        uri: URI.file(issuePath).toString(),
-      });
-    });
+        const uri = URI.file(issue.file).toString();
+        const arr = acc.get(uri) || [];
+        arr.push(this.elmMakeIssueToDiagnostic(issue));
+        acc.set(uri, arr);
+        return acc;
+      },
+      new Map(),
+    );
 
-    result.forEach(diagnostic => this.connection.sendDiagnostics(diagnostic));
+    this.currentDiagnostics.elmMake = diagnostics;
+    this.sendDiagnostics();
   }
 
   private elmMakeIssueToDiagnostic(issue: IElmIssue): Diagnostic {
