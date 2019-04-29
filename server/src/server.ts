@@ -32,22 +32,14 @@ export class Server implements ILanguageServer {
 
     const elmWorkspaceFallback =
       // Add a trailing slash if not present
-      params.rootUri && URI.parse(params.rootUri.replace(/\/?$/, "/"));
-    const elmWorkspace =
-      URI.parse(params.initializationOptions.elmWorkspace) ||
-      elmWorkspaceFallback;
+      params.rootUri && params.rootUri.replace(/\/?$/, "/");
+    const elmWorkspace = URI.parse(
+      params.initializationOptions.elmWorkspace || elmWorkspaceFallback,
+    );
 
-    if (params.workspaceFolders && params.workspaceFolders.length > 0) {
-      // Make sure the path ends with a slash to match how elmWorkspace works in VSCode
-      const workspaceFolder = params.workspaceFolders[0];
-      connection.console.info(`Initializing Elm language server for workspace
- ${workspaceFolder.uri} using ${elmWorkspace}`);
+    if (elmWorkspace) {
+      connection.console.info(`[elm-ls] initializing - folder=${elmWorkspace}`);
       this.registerProviders(connection, forest, elmWorkspace);
-    } else if (elmWorkspaceFallback) {
-      connection.console.info(
-        `Initializing Elm language server for folder ${elmWorkspaceFallback}`,
-      );
-      this.registerProviders(connection, forest, elmWorkspaceFallback);
     } else {
       connection.console.info(`No workspace.`);
     }
