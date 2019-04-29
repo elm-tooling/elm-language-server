@@ -108,7 +108,6 @@ export class ElmAnalyseDiagnostics {
           cmdArguments: ["--format=json"],
           notFoundText:
             "Install Elm-analyse using 'npm install -g elm-analyse'",
-          showMessageOnError: true,
 
           onStdout: data => {
             const state = JSON.parse(data.toString());

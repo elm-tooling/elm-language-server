@@ -113,7 +113,7 @@ function startClient(
     },
     run: { module: serverModule, transport: TransportKind.ipc },
   };
-  let outputChannel: OutputChannel = Window.createOutputChannel("elm-lsp");
+  let outputChannel: OutputChannel = Window.createOutputChannel("elmLS");
 
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
@@ -131,7 +131,7 @@ function startClient(
         path.join(clientWorkspace, "**/elm.json"),
       ),
     },
-    diagnosticCollectionName: "elm-lsp",
+    diagnosticCollectionName: "elmLS",
     outputChannel: outputChannel,
   };
 

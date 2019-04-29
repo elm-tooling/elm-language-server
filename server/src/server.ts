@@ -38,7 +38,7 @@ export class Server implements ILanguageServer {
     );
 
     if (elmWorkspace) {
-      connection.console.info(`[elm-ls] initializing - folder=${elmWorkspace}`);
+      connection.console.info(`[elmLS] initializing - folder=${elmWorkspace}`);
       this.registerProviders(connection, forest, elmWorkspace);
     } else {
       connection.console.info(`No workspace.`);
