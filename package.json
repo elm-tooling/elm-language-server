@@ -22,6 +22,9 @@
     "workspaceContains:**/elm.json"
   ],
   "main": "./client/out/extension",
+  "bin": {
+    "elm-ls": "server/out/index.js"
+  },
   "contributes": {
     "languages": [
       {

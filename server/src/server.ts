@@ -28,12 +28,17 @@ export class Server implements ILanguageServer {
 
   constructor(connection: Connection, params: InitializeParams) {
     this.calculator = new CapabilityCalculator(params.capabilities);
-    if (params.workspaceFolders && params.workspaceFolders.length > 0) {
-      const elmWorkspace = URI.parse(params.initializationOptions.elmWorkspace);
-      const forest = new Forest();
-      const workspaceFolder = params.workspaceFolders[0];
-      connection.console.info(`Initializing Elm language server for workspace
- ${workspaceFolder.uri} using ${elmWorkspace}`);
+    const forest = new Forest();
+
+    const elmWorkspaceFallback =
+      // Add a trailing slash if not present
+      params.rootUri && params.rootUri.replace(/\/?$/, "/");
+    const elmWorkspace = URI.parse(
+      params.initializationOptions.elmWorkspace || elmWorkspaceFallback,
+    );
+
+    if (elmWorkspace) {
+      connection.console.info(`[elm-ls] initializing - folder=${elmWorkspace}`);
       this.registerProviders(connection, forest, elmWorkspace);
     } else {
       connection.console.info(`No workspace.`);

@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import {
   createConnection,
   IConnection,
@@ -8,6 +10,7 @@ import {
 import { ILanguageServer } from "./server";
 import { rebuildTreeSitter } from "./util/rebuilder";
 
+export type Runtime = "node" | "electron";
 const connection: IConnection = createConnection(ProposedFeatures.all);
 
 connection.onInitialize(
@@ -17,10 +20,12 @@ connection.onInitialize(
         connection.console.info(
           "Rebuilding tree-sitter for local Electron version",
         );
+        const runtime: Runtime =
+          params.initializationOptions.runtime || "electron";
         const rebuildResult: [
           void | Error,
           void | Error
-        ] = await rebuildTreeSitter(connection.console);
+        ] = await rebuildTreeSitter(connection.console, runtime);
         for (const result of rebuildResult) {
           if (result) {
             connection.console.error("Rebuild failed!");
