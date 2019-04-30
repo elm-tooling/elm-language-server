@@ -33,6 +33,9 @@ export class CapabilityCalculator {
       hoverProvider: true,
       referencesProvider: true,
       renameProvider: true,
+      signatureHelpProvider: {
+        triggerCharacters: [" "],
+      },
       textDocumentSync: TextDocumentSyncKind.Full,
       workspaceSymbolProvider: true,
     };

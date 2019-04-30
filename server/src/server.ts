@@ -18,6 +18,7 @@ import { HoverProvider } from "./providers/hoverProvider";
 import { ReferencesProvider } from "./providers/referencesProvider";
 import { RenameProvider } from "./providers/renameProvider";
 import { WorkspaceSymbolProvider } from "./providers/workspaceSymbolProvider";
+import { SignatureHelpProvider } from "./providers/signatureHelpProvider";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -69,5 +70,6 @@ export class Server implements ILanguageServer {
     new WorkspaceSymbolProvider(connection, forest);
     new CodeLensProvider(connection, forest);
     new RenameProvider(connection, forest);
+    new SignatureHelpProvider(connection, forest);
   }
 }
