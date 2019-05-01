@@ -2,9 +2,9 @@ import {
   Diagnostic,
   DiagnosticSeverity,
   IConnection,
-  TextDocuments,
-  TextDocumentChangeEvent,
   Range,
+  TextDocumentChangeEvent,
+  TextDocuments,
 } from "vscode-languageserver";
 import URI from "vscode-uri";
 import { ElmAnalyseDiagnostics } from "./elmAnalyseDiagnostics";
@@ -70,17 +70,18 @@ export class DiagnosticsProvider {
 
   private sendDiagnostics() {
     const allDiagnostics: Map<string, Diagnostic[]> = new Map();
-    for (let [uri, diagnostics] of this.currentDiagnostics.elmAnalyse) {
+    for (const [uri, diagnostics] of this.currentDiagnostics.elmAnalyse) {
       allDiagnostics.set(uri, diagnostics);
     }
-    for (let [uri, diagnostics] of this.currentDiagnostics.elmMake) {
+
+    for (const [uri, diagnostics] of this.currentDiagnostics.elmMake) {
       allDiagnostics.set(
         uri,
         (allDiagnostics.get(uri) || []).concat(diagnostics),
       );
     }
 
-    for (let [uri, diagnostics] of allDiagnostics) {
+    for (const [uri, diagnostics] of allDiagnostics) {
       this.connection.sendDiagnostics({ uri, diagnostics });
     }
   }
@@ -102,10 +103,10 @@ export class DiagnosticsProvider {
         if (issue.file.startsWith(".")) {
           issue.file = this.elmWorkspaceFolder + issue.file.slice(1);
         }
-        const uri = URI.file(issue.file).toString();
-        const arr = acc.get(uri) || [];
+        const issueUri = URI.file(issue.file).toString();
+        const arr = acc.get(issueUri) || [];
         arr.push(this.elmMakeIssueToDiagnostic(issue));
-        acc.set(uri, arr);
+        acc.set(issueUri, arr);
         return acc;
       },
       new Map(),

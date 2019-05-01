@@ -1,37 +1,43 @@
+import { ElmApp, Message, Report } from "elm-analyse/ts/domain";
+import * as fs from "fs";
 import * as path from "path";
+import util from "util";
 import {
   Diagnostic,
   DiagnosticSeverity,
   IConnection,
 } from "vscode-languageserver";
 import URI from "vscode-uri";
-import { ElmApp, Message, Report } from "elm-analyse/ts/domain";
-import * as fs from "fs";
-import util from "util";
 
 const readFile = util.promisify(fs.readFile);
-
-interface NewDiagnosticsCallback {
-  (diagnostics: Map<string, Diagnostic[]>): void;
-}
+type INewDiagnosticsCallback = (diagnostics: Map<string, Diagnostic[]>) => void;
 
 export class ElmAnalyseDiagnostics {
   private connection: IConnection;
   private elmWorkspace: URI;
   private elmAnalyse: Promise<ElmApp>;
   private filesWithDiagnostics = new Set();
-  private onNewDiagnostics: NewDiagnosticsCallback;
+  private onNewDiagnostics: INewDiagnosticsCallback;
 
   constructor(
     connection: IConnection,
     elmWorkspace: URI,
-    onNewDiagnostics: NewDiagnosticsCallback,
+    onNewDiagnostics: INewDiagnosticsCallback,
   ) {
-    this.connection = connection;
     this.elmWorkspace = elmWorkspace;
     this.onNewDiagnostics = onNewDiagnostics;
 
     this.elmAnalyse = this.setupElmAnalyse();
+  }
+
+  public updateFile(uri: URI, text?: string): void {
+    this.elmAnalyse.then(elmAnalyse => {
+      elmAnalyse.ports.fileWatch.send({
+        content: text || null,
+        event: "update",
+        file: path.relative(this.elmWorkspace.fsPath, uri.path),
+      });
+    });
   }
 
   private async setupElmAnalyse() {
@@ -55,17 +61,10 @@ export class ElmAnalyseDiagnostics {
     return elmAnalyse;
   }
 
-  public updateFile = (uri: URI, text?: string) => {
-    this.elmAnalyse.then(elmAnalyse => {
-      elmAnalyse.ports.fileWatch.send({
-        content: text || null,
-        event: "update",
-        file: path.relative(this.elmWorkspace.fsPath, uri.path),
-      });
-    });
-  };
-
   private onNewReport = (report: Report) => {
+    this.connection.console.log(
+      `Received new elm-analyse report with ${report.messages.length} messages`,
+    );
     // When publishing diagnostics it looks like you have to publish
     // for one URI at a time, so this groups all of the messages for
     // each file and sends them as a batch
@@ -101,8 +100,8 @@ function messageToDiagnostic(message: Message): Diagnostic {
       code: "1",
       message: "Error parsing file",
       range: {
-        start: { line: 0, character: 0 },
         end: { line: 1, character: 0 },
+        start: { line: 0, character: 0 },
       },
       severity: DiagnosticSeverity.Error,
       source: "elm-analyse",
@@ -111,8 +110,8 @@ function messageToDiagnostic(message: Message): Diagnostic {
 
   const [lineStart, colStart, lineEnd, colEnd] = message.data.properties.range;
   const range = {
-    start: { line: lineStart - 1, character: colStart - 1 },
     end: { line: lineEnd - 1, character: colEnd - 1 },
+    start: { line: lineStart - 1, character: colStart - 1 },
   };
   return {
     code: message.id,
