@@ -24,6 +24,7 @@ export class ElmAnalyseDiagnostics {
     elmWorkspace: URI,
     onNewDiagnostics: INewDiagnosticsCallback,
   ) {
+    this.connection = connection;
     this.elmWorkspace = elmWorkspace;
     this.onNewDiagnostics = onNewDiagnostics;
 
