@@ -87,7 +87,7 @@ export class ElmAnalyseDiagnostics {
 
     this.filesWithDiagnostics = filesInReport;
 
-    // We you fix the last error in a file it no longer shows up in the report, but
+    // When you fix the last error in a file it no longer shows up in the report, but
     // we still need to clear the error marker for it
     filesThatAreNowFixed.forEach(file => diagnostics.set(file, []));
     this.onNewDiagnostics(diagnostics);
