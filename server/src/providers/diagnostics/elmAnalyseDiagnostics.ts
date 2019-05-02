@@ -41,11 +41,11 @@ export class ElmAnalyseDiagnostics {
     });
   }
 
-  private async setupElmAnalyse() {
+  private async setupElmAnalyse(): Promise<ElmApp> {
     const fsPath = this.elmWorkspace.fsPath;
     const elmJson = await readFile(path.join(fsPath, "elm.json"), {
       encoding: "utf-8",
-    });
+    }).then(JSON.parse);
     const fileLoadingPorts = require("elm-analyse/dist/app/file-loading-ports.js");
     const { Elm } = require("elm-analyse/dist/app/backend-elm.js");
     const elmAnalyse = Elm.Analyser.init({
@@ -56,7 +56,9 @@ export class ElmAnalyseDiagnostics {
       },
     });
 
-    fileLoadingPorts.setup(elmAnalyse, {}, this.elmWorkspace.fsPath);
+    // elm-analyse breaks if there is a trailing slash on the path, it tries to
+    // read <dir>//elm.json instead of <div>/elm.json
+    fileLoadingPorts.setup(elmAnalyse, {}, fsPath.replace(/\/?$/, ""));
     elmAnalyse.ports.sendReportValue.subscribe(this.onNewReport);
 
     return elmAnalyse;
