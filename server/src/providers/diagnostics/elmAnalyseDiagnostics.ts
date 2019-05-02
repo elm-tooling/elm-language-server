@@ -58,7 +58,7 @@ export class ElmAnalyseDiagnostics {
 
     // elm-analyse breaks if there is a trailing slash on the path, it tries to
     // read <dir>//elm.json instead of <div>/elm.json
-    fileLoadingPorts.setup(elmAnalyse, {}, fsPath.replace(/\/?$/, ""));
+    fileLoadingPorts.setup(elmAnalyse, {}, fsPath.replace(/[\\/]?$/, ""));
     elmAnalyse.ports.sendReportValue.subscribe(this.onNewReport);
 
     return elmAnalyse;
