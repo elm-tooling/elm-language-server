@@ -46,32 +46,56 @@ export class ASTProvider {
   protected initializeWorkspace = async (): Promise<void> => {
     try {
       const path = this.elmWorkspace.fsPath + "elm.json";
-      this.connection.console.info("Reading elm.json from " + path); // output 'testing'
+      this.connection.console.info("Reading elm.json from " + path);
       // Find elm files and feed them to tree sitter
       const elmJson = require(path);
-      const sourceDirs = elmJson["source-directories"];
+      const type = elmJson.type;
       const elmFolders: Array<{ path: string; writeable: boolean }> = [];
-      sourceDirs.forEach(async (folder: string) => {
+      let elmVersion = "";
+      if (type === "application") {
+        elmVersion = elmJson["elm-version"];
+        const sourceDirs = elmJson["source-directories"];
+        sourceDirs.forEach(async (folder: string) => {
+          elmFolders.push({
+            path: this.elmWorkspace.fsPath + folder,
+            writeable: true,
+          });
+        });
+      } else {
+        // Todo find a better way to do this
+        elmVersion = elmJson["elm-version"];
+        if (elmVersion.indexOf(" ") !== -1) {
+          elmVersion = elmVersion.substring(0, elmVersion.indexOf(" "));
+        }
         elmFolders.push({
-          path: this.elmWorkspace.fsPath + folder,
+          path: this.elmWorkspace.fsPath + "src",
           writeable: true,
         });
-      });
-      this.connection.console.info(elmFolders.length + " source-dirs found"); // output 'testing'
+      }
 
+      this.connection.console.info(elmFolders.length + " source-dirs found");
       const elmHome = this.findElmHome();
       // TODO find a way to detect this
-      const packagesRoot = `${elmHome}/0.19.0/package/`;
-      const dependencies = elmJson.dependencies.direct;
+      const packagesRoot = `${elmHome}/${elmVersion}/package/`;
+      const dependencies: { [index: string]: string } =
+        type === "application"
+          ? elmJson.dependencies.direct
+          : elmJson.dependencies;
+
       for (const key in dependencies) {
         if (dependencies.hasOwnProperty(key)) {
           const maintainer = key.substring(0, key.indexOf("/"));
           const packageName = key.substring(key.indexOf("/") + 1, key.length);
 
           // We should probably parse the elm json of a dependency, at some point down the line
-          const pathToPackage = `${packagesRoot}${maintainer}/${packageName}/${
-            dependencies[key]
-          }/src`;
+          const pathToPackage =
+            type === "application"
+              ? `${packagesRoot}${maintainer}/${packageName}/${
+                  dependencies[key]
+                }/src`
+              : `${packagesRoot}${maintainer}/${packageName}/${dependencies[
+                  key
+                ].substring(0, elmVersion.indexOf(" "))}`;
           elmFolders.push({ path: pathToPackage, writeable: false });
         }
       }
