@@ -24,10 +24,7 @@ export class FoldingRangeProvider {
     this.connection = connection;
     this.forest = forest;
 
-    this.connection.onRequest(
-      FoldingRangeRequest.type,
-      this.handleFoldingRange,
-    );
+    this.connection.onFoldingRanges(this.handleFoldingRange);
   }
 
   protected handleFoldingRange = async (
@@ -43,7 +40,7 @@ export class FoldingRangeProvider {
       while (true) {
         if (
           node.nextNamedSibling &&
-          node.nextNamedSibling.type == "import_clause"
+          node.nextNamedSibling.type === "import_clause"
         ) {
           node = node.nextNamedSibling;
         } else {
@@ -59,7 +56,7 @@ export class FoldingRangeProvider {
             node.previousNamedSibling === null ||
             node.previousNamedSibling.type !== "import_clause"
           ) {
-            let lastNode = findLastIdenticalNamedSibling(node);
+            const lastNode = findLastIdenticalNamedSibling(node);
             folds.push({
               endCharacter: lastNode.endPosition.column,
               endLine: lastNode.endPosition.row,
