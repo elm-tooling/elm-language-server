@@ -18,6 +18,7 @@ import {
 import URI from "vscode-uri";
 import { IForest } from "../forest";
 import { Position } from "../position";
+import * as utils from "../util/elmUtils";
 
 export class ASTProvider {
   private connection: IConnection;
@@ -45,17 +46,60 @@ export class ASTProvider {
   protected initializeWorkspace = async (): Promise<void> => {
     try {
       const path = this.elmWorkspace.fsPath + "elm.json";
-      this.connection.console.info("Reading elm.json from " + path); // output 'testing'
+      this.connection.console.info("Reading elm.json from " + path);
       // Find elm files and feed them to tree sitter
       const elmJson = require(path);
-      const sourceDirs = elmJson["source-directories"];
-      const elmFolders: string[] = [];
-      sourceDirs.forEach(async (folder: string) => {
-        elmFolders.push(this.elmWorkspace.fsPath + folder);
-      });
-      this.connection.console.info(
-        "source-dirs found: " + elmFolders.toString(),
-      ); // output 'testing'
+      const type = elmJson.type;
+      const elmFolders: Array<{ path: string; writeable: boolean }> = [];
+      let elmVersion = "";
+      if (type === "application") {
+        elmVersion = elmJson["elm-version"];
+        const sourceDirs = elmJson["source-directories"];
+        sourceDirs.forEach(async (folder: string) => {
+          elmFolders.push({
+            path: this.elmWorkspace.fsPath + folder,
+            writeable: true,
+          });
+        });
+      } else {
+        // Todo find a better way to do this
+        elmVersion = elmJson["elm-version"];
+        if (elmVersion.indexOf(" ") !== -1) {
+          elmVersion = elmVersion.substring(0, elmVersion.indexOf(" "));
+        }
+        elmFolders.push({
+          path: this.elmWorkspace.fsPath + "src",
+          writeable: true,
+        });
+      }
+
+      this.connection.console.info(elmFolders.length + " source-dirs found");
+      const elmHome = this.findElmHome();
+      // TODO find a way to detect this
+      const packagesRoot = `${elmHome}/${elmVersion}/package/`;
+      const dependencies: { [index: string]: string } =
+        type === "application"
+          ? elmJson.dependencies.direct
+          : elmJson.dependencies;
+
+      for (const key in dependencies) {
+        if (dependencies.hasOwnProperty(key)) {
+          const maintainer = key.substring(0, key.indexOf("/"));
+          const packageName = key.substring(key.indexOf("/") + 1, key.length);
+
+          // We should probably parse the elm json of a dependency, at some point down the line
+          const pathToPackage =
+            type === "application"
+              ? `${packagesRoot}${maintainer}/${packageName}/${
+                  dependencies[key]
+                }/src`
+              : `${packagesRoot}${maintainer}/${packageName}/${dependencies[
+                  key
+                ].substring(0, elmVersion.indexOf(" "))}`;
+          elmFolders.push({ path: pathToPackage, writeable: false });
+        }
+      }
+
       const elmFilePaths = await this.findElmFilesInFolders(elmFolders);
       this.connection.console.info(
         "Found " +
@@ -64,11 +108,21 @@ export class ASTProvider {
       );
 
       for (const filePath of elmFilePaths) {
-        const fileContent: string = await readFile(filePath.toString(), "utf8");
+        this.connection.console.info("Adding " + filePath.path.toString());
+        const fileContent: string = await readFile(
+          filePath.path.toString(),
+          "utf8",
+        );
         let tree: Tree | undefined;
         tree = this.parser.parse(fileContent);
-        this.forest.setTree(URI.file(filePath).toString(), true, true, tree);
+        this.forest.setTree(
+          URI.file(filePath.path).toString(),
+          filePath.writeable,
+          true,
+          tree,
+        );
       }
+      this.connection.console.info("Done parsing all files.");
     } catch (error) {
       this.connection.console.info(error.toString());
     }
@@ -133,8 +187,25 @@ export class ASTProvider {
     this.forest.removeTree(document.uri);
   };
 
-  private async findElmFilesInFolders(elmFolders: string[]): Promise<string[]> {
-    let elmFilePaths: string[] = [];
+  private findElmHome() {
+    const elmHomeVar = process.env.ELM_HOME;
+
+    if (elmHomeVar) {
+      return elmHomeVar;
+    }
+
+    const homedir = require("os").homedir();
+    if (utils.isWindows) {
+      return homedir + "/AppData/Roaming/elm";
+    } else {
+      return homedir + "/.elm";
+    }
+  }
+
+  private async findElmFilesInFolders(
+    elmFolders: Array<{ path: string; writeable: boolean }>,
+  ): Promise<Array<{ path: string; writeable: boolean }>> {
+    let elmFilePaths: Array<{ path: string; writeable: boolean }> = [];
     for (const element of elmFolders) {
       elmFilePaths = elmFilePaths.concat(
         await this.findElmFilesInFolder(element),
@@ -143,8 +214,15 @@ export class ASTProvider {
     return elmFilePaths;
   }
 
-  private async findElmFilesInFolder(path: string): Promise<string[]> {
-    return await globPromise(path + "/**/*.elm", {});
+  private async findElmFilesInFolder(element: {
+    path: string;
+    writeable: boolean;
+  }): Promise<Array<{ path: string; writeable: boolean }>> {
+    return (await globPromise(element.path + "/**/*.elm", {})).map(
+      (a: string) => {
+        return { path: a, writeable: element.writeable };
+      },
+    );
   }
 
   private buildTree = (text: string): Tree | undefined => {
