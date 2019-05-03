@@ -12,6 +12,7 @@
     "url": "https://github.com/razzeee/elm-language-server"
   },
   "dependencies": {
+    "elm-analyse": "github:antew/elm-analyse#lsp-hooks-built",
     "fast-diff": "^1.2.0",
     "prebuild-install": "^5.2.5",
     "request": "^2.88.0",

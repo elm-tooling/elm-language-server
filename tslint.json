@@ -3,7 +3,7 @@
   "extends": ["tslint:recommended", "tslint-config-prettier"],
   "jsRules": {},
   "rules": {
-    "prettier": true
+    "prettier": [true, ".prettierrc.yaml"]
   },
   "rulesDirectory": ["tslint-plugin-prettier"]
 }

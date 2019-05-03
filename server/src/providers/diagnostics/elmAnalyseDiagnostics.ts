@@ -1,123 +1,131 @@
+import { ElmApp, Message, Report } from "elm-analyse/ts/domain";
+import * as fs from "fs";
 import * as path from "path";
-import { IConnection } from "vscode-languageserver";
+import util from "util";
+import {
+  Diagnostic,
+  DiagnosticSeverity,
+  IConnection,
+} from "vscode-languageserver";
 import URI from "vscode-uri";
-import { execCmd } from "../../util/elmUtils";
-import { IElmIssue, IElmIssueRegion } from "./diagnosticsProvider";
 
-interface IElmAnalyseMessage {
-  type: string;
-  file: string;
-  data: IElmAnalyseMessageData;
-}
-
-interface IElmAnalyseMessageData {
-  description: string;
-  properties:
-    | { range: number[] }
-    | { range1: number[]; range2: number[] }
-    | { ranges: number[][] };
-}
+const readFile = util.promisify(fs.readFile);
+type INewDiagnosticsCallback = (diagnostics: Map<string, Diagnostic[]>) => void;
 
 export class ElmAnalyseDiagnostics {
   private connection: IConnection;
-  private elmWorkspaceFolder: URI;
+  private elmWorkspace: URI;
+  private elmAnalyse: Promise<ElmApp>;
+  private filesWithDiagnostics = new Set();
+  private onNewDiagnostics: INewDiagnosticsCallback;
 
-  constructor(connection: IConnection, elmWorkspaceFolder: URI) {
+  constructor(
+    connection: IConnection,
+    elmWorkspace: URI,
+    onNewDiagnostics: INewDiagnosticsCallback,
+  ) {
     this.connection = connection;
-    this.elmWorkspaceFolder = elmWorkspaceFolder;
+    this.elmWorkspace = elmWorkspace;
+    this.onNewDiagnostics = onNewDiagnostics;
+
+    this.elmAnalyse = this.setupElmAnalyse();
   }
 
-  public execActivateAnalyseProcesses = async (
-    filePath: URI,
-  ): Promise<IElmIssue[]> => {
-    const compilerErrors: IElmIssue[] = [];
-    try {
-      const analyseMessage = await this.startAnalyseProcess();
-
-      analyseMessage.forEach(element => {
-        compilerErrors.push(
-          ...this.parseMessage(this.elmWorkspaceFolder, element),
-        );
+  public updateFile(uri: URI, text?: string): void {
+    this.elmAnalyse.then(elmAnalyse => {
+      elmAnalyse.ports.fileWatch.send({
+        content: text || null,
+        event: "update",
+        file: path.relative(this.elmWorkspace.fsPath, uri.path),
       });
-    } catch (e) {
-      this.connection.console.error("Running Elm-analyse command failed");
-    }
-    return compilerErrors;
-  };
+    });
+  }
 
-  private parseMessage(cwd: URI, message: IElmAnalyseMessage): IElmIssue[] {
-    const elmAnalyseIssues: IElmIssue[] = [];
-    const messageInfoFileRegions = this.parseMessageInfoFileRanges(
-      message.data,
-    ).map(this.convertRangeToRegion);
-    messageInfoFileRegions.forEach(messageInfoFileRegion => {
-      const issue: IElmIssue = {
-        details: message.data.description,
-        file: path.join(cwd.toString(true), message.file),
-        overview: message.type,
-        region: messageInfoFileRegion,
-        subregion: "",
-        tag: "analyser",
-        type: "warning",
-      };
-      elmAnalyseIssues.push(issue);
+  private async setupElmAnalyse(): Promise<ElmApp> {
+    const fsPath = this.elmWorkspace.fsPath;
+    const elmJson = await readFile(path.join(fsPath, "elm.json"), {
+      encoding: "utf-8",
+    }).then(JSON.parse);
+    const fileLoadingPorts = require("elm-analyse/dist/app/file-loading-ports.js");
+    const { Elm } = require("elm-analyse/dist/app/backend-elm.js");
+    const elmAnalyse = Elm.Analyser.init({
+      flags: {
+        project: elmJson,
+        registry: [],
+        server: false,
+      },
     });
 
-    return elmAnalyseIssues;
+    // elm-analyse breaks if there is a trailing slash on the path, it tries to
+    // read <dir>//elm.json instead of <div>/elm.json
+    fileLoadingPorts.setup(elmAnalyse, {}, fsPath.replace(/[\\/]?$/, ""));
+    elmAnalyse.ports.sendReportValue.subscribe(this.onNewReport);
+
+    return elmAnalyse;
   }
 
-  private parseMessageInfoFileRanges(messageInfoData: IElmAnalyseMessageData) {
-    let messageInfoFileRanges: number[][];
-    const messageInfoProperties = messageInfoData.properties as any;
-    if (messageInfoProperties.hasOwnProperty("range")) {
-      messageInfoFileRanges = [messageInfoProperties.range];
-    } else if (
-      messageInfoProperties.hasOwnProperty("range1") &&
-      messageInfoProperties.hasOwnProperty("range2")
-    ) {
-      messageInfoFileRanges = [
-        messageInfoProperties.range1,
-        messageInfoProperties.range2,
-      ];
-    } else if (messageInfoProperties.hasOwnProperty("ranges")) {
-      messageInfoFileRanges = messageInfoProperties.ranges;
-    } else {
-      messageInfoFileRanges = [[0, 0, 0, 0]];
-    }
-    return messageInfoFileRanges;
-  }
+  private onNewReport = (report: Report) => {
+    this.connection.console.log(
+      `Received new elm-analyse report with ${report.messages.length} messages`,
+    );
+    // When publishing diagnostics it looks like you have to publish
+    // for one URI at a time, so this groups all of the messages for
+    // each file and sends them as a batch
+    const diagnostics: Map<string, Diagnostic[]> = report.messages.reduce(
+      (acc, message) => {
+        const uri = this.elmWorkspace + message.file;
+        const arr = acc.get(uri) || [];
+        arr.push(messageToDiagnostic(message));
+        acc.set(uri, arr);
+        return acc;
+      },
+      new Map(),
+    );
+    const filesInReport = new Set(diagnostics.keys());
+    const filesThatAreNowFixed = new Set(
+      [...this.filesWithDiagnostics].filter(
+        uriPath => !filesInReport.has(uriPath),
+      ),
+    );
 
-  private convertRangeToRegion(range: number[]): IElmIssueRegion {
+    this.filesWithDiagnostics = filesInReport;
+
+    // When you fix the last error in a file it no longer shows up in the report, but
+    // we still need to clear the error marker for it
+    filesThatAreNowFixed.forEach(file => diagnostics.set(file, []));
+    this.onNewDiagnostics(diagnostics);
+  };
+}
+
+function messageToDiagnostic(message: Message): Diagnostic {
+  if (message.type === "FileLoadFailed") {
     return {
-      end: {
-        column: range[3],
-        line: range[2],
+      code: "1",
+      message: "Error parsing file",
+      range: {
+        end: { line: 1, character: 0 },
+        start: { line: 0, character: 0 },
       },
-      start: {
-        column: range[1],
-        line: range[0],
-      },
+      severity: DiagnosticSeverity.Error,
+      source: "elm-analyse",
     };
   }
 
-  private async startAnalyseProcess() {
-    return new Promise<IElmAnalyseMessage[]>((resolve, reject) => {
-      return execCmd(
-        "elm-analyse",
-        {
-          cmdArguments: ["--format=json"],
-          notFoundText:
-            "Install Elm-analyse using 'npm install -g elm-analyse'",
-
-          onStdout: data => {
-            const state = JSON.parse(data.toString());
-            const messages: IElmAnalyseMessage[] = state.messages;
-            resolve(messages);
-          },
-        },
-        this.elmWorkspaceFolder,
-        this.connection,
-      );
-    });
-  }
+  const [lineStart, colStart, lineEnd, colEnd] = message.data.properties.range;
+  const range = {
+    end: { line: lineEnd - 1, character: colEnd - 1 },
+    start: { line: lineStart - 1, character: colStart - 1 },
+  };
+  return {
+    code: message.id,
+    // Clean up the error message a bit, removing the end of the line, e.g.
+    // "Record has only one field. Use the field's type or introduce a Type. At ((14,5),(14,20))"
+    message:
+      message.data.description.split(/at .+$/i)[0] +
+      "\n" +
+      `See https://stil4m.github.io/elm-analyse/#/messages/${message.type}`,
+    range,
+    severity: DiagnosticSeverity.Warning,
+    source: "elm-analyse",
+  };
 }
