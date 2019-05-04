@@ -42,11 +42,13 @@ export class DiagnosticsProvider {
     private elmWorkspaceFolder: URI,
     documentEvents: DocumentEvents,
     settings: Settings,
+    elmAnalyse: ElmAnalyseDiagnostics,
   ) {
     this.getDiagnostics = this.getDiagnostics.bind(this);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmMakeIssueToDiagnostic = this.elmMakeIssueToDiagnostic.bind(this);
     this.events = new TextDocumentEvents(documentEvents);
+    this.elmAnalyseDiagnostics = elmAnalyse;
 
     this.connection = connection;
     this.settings = settings;
@@ -57,17 +59,15 @@ export class DiagnosticsProvider {
       settings,
     );
 
-    this.elmAnalyseDiagnostics = new ElmAnalyseDiagnostics(
-      connection,
-      elmWorkspaceFolder,
-      this.newElmAnalyseDiagnostics,
-    );
-
     this.currentDiagnostics = { elmMake: new Map(), elmAnalyse: new Map() };
 
     this.events.on("open", this.getDiagnostics);
     this.events.on("change", this.getDiagnostics);
     this.events.on("save", this.getDiagnostics);
+    this.elmAnalyseDiagnostics.on(
+      "new-diagnostics",
+      this.newElmAnalyseDiagnostics,
+    );
   }
 
   private newElmAnalyseDiagnostics(diagnostics: Map<string, Diagnostic[]>) {

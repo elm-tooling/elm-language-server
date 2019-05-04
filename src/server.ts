@@ -19,6 +19,7 @@ import { CodeLensProvider } from "./providers/codeLensProvider";
 import { CompletionProvider } from "./providers/completionProvider";
 import { DefinitionProvider } from "./providers/definitionProvider";
 import { DiagnosticsProvider } from "./providers/diagnostics/diagnosticsProvider";
+import { ElmAnalyseDiagnostics } from "./providers/diagnostics/elmAnalyseDiagnostics"
 import { DocumentFormattingProvider } from "./providers/documentFormatingProvider";
 import { DocumentSymbolProvider } from "./providers/documentSymbolProvider";
 import { FoldingRangeProvider } from "./providers/foldingProvider";
@@ -227,12 +228,13 @@ export class Server implements ILanguageServer {
   ): void {
     this.initialize(connection, forest, elmWorkspace, imports, parser);
     const documentEvents = new DocumentEvents(connection);
+    const elmAnalyse = new ElmAnalyseDiagnostics(connection, elmWorkspace)
     // tslint:disable:no-unused-expression
     new ASTProvider(connection, forest, documentEvents, imports, parser);
     new FoldingRangeProvider(connection, forest);
     new CompletionProvider(connection, forest, imports);
     new HoverProvider(connection, forest, imports);
-    new DiagnosticsProvider(connection, elmWorkspace, documentEvents, settings);
+    new DiagnosticsProvider(connection, elmWorkspace, documentEvents, settings, elmAnalyse);
     new DocumentFormattingProvider(
       connection,
       elmWorkspace,

@@ -20,6 +20,7 @@ export class CapabilityCalculator {
       // Incremental sync is disabled for now due to not being able to get the
       // old text in ASTProvider
       // textDocumentSync: TextDocumentSyncKind.Incremental,
+      codeActionProvider: true,
       codeLensProvider: {
         resolveProvider: true,
       },
@@ -28,6 +29,9 @@ export class CapabilityCalculator {
       documentFormattingProvider: true,
       documentRangeFormattingProvider: true,
       documentSymbolProvider: true,
+      executeCommandProvider: {
+          commands: ["elm-analyse-fixer"]
+      },
       foldingRangeProvider: true,
       hoverProvider: true,
       referencesProvider: true,
