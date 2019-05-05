@@ -8,6 +8,7 @@ import {
   Position,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
+import { TreeUtils } from "../util/treeUtils";
 
 export class DefinitionProvider {
   private connection: IConnection;
@@ -26,31 +27,24 @@ export class DefinitionProvider {
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
     if (tree) {
-      let node = tree.rootNode.namedDescendantForPosition({
-        row: param.position.line,
+      const nodeAtPosition = tree.rootNode.namedDescendantForPosition({
         column: param.position.character,
+        row: param.position.line,
       });
 
-      let declaration = tree.rootNode
-        .descendantsOfType("function_declaration_left")
-        .find(
-          a =>
-            a.firstNamedChild !== null &&
-            a.firstNamedChild.type === "lower_case_identifier" &&
-            a.firstNamedChild.text === node.text,
-        );
+      const definitionNode = TreeUtils.findDefinitionNode(tree, nodeAtPosition);
 
-      if (declaration) {
+      if (definitionNode) {
         return Location.create(
           param.textDocument.uri,
           Range.create(
             Position.create(
-              declaration.startPosition.row,
-              declaration.startPosition.column,
+              definitionNode.startPosition.row,
+              definitionNode.startPosition.column,
             ),
             Position.create(
-              declaration.endPosition.row,
-              declaration.endPosition.column,
+              definitionNode.endPosition.row,
+              definitionNode.endPosition.column,
             ),
           ),
         );

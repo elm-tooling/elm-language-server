@@ -1,9 +1,7 @@
 import { SyntaxNode } from "tree-sitter";
 
 export class HintHelper {
-  public static createHintFromValueDeclaration(
-    declaration: SyntaxNode | undefined,
-  ) {
+  public static createHintFromDefinition(declaration: SyntaxNode | undefined) {
     if (declaration) {
       let comment: string = "";
       let annotation: string = "";

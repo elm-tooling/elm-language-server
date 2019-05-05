@@ -56,9 +56,7 @@ export class TreeUtils {
               });
             }
 
-            const typeAliases = tree.rootNode.descendantsOfType(
-              "type_alias_declaration",
-            );
+            const typeAliases = this.findAllTypeAliasDeclarations(tree);
             if (typeAliases) {
               typeAliases.forEach(typeAlias => {
                 const name = TreeUtils.findFirstNamedChildOfType(
@@ -75,9 +73,7 @@ export class TreeUtils {
               });
             }
 
-            const typeDeclarations = tree.rootNode.descendantsOfType(
-              "type_declaration",
-            );
+            const typeDeclarations = this.findAllTypeDeclarations(tree);
             if (typeDeclarations) {
               typeDeclarations.forEach(typeDeclaration => {
                 const unionCostructors: string[] = [];
@@ -136,14 +132,7 @@ export class TreeUtils {
               );
 
               if (name) {
-                const typeDeclaration = tree.rootNode
-                  .descendantsOfType("type_declaration")
-                  .find(
-                    a =>
-                      a.children.length > 1 &&
-                      a.children[1].type === "upper_case_identifier" &&
-                      a.children[1].text === name.text,
-                  );
+                const typeDeclaration = this.findType(tree, name.text);
                 if (typeDeclaration) {
                   const unionCostructors: string[] = [];
                   typeDeclaration
@@ -172,25 +161,38 @@ export class TreeUtils {
                 value,
               );
               if (name) {
-                exposed.push({
-                  exposedUnionConstructors: exposedConstructors.map(
-                    a => a.text,
-                  ),
-                  name: name.text,
-                  // Todo find the correct node
-                  syntaxNode: value,
-                  type: "Type",
-                });
+                const typeNode = this.findType(tree, name.text);
+
+                if (typeNode) {
+                  exposed.push({
+                    exposedUnionConstructors: exposedConstructors.map(
+                      a => a.text,
+                    ),
+                    name: name.text,
+                    syntaxNode: typeNode,
+                    type: "Type",
+                  });
+                }
               }
             } else {
-              // Todo find the correct node
-              // Separate between type alias and type here
-              exposed.push({
-                name: value.text,
-                syntaxNode: value,
-                type: "TypeAlias",
-              });
-              // exposed.push({ name: value.text, syntaxNode: value, type: "TypeAlias" });
+              const typeNode = this.findType(tree, value.text);
+
+              if (typeNode) {
+                exposed.push({
+                  name: value.text,
+                  syntaxNode: typeNode,
+                  type: "Type",
+                });
+              } else {
+                const typeAliasNode = this.findTypeAlias(tree, value.text);
+                if (typeAliasNode) {
+                  exposed.push({
+                    name: value.text,
+                    syntaxNode: typeAliasNode,
+                    type: "TypeAlias",
+                  });
+                }
+              }
             }
           }
 
@@ -243,7 +245,7 @@ export class TreeUtils {
     tree: Tree,
     functionName: string,
   ): SyntaxNode | undefined {
-    const functions = tree.rootNode.descendantsOfType("value_declaration");
+    const functions = this.findAllFunctions(tree);
     if (functions) {
       return functions.find(elmFunction => {
         const declaration = TreeUtils.findFirstNamedChildOfType(
@@ -256,5 +258,74 @@ export class TreeUtils {
         return false;
       });
     }
+  }
+
+  public static findType(tree: Tree, typeName: string): SyntaxNode | undefined {
+    const types = this.findAllTypeDeclarations(tree);
+    if (types) {
+      return types.find(
+        a =>
+          a.children.length > 1 &&
+          a.children[1].type === "upper_case_identifier" &&
+          a.children[1].text === typeName,
+      );
+    }
+  }
+
+  public static findTypeAlias(
+    tree: Tree,
+    typeAliasName: string,
+  ): SyntaxNode | undefined {
+    const typeAliases = this.findAllTypeAliasDeclarations(tree);
+    if (typeAliases) {
+      return typeAliases.find(
+        a =>
+          a.children.length > 2 &&
+          a.children[2].type === "upper_case_identifier" &&
+          a.children[2].text === typeAliasName,
+      );
+    }
+  }
+
+  public static findAllFunctions(tree: Tree): SyntaxNode[] | undefined {
+    const functions = this.findAllNamedChildsOfType(
+      "value_declaration",
+      tree.rootNode,
+    );
+    return functions;
+  }
+
+  public static findAllTypeDeclarations(tree: Tree): SyntaxNode[] | undefined {
+    const typeDeclarations = this.findAllNamedChildsOfType(
+      "type_declaration",
+      tree.rootNode,
+    );
+    return typeDeclarations;
+  }
+
+  public static findAllTypeAliasDeclarations(
+    tree: Tree,
+  ): SyntaxNode[] | undefined {
+    const typeAliasDeclarations = this.findAllNamedChildsOfType(
+      "type_alias_declaration",
+      tree.rootNode,
+    );
+    return typeAliasDeclarations;
+  }
+
+  public static findDefinitionNode(
+    tree: Tree,
+    nodeAtPosition: SyntaxNode,
+  ): SyntaxNode | undefined {
+    let definitionNode;
+    if (nodeAtPosition.type === "lower_case_identifier") {
+      definitionNode = this.findFunction(tree, nodeAtPosition.text);
+    } else if (nodeAtPosition.type === "upper_case_identifier") {
+      definitionNode = this.findType(tree, nodeAtPosition.text);
+      if (!definitionNode) {
+        definitionNode = this.findTypeAlias(tree, nodeAtPosition.text);
+      }
+    }
+    return definitionNode;
   }
 }

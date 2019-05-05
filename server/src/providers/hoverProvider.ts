@@ -7,6 +7,7 @@ import {
 } from "vscode-languageserver";
 import { IForest } from "../forest";
 import { HintHelper } from "../util/hintHelper";
+import { TreeUtils } from "../util/treeUtils";
 
 export class HoverProvider {
   private connection: IConnection;
@@ -30,27 +31,19 @@ export class HoverProvider {
         row: param.position.line,
       });
 
-      const declaration = tree.rootNode
-        .descendantsOfType("value_declaration")
-        .find(
-          a =>
-            a.firstNamedChild !== null &&
-            a.firstNamedChild.type === "function_declaration_left" &&
-            a.firstNamedChild.firstNamedChild !== null &&
-            a.firstNamedChild.firstNamedChild.type ===
-              "lower_case_identifier" &&
-            a.firstNamedChild.firstNamedChild.text === nodeAtPosition.text,
-        );
+      const definitionNode = TreeUtils.findDefinitionNode(tree, nodeAtPosition);
 
-      const value = HintHelper.createHintFromValueDeclaration(declaration);
+      if (definitionNode) {
+        const value = HintHelper.createHintFromDefinition(definitionNode);
 
-      if (value) {
-        return {
-          contents: {
-            kind: MarkupKind.Markdown,
-            value,
-          },
-        };
+        if (value) {
+          return {
+            contents: {
+              kind: MarkupKind.Markdown,
+              value,
+            },
+          };
+        }
       }
     }
 

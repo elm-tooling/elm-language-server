@@ -29,42 +29,42 @@ export class CompletionProvider {
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
     if (tree) {
-      const functions = TreeUtils.findAllNamedChildsOfType(
-        "value_declaration",
-        tree.rootNode,
-      );
-      // Add functions
-      if (functions) {
-        const declarations = functions.filter(
-          a =>
-            a.firstNamedChild !== null &&
-            a.firstNamedChild.type === "function_declaration_left" &&
-            a.firstNamedChild.firstNamedChild !== null &&
-            a.firstNamedChild.firstNamedChild.type === "lower_case_identifier",
-        );
+      this.findLocalSymbols(tree, completions);
+    }
 
-        for (const declaration of declarations) {
-          const value = HintHelper.createHintFromValueDeclaration(declaration);
-          if (value !== undefined) {
-            completions.push({
-              documentation: {
-                kind: MarkupKind.Markdown,
-                value,
-              },
-              kind: SymbolKind.Function,
-              label: declaration.firstNamedChild!.firstNamedChild!.text,
-            });
-          }
+    return completions;
+  };
+
+  private findLocalSymbols(tree: Tree, completions: CompletionItem[]) {
+    const functions = TreeUtils.findAllFunctions(tree);
+    // Add functions
+    if (functions) {
+      const declarations = functions.filter(
+        a =>
+          a.firstNamedChild !== null &&
+          a.firstNamedChild.type === "function_declaration_left" &&
+          a.firstNamedChild.firstNamedChild !== null &&
+          a.firstNamedChild.firstNamedChild.type === "lower_case_identifier",
+      );
+      for (const declaration of declarations) {
+        const value = HintHelper.createHintFromDefinition(declaration);
+        if (value !== undefined) {
+          completions.push({
+            documentation: {
+              kind: MarkupKind.Markdown,
+              value,
+            },
+            kind: SymbolKind.Function,
+            label: declaration.firstNamedChild!.firstNamedChild!.text,
+          });
         }
       }
-
-      // Add types
-      const typeDeclarations = tree.rootNode.descendantsOfType(
-        "type_declaration",
-      );
-
+    }
+    // Add types
+    const typeDeclarations = TreeUtils.findAllTypeDeclarations(tree);
+    if (typeDeclarations) {
       for (const declaration of typeDeclarations) {
-        const value = HintHelper.createHintFromValueDeclaration(declaration);
+        const value = HintHelper.createHintFromDefinition(declaration);
         const name = TreeUtils.findFirstNamedChildOfType(
           "upper_case_identifier",
           declaration,
@@ -79,30 +79,27 @@ export class CompletionProvider {
             label: name.text,
           });
         }
-      }
-      // Add types constucturs
-      const unionVariants = tree.rootNode.descendantsOfType("union_variant");
-
-      for (const declaration of unionVariants) {
-        const name = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
-          declaration,
-        );
-        if (name) {
-          completions.push({
-            kind: SymbolKind.Enum,
-            label: name.text,
-          });
+        // Add types constucturs
+        const unionVariants = declaration.descendantsOfType("union_variant");
+        for (const unionVariant of unionVariants) {
+          const unionVariantName = TreeUtils.findFirstNamedChildOfType(
+            "upper_case_identifier",
+            unionVariant,
+          );
+          if (unionVariantName) {
+            completions.push({
+              kind: SymbolKind.Enum,
+              label: unionVariantName.text,
+            });
+          }
         }
       }
-
-      // Add alias types
-      const typeAliasDeclarations = tree.rootNode.descendantsOfType(
-        "type_alias_declaration",
-      );
-
+    }
+    // Add alias types
+    const typeAliasDeclarations = TreeUtils.findAllTypeAliasDeclarations(tree);
+    if (typeAliasDeclarations) {
       for (const declaration of typeAliasDeclarations) {
-        const value = HintHelper.createHintFromValueDeclaration(declaration);
+        const value = HintHelper.createHintFromDefinition(declaration);
         const name = TreeUtils.findFirstNamedChildOfType(
           "upper_case_identifier",
           declaration,
@@ -119,7 +116,5 @@ export class CompletionProvider {
         }
       }
     }
-
-    return completions;
-  };
+  }
 }
