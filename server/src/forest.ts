@@ -11,6 +11,7 @@ export interface IForest {
     tree: Tree;
   }>;
   getTree(uri: string): Tree | undefined;
+  getExposingByModuleName(moduleName: string): Exposing | undefined;
   setTree(
     uri: string,
     writeable: boolean,
@@ -43,10 +44,10 @@ export class Forest implements IForest {
     }
   }
 
-  public getTreeByModuleName(moduleName: string): Tree | undefined {
+  public getExposingByModuleName(moduleName: string): Exposing | undefined {
     const result = this.treeIndex.find(tree => tree.moduleName === moduleName);
     if (result) {
-      return result.tree;
+      return result.exposing;
     } else {
       return undefined;
     }

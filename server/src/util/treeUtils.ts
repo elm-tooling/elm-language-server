@@ -1,6 +1,6 @@
 import { SyntaxNode, Tree } from "tree-sitter";
 
-export type NodeType = "Function" | "TypeAlias" | "Type";
+export type NodeType = "Function" | "TypeAlias" | "Type" | "Operator";
 
 export type Exposing = Array<
   | { name: string; syntaxNode: SyntaxNode; type: NodeType }
@@ -13,6 +13,7 @@ export type Exposing = Array<
 >;
 
 export class TreeUtils {
+  public static NodeType: any;
   public static getModuleName(
     tree: Tree,
   ): { moduleName: string; exposing: Exposing } | undefined {
@@ -106,6 +107,22 @@ export class TreeUtils {
             }
           }
         } else {
+          const exposedOperators = exposingList.descendantsOfType(
+            "operator_identifier",
+          );
+
+          for (const value of exposedOperators) {
+            const functionNode = this.findOperator(tree, value.text);
+
+            if (functionNode) {
+              exposed.push({
+                name: value.text,
+                syntaxNode: functionNode,
+                type: "Operator",
+              });
+            }
+          }
+
           const exposedValues = exposingList.descendantsOfType("exposed_value");
 
           for (const value of exposedValues) {
@@ -210,11 +227,16 @@ export class TreeUtils {
   ): SyntaxNode | undefined {
     return node.children.find(child => child.type === type);
   }
+  
   public static findAllNamedChildsOfType(
     type: string,
     node: SyntaxNode,
   ): SyntaxNode[] | undefined {
-    return node.children.filter(child => child.type === type);
+    const result = node.children.filter(child => child.type === type);
+    if (result.length === 0) {
+      return undefined;
+    }
+    return result;
   }
 
   public static isExposedFunction(tree: Tree, functionName: string) {
@@ -257,6 +279,38 @@ export class TreeUtils {
         }
         return false;
       });
+    }
+  }
+
+  public static findOperator(
+    tree: Tree,
+    operatorName: string,
+  ): SyntaxNode | undefined {
+    const infixDeclarations = this.findAllNamedChildsOfType(
+      "infix_declaration",
+      tree.rootNode,
+    );
+    if (infixDeclarations) {
+      const operatorNode = infixDeclarations.find(a => {
+        const operator = TreeUtils.findFirstNamedChildOfType(
+          "operator_identifier",
+          a,
+        );
+        if (operator) {
+          return operator.text === operatorName;
+        }
+        return false;
+      });
+
+      if (operatorNode) {
+        const functionReference = TreeUtils.findFirstNamedChildOfType(
+          "value_expr",
+          operatorNode,
+        );
+        if (functionReference) {
+          return this.findFunction(tree, functionReference.text);
+        }
+      }
     }
   }
 
@@ -319,7 +373,7 @@ export class TreeUtils {
   ): SyntaxNode | undefined {
     let definitionNode;
     if (nodeAtPosition.type === "lower_case_identifier") {
-      definitionNode = this.findFunction(tree, nodeAtPosition.text);
+      definitionNode = this.findOperator(tree, nodeAtPosition.text);
     } else if (nodeAtPosition.type === "upper_case_identifier") {
       definitionNode = this.findType(tree, nodeAtPosition.text);
       if (!definitionNode) {
