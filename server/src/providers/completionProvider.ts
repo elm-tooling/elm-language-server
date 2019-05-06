@@ -1,12 +1,5 @@
 import { SyntaxNode, Tree } from "tree-sitter";
-import {
-  CompletionItem,
-  CompletionItemKind,
-  CompletionParams,
-  IConnection,
-  MarkupKind,
-  SymbolKind,
-} from "vscode-languageserver";
+import { CompletionItem, CompletionItemKind, CompletionParams, IConnection, MarkupKind, SymbolKind } from "vscode-languageserver";
 import { IForest } from "../forest";
 import { HintHelper } from "../util/hintHelper";
 import { Exposing, TreeUtils } from "../util/treeUtils";
@@ -31,9 +24,21 @@ export class CompletionProvider {
 
     if (tree) {
       // Todo add variables from local let scopes
+      // Add module exposing_list completions
+      // Add import exposing_list completions
+      // Add import name completions
+
 
       completions.push(...this.getSameFileTopLevelCompletions(tree));
 
+      completions.push(...this.getCompletionsFromOtherFile(tree));
+
+
+      return completions;
+    }
+  };
+
+  public getCompletionsFromOtherFile(tree: Tree): CompletionItem[] {
       const imports = TreeUtils.findAllNamedChildsOfType(
         "import_clause",
         tree.rootNode,
@@ -125,10 +130,7 @@ export class CompletionProvider {
           }
         });
       }
-
-      return completions;
-    }
-  };
+  }
 
   private getPrefixedCompletions(
     moduleNameNode: SyntaxNode,
@@ -155,7 +157,11 @@ export class CompletionProvider {
           completions.push(
             this.createTypeCompletion(value, importPrefix + "." + element.name),
           );
-        // Todo add type constructors
+          if (element.exposedUnionConstructors) {
+            completions.push(...element.exposedUnionConstructors.map(a=> this.createTypeConstructorCompletion(a)))
+          }
+          // Todo add type constructors
+          break;
         case "TypeAlias":
           completions.push(
             this.createTypeAliasCompletion(
@@ -164,6 +170,7 @@ export class CompletionProvider {
             ),
           );
           break;
+        // Do not handle operators, they are not valid if prefixed
       }
     });
 
@@ -184,6 +191,9 @@ export class CompletionProvider {
           break;
         case "TypeAlias":
           completions.push(this.createTypeAliasCompletion(value, element.name));
+          break;
+        case "Operator":
+          completions.push(this.createOperatorCompletion(value, element.name));
           break;
       }
     });
@@ -284,6 +294,27 @@ export class CompletionProvider {
     return this.createCompletion(
       markdownDocumentation,
       SymbolKind.Struct,
+      label,
+    );
+  }
+
+  private createOperatorCompletion(
+    markdownDocumentation: string | undefined,
+    label: string,
+  ): CompletionItem {
+    return this.createCompletion(
+      markdownDocumentation,
+      SymbolKind.Operator,
+      label,
+    );
+  }
+
+  private createTypeConstructorCompletion(
+    label: string,
+  ): CompletionItem {
+    return this.createCompletion(
+      undefined,
+      SymbolKind.EnumMember,
       label,
     );
   }

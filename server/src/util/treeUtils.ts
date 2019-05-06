@@ -2,15 +2,12 @@ import { SyntaxNode, Tree } from "tree-sitter";
 
 export type NodeType = "Function" | "TypeAlias" | "Type" | "Operator";
 
-export type Exposing = Array<
-  | { name: string; syntaxNode: SyntaxNode; type: NodeType }
-  | {
-      name: string;
-      syntaxNode: SyntaxNode;
-      type: NodeType;
-      exposedUnionConstructors: string[];
-    }
->;
+export type Exposing = Array<{
+  name: string;
+  syntaxNode: SyntaxNode;
+  type: NodeType;
+  exposedUnionConstructors: string[] | undefined; // Only used for types
+}>;
 
 export class TreeUtils {
   public static NodeType: any;
@@ -49,6 +46,7 @@ export class TreeUtils {
                 if (declaration && declaration.firstNamedChild) {
                   const functionName = declaration.firstNamedChild.text;
                   exposed.push({
+                    exposedUnionConstructors: undefined,
                     name: functionName,
                     syntaxNode: declaration,
                     type: "Function",
@@ -66,6 +64,7 @@ export class TreeUtils {
                 );
                 if (name) {
                   exposed.push({
+                    exposedUnionConstructors: undefined,
                     name: name.text,
                     syntaxNode: typeAlias,
                     type: "TypeAlias",
@@ -116,6 +115,7 @@ export class TreeUtils {
 
             if (functionNode) {
               exposed.push({
+                exposedUnionConstructors: undefined,
                 name: value.text,
                 syntaxNode: functionNode,
                 type: "Operator",
@@ -129,6 +129,7 @@ export class TreeUtils {
             const functionNode = this.findFunction(tree, value.text);
             if (functionNode) {
               exposed.push({
+                exposedUnionConstructors: undefined,
                 name: value.text,
                 syntaxNode: functionNode,
                 type: "Function",
@@ -196,6 +197,7 @@ export class TreeUtils {
 
               if (typeNode) {
                 exposed.push({
+                  exposedUnionConstructors: undefined,
                   name: value.text,
                   syntaxNode: typeNode,
                   type: "Type",
@@ -204,6 +206,7 @@ export class TreeUtils {
                 const typeAliasNode = this.findTypeAlias(tree, value.text);
                 if (typeAliasNode) {
                   exposed.push({
+                    exposedUnionConstructors: undefined,
                     name: value.text,
                     syntaxNode: typeAliasNode,
                     type: "TypeAlias",
@@ -227,7 +230,7 @@ export class TreeUtils {
   ): SyntaxNode | undefined {
     return node.children.find(child => child.type === type);
   }
-  
+
   public static findAllNamedChildsOfType(
     type: string,
     node: SyntaxNode,
