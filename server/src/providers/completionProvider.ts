@@ -15,30 +15,8 @@ export class CompletionProvider {
     this.connection.onCompletion(this.handleCompletionRequest);
   }
 
-  private handleCompletionRequest = (
-    param: CompletionParams,
-  ): CompletionItem[] | null | undefined => {
-    const completions: CompletionItem[] = [];
-
-    const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
-
-    if (tree) {
-      // Todo add variables from local let scopes
-      // Add module exposing_list completions
-      // Add import exposing_list completions
-      // Add import name completions
-
-
-      completions.push(...this.getSameFileTopLevelCompletions(tree));
-
-      completions.push(...this.getCompletionsFromOtherFile(tree));
-
-
-      return completions;
-    }
-  };
-
   public getCompletionsFromOtherFile(tree: Tree): CompletionItem[] {
+    const completions: CompletionItem[] = [];
       const imports = TreeUtils.findAllNamedChildsOfType(
         "import_clause",
         tree.rootNode,
@@ -130,7 +108,31 @@ export class CompletionProvider {
           }
         });
       }
+      return completions;
   }
+
+  private handleCompletionRequest = (
+    param: CompletionParams,
+  ): CompletionItem[] | null | undefined => {
+    const completions: CompletionItem[] = [];
+
+    const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
+
+    if (tree) {
+      // Todo add variables from local let scopes
+      // Add module exposing_list completions
+      // Add import exposing_list completions
+      // Add import name completions
+
+
+      completions.push(...this.getSameFileTopLevelCompletions(tree));
+
+      completions.push(...this.getCompletionsFromOtherFile(tree));
+
+
+      return completions;
+    }
+  };
 
   private getPrefixedCompletions(
     moduleNameNode: SyntaxNode,
