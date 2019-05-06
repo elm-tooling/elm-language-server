@@ -18,6 +18,7 @@ import {
 import URI from "vscode-uri";
 import { IForest } from "../forest";
 import { Position } from "../position";
+import { DocumentEvents } from '../util/documentEvents';
 import * as utils from "../util/elmUtils";
 
 export class ASTProvider {
@@ -26,7 +27,7 @@ export class ASTProvider {
   private parser: Parser;
   private elmWorkspace: URI;
 
-  constructor(connection: IConnection, forest: IForest, elmWorkspace: URI) {
+  constructor(connection: IConnection, forest: IForest, elmWorkspace: URI, events: DocumentEvents ) {
     this.connection = connection;
     this.forest = forest;
     this.elmWorkspace = elmWorkspace;
@@ -37,8 +38,8 @@ export class ASTProvider {
       this.connection.console.info(error.toString());
     }
 
-    this.connection.onDidChangeTextDocument(this.handleChangeTextDocument);
-    this.connection.onDidCloseTextDocument(this.handleCloseTextDocument);
+    events.on("change", this.handleChangeTextDocument);
+    events.on("close", this.handleCloseTextDocument)
 
     this.initializeWorkspace();
   }

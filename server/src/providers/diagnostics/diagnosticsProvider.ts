@@ -3,10 +3,11 @@ import {
   DiagnosticSeverity,
   IConnection,
   Range,
-  TextDocumentChangeEvent,
-  TextDocuments,
+  TextDocument,
 } from "vscode-languageserver";
 import URI from "vscode-uri";
+import { DocumentEvents } from '../../util/documentEvents';
+import { TextDocumentEvents } from '../../util/textDocumentEvents';
 import { ElmAnalyseDiagnostics } from "./elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 
@@ -26,7 +27,7 @@ export interface IElmIssue {
 }
 
 export class DiagnosticsProvider {
-  private documents: TextDocuments = new TextDocuments();
+  private events: TextDocumentEvents;
   private elmMakeDiagnostics: ElmMakeDiagnostics;
   private elmAnalyseDiagnostics: ElmAnalyseDiagnostics;
   private connection: IConnection;
@@ -36,10 +37,11 @@ export class DiagnosticsProvider {
     elmAnalyse: Map<string, Diagnostic[]>;
   };
 
-  constructor(connection: IConnection, elmWorkspaceFolder: URI) {
+  constructor(connection: IConnection, elmWorkspaceFolder: URI, documentEvents: DocumentEvents) {
     this.getDiagnostics = this.getDiagnostics.bind(this);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmMakeIssueToDiagnostic = this.elmMakeIssueToDiagnostic.bind(this);
+    this.events = new TextDocumentEvents(documentEvents);
 
     this.connection = connection;
     this.elmWorkspaceFolder = elmWorkspaceFolder;
@@ -56,11 +58,9 @@ export class DiagnosticsProvider {
 
     this.currentDiagnostics = { elmMake: new Map(), elmAnalyse: new Map() };
 
-    this.documents.listen(connection);
-
-    this.documents.onDidOpen(this.getDiagnostics);
-    this.documents.onDidChangeContent(this.getDiagnostics);
-    this.documents.onDidSave(this.getDiagnostics);
+    this.events.on('open', this.getDiagnostics)
+    this.events.on('change', this.getDiagnostics)
+    this.events.on('save', this.getDiagnostics)
   }
 
   private newElmAnalyseDiagnostics(diagnostics: Map<string, Diagnostic[]>) {
@@ -86,9 +86,9 @@ export class DiagnosticsProvider {
     }
   }
 
-  private async getDiagnostics(change: TextDocumentChangeEvent): Promise<void> {
-    const uri = URI.parse(change.document.uri);
-    const text = change.document.getText();
+  private async getDiagnostics(document: TextDocument): Promise<void> {
+    const uri = URI.parse(document.uri);
+    const text = document.getText();
 
     this.elmAnalyseDiagnostics.updateFile(uri, text);
 
