@@ -1,5 +1,12 @@
 import { SyntaxNode, Tree } from "tree-sitter";
-import { CompletionItem, CompletionItemKind, CompletionParams, IConnection, MarkupKind, SymbolKind } from "vscode-languageserver";
+import {
+  CompletionItem,
+  CompletionItemKind,
+  CompletionParams,
+  IConnection,
+  MarkupKind,
+  SymbolKind,
+} from "vscode-languageserver";
 import { IForest } from "../forest";
 import { HintHelper } from "../util/hintHelper";
 import { Exposing, TreeUtils } from "../util/treeUtils";
@@ -17,98 +24,98 @@ export class CompletionProvider {
 
   public getCompletionsFromOtherFile(tree: Tree): CompletionItem[] {
     const completions: CompletionItem[] = [];
-      const imports = TreeUtils.findAllNamedChildsOfType(
-        "import_clause",
-        tree.rootNode,
-      );
+    const imports = TreeUtils.findAllNamedChildsOfType(
+      "import_clause",
+      tree.rootNode,
+    );
 
-      if (imports) {
-        imports.forEach(importNode => {
-          const moduleNameNode = TreeUtils.findFirstNamedChildOfType(
-            "upper_case_qid",
-            importNode,
+    if (imports) {
+      imports.forEach(importNode => {
+        const moduleNameNode = TreeUtils.findFirstNamedChildOfType(
+          "upper_case_qid",
+          importNode,
+        );
+        if (moduleNameNode) {
+          const exposedFromRemoteModule = this.forest.getExposingByModuleName(
+            moduleNameNode.text,
           );
-          if (moduleNameNode) {
-            const exposedFromRemoteModule = this.forest.getExposingByModuleName(
-              moduleNameNode.text,
-            );
-            if (exposedFromRemoteModule) {
-              completions.push(
-                ...this.getPrefixedCompletions(
-                  moduleNameNode,
-                  importNode,
-                  exposedFromRemoteModule,
-                ),
-              );
-
-              const exposingList = TreeUtils.findFirstNamedChildOfType(
-                "exposing_list",
+          if (exposedFromRemoteModule) {
+            completions.push(
+              ...this.getPrefixedCompletions(
+                moduleNameNode,
                 importNode,
-              );
+                exposedFromRemoteModule,
+              ),
+            );
 
-              if (exposingList) {
-                const doubleDot = TreeUtils.findFirstNamedChildOfType(
-                  "double_dot",
+            const exposingList = TreeUtils.findFirstNamedChildOfType(
+              "exposing_list",
+              importNode,
+            );
+
+            if (exposingList) {
+              const doubleDot = TreeUtils.findFirstNamedChildOfType(
+                "double_dot",
+                exposingList,
+              );
+              if (doubleDot) {
+                completions.push(
+                  ...this.getAllExposedCompletions(exposedFromRemoteModule),
+                );
+              } else {
+                const exposedValues = TreeUtils.findAllNamedChildsOfType(
+                  "exposed_value",
                   exposingList,
                 );
-                if (doubleDot) {
+                if (exposedValues) {
+                  const exposedNodes = exposedFromRemoteModule.filter(
+                    element => {
+                      return exposedValues.find(a => a.text === element.name);
+                    },
+                  );
                   completions.push(
-                    ...this.getAllExposedCompletions(exposedFromRemoteModule),
-                  );
-                } else {
-                  const exposedValues = TreeUtils.findAllNamedChildsOfType(
-                    "exposed_value",
-                    exposingList,
-                  );
-                  if (exposedValues) {
-                    const exposedNodes = exposedFromRemoteModule.filter(
-                      element => {
-                        return exposedValues.find(a => a.text === element.name);
-                      },
-                    );
-                    completions.push(
-                      ...exposedNodes.map(a => {
-                        const value = HintHelper.createHintFromDefinition(
-                          a.syntaxNode,
-                        );
+                    ...exposedNodes.map(a => {
+                      const value = HintHelper.createHintFromDefinition(
+                        a.syntaxNode,
+                      );
 
-                        return this.createFunctionCompletion(value, a.name);
-                      }),
-                    );
-                  }
-
-                  const exposedType = TreeUtils.findAllNamedChildsOfType(
-                    "exposed_type",
-                    exposingList,
+                      return this.createFunctionCompletion(value, a.name);
+                    }),
                   );
-                  if (exposedType) {
-                    const exposedNodes = exposedFromRemoteModule.filter(
-                      element => {
-                        return exposedType.find(a => a.text === element.name);
-                      },
-                    );
-                    completions.push(
-                      ...exposedNodes.map(a => {
-                        const value = HintHelper.createHintFromDefinition(
-                          a.syntaxNode,
-                        );
+                }
 
-                        if (a.type === "Type") {
-                          // Todo add type constructors
-                          return this.createTypeCompletion(value, a.name);
-                        } else {
-                          return this.createTypeAliasCompletion(value, a.name);
-                        }
-                      }),
-                    );
-                  }
+                const exposedType = TreeUtils.findAllNamedChildsOfType(
+                  "exposed_type",
+                  exposingList,
+                );
+                if (exposedType) {
+                  const exposedNodes = exposedFromRemoteModule.filter(
+                    element => {
+                      return exposedType.find(a => a.text === element.name);
+                    },
+                  );
+                  completions.push(
+                    ...exposedNodes.map(a => {
+                      const value = HintHelper.createHintFromDefinition(
+                        a.syntaxNode,
+                      );
+
+                      if (a.type === "Type") {
+                        // Todo add type constructors
+                        return this.createTypeCompletion(value, a.name);
+                      } else {
+                        return this.createTypeAliasCompletion(value, a.name);
+                      }
+                    }),
+                  );
                 }
               }
             }
           }
-        });
-      }
-      return completions;
+        }
+      });
+    }
+    return completions;
   }
 
   private handleCompletionRequest = (
@@ -124,11 +131,9 @@ export class CompletionProvider {
       // Add import exposing_list completions
       // Add import name completions
 
-
       completions.push(...this.getSameFileTopLevelCompletions(tree));
 
       completions.push(...this.getCompletionsFromOtherFile(tree));
-
 
       return completions;
     }
@@ -160,7 +165,11 @@ export class CompletionProvider {
             this.createTypeCompletion(value, importPrefix + "." + element.name),
           );
           if (element.exposedUnionConstructors) {
-            completions.push(...element.exposedUnionConstructors.map(a=> this.createTypeConstructorCompletion(a)))
+            completions.push(
+              ...element.exposedUnionConstructors.map(a =>
+                this.createTypeConstructorCompletion(a),
+              ),
+            );
           }
           // Todo add type constructors
           break;
@@ -237,7 +246,7 @@ export class CompletionProvider {
         if (name) {
           completions.push(this.createTypeCompletion(value, name.text));
         }
-        // Add types constucturs
+        // Add types constuctors
         const unionVariants = declaration.descendantsOfType("union_variant");
         for (const unionVariant of unionVariants) {
           const unionVariantName = TreeUtils.findFirstNamedChildOfType(
@@ -245,10 +254,9 @@ export class CompletionProvider {
             unionVariant,
           );
           if (unionVariantName) {
-            completions.push({
-              kind: SymbolKind.Enum,
-              label: unionVariantName.text,
-            });
+            completions.push(
+              this.createTypeConstructorCompletion(unionVariantName.text),
+            );
           }
         }
       }
@@ -311,14 +319,8 @@ export class CompletionProvider {
     );
   }
 
-  private createTypeConstructorCompletion(
-    label: string,
-  ): CompletionItem {
-    return this.createCompletion(
-      undefined,
-      SymbolKind.EnumMember,
-      label,
-    );
+  private createTypeConstructorCompletion(label: string): CompletionItem {
+    return this.createCompletion(undefined, SymbolKind.EnumMember, label);
   }
 
   private createCompletion(
