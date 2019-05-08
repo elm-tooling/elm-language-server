@@ -10,16 +10,10 @@ export type Exposing = Array<{
 }>;
 
 export class TreeUtils {
-  public static NodeType: any;
-  public static getModuleName(
+  public static getModuleNameAndExposing(
     tree: Tree,
   ): { moduleName: string; exposing: Exposing } | undefined {
-    const moduleDeclaration:
-      | SyntaxNode
-      | undefined = this.findFirstNamedChildOfType(
-      "module_declaration",
-      tree.rootNode,
-    );
+    const moduleDeclaration: SyntaxNode | undefined = this.findModule(tree);
     if (moduleDeclaration) {
       const moduleName = this.findFirstNamedChildOfType(
         "upper_case_qid",
@@ -243,10 +237,7 @@ export class TreeUtils {
   }
 
   public static isExposedFunction(tree: Tree, functionName: string) {
-    const module = TreeUtils.findFirstNamedChildOfType(
-      "module_declaration",
-      tree.rootNode,
-    );
+    const module = this.findModule(tree);
     if (module) {
       const descendants = module.descendantsOfType("exposed_value");
       return descendants.some(desc => desc.text === functionName);
@@ -255,10 +246,7 @@ export class TreeUtils {
   }
 
   public static isExposedType(tree: Tree, typeName: string) {
-    const module = TreeUtils.findFirstNamedChildOfType(
-      "module_declaration",
-      tree.rootNode,
-    );
+    const module = this.findModule(tree);
     if (module) {
       const descendants = module.descendantsOfType("exposed_type");
       return descendants.some(desc => desc.text.startsWith(typeName));
@@ -327,6 +315,10 @@ export class TreeUtils {
           a.children[1].text === typeName,
       );
     }
+  }
+
+  public static findModule(tree: Tree): SyntaxNode | undefined {
+    return this.findFirstNamedChildOfType("module_declaration", tree.rootNode);
   }
 
   public static findTypeAlias(

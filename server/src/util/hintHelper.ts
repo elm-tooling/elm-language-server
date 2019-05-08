@@ -24,6 +24,19 @@ export class HintHelper {
     }
   }
 
+  public static createHintFromModule(moduleNode: SyntaxNode | undefined) {
+    if (moduleNode) {
+      let comment: string = "";
+      if (
+        moduleNode.nextNamedSibling &&
+        moduleNode.nextNamedSibling.type === "block_comment"
+      ) {
+        comment = moduleNode.nextNamedSibling.text;
+      }
+      return this.createHint("", comment);
+    }
+  }
+
   private static createHint(annotation: string, comment: string) {
     let value = "";
     if (annotation) {

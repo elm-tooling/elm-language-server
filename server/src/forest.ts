@@ -59,7 +59,7 @@ export class Forest implements IForest {
     referenced: boolean,
     tree: Tree,
   ): void {
-    const moduleResult = TreeUtils.getModuleName(tree);
+    const moduleResult = TreeUtils.getModuleNameAndExposing(tree);
     if (moduleResult) {
       const { moduleName, exposing } = moduleResult;
 
