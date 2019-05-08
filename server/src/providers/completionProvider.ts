@@ -10,26 +10,39 @@ import {
 import { IForest } from "../forest";
 import { HintHelper } from "../util/hintHelper";
 import { Exposing, TreeUtils } from "../util/treeUtils";
+import { VirtualImports } from "../virtualImports";
+import { IVirtualImports } from "../virtualImports";
 
 export class CompletionProvider {
   private connection: IConnection;
   private forest: IForest;
+  private virtualImports: IVirtualImports;
 
-  constructor(connection: IConnection, forest: IForest) {
+  constructor(
+    connection: IConnection,
+    forest: IForest,
+    virtualImports: VirtualImports,
+  ) {
     this.connection = connection;
     this.forest = forest;
+    this.virtualImports = virtualImports;
 
     this.connection.onCompletion(this.handleCompletionRequest);
   }
 
   public getCompletionsFromOtherFile(tree: Tree): CompletionItem[] {
     const completions: CompletionItem[] = [];
-    const imports = TreeUtils.findAllNamedChildsOfType(
+    let imports = TreeUtils.findAllNamedChildsOfType(
       "import_clause",
       tree.rootNode,
     );
 
     if (imports) {
+      // Add standard imports
+      if (this.virtualImports.imports) {
+        imports = imports.concat(this.virtualImports.imports);
+      }
+
       imports.forEach(importNode => {
         const moduleNameNode = TreeUtils.findFirstNamedChildOfType(
           "upper_case_qid",

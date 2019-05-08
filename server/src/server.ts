@@ -2,7 +2,6 @@ import {
   Connection,
   InitializeParams,
   InitializeResult,
-  TextDocuments,
 } from "vscode-languageserver";
 import URI from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
@@ -19,7 +18,8 @@ import { HoverProvider } from "./providers/hoverProvider";
 import { ReferencesProvider } from "./providers/referencesProvider";
 import { RenameProvider } from "./providers/renameProvider";
 import { WorkspaceSymbolProvider } from "./providers/workspaceSymbolProvider";
-import { DocumentEvents } from './util/documentEvents';
+import { DocumentEvents } from "./util/documentEvents";
+import { VirtualImports } from "./virtualImports";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -31,6 +31,7 @@ export class Server implements ILanguageServer {
   constructor(connection: Connection, params: InitializeParams) {
     this.calculator = new CapabilityCalculator(params.capabilities);
     const forest = new Forest();
+    const virtualImports = new VirtualImports();
 
     const elmWorkspaceFallback =
       // Add a trailing slash if not present
@@ -41,7 +42,7 @@ export class Server implements ILanguageServer {
 
     if (elmWorkspace) {
       connection.console.info(`initializing - folder: "${elmWorkspace}"`);
-      this.registerProviders(connection, forest, elmWorkspace);
+      this.registerProviders(connection, forest, elmWorkspace, virtualImports);
     } else {
       connection.console.info(`No workspace.`);
     }
@@ -57,12 +58,19 @@ export class Server implements ILanguageServer {
     connection: Connection,
     forest: Forest,
     elmWorkspace: URI,
+    virtualImports: VirtualImports,
   ): void {
     const documentEvents = new DocumentEvents(connection);
     // tslint:disable:no-unused-expression
-    new ASTProvider(connection, forest, elmWorkspace, documentEvents);
+    new ASTProvider(
+      connection,
+      forest,
+      elmWorkspace,
+      documentEvents,
+      virtualImports,
+    );
     new FoldingRangeProvider(connection, forest);
-    new CompletionProvider(connection, forest);
+    new CompletionProvider(connection, forest, virtualImports);
     new HoverProvider(connection, forest);
     new DiagnosticsProvider(connection, elmWorkspace, documentEvents);
     new ElmFormatProvider(connection, elmWorkspace);
