@@ -31,22 +31,86 @@ export class HoverProvider {
         row: param.position.line,
       });
 
-      const definitionNode = TreeUtils.findDefinitionNode(tree, nodeAtPosition);
+      if (
+        nodeAtPosition.parent &&
+        nodeAtPosition.parent.type === "upper_case_qid"
+      ) {
+        const upperCaseQid = nodeAtPosition.parent;
+        const definitionNode = TreeUtils.findUppercaseQidNode(
+          tree,
+          upperCaseQid,
+        );
 
-      if (definitionNode) {
-        const value = HintHelper.createHintFromDefinition(definitionNode);
+        if (definitionNode) {
+          const value = HintHelper.createHintFromDefinition(definitionNode);
 
-        if (value) {
-          return {
-            contents: {
-              kind: MarkupKind.Markdown,
-              value,
-            },
-          };
+          if (value) {
+            return {
+              contents: {
+                kind: MarkupKind.Markdown,
+                value,
+              },
+            };
+          }
+        } else {
+          const moduleExposing = this.forest.treeIndex.find(
+            a => a.moduleName === upperCaseQid!.text,
+          );
+          if (moduleExposing) {
+            const moduleNode = TreeUtils.findModule(moduleExposing.tree);
+            const value = HintHelper.createHintFromModule(moduleNode);
+
+            if (value) {
+              return {
+                contents: {
+                  kind: MarkupKind.Markdown,
+                  value,
+                },
+              };
+            }
+          }
+        }
+      } else if (
+        nodeAtPosition.parent &&
+        nodeAtPosition.parent.type === "value_qid"
+      ) {
+        const definitionNode = TreeUtils.findLowercaseQidNode(
+          tree,
+          nodeAtPosition.parent,
+        );
+
+        if (definitionNode) {
+          const value = HintHelper.createHintFromDefinition(definitionNode);
+
+          if (value) {
+            return {
+              contents: {
+                kind: MarkupKind.Markdown,
+                value,
+              },
+            };
+          }
+        }
+      } else if (nodeAtPosition.type === "operator_identifier") {
+        const definitionNode = TreeUtils.findOperator(
+          tree,
+          nodeAtPosition.text,
+        );
+        if (definitionNode) {
+          const value = HintHelper.createHintFromDefinition(definitionNode);
+
+          if (value) {
+            return {
+              contents: {
+                kind: MarkupKind.Markdown,
+                value,
+              },
+            };
+          }
         }
       }
-    }
 
-    return undefined;
+      return undefined;
+    }
   };
 }

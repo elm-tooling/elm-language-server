@@ -362,18 +362,24 @@ export class TreeUtils {
     return typeAliasDeclarations;
   }
 
-  public static findDefinitionNode(
+  public static findLowercaseQidNode(
     tree: Tree,
     nodeAtPosition: SyntaxNode,
   ): SyntaxNode | undefined {
     let definitionNode;
-    if (nodeAtPosition.type === "lower_case_identifier") {
-      definitionNode = this.findOperator(tree, nodeAtPosition.text);
-    } else if (nodeAtPosition.type === "upper_case_identifier") {
-      definitionNode = this.findType(tree, nodeAtPosition.text);
-      if (!definitionNode) {
-        definitionNode = this.findTypeAlias(tree, nodeAtPosition.text);
-      }
+    definitionNode = this.findFunction(tree, nodeAtPosition.text);
+
+    return definitionNode;
+  }
+
+  public static findUppercaseQidNode(
+    tree: Tree,
+    nodeAtPosition: SyntaxNode,
+  ): SyntaxNode | undefined {
+    let definitionNode;
+    definitionNode = this.findType(tree, nodeAtPosition.text);
+    if (!definitionNode) {
+      definitionNode = this.findTypeAlias(tree, nodeAtPosition.text);
     }
     return definitionNode;
   }

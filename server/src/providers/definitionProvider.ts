@@ -32,7 +32,10 @@ export class DefinitionProvider {
         row: param.position.line,
       });
 
-      const definitionNode = TreeUtils.findDefinitionNode(tree, nodeAtPosition);
+      const definitionNode = TreeUtils.findUppercaseQidNode(
+        tree,
+        nodeAtPosition,
+      );
 
       if (definitionNode) {
         return Location.create(
