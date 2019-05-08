@@ -239,6 +239,19 @@ export class TreeUtils {
   public static isExposedFunction(tree: Tree, functionName: string) {
     const module = this.findModule(tree);
     if (module) {
+      const exposingList = this.findFirstNamedChildOfType(
+        "exposing_list",
+        module,
+      );
+      if (exposingList) {
+        const doubleDot = this.findFirstNamedChildOfType(
+          "double_dot",
+          exposingList,
+        );
+        if (doubleDot) {
+          return true;
+        }
+      }
       const descendants = module.descendantsOfType("exposed_value");
       return descendants.some(desc => desc.text === functionName);
     }
@@ -248,6 +261,19 @@ export class TreeUtils {
   public static isExposedType(tree: Tree, typeName: string) {
     const module = this.findModule(tree);
     if (module) {
+      const exposingList = this.findFirstNamedChildOfType(
+        "exposing_list",
+        module,
+      );
+      if (exposingList) {
+        const doubleDot = this.findFirstNamedChildOfType(
+          "double_dot",
+          exposingList,
+        );
+        if (doubleDot) {
+          return true;
+        }
+      }
       const descendants = module.descendantsOfType("exposed_type");
       return descendants.some(desc => desc.text.startsWith(typeName));
     }
