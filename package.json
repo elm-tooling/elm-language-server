@@ -59,7 +59,7 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "Debug configuration",
+      "title": "ElmLS",
       "properties": {
         "elmLS.trace.server": {
           "scope": "window",
@@ -71,6 +71,18 @@
           ],
           "default": "off",
           "description": "Traces the communication between VS Code and the language server."
+        },
+        "elmLS.elmPath": {
+          "scope": "window",
+          "type": "string",
+          "default": "elm",
+          "description": "The path to your elm executeable."
+        },
+        "elmLS.elmFormatPath": {
+          "scope": "window",
+          "type": "string",
+          "default": "elm-format",
+          "description": "The path to your elm-format executeable."
         }
       }
     }

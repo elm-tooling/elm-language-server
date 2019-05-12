@@ -8,13 +8,14 @@ import {
 } from "vscode-languageserver";
 import URI from "vscode-uri";
 import * as utils from "../../util/elmUtils";
+import { Settings } from "../../util/settings";
 import { IElmIssue } from "./diagnosticsProvider";
 
 export class ElmMakeDiagnostics {
-  private connection: IConnection;
-  private elmWorkspaceFolder: URI;
-
-  constructor(connection: IConnection, elmWorkspaceFolder: URI) {
+  constructor(
+    private connection: IConnection,
+    private elmWorkspaceFolder: URI,
+  ) {
     this.connection = connection;
     this.elmWorkspaceFolder = elmWorkspaceFolder;
   }
@@ -27,13 +28,15 @@ export class ElmMakeDiagnostics {
     );
   };
 
-  private checkForErrors(
+  private async checkForErrors(
     connection: IConnection,
     rootPath: string,
     filename: string,
   ): Promise<IElmIssue[]> {
+    const settings = await Settings.getSettings(connection);
+
     return new Promise((resolve, reject) => {
-      const makeCommand: string = "elm";
+      const makeCommand: string = settings.elmPath;
       const cwd: string = rootPath;
       let make: cp.ChildProcess;
       if (utils.isWindows) {
