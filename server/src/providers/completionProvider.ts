@@ -76,6 +76,28 @@ export class CompletionProvider {
                   ...this.getAllExposedCompletions(exposedFromRemoteModule),
                 );
               } else {
+                const exposedOperators = exposingList.descendantsOfType(
+                  "operator_identifier",
+                );
+                if (exposedOperators.length > 0) {
+                  const exposedNodes = exposedFromRemoteModule.filter(
+                    element => {
+                      return exposedOperators.find(
+                        a => a.text === element.name,
+                      );
+                    },
+                  );
+                  completions.push(
+                    ...exposedNodes.map(a => {
+                      const value = HintHelper.createHintFromDefinition(
+                        a.syntaxNode,
+                      );
+
+                      return this.createOperatorCompletion(value, a.name);
+                    }),
+                  );
+                }
+
                 const exposedValues = TreeUtils.findAllNamedChildsOfType(
                   "exposed_value",
                   exposingList,
