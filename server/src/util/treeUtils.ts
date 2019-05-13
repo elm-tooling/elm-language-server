@@ -134,9 +134,6 @@ export class TreeUtils {
           const exposedTypes = exposingList.descendantsOfType("exposed_type");
           for (const value of exposedTypes) {
             const doubleDot = value.descendantsOfType("double_dot");
-            const exposedConstructors = value.descendantsOfType(
-              "exposed_union_constructor",
-            );
             if (doubleDot.length > 0) {
               const name = TreeUtils.findFirstNamedChildOfType(
                 "upper_case_identifier",
@@ -163,25 +160,6 @@ export class TreeUtils {
                     exposedUnionConstructors: unionCostructors,
                     name: name.text,
                     syntaxNode: typeDeclaration,
-                    type: "Type",
-                  });
-                }
-              }
-            } else if (exposedConstructors.length > 0) {
-              const name = TreeUtils.findFirstNamedChildOfType(
-                "upper_case_identifier",
-                value,
-              );
-              if (name) {
-                const typeNode = this.findType(tree, name.text);
-
-                if (typeNode) {
-                  exposed.push({
-                    exposedUnionConstructors: exposedConstructors.map(
-                      a => a.text,
-                    ),
-                    name: name.text,
-                    syntaxNode: typeNode,
                     type: "Type",
                   });
                 }
