@@ -36,7 +36,7 @@ export class ElmAnalyseDiagnostics {
       elmAnalyse.ports.fileWatch.send({
         content: text || null,
         event: "update",
-        file: path.relative(this.elmWorkspace.fsPath, uri.path),
+        file: path.relative(this.elmWorkspace.fsPath, uri.fsPath),
       });
     });
   }
@@ -73,7 +73,7 @@ export class ElmAnalyseDiagnostics {
     // each file and sends them as a batch
     const diagnostics: Map<string, Diagnostic[]> = report.messages.reduce(
       (acc, message) => {
-        const uri = this.elmWorkspace + message.file;
+        const uri = URI.file(path.join(this.elmWorkspace.fsPath, message.file)).toString();
         const arr = acc.get(uri) || [];
         arr.push(messageToDiagnostic(message));
         acc.set(uri, arr);
