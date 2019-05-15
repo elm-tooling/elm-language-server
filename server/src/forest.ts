@@ -65,16 +65,7 @@ export class Forest implements IForest {
 
       const existingTree = this.treeIndex.findIndex(a => a.uri === uri);
 
-      if (existingTree !== -1) {
-        this.treeIndex[existingTree] = {
-          exposing,
-          moduleName,
-          referenced,
-          tree,
-          uri,
-          writeable,
-        };
-      } else {
+      if (existingTree === -1) {
         this.treeIndex.push({
           exposing,
           moduleName,
@@ -83,6 +74,15 @@ export class Forest implements IForest {
           uri,
           writeable,
         });
+      } else {
+        this.treeIndex[existingTree] = {
+          exposing,
+          moduleName,
+          referenced,
+          tree,
+          uri,
+          writeable,
+        };
       }
     }
   }
