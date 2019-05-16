@@ -1,5 +1,4 @@
 import diff from "fast-diff";
-import * as fs from "fs";
 import {
   DocumentFormattingParams,
   IConnection,
@@ -7,15 +6,22 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import URI from "vscode-uri";
+import { DocumentEvents } from "../util/documentEvents";
 import { execCmd } from "../util/elmUtils";
+import { Settings } from "../util/settings";
+import { TextDocumentEvents } from "../util/textDocumentEvents";
 
 export class ElmFormatProvider {
-  private connection: IConnection;
-  private elmWorkspaceFolder: URI;
+  private events: TextDocumentEvents;
 
-  constructor(connection: IConnection, elmWorkspaceFolder: URI) {
+  constructor(
+    private connection: IConnection,
+    private elmWorkspaceFolder: URI,
+    documentEvents: DocumentEvents,
+  ) {
     this.connection = connection;
     this.elmWorkspaceFolder = elmWorkspaceFolder;
+    this.events = new TextDocumentEvents(documentEvents);
 
     this.connection.onDocumentFormatting(this.handleFormattingRequest);
   }
@@ -24,19 +30,25 @@ export class ElmFormatProvider {
     params: DocumentFormattingParams,
   ) => {
     try {
-      const text = fs.readFileSync(URI.parse(params.textDocument.uri).fsPath);
+      const settings = await Settings.getSettings(this.connection);
+      const text = this.events.get(params.textDocument.uri);
+      if (!text) {
+        this.connection.console.error("Can't find file for formatting.");
+        return;
+      }
+
       const options = {
         cmdArguments: ["--stdin", "--elm-version 0.19", "--yes"],
         notFoundText: "Install Elm-format via 'npm install -g elm-format",
       };
       const format = execCmd(
-        "elm-format",
+        settings.elmFormatPath,
         options,
         this.elmWorkspaceFolder,
         this.connection,
       );
 
-      format.stdin.write(text);
+      format.stdin.write(text.getText());
       format.stdin.end();
 
       const stdout = await format;
