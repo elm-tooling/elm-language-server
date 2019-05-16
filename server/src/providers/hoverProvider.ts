@@ -1,4 +1,4 @@
-import { Tree, SyntaxNode } from "tree-sitter";
+import { SyntaxNode, Tree } from "tree-sitter";
 import {
   Hover,
   IConnection,
@@ -8,7 +8,7 @@ import {
 import { IForest } from "../forest";
 import { IImports } from "../imports";
 import { HintHelper } from "../util/hintHelper";
-import { TreeUtils, NodeType } from "../util/treeUtils";
+import { NodeType, TreeUtils } from "../util/treeUtils";
 
 export class HoverProvider {
   constructor(
@@ -53,37 +53,14 @@ export class HoverProvider {
               "TypeAlias",
             );
 
-        if (definitionNode) {
-          const value = HintHelper.createHintFromDefinition(definitionNode);
-
-          if (value) {
-            return {
-              contents: {
-                kind: MarkupKind.Markdown,
-                value,
-              },
-            };
-          }
-        } else {
-          const moduleNode = this.getDefinitionFromImport(
-            param.textDocument.uri,
-            upperCaseQid!.text,
-            "Module",
-          );
-
-          if (moduleNode) {
-            const value = HintHelper.createHintFromModule(moduleNode);
-
-            if (value) {
-              return {
-                contents: {
-                  kind: MarkupKind.Markdown,
-                  value,
-                },
-              };
-            }
-          }
-        }
+        definitionNode = definitionNode
+          ? definitionNode
+          : this.getDefinitionFromImport(
+              param.textDocument.uri,
+              upperCaseQid.text,
+              "Module",
+            );
+        return this.createMarkdownHoverFromDefinition(definitionNode);
       } else if (
         nodeAtPosition.parent &&
         nodeAtPosition.parent.type === "value_qid"
@@ -101,18 +78,7 @@ export class HoverProvider {
               "Function",
             );
 
-        if (definitionNode) {
-          const value = HintHelper.createHintFromDefinition(definitionNode);
-
-          if (value) {
-            return {
-              contents: {
-                kind: MarkupKind.Markdown,
-                value,
-              },
-            };
-          }
-        }
+        return this.createMarkdownHoverFromDefinition(definitionNode);
       } else if (nodeAtPosition.type === "operator_identifier") {
         let definitionNode = TreeUtils.findOperator(tree, nodeAtPosition.text);
 
@@ -124,23 +90,29 @@ export class HoverProvider {
               "Operator",
             );
 
-        if (definitionNode) {
-          const value = HintHelper.createHintFromDefinition(definitionNode);
-
-          if (value) {
-            return {
-              contents: {
-                kind: MarkupKind.Markdown,
-                value,
-              },
-            };
-          }
-        }
+        return this.createMarkdownHoverFromDefinition(definitionNode);
       }
 
       return undefined;
     }
   };
+
+  private createMarkdownHoverFromDefinition(
+    definitionNode: SyntaxNode | undefined,
+  ): Hover | undefined {
+    if (definitionNode) {
+      const value = HintHelper.createHint(definitionNode);
+
+      if (value) {
+        return {
+          contents: {
+            kind: MarkupKind.Markdown,
+            value,
+          },
+        };
+      }
+    }
+  }
 
   private getDefinitionFromImport(
     uri: string,

@@ -34,7 +34,7 @@ export class CompletionProvider {
     if (this.imports.imports && this.imports.imports[uri]) {
       const importList = this.imports.imports[uri];
       importList.forEach(element => {
-        const value = HintHelper.createHintFromDefinition(element.node);
+        const value = HintHelper.createHint(element.node);
         switch (element.type) {
           case "Function":
             completions.push(
@@ -103,7 +103,7 @@ export class CompletionProvider {
           a.firstNamedChild.firstNamedChild.type === "lower_case_identifier",
       );
       for (const declaration of declarations) {
-        const value = HintHelper.createHintFromDefinition(declaration);
+        const value = HintHelper.createHint(declaration);
         completions.push(
           this.createFunctionCompletion(
             value,
@@ -116,7 +116,7 @@ export class CompletionProvider {
     const typeDeclarations = TreeUtils.findAllTypeDeclarations(tree);
     if (typeDeclarations) {
       for (const declaration of typeDeclarations) {
-        const value = HintHelper.createHintFromDefinition(declaration);
+        const value = HintHelper.createHint(declaration);
         const name = TreeUtils.findFirstNamedChildOfType(
           "upper_case_identifier",
           declaration,
@@ -143,7 +143,7 @@ export class CompletionProvider {
     const typeAliasDeclarations = TreeUtils.findAllTypeAliasDeclarations(tree);
     if (typeAliasDeclarations) {
       for (const declaration of typeAliasDeclarations) {
-        const value = HintHelper.createHintFromDefinition(declaration);
+        const value = HintHelper.createHint(declaration);
         const name = TreeUtils.findFirstNamedChildOfType(
           "upper_case_identifier",
           declaration,
