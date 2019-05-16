@@ -1,6 +1,11 @@
 import { SyntaxNode, Tree } from "tree-sitter";
 
-export type NodeType = "Function" | "TypeAlias" | "Type" | "Operator";
+export type NodeType =
+  | "Function"
+  | "TypeAlias"
+  | "Type"
+  | "Operator"
+  | "UnionConstructor";
 
 export type Exposing = Array<{
   name: string;

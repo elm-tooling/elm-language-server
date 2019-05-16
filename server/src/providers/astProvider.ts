@@ -17,29 +17,29 @@ import {
 } from "vscode-languageserver";
 import URI from "vscode-uri";
 import { IForest } from "../forest";
+import { Imports } from "../imports";
 import { Position } from "../position";
 import { DocumentEvents } from "../util/documentEvents";
 import * as utils from "../util/elmUtils";
-import { VirtualImports } from "../virtualImports";
 
 export class ASTProvider {
   private connection: IConnection;
   private forest: IForest;
   private parser: Parser;
   private elmWorkspace: URI;
-  private virtualImports: VirtualImports;
+  private imports: Imports;
 
   constructor(
     connection: IConnection,
     forest: IForest,
     elmWorkspace: URI,
     events: DocumentEvents,
-    virtualImports: VirtualImports,
+    imports: Imports,
   ) {
     this.connection = connection;
     this.forest = forest;
     this.elmWorkspace = elmWorkspace;
-    this.virtualImports = virtualImports;
+    this.imports = imports;
     this.parser = new Parser();
     try {
       this.parser.setLanguage(TreeSitterElm);
@@ -133,7 +133,22 @@ export class ASTProvider {
         );
       }
 
-      this.virtualImports.updateVirtualImports();
+      for (const filePath of elmFilePaths) {
+        this.connection.console.info(
+          "Adding imports " + filePath.path.toString(),
+        );
+        const fileContent: string = await readFile(
+          filePath.path.toString(),
+          "utf8",
+        );
+        let tree: Tree | undefined;
+        tree = this.parser.parse(fileContent);
+        this.imports.updateImports(
+          URI.file(filePath.path).toString(),
+          tree,
+          this.forest,
+        );
+      }
 
       this.connection.console.info("Done parsing all files.");
     } catch (error) {
@@ -190,6 +205,7 @@ export class ASTProvider {
     }
     if (tree) {
       this.forest.setTree(document.uri, true, true, tree);
+      this.imports.updateImports(document.uri, tree, this.forest);
     }
   };
 
