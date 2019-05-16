@@ -1,4 +1,4 @@
-import { Tree } from "tree-sitter";
+import { Tree, SyntaxNode } from "tree-sitter";
 import {
   Hover,
   IConnection,
@@ -6,17 +6,16 @@ import {
   TextDocumentPositionParams,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
+import { IImports } from "../imports";
 import { HintHelper } from "../util/hintHelper";
-import { TreeUtils } from "../util/treeUtils";
+import { TreeUtils, NodeType } from "../util/treeUtils";
 
 export class HoverProvider {
-  private connection: IConnection;
-  private forest: IForest;
-
-  constructor(connection: IConnection, forest: IForest) {
-    this.connection = connection;
-    this.forest = forest;
-
+  constructor(
+    private connection: IConnection,
+    private forest: IForest,
+    private imports: IImports,
+  ) {
     this.connection.onHover(this.handleHoverRequest);
   }
 
@@ -36,10 +35,23 @@ export class HoverProvider {
         nodeAtPosition.parent.type === "upper_case_qid"
       ) {
         const upperCaseQid = nodeAtPosition.parent;
-        const definitionNode = TreeUtils.findUppercaseQidNode(
-          tree,
-          upperCaseQid,
-        );
+        let definitionNode = TreeUtils.findUppercaseQidNode(tree, upperCaseQid);
+
+        definitionNode = definitionNode
+          ? definitionNode
+          : this.getDefinitionFromImport(
+              param.textDocument.uri,
+              upperCaseQid.text,
+              "Type",
+            );
+
+        definitionNode = definitionNode
+          ? definitionNode
+          : this.getDefinitionFromImport(
+              param.textDocument.uri,
+              upperCaseQid.text,
+              "TypeAlias",
+            );
 
         if (definitionNode) {
           const value = HintHelper.createHintFromDefinition(definitionNode);
@@ -53,11 +65,13 @@ export class HoverProvider {
             };
           }
         } else {
-          const moduleExposing = this.forest.treeIndex.find(
-            a => a.moduleName === upperCaseQid!.text,
+          const moduleNode = this.getDefinitionFromImport(
+            param.textDocument.uri,
+            upperCaseQid!.text,
+            "Module",
           );
-          if (moduleExposing) {
-            const moduleNode = TreeUtils.findModule(moduleExposing.tree);
+
+          if (moduleNode) {
             const value = HintHelper.createHintFromModule(moduleNode);
 
             if (value) {
@@ -74,10 +88,18 @@ export class HoverProvider {
         nodeAtPosition.parent &&
         nodeAtPosition.parent.type === "value_qid"
       ) {
-        const definitionNode = TreeUtils.findLowercaseQidNode(
+        let definitionNode = TreeUtils.findLowercaseQidNode(
           tree,
           nodeAtPosition.parent,
         );
+
+        definitionNode = definitionNode
+          ? definitionNode
+          : this.getDefinitionFromImport(
+              param.textDocument.uri,
+              nodeAtPosition.parent.text,
+              "Function",
+            );
 
         if (definitionNode) {
           const value = HintHelper.createHintFromDefinition(definitionNode);
@@ -92,10 +114,16 @@ export class HoverProvider {
           }
         }
       } else if (nodeAtPosition.type === "operator_identifier") {
-        const definitionNode = TreeUtils.findOperator(
-          tree,
-          nodeAtPosition.text,
-        );
+        let definitionNode = TreeUtils.findOperator(tree, nodeAtPosition.text);
+
+        definitionNode = definitionNode
+          ? definitionNode
+          : this.getDefinitionFromImport(
+              param.textDocument.uri,
+              nodeAtPosition.text,
+              "Operator",
+            );
+
         if (definitionNode) {
           const value = HintHelper.createHintFromDefinition(definitionNode);
 
@@ -113,4 +141,22 @@ export class HoverProvider {
       return undefined;
     }
   };
+
+  private getDefinitionFromImport(
+    uri: string,
+    nodeName: string,
+    type: NodeType,
+  ) {
+    if (this.imports.imports) {
+      const allFileImports = this.imports.imports[uri];
+      if (allFileImports) {
+        const foundNode = allFileImports.find(
+          a => a.alias === nodeName && a.type === type,
+        );
+        if (foundNode) {
+          return foundNode.node;
+        }
+      }
+    }
+  }
 }

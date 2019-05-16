@@ -133,22 +133,10 @@ export class ASTProvider {
         );
       }
 
-      for (const filePath of elmFilePaths) {
-        this.connection.console.info(
-          "Adding imports " + filePath.path.toString(),
-        );
-        const fileContent: string = await readFile(
-          filePath.path.toString(),
-          "utf8",
-        );
-        let tree: Tree | undefined;
-        tree = this.parser.parse(fileContent);
-        this.imports.updateImports(
-          URI.file(filePath.path).toString(),
-          tree,
-          this.forest,
-        );
-      }
+      this.forest.treeIndex.forEach(item => {
+        this.connection.console.info("Adding imports " + item.uri.toString());
+        this.imports.updateImports(item.uri, item.tree, this.forest);
+      });
 
       this.connection.console.info("Done parsing all files.");
     } catch (error) {

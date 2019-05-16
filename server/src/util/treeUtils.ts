@@ -5,6 +5,7 @@ export type NodeType =
   | "TypeAlias"
   | "Type"
   | "Operator"
+  | "Module"
   | "UnionConstructor";
 
 export type Exposing = Array<{

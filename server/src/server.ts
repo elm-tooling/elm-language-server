@@ -65,7 +65,7 @@ export class Server implements ILanguageServer {
     new ASTProvider(connection, forest, elmWorkspace, documentEvents, imports);
     new FoldingRangeProvider(connection, forest);
     new CompletionProvider(connection, forest, imports);
-    new HoverProvider(connection, forest);
+    new HoverProvider(connection, forest, imports);
     new DiagnosticsProvider(connection, elmWorkspace, documentEvents);
     new ElmFormatProvider(connection, elmWorkspace);
     new DefinitionProvider(connection, forest);

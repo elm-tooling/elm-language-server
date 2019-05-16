@@ -11,12 +11,12 @@ export interface IImport {
 }
 
 export interface IImports {
-  imports?: { [key: string]: IImport[] };
+  imports?: { [uri: string]: IImport[] };
   updateImports(uri: string, tree: Tree, forest: IForest): void;
 }
 
 export class Imports implements IImports {
-  public imports?: { [key: string]: IImport[] } = {};
+  public imports?: { [uri: string]: IImport[] } = {};
   private parser: Parser;
 
   constructor() {
@@ -43,6 +43,16 @@ export class Imports implements IImports {
           importNode,
         );
         if (moduleNameNode) {
+          const foundModule = forest.getTreeByModuleName(moduleNameNode.text);
+          if (foundModule) {
+            result.push({
+              alias: moduleNameNode.text,
+              fromModuleName: moduleNameNode.text,
+              node: TreeUtils.findModule(foundModule),
+              type: "Module",
+            });
+          }
+
           const exposedFromRemoteModule = forest.getExposingByModuleName(
             moduleNameNode.text,
           );
