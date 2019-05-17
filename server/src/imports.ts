@@ -140,7 +140,17 @@ export class Imports implements IImports {
                   if (exposedType) {
                     const exposedNodes = exposedFromRemoteModule.filter(
                       element => {
-                        return exposedType.find(a => a.text === element.name);
+                        return exposedType.find(a => {
+                          const typeName = TreeUtils.findFirstNamedChildOfType(
+                            "upper_case_identifier",
+                            a,
+                          );
+                          if (typeName) {
+                            return typeName.text === element.name;
+                          } else {
+                            return false;
+                          }
+                        });
                       },
                     );
                     result.push(
