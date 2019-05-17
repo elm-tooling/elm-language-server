@@ -12,6 +12,19 @@ export interface IForest {
   }>;
   getTree(uri: string): Tree | undefined;
   getExposingByModuleName(moduleName: string): Exposing | undefined;
+  getTreeByModuleName(moduleName: string): Tree | undefined;
+  getByModuleName(
+    moduleName: string,
+  ):
+    | {
+        uri: string;
+        writeable: boolean;
+        referenced: boolean;
+        moduleName: string;
+        exposing: Exposing;
+        tree: Tree;
+      }
+    | undefined;
   setTree(
     uri: string,
     writeable: boolean,
@@ -48,6 +61,35 @@ export class Forest implements IForest {
     const result = this.treeIndex.find(tree => tree.moduleName === moduleName);
     if (result) {
       return result.exposing;
+    } else {
+      return undefined;
+    }
+  }
+
+  public getTreeByModuleName(moduleName: string): Tree | undefined {
+    const result = this.treeIndex.find(tree => tree.moduleName === moduleName);
+    if (result) {
+      return result.tree;
+    } else {
+      return undefined;
+    }
+  }
+
+  public getByModuleName(
+    moduleName: string,
+  ):
+    | {
+        uri: string;
+        writeable: boolean;
+        referenced: boolean;
+        moduleName: string;
+        exposing: Exposing;
+        tree: Tree;
+      }
+    | undefined {
+    const result = this.treeIndex.find(tree => tree.moduleName === moduleName);
+    if (result) {
+      return result;
     } else {
       return undefined;
     }

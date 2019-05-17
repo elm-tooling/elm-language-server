@@ -1,7 +1,17 @@
 import { SyntaxNode } from "tree-sitter";
 
 export class HintHelper {
-  public static createHintFromDefinition(declaration: SyntaxNode | undefined) {
+  public static createHint(node: SyntaxNode | undefined): string | undefined {
+    if (node) {
+      if (node.type === "module_declaration") {
+        return this.createHintFromModule(node);
+      } else {
+        return this.createHintFromDefinition(node);
+      }
+    }
+  }
+
+  private static createHintFromDefinition(declaration: SyntaxNode | undefined) {
     if (declaration) {
       let comment: string = "";
       let annotation: string = "";
@@ -20,11 +30,11 @@ export class HintHelper {
           comment = declaration.previousNamedSibling.text;
         }
       }
-      return this.createHint(annotation, comment);
+      return this.formatHint(annotation, comment);
     }
   }
 
-  public static createHintFromModule(moduleNode: SyntaxNode | undefined) {
+  private static createHintFromModule(moduleNode: SyntaxNode | undefined) {
     if (moduleNode) {
       let comment: string = "";
       if (
@@ -33,11 +43,11 @@ export class HintHelper {
       ) {
         comment = moduleNode.nextNamedSibling.text;
       }
-      return this.createHint("", comment);
+      return this.formatHint("", comment);
     }
   }
 
-  private static createHint(annotation: string, comment: string) {
+  private static formatHint(annotation: string, comment: string) {
     let value = "";
     if (annotation) {
       value += this.wrapCodeInMarkdown(annotation);

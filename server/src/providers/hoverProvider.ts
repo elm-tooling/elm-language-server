@@ -1,4 +1,4 @@
-import { Tree } from "tree-sitter";
+import { SyntaxNode, Tree } from "tree-sitter";
 import {
   Hover,
   IConnection,
@@ -6,17 +6,16 @@ import {
   TextDocumentPositionParams,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
+import { IImports } from "../imports";
 import { HintHelper } from "../util/hintHelper";
-import { TreeUtils } from "../util/treeUtils";
+import { NodeType, TreeUtils } from "../util/treeUtils";
 
 export class HoverProvider {
-  private connection: IConnection;
-  private forest: IForest;
-
-  constructor(connection: IConnection, forest: IForest) {
-    this.connection = connection;
-    this.forest = forest;
-
+  constructor(
+    private connection: IConnection,
+    private forest: IForest,
+    private imports: IImports,
+  ) {
     this.connection.onHover(this.handleHoverRequest);
   }
 
@@ -36,81 +35,100 @@ export class HoverProvider {
         nodeAtPosition.parent.type === "upper_case_qid"
       ) {
         const upperCaseQid = nodeAtPosition.parent;
-        const definitionNode = TreeUtils.findUppercaseQidNode(
-          tree,
-          upperCaseQid,
-        );
+        let definitionNode = TreeUtils.findUppercaseQidNode(tree, upperCaseQid);
 
-        if (definitionNode) {
-          const value = HintHelper.createHintFromDefinition(definitionNode);
+        definitionNode = definitionNode
+          ? definitionNode
+          : this.getDefinitionFromImport(
+              param.textDocument.uri,
+              upperCaseQid.text,
+              "Type",
+            );
 
-          if (value) {
-            return {
-              contents: {
-                kind: MarkupKind.Markdown,
-                value,
-              },
-            };
-          }
-        } else {
-          const moduleExposing = this.forest.treeIndex.find(
-            a => a.moduleName === upperCaseQid!.text,
-          );
-          if (moduleExposing) {
-            const moduleNode = TreeUtils.findModule(moduleExposing.tree);
-            const value = HintHelper.createHintFromModule(moduleNode);
+        definitionNode = definitionNode
+          ? definitionNode
+          : this.getDefinitionFromImport(
+              param.textDocument.uri,
+              upperCaseQid.text,
+              "TypeAlias",
+            );
 
-            if (value) {
-              return {
-                contents: {
-                  kind: MarkupKind.Markdown,
-                  value,
-                },
-              };
-            }
-          }
-        }
+        definitionNode = definitionNode
+          ? definitionNode
+          : this.getDefinitionFromImport(
+              param.textDocument.uri,
+              upperCaseQid.text,
+              "Module",
+            );
+        return this.createMarkdownHoverFromDefinition(definitionNode);
       } else if (
         nodeAtPosition.parent &&
         nodeAtPosition.parent.type === "value_qid"
       ) {
-        const definitionNode = TreeUtils.findLowercaseQidNode(
+        let definitionNode = TreeUtils.findLowercaseQidNode(
           tree,
           nodeAtPosition.parent,
         );
 
-        if (definitionNode) {
-          const value = HintHelper.createHintFromDefinition(definitionNode);
+        definitionNode = definitionNode
+          ? definitionNode
+          : this.getDefinitionFromImport(
+              param.textDocument.uri,
+              nodeAtPosition.parent.text,
+              "Function",
+            );
 
-          if (value) {
-            return {
-              contents: {
-                kind: MarkupKind.Markdown,
-                value,
-              },
-            };
-          }
-        }
+        return this.createMarkdownHoverFromDefinition(definitionNode);
       } else if (nodeAtPosition.type === "operator_identifier") {
-        const definitionNode = TreeUtils.findOperator(
-          tree,
-          nodeAtPosition.text,
-        );
-        if (definitionNode) {
-          const value = HintHelper.createHintFromDefinition(definitionNode);
+        let definitionNode = TreeUtils.findOperator(tree, nodeAtPosition.text);
 
-          if (value) {
-            return {
-              contents: {
-                kind: MarkupKind.Markdown,
-                value,
-              },
-            };
-          }
-        }
+        definitionNode = definitionNode
+          ? definitionNode
+          : this.getDefinitionFromImport(
+              param.textDocument.uri,
+              nodeAtPosition.text,
+              "Operator",
+            );
+
+        return this.createMarkdownHoverFromDefinition(definitionNode);
       }
 
       return undefined;
     }
   };
+
+  private createMarkdownHoverFromDefinition(
+    definitionNode: SyntaxNode | undefined,
+  ): Hover | undefined {
+    if (definitionNode) {
+      const value = HintHelper.createHint(definitionNode);
+
+      if (value) {
+        return {
+          contents: {
+            kind: MarkupKind.Markdown,
+            value,
+          },
+        };
+      }
+    }
+  }
+
+  private getDefinitionFromImport(
+    uri: string,
+    nodeName: string,
+    type: NodeType,
+  ) {
+    if (this.imports.imports) {
+      const allFileImports = this.imports.imports[uri];
+      if (allFileImports) {
+        const foundNode = allFileImports.find(
+          a => a.alias === nodeName && a.type === type,
+        );
+        if (foundNode) {
+          return foundNode.node;
+        }
+      }
+    }
+  }
 }
