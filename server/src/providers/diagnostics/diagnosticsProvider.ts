@@ -6,8 +6,8 @@ import {
   TextDocument,
 } from "vscode-languageserver";
 import URI from "vscode-uri";
-import { DocumentEvents } from '../../util/documentEvents';
-import { TextDocumentEvents } from '../../util/textDocumentEvents';
+import { DocumentEvents } from "../../util/documentEvents";
+import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { ElmAnalyseDiagnostics } from "./elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 
@@ -30,14 +30,16 @@ export class DiagnosticsProvider {
   private events: TextDocumentEvents;
   private elmMakeDiagnostics: ElmMakeDiagnostics;
   private elmAnalyseDiagnostics: ElmAnalyseDiagnostics;
-  private connection: IConnection;
-  private elmWorkspaceFolder: URI;
   private currentDiagnostics: {
     elmMake: Map<string, Diagnostic[]>;
     elmAnalyse: Map<string, Diagnostic[]>;
   };
 
-  constructor(connection: IConnection, elmWorkspaceFolder: URI, documentEvents: DocumentEvents) {
+  constructor(
+    private connection: IConnection,
+    private elmWorkspaceFolder: URI,
+    documentEvents: DocumentEvents,
+  ) {
     this.getDiagnostics = this.getDiagnostics.bind(this);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmMakeIssueToDiagnostic = this.elmMakeIssueToDiagnostic.bind(this);
@@ -58,9 +60,9 @@ export class DiagnosticsProvider {
 
     this.currentDiagnostics = { elmMake: new Map(), elmAnalyse: new Map() };
 
-    this.events.on('open', this.getDiagnostics)
-    this.events.on('change', this.getDiagnostics)
-    this.events.on('save', this.getDiagnostics)
+    this.events.on("open", this.getDiagnostics);
+    this.events.on("change", this.getDiagnostics);
+    this.events.on("save", this.getDiagnostics);
   }
 
   private newElmAnalyseDiagnostics(diagnostics: Map<string, Diagnostic[]>) {

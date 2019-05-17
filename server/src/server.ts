@@ -1,5 +1,6 @@
 import {
   Connection,
+  IConnection,
   InitializeParams,
   InitializeResult,
 } from "vscode-languageserver";
@@ -55,7 +56,7 @@ export class Server implements ILanguageServer {
   }
 
   private registerProviders(
-    connection: Connection,
+    connection: IConnection,
     forest: Forest,
     elmWorkspace: URI,
     imports: Imports,
@@ -67,7 +68,7 @@ export class Server implements ILanguageServer {
     new CompletionProvider(connection, forest, imports);
     new HoverProvider(connection, forest, imports);
     new DiagnosticsProvider(connection, elmWorkspace, documentEvents);
-    new ElmFormatProvider(connection, elmWorkspace);
+    new ElmFormatProvider(connection, elmWorkspace, documentEvents);
     new DefinitionProvider(connection, forest, imports);
     new ReferencesProvider(connection, forest);
     new DocumentSymbolProvider(connection, forest);

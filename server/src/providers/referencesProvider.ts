@@ -2,8 +2,8 @@ import { SyntaxNode, Tree } from "tree-sitter";
 import {
   IConnection,
   Location,
-  Range,
   Position,
+  Range,
   ReferenceParams,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
@@ -25,9 +25,9 @@ export class ReferencesProvider {
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
     if (tree) {
-      let nodeAtPosition = tree.rootNode.namedDescendantForPosition({
-        row: param.position.line,
+      const nodeAtPosition = tree.rootNode.namedDescendantForPosition({
         column: param.position.character,
+        row: param.position.line,
       });
 
       // let nameNode: SyntaxNode | null = null;
@@ -38,7 +38,7 @@ export class ReferencesProvider {
       // }
 
       if (nodeAtPosition) {
-        let references = tree.rootNode
+        const references = tree.rootNode
           .descendantsOfType("value_expr")
           .filter(
             a =>
@@ -48,7 +48,7 @@ export class ReferencesProvider {
               a.firstNamedChild.lastNamedChild.text === nodeAtPosition.text,
           );
 
-        let declaration = tree.rootNode
+        const declaration = tree.rootNode
           .descendantsOfType("function_declaration_left")
           .find(
             a =>
