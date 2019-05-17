@@ -8,6 +8,7 @@ export interface IImport {
   node: SyntaxNode | undefined;
   fromModuleName: string;
   type: NodeType;
+  uri: string;
 }
 
 export interface IImports {
@@ -43,111 +44,117 @@ export class Imports implements IImports {
           importNode,
         );
         if (moduleNameNode) {
-          const foundModule = forest.getTreeByModuleName(moduleNameNode.text);
+          const foundModule = forest.getByModuleName(moduleNameNode.text);
           if (foundModule) {
             result.push({
               alias: moduleNameNode.text,
               fromModuleName: moduleNameNode.text,
-              node: TreeUtils.findModule(foundModule),
+              node: TreeUtils.findModule(foundModule.tree),
               type: "Module",
+              uri: foundModule.uri,
             });
-          }
 
-          const exposedFromRemoteModule = forest.getExposingByModuleName(
-            moduleNameNode.text,
-          );
-          if (exposedFromRemoteModule) {
-            result.push(
-              ...this.getPrefixedCompletions(
-                moduleNameNode,
-                importNode,
-                exposedFromRemoteModule,
-              ),
+            const exposedFromRemoteModule = forest.getExposingByModuleName(
+              moduleNameNode.text,
             );
-
-            const exposingList = TreeUtils.findFirstNamedChildOfType(
-              "exposing_list",
-              importNode,
-            );
-
-            if (exposingList) {
-              const doubleDot = TreeUtils.findFirstNamedChildOfType(
-                "double_dot",
-                exposingList,
+            if (exposedFromRemoteModule) {
+              result.push(
+                ...this.getPrefixedCompletions(
+                  moduleNameNode,
+                  importNode,
+                  exposedFromRemoteModule,
+                  foundModule.uri,
+                ),
               );
-              if (doubleDot) {
-                result.push(
-                  ...this.getAllExposedCompletions(
-                    exposedFromRemoteModule,
-                    moduleNameNode.text,
-                  ),
-                );
-              } else {
-                const exposedOperators = exposingList.descendantsOfType(
-                  "operator_identifier",
-                );
-                if (exposedOperators.length > 0) {
-                  const exposedNodes = exposedFromRemoteModule.filter(
-                    element => {
-                      return exposedOperators.find(
-                        a => a.text === element.name,
-                      );
-                    },
-                  );
-                  result.push(
-                    ...exposedNodes.map(a => {
-                      return {
-                        alias: a.name,
-                        fromModuleName: moduleNameNode.text,
-                        node: a.syntaxNode,
-                        type: a.type,
-                      };
-                    }),
-                  );
-                }
 
-                const exposedValues = TreeUtils.findAllNamedChildsOfType(
-                  "exposed_value",
+              const exposingList = TreeUtils.findFirstNamedChildOfType(
+                "exposing_list",
+                importNode,
+              );
+
+              if (exposingList) {
+                const doubleDot = TreeUtils.findFirstNamedChildOfType(
+                  "double_dot",
                   exposingList,
                 );
-                if (exposedValues) {
-                  const exposedNodes = exposedFromRemoteModule.filter(
-                    element => {
-                      return exposedValues.find(a => a.text === element.name);
-                    },
-                  );
+                if (doubleDot) {
                   result.push(
-                    ...exposedNodes.map(a => {
-                      return {
-                        alias: a.name,
-                        fromModuleName: moduleNameNode.text,
-                        node: a.syntaxNode,
-                        type: a.type,
-                      };
-                    }),
+                    ...this.getAllExposedCompletions(
+                      exposedFromRemoteModule,
+                      moduleNameNode.text,
+                      foundModule.uri,
+                    ),
                   );
-                }
+                } else {
+                  const exposedOperators = exposingList.descendantsOfType(
+                    "operator_identifier",
+                  );
+                  if (exposedOperators.length > 0) {
+                    const exposedNodes = exposedFromRemoteModule.filter(
+                      element => {
+                        return exposedOperators.find(
+                          a => a.text === element.name,
+                        );
+                      },
+                    );
+                    result.push(
+                      ...exposedNodes.map(a => {
+                        return {
+                          alias: a.name,
+                          fromModuleName: moduleNameNode.text,
+                          node: a.syntaxNode,
+                          type: a.type,
+                          uri: foundModule.uri,
+                        };
+                      }),
+                    );
+                  }
 
-                const exposedType = TreeUtils.findAllNamedChildsOfType(
-                  "exposed_type",
-                  exposingList,
-                );
-                if (exposedType) {
-                  const exposedNodes = exposedFromRemoteModule.filter(
-                    element => {
-                      return exposedType.find(a => a.text === element.name);
-                    },
+                  const exposedValues = TreeUtils.findAllNamedChildsOfType(
+                    "exposed_value",
+                    exposingList,
                   );
-                  result.push(
-                    ...exposedNodes.map(a => {
-                      return {
-                        alias: a.name,
-                        fromModuleName: moduleNameNode.text,
-                        node: a.syntaxNode,
-                        type: a.type,
-                      };
-                    }),
+                  if (exposedValues) {
+                    const exposedNodes = exposedFromRemoteModule.filter(
+                      element => {
+                        return exposedValues.find(a => a.text === element.name);
+                      },
+                    );
+                    result.push(
+                      ...exposedNodes.map(a => {
+                        return {
+                          alias: a.name,
+                          fromModuleName: moduleNameNode.text,
+                          node: a.syntaxNode,
+                          type: a.type,
+                          uri: foundModule.uri,
+                        };
+                      }),
+                    );
+                  }
+
+                  const exposedType = TreeUtils.findAllNamedChildsOfType(
+                    "exposed_type",
+                    exposingList,
                   );
+                  if (exposedType) {
+                    const exposedNodes = exposedFromRemoteModule.filter(
+                      element => {
+                        return exposedType.find(a => a.text === element.name);
+                      },
+                    );
+                    result.push(
+                      ...exposedNodes.map(a => {
+                        return {
+                          alias: a.name,
+                          fromModuleName: moduleNameNode.text,
+                          node: a.syntaxNode,
+                          type: a.type,
+                          uri: foundModule.uri,
+                        };
+                      }),
+                    );
+                  }
                 }
               }
             }
@@ -165,6 +172,7 @@ export class Imports implements IImports {
     moduleNameNode: SyntaxNode,
     importNode: SyntaxNode,
     exposed: Exposing,
+    uri: string,
   ): IImport[] {
     const result: IImport[] = [];
 
@@ -181,6 +189,7 @@ export class Imports implements IImports {
             fromModuleName: moduleNameNode.text,
             node: element.syntaxNode,
             type: element.type,
+            uri,
           });
           if (element.exposedUnionConstructors) {
             result.push(
@@ -190,6 +199,7 @@ export class Imports implements IImports {
                   fromModuleName: moduleNameNode.text,
                   node: undefined,
                   type: "UnionConstructor" as NodeType,
+                  uri,
                 };
               }),
             );
@@ -243,6 +253,7 @@ import Platform.Sub as Sub exposing ( Sub )
   private getAllExposedCompletions(
     exposed: Exposing,
     moduleName: string,
+    uri: string,
   ): IImport[] {
     const result: IImport[] = [];
 
@@ -252,6 +263,7 @@ import Platform.Sub as Sub exposing ( Sub )
         fromModuleName: moduleName,
         node: element.syntaxNode,
         type: element.type,
+        uri,
       });
     });
 

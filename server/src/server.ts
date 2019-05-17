@@ -68,7 +68,7 @@ export class Server implements ILanguageServer {
     new HoverProvider(connection, forest, imports);
     new DiagnosticsProvider(connection, elmWorkspace, documentEvents);
     new ElmFormatProvider(connection, elmWorkspace);
-    new DefinitionProvider(connection, forest);
+    new DefinitionProvider(connection, forest, imports);
     new ReferencesProvider(connection, forest);
     new DocumentSymbolProvider(connection, forest);
     new WorkspaceSymbolProvider(connection, forest);
