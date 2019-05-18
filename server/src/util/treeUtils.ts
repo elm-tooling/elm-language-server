@@ -8,11 +8,19 @@ export type NodeType =
   | "Module"
   | "UnionConstructor";
 
+export type IdentifiedNodeType =
+  | "Function"
+  | "TypeAlias"
+  | "TypeOrUnionConstructor"
+  | "Operator"
+  | "Module";
 export type Exposing = Array<{
   name: string;
   syntaxNode: SyntaxNode;
   type: NodeType;
-  exposedUnionConstructors: string[] | undefined; // Only used for types
+  exposedUnionConstructors:
+    | Array<{ name: string; syntaxNode: SyntaxNode }>
+    | undefined;
 }>;
 
 export class TreeUtils {
@@ -76,7 +84,10 @@ export class TreeUtils {
             const typeDeclarations = this.findAllTypeDeclarations(tree);
             if (typeDeclarations) {
               typeDeclarations.forEach(typeDeclaration => {
-                const unionCostructors: string[] = [];
+                const unionCostructors: Array<{
+                  name: string;
+                  syntaxNode: SyntaxNode;
+                }> = [];
                 typeDeclaration
                   .descendantsOfType("union_variant")
                   .forEach(variant => {
@@ -84,8 +95,11 @@ export class TreeUtils {
                       "upper_case_identifier",
                       variant,
                     );
-                    if (name) {
-                      unionCostructors.push(name.text);
+                    if (name && name.parent) {
+                      unionCostructors.push({
+                        name: name.text,
+                        syntaxNode: name.parent,
+                      });
                     }
                   });
                 const typeDeclarationName = TreeUtils.findFirstNamedChildOfType(
@@ -149,7 +163,10 @@ export class TreeUtils {
               if (name) {
                 const typeDeclaration = this.findType(tree, name.text);
                 if (typeDeclaration) {
-                  const unionCostructors: string[] = [];
+                  const unionCostructors: Array<{
+                    name: string;
+                    syntaxNode: SyntaxNode;
+                  }> = [];
                   typeDeclaration
                     .descendantsOfType("union_variant")
                     .forEach(variant => {
@@ -157,8 +174,11 @@ export class TreeUtils {
                         "upper_case_identifier",
                         variant,
                       );
-                      if (unionConstructorName) {
-                        unionCostructors.push(unionConstructorName.text);
+                      if (unionConstructorName && unionConstructorName.parent) {
+                        unionCostructors.push({
+                          name: unionConstructorName.text,
+                          syntaxNode: unionConstructorName.parent,
+                        });
                       }
                     });
 
@@ -262,6 +282,21 @@ export class TreeUtils {
       return descendants.some(desc => desc.text.startsWith(typeName));
     }
     return false;
+  }
+
+  public static findUnionConstructor(
+    tree: Tree,
+    unionConstructorName: string,
+  ): SyntaxNode | undefined {
+    const unionVariants = tree.rootNode.descendantsOfType("union_variant");
+    if (unionVariants.length > 0) {
+      return unionVariants.find(
+        a =>
+          a.firstChild !== null &&
+          a.firstChild.type === "upper_case_identifier" &&
+          a.firstChild.text === unionConstructorName,
+      );
+    }
   }
 
   public static findFunction(
@@ -391,6 +426,43 @@ export class TreeUtils {
     if (!definitionNode) {
       definitionNode = this.findTypeAlias(tree, nodeAtPosition.text);
     }
+    if (!definitionNode) {
+      definitionNode = this.findUnionConstructor(tree, nodeAtPosition.text);
+    }
     return definitionNode;
+  }
+
+  public static identifyFromNodeAtPosition(
+    nodeAtPosition: SyntaxNode,
+  ): IdentifiedNodeType | undefined {
+    if (
+      nodeAtPosition.parent &&
+      nodeAtPosition.parent.type === "upper_case_qid" &&
+      nodeAtPosition.parent.previousNamedSibling &&
+      nodeAtPosition.parent.previousNamedSibling.type === "import"
+    ) {
+      return "Module";
+    } else if (
+      nodeAtPosition.parent &&
+      nodeAtPosition.parent.type === "upper_case_qid" &&
+      nodeAtPosition.parent.parent &&
+      nodeAtPosition.parent.parent.type === "type_ref"
+    ) {
+      return "TypeOrUnionConstructor";
+    } else if (
+      nodeAtPosition.parent &&
+      nodeAtPosition.parent.type === "upper_case_qid" &&
+      nodeAtPosition.parent.parent &&
+      nodeAtPosition.parent.parent.type === "value_expr"
+    ) {
+      return "TypeAlias";
+    } else if (
+      nodeAtPosition.parent &&
+      nodeAtPosition.parent.type === "value_qid"
+    ) {
+      return "Function";
+    } else if (nodeAtPosition.type === "operator_identifier") {
+      return "Operator";
+    }
   }
 }

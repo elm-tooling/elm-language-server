@@ -33,6 +33,25 @@ export class DefinitionProvider {
 
       if (
         nodeAtPosition.parent &&
+        nodeAtPosition.parent.type === "upper_case_qid" &&
+        nodeAtPosition.parent.previousNamedSibling &&
+        nodeAtPosition.parent.previousNamedSibling.type === "import"
+      ) {
+        const upperCaseQid = nodeAtPosition.parent;
+
+        const definitionFromOtherFile = this.findImportFromFile(
+          param.textDocument.uri,
+          upperCaseQid.text,
+          "Module",
+        );
+        if (definitionFromOtherFile) {
+          return this.createLocationFromDefinition(
+            definitionFromOtherFile.node,
+            definitionFromOtherFile.uri,
+          );
+        }
+      } else if (
+        nodeAtPosition.parent &&
         nodeAtPosition.parent.type === "upper_case_qid"
       ) {
         const upperCaseQid = nodeAtPosition.parent;
@@ -62,7 +81,7 @@ export class DefinitionProvider {
             : this.findImportFromFile(
                 param.textDocument.uri,
                 upperCaseQid.text,
-                "Module",
+                "UnionConstructor",
               );
           if (definitionFromOtherFile) {
             return this.createLocationFromDefinition(

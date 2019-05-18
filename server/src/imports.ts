@@ -5,7 +5,7 @@ import { Exposing, NodeType, TreeUtils } from "./util/treeUtils";
 
 export interface IImport {
   alias: string;
-  node: SyntaxNode | undefined;
+  node: SyntaxNode;
   fromModuleName: string;
   type: NodeType;
   uri: string;
@@ -46,124 +46,129 @@ export class Imports implements IImports {
         if (moduleNameNode) {
           const foundModule = forest.getByModuleName(moduleNameNode.text);
           if (foundModule) {
-            result.push({
-              alias: moduleNameNode.text,
-              fromModuleName: moduleNameNode.text,
-              node: TreeUtils.findModule(foundModule.tree),
-              type: "Module",
-              uri: foundModule.uri,
-            });
+            const foundModuleNode = TreeUtils.findModule(foundModule.tree);
+            if (foundModuleNode) {
+              result.push({
+                alias: moduleNameNode.text,
+                fromModuleName: moduleNameNode.text,
+                node: foundModuleNode,
+                type: "Module",
+                uri: foundModule.uri,
+              });
 
-            const exposedFromRemoteModule = forest.getExposingByModuleName(
-              moduleNameNode.text,
-            );
-            if (exposedFromRemoteModule) {
-              result.push(
-                ...this.getPrefixedCompletions(
-                  moduleNameNode,
-                  importNode,
-                  exposedFromRemoteModule,
-                  foundModule.uri,
-                ),
+              const exposedFromRemoteModule = forest.getExposingByModuleName(
+                moduleNameNode.text,
               );
-
-              const exposingList = TreeUtils.findFirstNamedChildOfType(
-                "exposing_list",
-                importNode,
-              );
-
-              if (exposingList) {
-                const doubleDot = TreeUtils.findFirstNamedChildOfType(
-                  "double_dot",
-                  exposingList,
+              if (exposedFromRemoteModule) {
+                result.push(
+                  ...this.getPrefixedCompletions(
+                    moduleNameNode,
+                    importNode,
+                    exposedFromRemoteModule,
+                    foundModule.uri,
+                  ),
                 );
-                if (doubleDot) {
-                  result.push(
-                    ...this.getAllExposedCompletions(
-                      exposedFromRemoteModule,
-                      moduleNameNode.text,
-                      foundModule.uri,
-                    ),
-                  );
-                } else {
-                  const exposedOperators = exposingList.descendantsOfType(
-                    "operator_identifier",
-                  );
-                  if (exposedOperators.length > 0) {
-                    const exposedNodes = exposedFromRemoteModule.filter(
-                      element => {
-                        return exposedOperators.find(
-                          a => a.text === element.name,
-                        );
-                      },
-                    );
-                    result.push(
-                      ...exposedNodes.map(a => {
-                        return {
-                          alias: a.name,
-                          fromModuleName: moduleNameNode.text,
-                          node: a.syntaxNode,
-                          type: a.type,
-                          uri: foundModule.uri,
-                        };
-                      }),
-                    );
-                  }
 
-                  const exposedValues = TreeUtils.findAllNamedChildsOfType(
-                    "exposed_value",
+                const exposingList = TreeUtils.findFirstNamedChildOfType(
+                  "exposing_list",
+                  importNode,
+                );
+
+                if (exposingList) {
+                  const doubleDot = TreeUtils.findFirstNamedChildOfType(
+                    "double_dot",
                     exposingList,
                   );
-                  if (exposedValues) {
-                    const exposedNodes = exposedFromRemoteModule.filter(
-                      element => {
-                        return exposedValues.find(a => a.text === element.name);
-                      },
-                    );
+                  if (doubleDot) {
                     result.push(
-                      ...exposedNodes.map(a => {
-                        return {
-                          alias: a.name,
-                          fromModuleName: moduleNameNode.text,
-                          node: a.syntaxNode,
-                          type: a.type,
-                          uri: foundModule.uri,
-                        };
-                      }),
+                      ...this.getAllExposedCompletions(
+                        exposedFromRemoteModule,
+                        moduleNameNode.text,
+                        foundModule.uri,
+                      ),
                     );
-                  }
-
-                  const exposedType = TreeUtils.findAllNamedChildsOfType(
-                    "exposed_type",
-                    exposingList,
-                  );
-                  if (exposedType) {
-                    const exposedNodes = exposedFromRemoteModule.filter(
-                      element => {
-                        return exposedType.find(a => {
-                          const typeName = TreeUtils.findFirstNamedChildOfType(
-                            "upper_case_identifier",
-                            a,
+                  } else {
+                    const exposedOperators = exposingList.descendantsOfType(
+                      "operator_identifier",
+                    );
+                    if (exposedOperators.length > 0) {
+                      const exposedNodes = exposedFromRemoteModule.filter(
+                        element => {
+                          return exposedOperators.find(
+                            a => a.text === element.name,
                           );
-                          if (typeName) {
-                            return typeName.text === element.name;
-                          } else {
-                            return false;
-                          }
-                        });
-                      },
+                        },
+                      );
+                      result.push(
+                        ...exposedNodes.map(a => {
+                          return {
+                            alias: a.name,
+                            fromModuleName: moduleNameNode.text,
+                            node: a.syntaxNode,
+                            type: a.type,
+                            uri: foundModule.uri,
+                          };
+                        }),
+                      );
+                    }
+
+                    const exposedValues = TreeUtils.findAllNamedChildsOfType(
+                      "exposed_value",
+                      exposingList,
                     );
-                    result.push(
-                      ...exposedNodes.map(a => {
-                        return {
-                          alias: a.name,
-                          fromModuleName: moduleNameNode.text,
-                          node: a.syntaxNode,
-                          type: a.type,
-                          uri: foundModule.uri,
-                        };
-                      }),
+                    if (exposedValues) {
+                      const exposedNodes = exposedFromRemoteModule.filter(
+                        element => {
+                          return exposedValues.find(
+                            a => a.text === element.name,
+                          );
+                        },
+                      );
+                      result.push(
+                        ...exposedNodes.map(a => {
+                          return {
+                            alias: a.name,
+                            fromModuleName: moduleNameNode.text,
+                            node: a.syntaxNode,
+                            type: a.type,
+                            uri: foundModule.uri,
+                          };
+                        }),
+                      );
+                    }
+
+                    const exposedType = TreeUtils.findAllNamedChildsOfType(
+                      "exposed_type",
+                      exposingList,
                     );
+                    if (exposedType) {
+                      const exposedNodes = exposedFromRemoteModule.filter(
+                        element => {
+                          return exposedType.find(a => {
+                            const typeName = TreeUtils.findFirstNamedChildOfType(
+                              "upper_case_identifier",
+                              a,
+                            );
+                            if (typeName) {
+                              return typeName.text === element.name;
+                            } else {
+                              return false;
+                            }
+                          });
+                        },
+                      );
+                      result.push(
+                        ...exposedNodes.map(a => {
+                          return {
+                            alias: a.name,
+                            fromModuleName: moduleNameNode.text,
+                            node: a.syntaxNode,
+                            type: a.type,
+                            uri: foundModule.uri,
+                          };
+                        }),
+                      );
+                    }
                   }
                 }
               }
@@ -205,9 +210,9 @@ export class Imports implements IImports {
             result.push(
               ...element.exposedUnionConstructors.map(a => {
                 return {
-                  alias: importPrefix + "." + a,
+                  alias: a.name,
                   fromModuleName: moduleNameNode.text,
-                  node: undefined,
+                  node: a.syntaxNode,
                   type: "UnionConstructor" as NodeType,
                   uri,
                 };

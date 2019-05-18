@@ -32,6 +32,19 @@ export class HoverProvider {
 
       if (
         nodeAtPosition.parent &&
+        nodeAtPosition.parent.type === "upper_case_qid" &&
+        nodeAtPosition.parent.previousNamedSibling &&
+        nodeAtPosition.parent.previousNamedSibling.type === "import"
+      ) {
+        const upperCaseQid = nodeAtPosition.parent;
+        const definitionNode = this.getDefinitionFromImport(
+          param.textDocument.uri,
+          upperCaseQid.text,
+          "Module",
+        );
+        return this.createMarkdownHoverFromDefinition(definitionNode);
+      } else if (
+        nodeAtPosition.parent &&
         nodeAtPosition.parent.type === "upper_case_qid"
       ) {
         const upperCaseQid = nodeAtPosition.parent;
