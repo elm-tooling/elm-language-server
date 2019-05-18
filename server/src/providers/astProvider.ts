@@ -48,7 +48,6 @@ export class ASTProvider {
     }
 
     events.on("change", this.handleChangeTextDocument);
-    events.on("close", this.handleCloseTextDocument);
 
     this.initializeWorkspace();
   }
@@ -195,13 +194,6 @@ export class ASTProvider {
       this.forest.setTree(document.uri, true, true, tree);
       this.imports.updateImports(document.uri, tree, this.forest);
     }
-  };
-
-  protected handleCloseTextDocument = async (
-    params: DidCloseTextDocumentParams,
-  ): Promise<void> => {
-    const document: TextDocumentIdentifier = params.textDocument;
-    this.forest.removeTree(document.uri);
   };
 
   private findElmHome() {
