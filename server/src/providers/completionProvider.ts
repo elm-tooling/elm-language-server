@@ -10,7 +10,7 @@ import {
 } from "vscode-languageserver";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
-import { getSpecialItems } from "../util/elmUtils";
+import { getEmptyTypes } from "../util/elmUtils";
 import { HintHelper } from "../util/hintHelper";
 import { TreeUtils } from "../util/treeUtils";
 
@@ -85,7 +85,7 @@ export class CompletionProvider {
     }
 
     completions.push(
-      ...getSpecialItems().map(a =>
+      ...getEmptyTypes().map(a =>
         this.createCompletion(a.markdown, a.symbolKind, a.name),
       ),
     );

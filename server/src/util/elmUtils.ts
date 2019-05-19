@@ -138,7 +138,8 @@ export function execCmd(
   }
 }
 
-export function getSpecialItems() {
+// Special type that has no core mock https://github.com/elm/compiler/blob/51e20357137ebc9c3f6136cf0a3fe21c24027f39/compiler/src/Canonicalize/Environment/Foreign.hs#L62
+export function getEmptyTypes() {
   return [
     {
       markdown: `An \`List\` is a list of items. Every item must be of the same type. Valid syntax for lists includes:

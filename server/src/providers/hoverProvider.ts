@@ -7,7 +7,7 @@ import {
 } from "vscode-languageserver";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
-import { getSpecialItems } from "../util/elmUtils";
+import { getEmptyTypes } from "../util/elmUtils";
 import { HintHelper } from "../util/hintHelper";
 import { TreeUtils } from "../util/treeUtils";
 
@@ -41,7 +41,7 @@ export class HoverProvider {
       if (definitionNode) {
         return this.createMarkdownHoverFromDefinition(definitionNode.node);
       } else {
-        const specialMatch = getSpecialItems().find(
+        const specialMatch = getEmptyTypes().find(
           a => a.name === nodeAtPosition.text,
         );
         if (specialMatch) {
