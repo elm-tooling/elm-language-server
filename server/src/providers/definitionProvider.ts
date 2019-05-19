@@ -31,125 +31,19 @@ export class DefinitionProvider {
         row: param.position.line,
       });
 
-      if (
-        nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "upper_case_qid" &&
-        nodeAtPosition.parent.previousNamedSibling &&
-        nodeAtPosition.parent.previousNamedSibling.type === "import"
-      ) {
-        const upperCaseQid = nodeAtPosition.parent;
+      const definitionNode = TreeUtils.findDefinitonNodeByReferencingNode(
+        nodeAtPosition,
+        param.textDocument.uri,
+        tree,
+        this.imports,
+      );
 
-        const definitionFromOtherFile = this.findImportFromFile(
-          param.textDocument.uri,
-          upperCaseQid.text,
-          "Module",
-        );
-        if (definitionFromOtherFile) {
-          return this.createLocationFromDefinition(
-            definitionFromOtherFile.node,
-            definitionFromOtherFile.uri,
-          );
-        }
-      } else if (
-        nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "upper_case_qid"
-      ) {
-        const upperCaseQid = nodeAtPosition.parent;
-        const definitionNode = TreeUtils.findUppercaseQidNode(
-          tree,
-          upperCaseQid,
-        );
-
-        let definitionFromOtherFile;
-        if (!definitionNode) {
-          definitionFromOtherFile = this.findImportFromFile(
-            param.textDocument.uri,
-            upperCaseQid.text,
-            "Type",
-          );
-
-          definitionFromOtherFile = definitionFromOtherFile
-            ? definitionFromOtherFile
-            : this.findImportFromFile(
-                param.textDocument.uri,
-                upperCaseQid.text,
-                "TypeAlias",
-              );
-
-          definitionFromOtherFile = definitionFromOtherFile
-            ? definitionFromOtherFile
-            : this.findImportFromFile(
-                param.textDocument.uri,
-                upperCaseQid.text,
-                "UnionConstructor",
-              );
-          if (definitionFromOtherFile) {
-            return this.createLocationFromDefinition(
-              definitionFromOtherFile.node,
-              definitionFromOtherFile.uri,
-            );
-          }
-        }
+      if (definitionNode) {
         return this.createLocationFromDefinition(
-          definitionNode,
-          param.textDocument.uri,
-        );
-      } else if (
-        nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "value_qid"
-      ) {
-        const definitionNode = TreeUtils.findLowercaseQidNode(
-          tree,
-          nodeAtPosition.parent,
-        );
-
-        if (!definitionNode) {
-          const definitionFromOtherFile = this.findImportFromFile(
-            param.textDocument.uri,
-            nodeAtPosition.parent.text,
-            "Function",
-          );
-
-          if (definitionFromOtherFile) {
-            return this.createLocationFromDefinition(
-              definitionFromOtherFile.node,
-              definitionFromOtherFile.uri,
-            );
-          }
-        }
-
-        return this.createLocationFromDefinition(
-          definitionNode,
-          param.textDocument.uri,
-        );
-      } else if (nodeAtPosition.type === "operator_identifier") {
-        const definitionNode = TreeUtils.findOperator(
-          tree,
-          nodeAtPosition.text,
-        );
-
-        if (!definitionNode) {
-          const definitionFromOtherFile = this.findImportFromFile(
-            param.textDocument.uri,
-            nodeAtPosition.text,
-            "Operator",
-          );
-
-          if (definitionFromOtherFile) {
-            return this.createLocationFromDefinition(
-              definitionFromOtherFile.node,
-              definitionFromOtherFile.uri,
-            );
-          }
-        }
-
-        return this.createLocationFromDefinition(
-          definitionNode,
-          param.textDocument.uri,
+          definitionNode.node,
+          definitionNode.uri,
         );
       }
-
-      return undefined;
     }
   };
 
@@ -171,20 +65,6 @@ export class DefinitionProvider {
           ),
         ),
       );
-    }
-  }
-
-  private findImportFromFile(uri: string, nodeName: string, type: NodeType) {
-    if (this.imports.imports) {
-      const allFileImports = this.imports.imports[uri];
-      if (allFileImports) {
-        const foundNode = allFileImports.find(
-          a => a.alias === nodeName && a.type === type,
-        );
-        if (foundNode) {
-          return foundNode;
-        }
-      }
     }
   }
 }

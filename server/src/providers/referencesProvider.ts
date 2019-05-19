@@ -20,14 +20,14 @@ export class ReferencesProvider {
   }
 
   protected handleReferencesRequest = async (
-    param: ReferenceParams,
+    params: ReferenceParams,
   ): Promise<Location[] | null | undefined> => {
-    const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
+    const tree: Tree | undefined = this.forest.getTree(params.textDocument.uri);
 
     if (tree) {
       const nodeAtPosition = tree.rootNode.namedDescendantForPosition({
-        column: param.position.character,
-        row: param.position.line,
+        column: params.position.character,
+        row: params.position.line,
       });
 
       // let nameNode: SyntaxNode | null = null;
@@ -64,7 +64,7 @@ export class ReferencesProvider {
         if (references) {
           return references.map(a =>
             Location.create(
-              param.textDocument.uri,
+              params.textDocument.uri,
               Range.create(
                 Position.create(a.startPosition.row, a.startPosition.column),
                 Position.create(a.endPosition.row, a.endPosition.column),

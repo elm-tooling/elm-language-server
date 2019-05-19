@@ -1,4 +1,5 @@
 import { SyntaxNode, Tree } from "tree-sitter";
+import { IImport, IImports } from "../imports";
 
 export type NodeType =
   | "Function"
@@ -8,12 +9,6 @@ export type NodeType =
   | "Module"
   | "UnionConstructor";
 
-export type IdentifiedNodeType =
-  | "Function"
-  | "TypeAlias"
-  | "TypeOrUnionConstructor"
-  | "Operator"
-  | "Module";
 export type Exposing = Array<{
   name: string;
   syntaxNode: SyntaxNode;
@@ -432,37 +427,148 @@ export class TreeUtils {
     return definitionNode;
   }
 
-  public static identifyFromNodeAtPosition(
+  public static findDefinitonNodeByReferencingNode(
     nodeAtPosition: SyntaxNode,
-  ): IdentifiedNodeType | undefined {
+    uri: string,
+    tree: Tree,
+    imports: IImports,
+  ): { node: SyntaxNode; uri: string } | undefined {
     if (
       nodeAtPosition.parent &&
       nodeAtPosition.parent.type === "upper_case_qid" &&
       nodeAtPosition.parent.previousNamedSibling &&
       nodeAtPosition.parent.previousNamedSibling.type === "import"
     ) {
-      return "Module";
+      const upperCaseQid = nodeAtPosition.parent;
+      const definitionFromOtherFile = this.getDefinitionFromImport(
+        uri,
+        upperCaseQid.text,
+        "Module",
+        imports,
+      );
+      if (definitionFromOtherFile) {
+        return {
+          node: definitionFromOtherFile.node,
+          uri: definitionFromOtherFile.uri,
+        };
+      }
     } else if (
       nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "upper_case_qid" &&
-      nodeAtPosition.parent.parent &&
-      nodeAtPosition.parent.parent.type === "type_ref"
+      nodeAtPosition.parent.type === "upper_case_qid"
     ) {
-      return "TypeOrUnionConstructor";
-    } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "upper_case_qid" &&
-      nodeAtPosition.parent.parent &&
-      nodeAtPosition.parent.parent.type === "value_expr"
-    ) {
-      return "TypeAlias";
+      const upperCaseQid = nodeAtPosition.parent;
+      const definitionNode = TreeUtils.findUppercaseQidNode(tree, upperCaseQid);
+
+      let definitionFromOtherFile;
+      if (!definitionNode) {
+        definitionFromOtherFile = this.getDefinitionFromImport(
+          uri,
+          upperCaseQid.text,
+          "Type",
+          imports,
+        );
+
+        definitionFromOtherFile = definitionFromOtherFile
+          ? definitionFromOtherFile
+          : this.getDefinitionFromImport(
+              uri,
+              upperCaseQid.text,
+              "TypeAlias",
+              imports,
+            );
+
+        definitionFromOtherFile = definitionFromOtherFile
+          ? definitionFromOtherFile
+          : this.getDefinitionFromImport(
+              uri,
+              upperCaseQid.text,
+              "UnionConstructor",
+              imports,
+            );
+        if (definitionFromOtherFile) {
+          return {
+            node: definitionFromOtherFile.node,
+            uri: definitionFromOtherFile.uri,
+          };
+        }
+      }
+      if (definitionNode) {
+        return {
+          node: definitionNode,
+          uri,
+        };
+      }
     } else if (
       nodeAtPosition.parent &&
       nodeAtPosition.parent.type === "value_qid"
     ) {
-      return "Function";
+      const definitionNode = TreeUtils.findLowercaseQidNode(
+        tree,
+        nodeAtPosition.parent,
+      );
+
+      if (!definitionNode) {
+        const definitionFromOtherFile = this.getDefinitionFromImport(
+          uri,
+          nodeAtPosition.parent.text,
+          "Function",
+          imports,
+        );
+
+        if (definitionFromOtherFile) {
+          return {
+            node: definitionFromOtherFile.node,
+            uri: definitionFromOtherFile.uri,
+          };
+        }
+      }
+
+      if (definitionNode) {
+        return {
+          node: definitionNode,
+          uri,
+        };
+      }
     } else if (nodeAtPosition.type === "operator_identifier") {
-      return "Operator";
+      const definitionNode = TreeUtils.findOperator(tree, nodeAtPosition.text);
+
+      if (!definitionNode) {
+        const definitionFromOtherFile = this.getDefinitionFromImport(
+          uri,
+          nodeAtPosition.text,
+          "Operator",
+          imports,
+        );
+
+        if (definitionFromOtherFile) {
+          return {
+            node: definitionFromOtherFile.node,
+            uri: definitionFromOtherFile.uri,
+          };
+        }
+      }
+      if (definitionNode) {
+        return { node: definitionNode, uri };
+      }
+    }
+  }
+
+  public static getDefinitionFromImport(
+    uri: string,
+    nodeName: string,
+    type: NodeType,
+    imports: IImports,
+  ): IImport | undefined {
+    if (imports.imports) {
+      const allFileImports = imports.imports[uri];
+      if (allFileImports) {
+        const foundNode = allFileImports.find(
+          a => a.alias === nodeName && a.type === type,
+        );
+        if (foundNode) {
+          return foundNode;
+        }
+      }
     }
   }
 }

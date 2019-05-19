@@ -20,93 +20,26 @@ export class HoverProvider {
   }
 
   protected handleHoverRequest = (
-    param: TextDocumentPositionParams,
+    params: TextDocumentPositionParams,
   ): Hover | null | undefined => {
-    const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
+    const tree: Tree | undefined = this.forest.getTree(params.textDocument.uri);
 
     if (tree) {
       const nodeAtPosition = tree.rootNode.namedDescendantForPosition({
-        column: param.position.character,
-        row: param.position.line,
+        column: params.position.character,
+        row: params.position.line,
       });
 
-      if (
-        nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "upper_case_qid" &&
-        nodeAtPosition.parent.previousNamedSibling &&
-        nodeAtPosition.parent.previousNamedSibling.type === "import"
-      ) {
-        const upperCaseQid = nodeAtPosition.parent;
-        const definitionNode = this.getDefinitionFromImport(
-          param.textDocument.uri,
-          upperCaseQid.text,
-          "Module",
-        );
-        return this.createMarkdownHoverFromDefinition(definitionNode);
-      } else if (
-        nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "upper_case_qid"
-      ) {
-        const upperCaseQid = nodeAtPosition.parent;
-        let definitionNode = TreeUtils.findUppercaseQidNode(tree, upperCaseQid);
+      const definitionNode = TreeUtils.findDefinitonNodeByReferencingNode(
+        nodeAtPosition,
+        params.textDocument.uri,
+        tree,
+        this.imports,
+      );
 
-        definitionNode = definitionNode
-          ? definitionNode
-          : this.getDefinitionFromImport(
-              param.textDocument.uri,
-              upperCaseQid.text,
-              "Type",
-            );
-
-        definitionNode = definitionNode
-          ? definitionNode
-          : this.getDefinitionFromImport(
-              param.textDocument.uri,
-              upperCaseQid.text,
-              "TypeAlias",
-            );
-
-        definitionNode = definitionNode
-          ? definitionNode
-          : this.getDefinitionFromImport(
-              param.textDocument.uri,
-              upperCaseQid.text,
-              "Module",
-            );
-        return this.createMarkdownHoverFromDefinition(definitionNode);
-      } else if (
-        nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "value_qid"
-      ) {
-        let definitionNode = TreeUtils.findLowercaseQidNode(
-          tree,
-          nodeAtPosition.parent,
-        );
-
-        definitionNode = definitionNode
-          ? definitionNode
-          : this.getDefinitionFromImport(
-              param.textDocument.uri,
-              nodeAtPosition.parent.text,
-              "Function",
-            );
-
-        return this.createMarkdownHoverFromDefinition(definitionNode);
-      } else if (nodeAtPosition.type === "operator_identifier") {
-        let definitionNode = TreeUtils.findOperator(tree, nodeAtPosition.text);
-
-        definitionNode = definitionNode
-          ? definitionNode
-          : this.getDefinitionFromImport(
-              param.textDocument.uri,
-              nodeAtPosition.text,
-              "Operator",
-            );
-
-        return this.createMarkdownHoverFromDefinition(definitionNode);
+      if (definitionNode) {
+        return this.createMarkdownHoverFromDefinition(definitionNode.node);
       }
-
-      return undefined;
     }
   };
 
@@ -123,24 +56,6 @@ export class HoverProvider {
             value,
           },
         };
-      }
-    }
-  }
-
-  private getDefinitionFromImport(
-    uri: string,
-    nodeName: string,
-    type: NodeType,
-  ) {
-    if (this.imports.imports) {
-      const allFileImports = this.imports.imports[uri];
-      if (allFileImports) {
-        const foundNode = allFileImports.find(
-          a => a.alias === nodeName && a.type === type,
-        );
-        if (foundNode) {
-          return foundNode.node;
-        }
       }
     }
   }
