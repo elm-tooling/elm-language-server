@@ -11,7 +11,7 @@ import { execCmd } from "../util/elmUtils";
 import { Settings } from "../util/settings";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 
-export class ElmFormatProvider {
+export class DocumentFormattingProvider {
   private events: TextDocumentEvents;
 
   constructor(

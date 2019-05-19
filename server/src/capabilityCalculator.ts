@@ -26,6 +26,7 @@ export class CapabilityCalculator {
       completionProvider: {},
       definitionProvider: true,
       documentFormattingProvider: true,
+      documentRangeFormattingProvider: true,
       documentSymbolProvider: true,
       foldingRangeProvider: true,
       hoverProvider: true,

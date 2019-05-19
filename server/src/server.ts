@@ -13,8 +13,8 @@ import { CodeLensProvider } from "./providers/codeLensProvider";
 import { CompletionProvider } from "./providers/completionProvider";
 import { DefinitionProvider } from "./providers/definitionProvider";
 import { DiagnosticsProvider } from "./providers/diagnostics/diagnosticsProvider";
+import { DocumentFormattingProvider } from "./providers/documentFormatingProvider";
 import { DocumentSymbolProvider } from "./providers/documentSymbolProvider";
-import { ElmFormatProvider } from "./providers/elmFormatProvider";
 import { FoldingRangeProvider } from "./providers/foldingProvider";
 import { HoverProvider } from "./providers/hoverProvider";
 import { ReferencesProvider } from "./providers/referencesProvider";
@@ -68,7 +68,7 @@ export class Server implements ILanguageServer {
     new CompletionProvider(connection, forest, imports);
     new HoverProvider(connection, forest, imports);
     new DiagnosticsProvider(connection, elmWorkspace, documentEvents);
-    new ElmFormatProvider(connection, elmWorkspace, documentEvents);
+    new DocumentFormattingProvider(connection, elmWorkspace, documentEvents);
     new DefinitionProvider(connection, forest, imports);
     new ReferencesProvider(connection, forest);
     new DocumentSymbolProvider(connection, forest);
