@@ -7,8 +7,9 @@ import {
 } from "vscode-languageserver";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
+import { getSpecialItems } from "../util/elmUtils";
 import { HintHelper } from "../util/hintHelper";
-import { NodeType, TreeUtils } from "../util/treeUtils";
+import { TreeUtils } from "../util/treeUtils";
 
 export class HoverProvider {
   constructor(
@@ -39,6 +40,18 @@ export class HoverProvider {
 
       if (definitionNode) {
         return this.createMarkdownHoverFromDefinition(definitionNode.node);
+      } else {
+        const specialMatch = getSpecialItems().find(
+          a => a.name === nodeAtPosition.text,
+        );
+        if (specialMatch) {
+          return {
+            contents: {
+              kind: MarkupKind.Markdown,
+              value: specialMatch.markdown,
+            },
+          };
+        }
       }
     }
   };

@@ -1,5 +1,5 @@
 import * as cp from "child_process";
-import { IConnection } from "vscode-languageserver";
+import { IConnection, SymbolKind } from "vscode-languageserver";
 import URI from "vscode-uri";
 
 export const isWindows = process.platform === "win32";
@@ -136,4 +136,22 @@ export function execCmd(
       childProcess.kill("SIGINT");
     }
   }
+}
+
+export function getSpecialItems() {
+  return [
+    {
+      markdown: `An \`List\` is a list of items. Every item must be of the same type. Valid syntax for lists includes:
+    
+    [] 
+    [42, 43]
+    ["one", "two", "three"]
+    [3.14, 0.1234]
+    ['a', 'Z', '0']
+    
+    `,
+      name: "List",
+      symbolKind: SymbolKind.Enum,
+    },
+  ];
 }
