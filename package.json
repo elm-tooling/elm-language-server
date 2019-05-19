@@ -65,12 +65,6 @@
         "path": "./syntaxes/elm.json"
       }
     ],
-    "snippets": [
-      {
-        "language": "elm",
-        "path": "./snippets/elm.json"
-      }
-    ],
     "configuration": {
       "type": "object",
       "title": "ElmLS",
