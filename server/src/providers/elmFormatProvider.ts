@@ -53,7 +53,7 @@ export class ElmFormatProvider {
 
       const stdout = await format;
 
-      const ranges = this.getTextRangeChanges(text.toString(), stdout.stdout);
+      const ranges = this.getTextRangeChanges(text.getText(), stdout.stdout);
 
       return ranges;
     } catch (error) {
