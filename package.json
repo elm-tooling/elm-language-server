@@ -7,9 +7,11 @@
   "version": "1.0.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/razzeee/elm-language-server"
+    "url": "https://github.com/elm-tooling/elm-language-server"
   },
   "categories": [
+    "Linters",
+    "Snippets",
     "Programming Languages"
   ],
   "keywords": [
@@ -39,6 +41,12 @@
         "configuration": "./language-configuration.json"
       }
     ],
+    "jsonValidation": [
+      {
+        "fileMatch": "elm.json",
+        "url": "./schemas/elm.schema.json"
+      }
+    ],
     "grammars": [
       {
         "scopeName": "markdown.elm.codeblock",
@@ -55,6 +63,12 @@
         "language": "elm",
         "scopeName": "source.elm",
         "path": "./syntaxes/elm.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "elm",
+        "path": "./snippets/elm.json"
       }
     ],
     "configuration": {
@@ -93,7 +107,8 @@
     "watch": "tsc -b -w",
     "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
     "test": "sh ./scripts/e2e.sh",
-    "lint": "tslint -p tsconfig.json"
+    "lint": "tslint -p tsconfig.json",
+    "tslint-check": "tslint-config-prettier-check ./tslint.json"
   },
   "devDependencies": {
     "@types/mocha": "^5.2.6",
