@@ -1,20 +1,8 @@
 "use strict";
 
 import * as path from "path";
-import {
-  ExtensionContext,
-  RelativePattern,
-  Uri,
-  workspace,
-  OutputChannel,
-  window as Window,
-} from "vscode";
-import {
-  LanguageClient,
-  LanguageClientOptions,
-  ServerOptions,
-  TransportKind,
-} from "vscode-languageclient";
+import { ExtensionContext, OutputChannel, RelativePattern, Uri, window as Window, workspace } from "vscode";
+import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from "vscode-languageclient";
 
 let languageClient: LanguageClient;
 
@@ -25,15 +13,16 @@ export async function activate(context: ExtensionContext) {
 
   const elmJsons = await workspace.findFiles(
     "**/elm.json",
-    "**/@(node_modules|elm-stuff)/**",
+    "**/node_modules/**",
   );
-  elmJsons.forEach((uri: Uri) => {
-    const workspaceFolder = workspace.getWorkspaceFolder(uri);
-    const elmJsonFolder = getElmJsonFolder(uri);
+  // Todo do this smarter
+  if (elmJsons) {
+    const workspaceFolder = workspace.getWorkspaceFolder(elmJsons[0]);
+    const elmJsonFolder = getElmJsonFolder(elmJsons[0]);
     if (workspaceFolder) {
-      startClient(workspaceFolder.uri.fsPath, context, elmJsonFolder);
+      startClient(context, elmJsonFolder);
     }
-  });
+  }
 
   const watcher = workspace.createFileSystemWatcher(
     "**/elm.json",
@@ -45,13 +34,14 @@ export async function activate(context: ExtensionContext) {
     const workspaceFolder = workspace.getWorkspaceFolder(uri);
     const elmJsonFolder = getElmJsonFolder(uri);
     if (workspaceFolder) {
-      startClient(workspaceFolder.uri.fsPath, context, elmJsonFolder);
+      startClient(context, elmJsonFolder);
     }
   });
   watcher.onDidDelete(uri => {
     const workspaceFolder = workspace.getWorkspaceFolder(uri);
+    const elmJsonFolder = getElmJsonFolder(uri);
     if (workspaceFolder) {
-      stopClient(workspaceFolder.uri);
+      stopClient(elmJsonFolder);
     }
   });
 }
@@ -65,10 +55,7 @@ async function stopClient(workspaceUri: Uri) {
 
   if (client) {
     const pattern = new RelativePattern(workspaceUri.fsPath, "**/elm.json");
-    const files = await workspace.findFiles(
-      pattern,
-      "**/@(node_modules|elm-stuff)/**",
-    );
+    const files = await workspace.findFiles(pattern, "**/node_modules/**");
     if (files.length === 0) {
       languageClient.info("Found the client shutting it down.");
       client.stop();
@@ -84,12 +71,8 @@ async function stopClient(workspaceUri: Uri) {
 }
 
 const clients: Map<string, LanguageClient> = new Map();
-function startClient(
-  clientWorkspace: string,
-  context: ExtensionContext,
-  elmWorkspace: Uri,
-) {
-  if (clients.has(clientWorkspace)) {
+function startClient(context: ExtensionContext, elmWorkspace: Uri) {
+  if (clients.has(elmWorkspace.fsPath)) {
     // Client was already started for this directory
     return;
   }
@@ -99,7 +82,7 @@ function startClient(
   );
   // The debug options for the server
   // --inspect=6009: runs the server in Node's Inspector mode so VS Code can attach to the server for debugging
-  let debugOptions = {
+  const debugOptions = {
     execArgv: ["--nolazy", `--inspect=${6010 + clients.size}`],
   };
 
@@ -113,26 +96,26 @@ function startClient(
     },
     run: { module: serverModule, transport: TransportKind.ipc },
   };
-  let outputChannel: OutputChannel = Window.createOutputChannel("elmLS");
+  const outputChannel: OutputChannel = Window.createOutputChannel("elmLS");
 
   // Options to control the language client
   const clientOptions: LanguageClientOptions = {
+    diagnosticCollectionName: "elmLS",
     // Register the server for Elm documents in the directory
     documentSelector: [
       {
-        pattern: path.join(clientWorkspace, "**", "*.elm"),
+        pattern: "**/*.elm",
         scheme: "file",
       },
     ],
     initializationOptions: { elmWorkspace: elmWorkspace.toString() },
+    outputChannel,
     // Notify the server about file changes to 'elm.json'
     synchronize: {
       fileEvents: workspace.createFileSystemWatcher(
-        path.join(clientWorkspace, "**/elm.json"),
+        path.join(elmWorkspace.fsPath, "**/elm.json"),
       ),
     },
-    diagnosticCollectionName: "elmLS",
-    outputChannel: outputChannel,
   };
 
   // Create the language client and start the client.
@@ -145,8 +128,8 @@ function startClient(
 
   // Start the client. This will also launch the server
   languageClient.start();
-  languageClient.info(`Starting language server for ${clientWorkspace}`);
-  clients.set(clientWorkspace, languageClient);
+  languageClient.info(`Starting language server for ${elmWorkspace.fsPath}`);
+  clients.set(elmWorkspace.fsPath, languageClient);
 }
 
 export function deactivate(): Thenable<void> | undefined {
