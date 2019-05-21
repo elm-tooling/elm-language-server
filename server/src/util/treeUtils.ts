@@ -19,6 +19,16 @@ export type Exposing = Array<{
 }>;
 
 export class TreeUtils {
+  public static getModuleNameNode(tree: Tree): SyntaxNode | undefined {
+    const moduleDeclaration: SyntaxNode | undefined = this.findModule(tree);
+    if (moduleDeclaration) {
+      return this.findFirstNamedChildOfType(
+        "upper_case_qid",
+        moduleDeclaration,
+      );
+    }
+  }
+
   public static getModuleNameAndExposing(
     tree: Tree,
   ): { moduleName: string; exposing: Exposing } | undefined {
@@ -384,6 +394,37 @@ export class TreeUtils {
     return functions;
   }
 
+  public static findAllFunctionCalls(tree: Tree): SyntaxNode[] | undefined {
+    let functions = tree.rootNode.descendantsOfType("value_expr");
+    if (functions.length > 0) {
+      functions = functions.filter(
+        a => a.firstChild && a.firstChild.type === "value_qid",
+      );
+    }
+
+    return functions;
+  }
+
+  public static getFunctionNameNodeFromDefinition(node: SyntaxNode) {
+    const declaration = TreeUtils.findFirstNamedChildOfType(
+      "function_declaration_left",
+      node,
+    );
+    if (declaration && declaration.firstNamedChild) {
+      return declaration.firstNamedChild;
+    }
+  }
+
+  public static findFunctionCalls(
+    tree: Tree,
+    functionName: string,
+  ): SyntaxNode[] | undefined {
+    const functions = this.findAllFunctionCalls(tree);
+    if (functions) {
+      return functions.filter(a => a.text === functionName);
+    }
+  }
+
   public static findAllTypeDeclarations(tree: Tree): SyntaxNode[] | undefined {
     const typeDeclarations = this.findAllNamedChildsOfType(
       "type_declaration",
@@ -415,16 +456,19 @@ export class TreeUtils {
   public static findUppercaseQidNode(
     tree: Tree,
     nodeAtPosition: SyntaxNode,
-  ): SyntaxNode | undefined {
-    let definitionNode;
-    definitionNode = this.findType(tree, nodeAtPosition.text);
-    if (!definitionNode) {
-      definitionNode = this.findTypeAlias(tree, nodeAtPosition.text);
+  ): { node: SyntaxNode; nodeType: NodeType } | undefined {
+    let definitionNode = this.findType(tree, nodeAtPosition.text);
+    if (definitionNode) {
+      return { node: definitionNode, nodeType: "Type" };
     }
-    if (!definitionNode) {
-      definitionNode = this.findUnionConstructor(tree, nodeAtPosition.text);
+    definitionNode = this.findTypeAlias(tree, nodeAtPosition.text);
+    if (definitionNode) {
+      return { node: definitionNode, nodeType: "TypeAlias" };
     }
-    return definitionNode;
+    definitionNode = this.findUnionConstructor(tree, nodeAtPosition.text);
+    if (definitionNode) {
+      return { node: definitionNode, nodeType: "UnionConstructor" };
+    }
   }
 
   public static findDefinitonNodeByReferencingNode(
@@ -432,7 +476,7 @@ export class TreeUtils {
     uri: string,
     tree: Tree,
     imports: IImports,
-  ): { node: SyntaxNode; uri: string } | undefined {
+  ): { node: SyntaxNode; uri: string; nodeType: NodeType } | undefined {
     if (
       nodeAtPosition.parent &&
       nodeAtPosition.parent.type === "upper_case_qid" &&
@@ -449,7 +493,8 @@ export class TreeUtils {
       if (definitionFromOtherFile) {
         return {
           node: definitionFromOtherFile.node,
-          uri: definitionFromOtherFile.uri,
+          nodeType: "Module",
+          uri: definitionFromOtherFile.fromUri,
         };
       }
     } else if (
@@ -467,34 +512,46 @@ export class TreeUtils {
           "Type",
           imports,
         );
-
-        definitionFromOtherFile = definitionFromOtherFile
-          ? definitionFromOtherFile
-          : this.getDefinitionFromImport(
-              uri,
-              upperCaseQid.text,
-              "TypeAlias",
-              imports,
-            );
-
-        definitionFromOtherFile = definitionFromOtherFile
-          ? definitionFromOtherFile
-          : this.getDefinitionFromImport(
-              uri,
-              upperCaseQid.text,
-              "UnionConstructor",
-              imports,
-            );
         if (definitionFromOtherFile) {
           return {
             node: definitionFromOtherFile.node,
-            uri: definitionFromOtherFile.uri,
+            nodeType: "Type",
+            uri: definitionFromOtherFile.fromUri,
+          };
+        }
+
+        definitionFromOtherFile = this.getDefinitionFromImport(
+          uri,
+          upperCaseQid.text,
+          "TypeAlias",
+          imports,
+        );
+        if (definitionFromOtherFile) {
+          return {
+            node: definitionFromOtherFile.node,
+            nodeType: "TypeAlias",
+            uri: definitionFromOtherFile.fromUri,
+          };
+        }
+
+        definitionFromOtherFile = this.getDefinitionFromImport(
+          uri,
+          upperCaseQid.text,
+          "UnionConstructor",
+          imports,
+        );
+        if (definitionFromOtherFile) {
+          return {
+            node: definitionFromOtherFile.node,
+            nodeType: "UnionConstructor",
+            uri: definitionFromOtherFile.fromUri,
           };
         }
       }
       if (definitionNode) {
         return {
-          node: definitionNode,
+          node: definitionNode.node,
+          nodeType: definitionNode.nodeType,
           uri,
         };
       }
@@ -518,7 +575,8 @@ export class TreeUtils {
         if (definitionFromOtherFile) {
           return {
             node: definitionFromOtherFile.node,
-            uri: definitionFromOtherFile.uri,
+            nodeType: "Function",
+            uri: definitionFromOtherFile.fromUri,
           };
         }
       }
@@ -526,6 +584,7 @@ export class TreeUtils {
       if (definitionNode) {
         return {
           node: definitionNode,
+          nodeType: "Function",
           uri,
         };
       }
@@ -543,12 +602,13 @@ export class TreeUtils {
         if (definitionFromOtherFile) {
           return {
             node: definitionFromOtherFile.node,
-            uri: definitionFromOtherFile.uri,
+            nodeType: "Operator",
+            uri: definitionFromOtherFile.fromUri,
           };
         }
       }
       if (definitionNode) {
-        return { node: definitionNode, uri };
+        return { node: definitionNode, uri, nodeType: "Operator" };
       }
     }
   }

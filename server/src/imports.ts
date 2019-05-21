@@ -6,9 +6,9 @@ import { Exposing, NodeType, TreeUtils } from "./util/treeUtils";
 export interface IImport {
   alias: string;
   node: SyntaxNode;
+  fromUri: string;
   fromModuleName: string;
   type: NodeType;
-  uri: string;
 }
 
 export interface IImports {
@@ -51,9 +51,9 @@ export class Imports implements IImports {
               result.push({
                 alias: moduleNameNode.text,
                 fromModuleName: moduleNameNode.text,
+                fromUri: foundModule.uri,
                 node: foundModuleNode,
                 type: "Module",
-                uri: foundModule.uri,
               });
 
               const exposedFromRemoteModule = forest.getExposingByModuleName(
@@ -104,9 +104,9 @@ export class Imports implements IImports {
                           return {
                             alias: a.name,
                             fromModuleName: moduleNameNode.text,
+                            fromUri: foundModule.uri,
                             node: a.syntaxNode,
                             type: a.type,
-                            uri: foundModule.uri,
                           };
                         }),
                       );
@@ -129,9 +129,9 @@ export class Imports implements IImports {
                           return {
                             alias: a.name,
                             fromModuleName: moduleNameNode.text,
+                            fromUri: foundModule.uri,
                             node: a.syntaxNode,
                             type: a.type,
-                            uri: foundModule.uri,
                           };
                         }),
                       );
@@ -162,9 +162,9 @@ export class Imports implements IImports {
                           return {
                             alias: a.name,
                             fromModuleName: moduleNameNode.text,
+                            fromUri: foundModule.uri,
                             node: a.syntaxNode,
                             type: a.type,
-                            uri: foundModule.uri,
                           };
                         }),
                       );
@@ -202,9 +202,9 @@ export class Imports implements IImports {
           result.push({
             alias: importPrefix + "." + element.name,
             fromModuleName: moduleNameNode.text,
+            fromUri: uri,
             node: element.syntaxNode,
             type: element.type,
-            uri,
           });
           if (element.exposedUnionConstructors) {
             result.push(
@@ -212,9 +212,9 @@ export class Imports implements IImports {
                 return {
                   alias: a.name,
                   fromModuleName: moduleNameNode.text,
+                  fromUri: uri,
                   node: a.syntaxNode,
                   type: "UnionConstructor" as NodeType,
-                  uri,
                 };
               }),
             );
@@ -276,9 +276,9 @@ import Platform.Sub as Sub exposing ( Sub )
       result.push({
         alias: element.name,
         fromModuleName: moduleName,
+        fromUri: uri,
         node: element.syntaxNode,
         type: element.type,
-        uri,
       });
     });
 

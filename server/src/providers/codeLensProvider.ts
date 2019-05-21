@@ -33,13 +33,11 @@ export class CodeLensProvider {
       tree.rootNode.children.forEach(node => {
         if (node.type === "value_declaration") {
           let exposed = false;
-          const declaration = TreeUtils.findFirstNamedChildOfType(
-            "function_declaration_left",
+          const functionName = TreeUtils.getFunctionNameNodeFromDefinition(
             node,
           );
-          if (declaration && declaration.firstNamedChild) {
-            const functionName = declaration.firstNamedChild.text;
-            exposed = TreeUtils.isExposedFunction(tree, functionName);
+          if (functionName) {
+            exposed = TreeUtils.isExposedFunction(tree, functionName.text);
           }
           if (
             node.previousNamedSibling &&

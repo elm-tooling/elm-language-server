@@ -70,7 +70,7 @@ export class Server implements ILanguageServer {
     new DiagnosticsProvider(connection, elmWorkspace, documentEvents);
     new DocumentFormattingProvider(connection, elmWorkspace, documentEvents);
     new DefinitionProvider(connection, forest, imports);
-    new ReferencesProvider(connection, forest);
+    new ReferencesProvider(connection, forest, imports);
     new DocumentSymbolProvider(connection, forest);
     new WorkspaceSymbolProvider(connection, forest);
     new CodeLensProvider(connection, forest);

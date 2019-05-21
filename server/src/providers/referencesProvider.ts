@@ -7,15 +7,15 @@ import {
   ReferenceParams,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
+import { IImports } from "../imports";
+import { TreeUtils } from "../util/treeUtils";
 
 export class ReferencesProvider {
-  private connection: IConnection;
-  private forest: IForest;
-
-  constructor(connection: IConnection, forest: IForest) {
-    this.connection = connection;
-    this.forest = forest;
-
+  constructor(
+    private connection: IConnection,
+    private forest: IForest,
+    private imports: IImports,
+  ) {
     this.connection.onReferences(this.handleReferencesRequest);
   }
 
@@ -30,48 +30,71 @@ export class ReferencesProvider {
         row: params.position.line,
       });
 
-      // let nameNode: SyntaxNode | null = null;
-      // if (nodeAtPosition.type === "function_call_expr") {
-      //   nameNode = nodeAtPosition.firstNamedChild;
-      // } else if (nodeAtPosition.type === "lower_case_identifier") {
-      //   nameNode = nodeAtPosition;
-      // }
+      const references: Array<{ node: SyntaxNode; uri: string }> = [];
 
-      if (nodeAtPosition) {
-        const references = tree.rootNode
-          .descendantsOfType("value_expr")
-          .filter(
-            a =>
-              a.firstNamedChild !== null &&
-              a.firstNamedChild.type === "value_qid" &&
-              a.firstNamedChild.lastNamedChild !== null &&
-              a.firstNamedChild.lastNamedChild.text === nodeAtPosition.text,
-          );
+      const definitionNode = TreeUtils.findDefinitonNodeByReferencingNode(
+        nodeAtPosition,
+        params.textDocument.uri,
+        tree,
+        this.imports,
+      );
 
-        const declaration = tree.rootNode
-          .descendantsOfType("function_declaration_left")
-          .find(
-            a =>
-              a.firstNamedChild !== null &&
-              a.firstNamedChild.type === "lower_case_identifier" &&
-              a.firstNamedChild.text === nodeAtPosition.text,
-          );
+      if (definitionNode) {
+        const refSourceTree = this.forest.getTree(definitionNode.uri);
 
-        if (declaration) {
-          references.push(declaration);
+        if (refSourceTree) {
+          switch (definitionNode.nodeType) {
+            case "Function":
+              const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(
+                definitionNode.node,
+              );
+              if (functionNameNode) {
+                references.push({
+                  node: functionNameNode,
+                  uri: definitionNode.uri,
+                });
+
+                const functions = TreeUtils.findFunctionCalls(
+                  refSourceTree,
+                  functionNameNode.text,
+                );
+                if (functions) {
+                  references.push(
+                    ...functions.map(a => {
+                      return { node: a, uri: definitionNode.uri };
+                    }),
+                  );
+                }
+
+                // if (TreeUtils.isExposedFunction(tree, functionNameNode.text)) {
+                //   const moduleNameNode = TreeUtils.getModuleNameNode(tree);
+                //   // if (this.imports.imports) {
+              }
+
+              break;
+
+            default:
+              break;
+          }
         }
+      }
 
-        if (references) {
-          return references.map(a =>
-            Location.create(
-              params.textDocument.uri,
-              Range.create(
-                Position.create(a.startPosition.row, a.startPosition.column),
-                Position.create(a.endPosition.row, a.endPosition.column),
+      if (references) {
+        return references.map(a =>
+          Location.create(
+            a.uri,
+            Range.create(
+              Position.create(
+                a.node.startPosition.row,
+                a.node.startPosition.column,
+              ),
+              Position.create(
+                a.node.endPosition.row,
+                a.node.endPosition.column,
               ),
             ),
-          );
-        }
+          ),
+        );
       }
     }
 
