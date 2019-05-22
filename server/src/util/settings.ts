@@ -6,11 +6,14 @@ export interface IClientSettings {
 }
 
 export class Settings {
-  private params: IClientSettings;
+  private fallbackSettings: IClientSettings;
   private capabilities: ClientCapabilities;
-  constructor(capabilities: ClientCapabilities, params: IClientSettings) {
+  constructor(
+    capabilities: ClientCapabilities,
+    fallbackSettings: IClientSettings,
+  ) {
     this.capabilities = capabilities;
-    this.params = params;
+    this.fallbackSettings = fallbackSettings;
   }
 
   public getSettings(connection: IConnection): Thenable<IClientSettings> {
@@ -20,7 +23,7 @@ export class Settings {
       this.capabilities.workspace.configuration;
 
     if (!supportsConfig) {
-      return Promise.resolve(this.params);
+      return Promise.resolve(this.fallbackSettings);
     }
 
     return connection.workspace
@@ -30,7 +33,7 @@ export class Settings {
       .then(settings =>
         // Allow falling back to the preset params if we cant get the
         // settings from the workspace
-        Object.assign({}, this.params, settings),
+        Object.assign({}, this.fallbackSettings, settings),
       );
   }
 }
