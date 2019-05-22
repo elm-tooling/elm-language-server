@@ -13,15 +13,18 @@ import { TextDocumentEvents } from "../util/textDocumentEvents";
 
 export class DocumentFormattingProvider {
   private events: TextDocumentEvents;
+  private settings: Settings;
 
   constructor(
     private connection: IConnection,
     private elmWorkspaceFolder: URI,
     documentEvents: DocumentEvents,
+    settings: Settings,
   ) {
     this.connection = connection;
     this.elmWorkspaceFolder = elmWorkspaceFolder;
     this.events = new TextDocumentEvents(documentEvents);
+    this.settings = settings;
 
     this.connection.onDocumentFormatting(this.handleFormattingRequest);
   }
@@ -30,7 +33,7 @@ export class DocumentFormattingProvider {
     params: DocumentFormattingParams,
   ) => {
     try {
-      const settings = await Settings.getSettings(this.connection);
+      const settings = await this.settings.getSettings(this.connection);
       const text = this.events.get(params.textDocument.uri);
       if (!text) {
         this.connection.console.error("Can't find file for formatting.");

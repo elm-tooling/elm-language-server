@@ -7,6 +7,7 @@ import {
 } from "vscode-languageserver";
 import URI from "vscode-uri";
 import { DocumentEvents } from "../../util/documentEvents";
+import { Settings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { ElmAnalyseDiagnostics } from "./elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
@@ -34,11 +35,13 @@ export class DiagnosticsProvider {
     elmMake: Map<string, Diagnostic[]>;
     elmAnalyse: Map<string, Diagnostic[]>;
   };
+  private settings: Settings;
 
   constructor(
     private connection: IConnection,
     private elmWorkspaceFolder: URI,
     documentEvents: DocumentEvents,
+    settings: Settings,
   ) {
     this.getDiagnostics = this.getDiagnostics.bind(this);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
@@ -46,10 +49,12 @@ export class DiagnosticsProvider {
     this.events = new TextDocumentEvents(documentEvents);
 
     this.connection = connection;
+    this.settings = settings;
     this.elmWorkspaceFolder = elmWorkspaceFolder;
     this.elmMakeDiagnostics = new ElmMakeDiagnostics(
       connection,
       elmWorkspaceFolder,
+      settings,
     );
 
     this.elmAnalyseDiagnostics = new ElmAnalyseDiagnostics(
