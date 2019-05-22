@@ -21,6 +21,7 @@ import { ReferencesProvider } from "./providers/referencesProvider";
 import { RenameProvider } from "./providers/renameProvider";
 import { WorkspaceSymbolProvider } from "./providers/workspaceSymbolProvider";
 import { DocumentEvents } from "./util/documentEvents";
+import { Settings } from "./util/settings";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -41,9 +42,11 @@ export class Server implements ILanguageServer {
       params.initializationOptions.elmWorkspace || elmWorkspaceFallback,
     );
 
+    const settings = new Settings(params.capabilities, params.initializationOptions);
+
     if (elmWorkspace) {
       connection.console.info(`initializing - folder: "${elmWorkspace}"`);
-      this.registerProviders(connection, forest, elmWorkspace, imports);
+      this.registerProviders(connection, forest, elmWorkspace, imports, settings);
     } else {
       connection.console.info(`No workspace.`);
     }
@@ -60,6 +63,7 @@ export class Server implements ILanguageServer {
     forest: Forest,
     elmWorkspace: URI,
     imports: Imports,
+    settings: Settings
   ): void {
     const documentEvents = new DocumentEvents(connection);
     // tslint:disable:no-unused-expression
@@ -67,8 +71,8 @@ export class Server implements ILanguageServer {
     new FoldingRangeProvider(connection, forest);
     new CompletionProvider(connection, forest, imports);
     new HoverProvider(connection, forest, imports);
-    new DiagnosticsProvider(connection, elmWorkspace, documentEvents);
-    new DocumentFormattingProvider(connection, elmWorkspace, documentEvents);
+    new DiagnosticsProvider(connection, elmWorkspace, documentEvents, settings);
+    new DocumentFormattingProvider(connection, elmWorkspace, documentEvents, settings);
     new DefinitionProvider(connection, forest, imports);
     new ReferencesProvider(connection, forest, imports);
     new DocumentSymbolProvider(connection, forest);

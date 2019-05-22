@@ -23,18 +23,21 @@ This extension contributes the following settings:
 
 To enable support with [coc.nvim](https://github.com/neoclide/coc.nvim), run `:CocConfig` and add the language server config below.
 
+If needed, you can set the paths to `elm` and `elm-format` with the `elmPath` and `elmFormatPath` variables.
+
 ```
 {
   "languageserver": {
-    "elm-ls": {
+    "elmLS": {
       "command": "elm-ls",
       "args": ["--stdio"],
       "filetypes": ["elm"],
       "rootPatterns": ["elm.json"],
       "initializationOptions": {
-        "runtime": "node"
-      },
-      "settings": {}
+        "runtime": "node",
+        "elmPath": "elm",
+        "elmFormatPath": "elm-format"
+      }
     }
   }
 }
@@ -49,3 +52,9 @@ For [ALE](https://github.com/w0rp/ale) support.
 | [Vim-Plug](https://github.com/junegunn/vim-plug)  | `Plug 'antew/vim-elm-language-server'`                                                        |
 | [Vundle](https://github.com/VundleVim/Vundle.vim) | `Plugin 'antew/vim-elm-language-server'`                                                      |
 | [Pathogen](https://github.com/tpope/vim-pathogen) | <pre>cd ~/.vim/bundle<br>git clone https://github.com/antew/vim-elm-language-server.git</pre> |
+
+If needed, you can set the paths to `elm` and `elm-format` with these variables:
+```
+let g:ale_elm_ls_elm_format_path = "/path/to/elm-format"
+let g:ale_elm_ls_elm_path = "/path/to/elm"
+```

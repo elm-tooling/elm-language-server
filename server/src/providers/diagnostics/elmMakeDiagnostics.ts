@@ -15,9 +15,11 @@ export class ElmMakeDiagnostics {
   constructor(
     private connection: IConnection,
     private elmWorkspaceFolder: URI,
+    private settings: Settings,
   ) {
     this.connection = connection;
     this.elmWorkspaceFolder = elmWorkspaceFolder;
+    this.settings = settings;
   }
 
   public createDiagnostics = async (filePath: URI): Promise<IElmIssue[]> => {
@@ -33,7 +35,7 @@ export class ElmMakeDiagnostics {
     rootPath: string,
     filename: string,
   ): Promise<IElmIssue[]> {
-    const settings = await Settings.getSettings(connection);
+    const settings = await this.settings.getSettings(connection);
 
     return new Promise((resolve, reject) => {
       const makeCommand: string = settings.elmPath;
