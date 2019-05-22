@@ -14,7 +14,8 @@ export class Settings {
   }
 
   public getSettings(connection: IConnection): Thenable<IClientSettings> {
-    const supportsConfig = this.capabilities &&
+    const supportsConfig =
+      this.capabilities &&
       this.capabilities.workspace &&
       this.capabilities.workspace.configuration;
 
@@ -25,9 +26,11 @@ export class Settings {
     return connection.workspace
       .getConfiguration({
         section: "elmLS",
-      }).then(settings => 
-        // Allow falling back to the preset params if we cant get the 
+      })
+      .then(settings =>
+        // Allow falling back to the preset params if we cant get the
         // settings from the workspace
-        Object.assign({}, this.params, settings));
+        Object.assign({}, this.params, settings),
+      );
   }
 }

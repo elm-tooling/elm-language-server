@@ -41,7 +41,7 @@ export class DiagnosticsProvider {
     private connection: IConnection,
     private elmWorkspaceFolder: URI,
     documentEvents: DocumentEvents,
-    settings: Settings
+    settings: Settings,
   ) {
     this.getDiagnostics = this.getDiagnostics.bind(this);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
@@ -54,7 +54,7 @@ export class DiagnosticsProvider {
     this.elmMakeDiagnostics = new ElmMakeDiagnostics(
       connection,
       elmWorkspaceFolder,
-      settings
+      settings,
     );
 
     this.elmAnalyseDiagnostics = new ElmAnalyseDiagnostics(
