@@ -111,9 +111,46 @@ export class ReferencesProvider {
                     }
                   }
                 }
-                // if (this.imports.imports) {
               }
 
+              break;
+
+            case "Module":
+              const moduleNameNode = TreeUtils.getModuleNameNode(
+                refSourceTree.tree,
+              );
+              if (moduleNameNode) {
+                if (refSourceTree.writeable) {
+                  references.push({
+                    node: moduleNameNode,
+                    uri: definitionNode.uri,
+                  });
+                }
+
+                for (const uri in this.imports.imports) {
+                  if (this.imports.imports.hasOwnProperty(uri)) {
+                    const element = this.imports.imports[uri];
+                    const needsToBeChecked = element.filter(
+                      a => a.fromModuleName === moduleNameNode.text,
+                    );
+                    if (needsToBeChecked.length > 0) {
+                      const treeToCheck = this.forest.getByUri(uri);
+
+                      if (treeToCheck) {
+                        needsToBeChecked.forEach(a => {
+                          const modules = TreeUtils.findImportNameNode(
+                            treeToCheck.tree,
+                            a.alias,
+                          );
+                          if (modules && treeToCheck.writeable) {
+                            references.push({ node: modules, uri });
+                          }
+                        });
+                      }
+                    }
+                  }
+                }
+              }
               break;
 
             default:

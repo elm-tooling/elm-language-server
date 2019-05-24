@@ -484,7 +484,7 @@ export class TreeUtils {
       nodeAtPosition.parent.previousNamedSibling.type === "import"
     ) {
       const upperCaseQid = nodeAtPosition.parent;
-      const definitionFromOtherFile = this.getDefinitionFromImport(
+      const definitionFromOtherFile = this.findImportFromImportList(
         uri,
         upperCaseQid.text,
         "Module",
@@ -521,7 +521,7 @@ export class TreeUtils {
 
       let definitionFromOtherFile;
       if (!definitionNode) {
-        definitionFromOtherFile = this.getDefinitionFromImport(
+        definitionFromOtherFile = this.findImportFromImportList(
           uri,
           upperCaseQid.text,
           "Type",
@@ -535,7 +535,7 @@ export class TreeUtils {
           };
         }
 
-        definitionFromOtherFile = this.getDefinitionFromImport(
+        definitionFromOtherFile = this.findImportFromImportList(
           uri,
           upperCaseQid.text,
           "TypeAlias",
@@ -549,7 +549,7 @@ export class TreeUtils {
           };
         }
 
-        definitionFromOtherFile = this.getDefinitionFromImport(
+        definitionFromOtherFile = this.findImportFromImportList(
           uri,
           upperCaseQid.text,
           "UnionConstructor",
@@ -580,7 +580,7 @@ export class TreeUtils {
       );
 
       if (!definitionNode) {
-        const definitionFromOtherFile = this.getDefinitionFromImport(
+        const definitionFromOtherFile = this.findImportFromImportList(
           uri,
           nodeAtPosition.parent.text,
           "Function",
@@ -623,7 +623,7 @@ export class TreeUtils {
       const definitionNode = TreeUtils.findOperator(tree, nodeAtPosition.text);
 
       if (!definitionNode) {
-        const definitionFromOtherFile = this.getDefinitionFromImport(
+        const definitionFromOtherFile = this.findImportFromImportList(
           uri,
           nodeAtPosition.text,
           "Operator",
@@ -644,7 +644,7 @@ export class TreeUtils {
     }
   }
 
-  public static getDefinitionFromImport(
+  public static findImportFromImportList(
     uri: string,
     nodeName: string,
     type: NodeType,
@@ -660,6 +660,32 @@ export class TreeUtils {
           return foundNode;
         }
       }
+    }
+  }
+
+  public static findAllImportNameNodes(tree: Tree): SyntaxNode[] | undefined {
+    const result = tree.rootNode.children.filter(
+      a => a.type === "import_clause",
+    );
+    if (result.length > 0) {
+      return result;
+    } else {
+      return undefined;
+    }
+  }
+
+  public static findImportNameNode(
+    tree: Tree,
+    moduleName: string,
+  ): SyntaxNode | undefined {
+    const allImports = this.findAllImportNameNodes(tree);
+    if (allImports) {
+      return allImports.find(
+        a =>
+          a.children.length > 1 &&
+          a.children[1].type === "upper_case_qid" &&
+          a.children[1].text === moduleName,
+      );
     }
   }
 }
