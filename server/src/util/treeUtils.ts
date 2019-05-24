@@ -498,6 +498,21 @@ export class TreeUtils {
         };
       }
     } else if (
+      nodeAtPosition.previousNamedSibling &&
+      (nodeAtPosition.previousNamedSibling.type === "type" ||
+        nodeAtPosition.previousNamedSibling.type === "type_alias")
+    ) {
+      const upperCaseQid = nodeAtPosition;
+      const definitionNode = TreeUtils.findUppercaseQidNode(tree, upperCaseQid);
+
+      if (definitionNode) {
+        return {
+          node: definitionNode.node,
+          nodeType: definitionNode.nodeType,
+          uri,
+        };
+      }
+    } else if (
       nodeAtPosition.parent &&
       nodeAtPosition.parent.type === "upper_case_qid"
     ) {
@@ -580,6 +595,22 @@ export class TreeUtils {
           };
         }
       }
+
+      if (definitionNode) {
+        return {
+          node: definitionNode,
+          nodeType: "Function",
+          uri,
+        };
+      }
+    } else if (
+      nodeAtPosition.parent &&
+      nodeAtPosition.parent.type === "function_declaration_left"
+    ) {
+      const definitionNode = TreeUtils.findLowercaseQidNode(
+        tree,
+        nodeAtPosition,
+      );
 
       if (definitionNode) {
         return {
