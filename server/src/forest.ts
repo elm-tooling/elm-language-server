@@ -1,30 +1,22 @@
 import { Tree } from "tree-sitter";
 import { Exposing, TreeUtils } from "./util/treeUtils";
 
+export interface ITreeContainer {
+  uri: string;
+  writeable: boolean;
+  referenced: boolean;
+  moduleName: string;
+  exposing: Exposing;
+  tree: Tree;
+}
+
 export interface IForest {
-  treeIndex: Array<{
-    uri: string;
-    writeable: boolean;
-    referenced: boolean;
-    moduleName: string;
-    exposing: Exposing;
-    tree: Tree;
-  }>;
+  treeIndex: ITreeContainer[];
   getTree(uri: string): Tree | undefined;
   getExposingByModuleName(moduleName: string): Exposing | undefined;
   getTreeByModuleName(moduleName: string): Tree | undefined;
-  getByModuleName(
-    moduleName: string,
-  ):
-    | {
-        uri: string;
-        writeable: boolean;
-        referenced: boolean;
-        moduleName: string;
-        exposing: Exposing;
-        tree: Tree;
-      }
-    | undefined;
+  getByModuleName(moduleName: string): ITreeContainer | undefined;
+  getByUri(uri: string): ITreeContainer | undefined;
   setTree(
     uri: string,
     writeable: boolean,
@@ -35,14 +27,7 @@ export interface IForest {
 }
 
 export class Forest implements IForest {
-  public treeIndex: Array<{
-    uri: string;
-    writeable: boolean;
-    referenced: boolean;
-    moduleName: string;
-    exposing: Exposing;
-    tree: Tree;
-  }> = [];
+  public treeIndex: ITreeContainer[] = [];
 
   constructor() {
     this.treeIndex = new Array();
@@ -75,19 +60,17 @@ export class Forest implements IForest {
     }
   }
 
-  public getByModuleName(
-    moduleName: string,
-  ):
-    | {
-        uri: string;
-        writeable: boolean;
-        referenced: boolean;
-        moduleName: string;
-        exposing: Exposing;
-        tree: Tree;
-      }
-    | undefined {
+  public getByModuleName(moduleName: string): ITreeContainer | undefined {
     const result = this.treeIndex.find(tree => tree.moduleName === moduleName);
+    if (result) {
+      return result;
+    } else {
+      return undefined;
+    }
+  }
+
+  public getByUri(uri: string): ITreeContainer | undefined {
+    const result = this.treeIndex.find(tree => tree.uri === uri);
     if (result) {
       return result;
     } else {

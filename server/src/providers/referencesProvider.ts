@@ -40,7 +40,7 @@ export class ReferencesProvider {
       );
 
       if (definitionNode) {
-        const refSourceTree = this.forest.getTree(definitionNode.uri);
+        const refSourceTree = this.forest.getByUri(definitionNode.uri);
 
         if (refSourceTree) {
           switch (definitionNode.nodeType) {
@@ -49,16 +49,18 @@ export class ReferencesProvider {
                 definitionNode.node,
               );
               if (functionNameNode) {
-                references.push({
-                  node: functionNameNode,
-                  uri: definitionNode.uri,
-                });
+                if (refSourceTree.writeable) {
+                  references.push({
+                    node: functionNameNode,
+                    uri: definitionNode.uri,
+                  });
+                }
 
                 const localFunctions = TreeUtils.findFunctionCalls(
-                  refSourceTree,
+                  refSourceTree.tree,
                   functionNameNode.text,
                 );
-                if (localFunctions) {
+                if (localFunctions && refSourceTree.writeable) {
                   references.push(
                     ...localFunctions.map(node => {
                       return { node, uri: definitionNode.uri };
@@ -68,12 +70,12 @@ export class ReferencesProvider {
 
                 if (
                   TreeUtils.isExposedFunction(
-                    refSourceTree,
+                    refSourceTree.tree,
                     functionNameNode.text,
                   )
                 ) {
                   const moduleNameNode = TreeUtils.getModuleNameNode(
-                    refSourceTree,
+                    refSourceTree.tree,
                   );
                   if (moduleNameNode) {
                     for (const uri in this.imports.imports) {
@@ -87,15 +89,15 @@ export class ReferencesProvider {
                               a.alias === functionNameNode.text),
                         );
                         if (needsToBeChecked.length > 0) {
-                          const treeToCheck = this.forest.getTree(uri);
+                          const treeToCheck = this.forest.getByUri(uri);
 
                           if (treeToCheck) {
                             needsToBeChecked.forEach(a => {
                               const functions = TreeUtils.findFunctionCalls(
-                                treeToCheck,
+                                treeToCheck.tree,
                                 a.alias,
                               );
-                              if (functions) {
+                              if (functions && treeToCheck.writeable) {
                                 references.push(
                                   ...functions.map(node => {
                                     return { node, uri };
