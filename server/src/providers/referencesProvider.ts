@@ -43,6 +43,9 @@ export class ReferencesProvider {
         const refSourceTree = this.forest.getByUri(definitionNode.uri);
 
         if (refSourceTree) {
+          const moduleNameNode = TreeUtils.getModuleNameNode(
+            refSourceTree.tree,
+          );
           switch (definitionNode.nodeType) {
             case "Function":
               const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(
@@ -74,9 +77,6 @@ export class ReferencesProvider {
                     functionNameNode.text,
                   )
                 ) {
-                  const moduleNameNode = TreeUtils.getModuleNameNode(
-                    refSourceTree.tree,
-                  );
                   if (moduleNameNode) {
                     for (const uri in this.imports.imports) {
                       if (this.imports.imports.hasOwnProperty(uri)) {
@@ -116,9 +116,6 @@ export class ReferencesProvider {
               break;
 
             case "Module":
-              const moduleNameNode = TreeUtils.getModuleNameNode(
-                refSourceTree.tree,
-              );
               if (moduleNameNode) {
                 if (refSourceTree.writeable) {
                   references.push({
