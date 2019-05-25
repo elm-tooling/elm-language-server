@@ -481,7 +481,8 @@ export class TreeUtils {
       nodeAtPosition.parent &&
       nodeAtPosition.parent.type === "upper_case_qid" &&
       nodeAtPosition.parent.previousNamedSibling &&
-      nodeAtPosition.parent.previousNamedSibling.type === "import"
+      (nodeAtPosition.parent.previousNamedSibling.type === "import" ||
+        nodeAtPosition.parent.previousNamedSibling.type === "module")
     ) {
       const upperCaseQid = nodeAtPosition.parent;
       const definitionFromOtherFile = this.findImportFromImportList(
