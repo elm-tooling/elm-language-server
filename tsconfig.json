@@ -1,28 +1,18 @@
 {
-	"compilerOptions": {
-		"module": "commonjs",
-		"target": "es6",
-		"outDir": "out",
-		"rootDir": "src",
-		"strict": true,
-		"lib": [
-			"es6"
-		],
-		"sourceMap": true
-	},
-	"include": [
-		"src"
-	],
-	"exclude": [
-		"node_modules",
-		".vscode-test"
-	],
-	"references": [
-		{
-			"path": "./client"
-		},
-		{
-			"path": "./server"
-		}
-	]
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "*": ["types/*"] },
+    "target": "es6",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "outDir": "out",
+    "rootDir": "src",
+    "strict": true,
+    "lib": ["es6"],
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", ".vscode-test"]
 }

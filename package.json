@@ -1,116 +1,43 @@
 {
-  "name": "elm-vscode-ls",
-  "displayName": "Elm",
-  "description": "VSCode plugin using the elm-language-server",
+  "name": "elm-language-server",
+  "description": "Implementation of an elm language server in node.",
+  "version": "1.0.0",
   "author": "Kolja Lampe",
   "license": "MIT",
-  "version": "1.0.0",
+  "engines": {
+    "node": "*"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/elm-tooling/elm-language-server"
+    "url": "https://github.com/razzeee/elm-language-server"
   },
-  "categories": [
-    "Linters",
-    "Snippets",
-    "Programming Languages"
-  ],
-  "keywords": [
-    "elm"
-  ],
-  "engines": {
-    "vscode": "^1.30.0"
-  },
-  "activationEvents": [
-    "workspaceContains:**/elm.json"
-  ],
-  "main": "./client/out/extension",
-  "bin": {
-    "elm-ls": "server/out/index.js"
-  },
-  "contributes": {
-    "languages": [
-      {
-        "id": "elm",
-        "aliases": [
-          "Elm",
-          "elm"
-        ],
-        "extensions": [
-          ".elm"
-        ],
-        "configuration": "./language-configuration.json"
-      }
-    ],
-    "jsonValidation": [
-      {
-        "fileMatch": "elm.json",
-        "url": "./schemas/elm.schema.json"
-      }
-    ],
-    "grammars": [
-      {
-        "scopeName": "markdown.elm.codeblock",
-        "path": "./syntaxes/codeblock.json",
-        "injectTo": [
-          "text.html.markdown"
-        ],
-        "embeddedLanguages": {
-          "meta.embedded.block.elm": "elm",
-          "meta.embedded.block.glsl": "glsl"
-        }
-      },
-      {
-        "language": "elm",
-        "scopeName": "source.elm",
-        "path": "./syntaxes/elm.json"
-      }
-    ],
-    "configuration": {
-      "type": "object",
-      "title": "ElmLS",
-      "properties": {
-        "elmLS.trace.server": {
-          "scope": "window",
-          "type": "string",
-          "enum": [
-            "off",
-            "messages",
-            "verbose"
-          ],
-          "default": "off",
-          "description": "Traces the communication between VS Code and the language server."
-        },
-        "elmLS.elmPath": {
-          "scope": "window",
-          "type": "string",
-          "default": "elm",
-          "description": "The path to your elm executeable."
-        },
-        "elmLS.elmFormatPath": {
-          "scope": "window",
-          "type": "string",
-          "default": "elm-format",
-          "description": "The path to your elm-format executeable."
-        }
-      }
-    }
-  },
-  "scripts": {
-    "vscode:prepublish": "cd client && npm run update-vscode && cd .. && npm run compile",
-    "compile": "tsc -b",
-    "watch": "tsc -b -w",
-    "postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
-    "test": "sh ./scripts/e2e.sh",
-    "lint": "tslint -p tsconfig.json",
-    "tslint-check": "tslint-config-prettier-check ./tslint.json"
+  "dependencies": {
+    "elm-analyse": "^0.16.4",
+    "fast-diff": "^1.2.0",
+    "prebuild-install": "^5.3.0",
+    "request": "^2.88.0",
+    "tree-sitter": "^0.14.0",
+    "tree-sitter-elm": "^2.2.4",
+    "vscode-languageserver": "^5.2.1",
+    "vscode-uri": "^1.0.6",
+    "ws": "^6.2.1"
   },
   "devDependencies": {
-    "@types/mocha": "^5.2.6",
-    "@types/node": "^12.0.1",
+    "@types/glob": "^7.1.1",
+    "@types/node": "12.0.2",
+    "@types/request": "^2.48.1",
+    "@types/ws": "^6.0.1",
+    "prebuild": "^8.2.1",
     "prettier": "^1.17.1",
     "tslint": "^5.16.0",
     "tslint-config-prettier": "^1.18.0",
     "tslint-plugin-prettier": "^2.0.1",
     "typescript": "3.4.5"
+  },
+  "scripts": {
+    "compile": "tsc -b",
+    "watch": "tsc -b -w",
+    "lint": "tslint -p tsconfig.json",
+    "tslint-check": "tslint-config-prettier-check ./tslint.json"
   }
 }

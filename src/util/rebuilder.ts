@@ -40,6 +40,7 @@ function fetchPrebuild(
   console: RemoteConsole,
   runtime: Runtime,
 ): Promise<void | Error> {
+  // tslint:disable-next-line: no-console
   console.info(`Fetching ${name}`);
   const pkgRoot: string = path.resolve(
     path.join(__dirname, "../../node_modules", name),
@@ -55,6 +56,7 @@ function fetchPrebuild(
     treeSitterRepo,
     runtime,
   );
+  // tslint:disable-next-line: no-console
   console.info(`Downloading from ${url}`);
 
   return new Promise((res, rej) => {

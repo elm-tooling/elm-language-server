@@ -1,14 +1,11 @@
 import { SyntaxNode, Tree } from "tree-sitter";
 import {
   IConnection,
-  TextDocumentPositionParams,
-  Location,
-  LocationLink,
-  Range,
   Position,
+  Range,
   RenameParams,
-  WorkspaceEdit,
   TextEdit,
+  WorkspaceEdit,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
 
@@ -29,13 +26,13 @@ export class RenameProvider {
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
     if (tree) {
-      let nodeAtPosition = tree.rootNode.namedDescendantForPosition({
-        row: param.position.line,
+      const nodeAtPosition = tree.rootNode.namedDescendantForPosition({
         column: param.position.character,
+        row: param.position.line,
       });
 
       if (nodeAtPosition) {
-        let references = tree.rootNode
+        const references = tree.rootNode
           .descendantsOfType("value_expr")
           .filter(
             a =>
@@ -45,7 +42,7 @@ export class RenameProvider {
               a.firstNamedChild.lastNamedChild.text === nodeAtPosition.text,
           );
 
-        let declaration = tree.rootNode
+        const declaration = tree.rootNode
           .descendantsOfType("function_declaration_left")
           .find(
             a =>
@@ -58,7 +55,7 @@ export class RenameProvider {
           references.push(declaration.firstNamedChild);
         }
 
-        let annotation = tree.rootNode
+        const annotation = tree.rootNode
           .descendantsOfType("type_annotation")
           .find(
             a =>
