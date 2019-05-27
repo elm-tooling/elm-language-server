@@ -39,5 +39,8 @@
     "watch": "tsc -b -w",
     "lint": "tslint -p tsconfig.json",
     "tslint-check": "tslint-config-prettier-check ./tslint.json"
+  },
+  "bin": {
+    "elm-language-server": "./out/index.js"
   }
 }
