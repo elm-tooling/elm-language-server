@@ -22,12 +22,22 @@ export class ElmMakeDiagnostics {
     this.settings = settings;
   }
 
-  public createDiagnostics = async (filePath: URI): Promise<IElmIssue[]> => {
+  public createDiagnostics = async (filePath: URI): Promise<Map<string, Diagnostic[]>> => {
     return await this.checkForErrors(
       this.connection,
       this.elmWorkspaceFolder.fsPath,
       filePath.fsPath,
-    );
+    ).then(issues =>
+      {
+        if (issues.length > 0){
+          return this.issuesToDiagnosticMap(issues);
+        } else {
+          return new Map([
+            [filePath.toString(), []]
+          ]);
+        }
+      }
+      )
   };
 
   private async checkForErrors(
@@ -148,6 +158,29 @@ export class ElmMakeDiagnostics {
         return DiagnosticSeverity.Error;
     }
   }
+
+  private issuesToDiagnosticMap(issues: IElmIssue[]): Map<string, Diagnostic[]> {
+    return issues.reduce(
+      (acc, issue) =>
+      {
+        const uri = this.getUriFromIssue(issue);
+        const diagnostic = this.elmMakeIssueToDiagnostic(issue);
+        const arr = acc.get(uri) || [];
+        arr.push(diagnostic);
+        acc.set(uri, diagnostic);
+        return acc;
+      }, new Map()
+    );
+  }
+  
+
+  private getUriFromIssue(issue: IElmIssue): string {
+    if (issue.file.startsWith(".")) {
+      issue.file = this.elmWorkspaceFolder + issue.file.slice(1);
+    }
+    return URI.file(issue.file).toString();
+  }
+
 
   private elmMakeIssueToDiagnostic(issue: IElmIssue): Diagnostic {
     const lineRange: Range = Range.create(

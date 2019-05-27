@@ -99,27 +99,7 @@ export class DiagnosticsProvider {
 
     this.elmAnalyseDiagnostics.updateFile(uri, text);
 
-    const compilerErrors: IElmIssue[] = [];
-    compilerErrors.push(
-      ...(await this.elmMakeDiagnostics.createDiagnostics(uri)),
-    );
-
-    const diagnostics: Map<string, Diagnostic[]> = compilerErrors.reduce(
-      (acc, issue) => {
-        // If provided path is relative, make it absolute
-        if (issue.file.startsWith(".")) {
-          issue.file = this.elmWorkspaceFolder + issue.file.slice(1);
-        }
-        const issueUri = URI.file(issue.file).toString();
-        const arr = acc.get(issueUri) || [];
-        arr.push(this.elmMakeIssueToDiagnostic(issue));
-        acc.set(issueUri, arr);
-        return acc;
-      },
-      new Map(),
-    );
-
-    this.currentDiagnostics.elmMake = diagnostics;
+    this.currentDiagnostics.elmMake = await this.elmMakeDiagnostics.createDiagnostics(uri);
     this.sendDiagnostics();
   }
 
