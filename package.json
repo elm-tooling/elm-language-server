@@ -9,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/razzeee/elm-language-server"
+    "url": "https://github.com/elm-tooling/elm-language-server"
   },
   "dependencies": {
     "elm-analyse": "^0.16.4",
