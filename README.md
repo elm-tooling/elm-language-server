@@ -44,7 +44,7 @@ If needed, you can set the paths to `elm` and `elm-format` with the `elmPath` an
 {
   "languageserver": {
     "elmLS": {
-      "command": "elm-ls",
+      "command": "elm-language-server",
       "args": ["--stdio"],
       "filetypes": ["elm"],
       "rootPatterns": ["elm.json"],
