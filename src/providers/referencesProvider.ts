@@ -114,6 +114,77 @@ export class ReferencesProvider {
               }
 
               break;
+            case "Type":
+            case "TypeAlias":
+              const typeOrTypeAliasNameNode = TreeUtils.getTypeOrTypeAliasNameNodeFromDefinition(
+                definitionNode.node,
+              );
+
+              if (typeOrTypeAliasNameNode) {
+                if (refSourceTree.writeable) {
+                  references.push({
+                    node: typeOrTypeAliasNameNode,
+                    uri: definitionNode.uri,
+                  });
+                }
+
+                const localFunctions = TreeUtils.findTypeOrTypeAliasCalls(
+                  refSourceTree.tree,
+                  typeOrTypeAliasNameNode.text,
+                );
+                if (localFunctions && refSourceTree.writeable) {
+                  references.push(
+                    ...localFunctions.map(node => {
+                      return { node, uri: definitionNode.uri };
+                    }),
+                  );
+                }
+
+                if (
+                  TreeUtils.isExposedTypeOrTypeAlias(
+                    refSourceTree.tree,
+                    typeOrTypeAliasNameNode.text,
+                  )
+                ) {
+                  if (moduleNameNode) {
+                    for (const uri in this.imports.imports) {
+                      if (this.imports.imports.hasOwnProperty(uri)) {
+                        const element = this.imports.imports[uri];
+                        const needsToBeChecked = element.filter(
+                          a =>
+                            a.fromModuleName === moduleNameNode.text &&
+                            (a.type === "Type" || a.type === "TypeAlias") &&
+                            (a.alias.endsWith(
+                              "." + typeOrTypeAliasNameNode.text,
+                            ) ||
+                              a.alias === typeOrTypeAliasNameNode.text),
+                        );
+                        if (needsToBeChecked.length > 0) {
+                          const treeToCheck = this.forest.getByUri(uri);
+
+                          if (treeToCheck) {
+                            needsToBeChecked.forEach(a => {
+                              const functions = TreeUtils.findTypeOrTypeAliasCalls(
+                                treeToCheck.tree,
+                                a.alias,
+                              );
+                              if (functions && treeToCheck.writeable) {
+                                references.push(
+                                  ...functions.map(node => {
+                                    return { node, uri };
+                                  }),
+                                );
+                              }
+                            });
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+
+              break;
 
             case "Module":
               if (moduleNameNode) {

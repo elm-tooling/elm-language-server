@@ -85,7 +85,7 @@ export class CodeLensProvider {
             node,
           );
           if (typeNode) {
-            exposed = TreeUtils.isExposedType(tree, typeNode.text);
+            exposed = TreeUtils.isExposedTypeOrTypeAlias(tree, typeNode.text);
 
             codeLens.push(
               CodeLens.create(

@@ -95,7 +95,7 @@ export class CompletionProvider {
 
   private getSameFileTopLevelCompletions(tree: Tree): CompletionItem[] {
     const completions: CompletionItem[] = [];
-    const functions = TreeUtils.findAllFunctions(tree);
+    const functions = TreeUtils.findAllFunctionDeclarations(tree);
     // Add functions
     if (functions) {
       const declarations = functions.filter(

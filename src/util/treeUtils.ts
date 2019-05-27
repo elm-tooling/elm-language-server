@@ -20,7 +20,9 @@ export type Exposing = Array<{
 
 export class TreeUtils {
   public static getModuleNameNode(tree: Tree): SyntaxNode | undefined {
-    const moduleDeclaration: SyntaxNode | undefined = this.findModule(tree);
+    const moduleDeclaration:
+      | SyntaxNode
+      | undefined = this.findModuleDeclaration(tree);
     if (moduleDeclaration) {
       return this.findFirstNamedChildOfType(
         "upper_case_qid",
@@ -32,7 +34,9 @@ export class TreeUtils {
   public static getModuleNameAndExposing(
     tree: Tree,
   ): { moduleName: string; exposing: Exposing } | undefined {
-    const moduleDeclaration: SyntaxNode | undefined = this.findModule(tree);
+    const moduleDeclaration:
+      | SyntaxNode
+      | undefined = this.findModuleDeclaration(tree);
     if (moduleDeclaration) {
       const moduleName = this.findFirstNamedChildOfType(
         "upper_case_qid",
@@ -166,7 +170,10 @@ export class TreeUtils {
               );
 
               if (name) {
-                const typeDeclaration = this.findType(tree, name.text);
+                const typeDeclaration = this.findTypeDeclaration(
+                  tree,
+                  name.text,
+                );
                 if (typeDeclaration) {
                   const unionCostructors: Array<{
                     name: string;
@@ -196,7 +203,7 @@ export class TreeUtils {
                 }
               }
             } else {
-              const typeNode = this.findType(tree, value.text);
+              const typeNode = this.findTypeDeclaration(tree, value.text);
 
               if (typeNode) {
                 exposed.push({
@@ -206,7 +213,10 @@ export class TreeUtils {
                   type: "Type",
                 });
               } else {
-                const typeAliasNode = this.findTypeAlias(tree, value.text);
+                const typeAliasNode = this.findTypeAliasDeclaration(
+                  tree,
+                  value.text,
+                );
                 if (typeAliasNode) {
                   exposed.push({
                     exposedUnionConstructors: undefined,
@@ -246,7 +256,7 @@ export class TreeUtils {
   }
 
   public static isExposedFunction(tree: Tree, functionName: string) {
-    const module = this.findModule(tree);
+    const module = this.findModuleDeclaration(tree);
     if (module) {
       const exposingList = this.findFirstNamedChildOfType(
         "exposing_list",
@@ -267,8 +277,8 @@ export class TreeUtils {
     return false;
   }
 
-  public static isExposedType(tree: Tree, typeName: string) {
-    const module = this.findModule(tree);
+  public static isExposedTypeOrTypeAlias(tree: Tree, typeName: string) {
+    const module = this.findModuleDeclaration(tree);
     if (module) {
       const exposingList = this.findFirstNamedChildOfType(
         "exposing_list",
@@ -308,7 +318,7 @@ export class TreeUtils {
     tree: Tree,
     functionName: string,
   ): SyntaxNode | undefined {
-    const functions = this.findAllFunctions(tree);
+    const functions = this.findAllFunctionDeclarations(tree);
     if (functions) {
       return functions.find(elmFunction => {
         const declaration = TreeUtils.findFirstNamedChildOfType(
@@ -355,7 +365,10 @@ export class TreeUtils {
     }
   }
 
-  public static findType(tree: Tree, typeName: string): SyntaxNode | undefined {
+  public static findTypeDeclaration(
+    tree: Tree,
+    typeName: string,
+  ): SyntaxNode | undefined {
     const types = this.findAllTypeDeclarations(tree);
     if (types) {
       return types.find(
@@ -367,11 +380,11 @@ export class TreeUtils {
     }
   }
 
-  public static findModule(tree: Tree): SyntaxNode | undefined {
+  public static findModuleDeclaration(tree: Tree): SyntaxNode | undefined {
     return this.findFirstNamedChildOfType("module_declaration", tree.rootNode);
   }
 
-  public static findTypeAlias(
+  public static findTypeAliasDeclaration(
     tree: Tree,
     typeAliasName: string,
   ): SyntaxNode | undefined {
@@ -386,11 +399,26 @@ export class TreeUtils {
     }
   }
 
-  public static findAllFunctions(tree: Tree): SyntaxNode[] | undefined {
+  public static findAllFunctionDeclarations(
+    tree: Tree,
+  ): SyntaxNode[] | undefined {
     const functions = this.findAllNamedChildsOfType(
       "value_declaration",
       tree.rootNode,
     );
+    return functions;
+  }
+
+  public static findAllTypeOrTypeAliasCalls(
+    tree: Tree,
+  ): SyntaxNode[] | undefined {
+    let functions = tree.rootNode.descendantsOfType("type_ref");
+    if (functions.length > 0) {
+      functions = functions.filter(
+        a => a.firstChild && a.firstChild.type === "upper_case_qid",
+      );
+    }
+
     return functions;
   }
 
@@ -415,6 +443,10 @@ export class TreeUtils {
     }
   }
 
+  public static getTypeOrTypeAliasNameNodeFromDefinition(node: SyntaxNode) {
+    return TreeUtils.findFirstNamedChildOfType("upper_case_identifier", node);
+  }
+
   public static findFunctionCalls(
     tree: Tree,
     functionName: string,
@@ -422,6 +454,16 @@ export class TreeUtils {
     const functions = this.findAllFunctionCalls(tree);
     if (functions) {
       return functions.filter(a => a.text === functionName);
+    }
+  }
+
+  public static findTypeOrTypeAliasCalls(
+    tree: Tree,
+    typeOrTypeAliasName: string,
+  ): SyntaxNode[] | undefined {
+    const typeOrTypeAliasNodes = this.findAllTypeOrTypeAliasCalls(tree);
+    if (typeOrTypeAliasNodes) {
+      return typeOrTypeAliasNodes.filter(a => a.text === typeOrTypeAliasName);
     }
   }
 
@@ -457,11 +499,11 @@ export class TreeUtils {
     tree: Tree,
     nodeAtPosition: SyntaxNode,
   ): { node: SyntaxNode; nodeType: NodeType } | undefined {
-    let definitionNode = this.findType(tree, nodeAtPosition.text);
+    let definitionNode = this.findTypeDeclaration(tree, nodeAtPosition.text);
     if (definitionNode) {
       return { node: definitionNode, nodeType: "Type" };
     }
-    definitionNode = this.findTypeAlias(tree, nodeAtPosition.text);
+    definitionNode = this.findTypeAliasDeclaration(tree, nodeAtPosition.text);
     if (definitionNode) {
       return { node: definitionNode, nodeType: "TypeAlias" };
     }
