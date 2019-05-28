@@ -48,6 +48,18 @@ export class ReferencesProvider {
           );
           switch (definitionNode.nodeType) {
             case "Function":
+              const annotationNameNode = TreeUtils.getFunctionAnnotationNameNodeFromDefinition(
+                definitionNode.node,
+              );
+              if (annotationNameNode) {
+                if (refSourceTree.writeable) {
+                  references.push({
+                    node: annotationNameNode,
+                    uri: definitionNode.uri,
+                  });
+                }
+              }
+
               const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(
                 definitionNode.node,
               );
@@ -77,6 +89,23 @@ export class ReferencesProvider {
                     functionNameNode.text,
                   )
                 ) {
+                  const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
+                    refSourceTree.tree,
+                  );
+                  if (moduleDeclarationNode) {
+                    const exposedNode = TreeUtils.findExposedFunctionNode(
+                      moduleDeclarationNode,
+                      functionNameNode.text,
+                    );
+
+                    if (exposedNode && refSourceTree.writeable) {
+                      references.push({
+                        node: exposedNode,
+                        uri: definitionNode.uri,
+                      });
+                    }
+                  }
+
                   if (moduleNameNode) {
                     for (const uri in this.imports.imports) {
                       if (this.imports.imports.hasOwnProperty(uri)) {
@@ -92,6 +121,24 @@ export class ReferencesProvider {
                           const treeToCheck = this.forest.getByUri(uri);
 
                           if (treeToCheck) {
+                            const importClauseNode = TreeUtils.findImportNameNode(
+                              treeToCheck.tree,
+                              moduleNameNode.text,
+                            );
+                            if (importClauseNode) {
+                              const exposedNode = TreeUtils.findExposedFunctionNode(
+                                importClauseNode,
+                                functionNameNode.text,
+                              );
+
+                              if (exposedNode && treeToCheck.writeable) {
+                                references.push({
+                                  node: exposedNode,
+                                  uri,
+                                });
+                              }
+                            }
+
                             needsToBeChecked.forEach(a => {
                               const functions = TreeUtils.findFunctionCalls(
                                 treeToCheck.tree,
@@ -146,6 +193,23 @@ export class ReferencesProvider {
                     typeOrTypeAliasNameNode.text,
                   )
                 ) {
+                  const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
+                    refSourceTree.tree,
+                  );
+                  if (moduleDeclarationNode) {
+                    const exposedNode = TreeUtils.findExposedTypeOrTypeAliasNode(
+                      moduleDeclarationNode,
+                      typeOrTypeAliasNameNode.text,
+                    );
+
+                    if (exposedNode && refSourceTree.writeable) {
+                      references.push({
+                        node: exposedNode,
+                        uri: definitionNode.uri,
+                      });
+                    }
+                  }
+
                   if (moduleNameNode) {
                     for (const uri in this.imports.imports) {
                       if (this.imports.imports.hasOwnProperty(uri)) {
@@ -163,6 +227,24 @@ export class ReferencesProvider {
                           const treeToCheck = this.forest.getByUri(uri);
 
                           if (treeToCheck) {
+                            const importClauseNode = TreeUtils.findImportNameNode(
+                              treeToCheck.tree,
+                              moduleNameNode.text,
+                            );
+                            if (importClauseNode) {
+                              const exposedNode = TreeUtils.findExposedTypeOrTypeAliasNode(
+                                importClauseNode,
+                                typeOrTypeAliasNameNode.text,
+                              );
+
+                              if (exposedNode && treeToCheck.writeable) {
+                                references.push({
+                                  node: exposedNode,
+                                  uri,
+                                });
+                              }
+                            }
+
                             needsToBeChecked.forEach(a => {
                               const functions = TreeUtils.findTypeOrTypeAliasCalls(
                                 treeToCheck.tree,

@@ -255,6 +255,29 @@ export class TreeUtils {
     return result;
   }
 
+  public static findExposedFunctionNode(
+    node: SyntaxNode,
+    functionName: string,
+  ): SyntaxNode | undefined {
+    if (node) {
+      const exposingList = this.findFirstNamedChildOfType(
+        "exposing_list",
+        node,
+      );
+      if (exposingList) {
+        const doubleDot = this.findFirstNamedChildOfType(
+          "double_dot",
+          exposingList,
+        );
+        if (doubleDot) {
+          return undefined;
+        }
+      }
+      const descendants = node.descendantsOfType("exposed_value");
+      return descendants.find(desc => desc.text === functionName);
+    }
+  }
+
   public static isExposedFunction(tree: Tree, functionName: string) {
     const module = this.findModuleDeclaration(tree);
     if (module) {
@@ -275,6 +298,30 @@ export class TreeUtils {
       return descendants.some(desc => desc.text === functionName);
     }
     return false;
+  }
+
+  public static findExposedTypeOrTypeAliasNode(
+    node: SyntaxNode,
+    typeName: string,
+  ): SyntaxNode | undefined {
+    if (node) {
+      const exposingList = this.findFirstNamedChildOfType(
+        "exposing_list",
+        node,
+      );
+      if (exposingList) {
+        const doubleDot = this.findFirstNamedChildOfType(
+          "double_dot",
+          exposingList,
+        );
+        if (doubleDot) {
+          return undefined;
+        }
+      }
+      const descendants = node.descendantsOfType("exposed_type");
+      return descendants.find(desc => desc.text.startsWith(typeName));
+    }
+    return undefined;
   }
 
   public static isExposedTypeOrTypeAlias(tree: Tree, typeName: string) {
@@ -440,6 +487,19 @@ export class TreeUtils {
     );
     if (declaration && declaration.firstNamedChild) {
       return declaration.firstNamedChild;
+    }
+  }
+
+  public static getFunctionAnnotationNameNodeFromDefinition(
+    node: SyntaxNode,
+  ): SyntaxNode | undefined {
+    if (
+      node.previousNamedSibling &&
+      node.previousNamedSibling.type === "type_annotation" &&
+      node.previousNamedSibling.firstChild &&
+      node.previousNamedSibling.firstChild.type === "lower_case_identifier"
+    ) {
+      return node.previousNamedSibling.firstChild;
     }
   }
 
