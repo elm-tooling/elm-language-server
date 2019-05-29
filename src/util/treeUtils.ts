@@ -651,6 +651,62 @@ export class TreeUtils {
         };
       }
     } else if (
+      nodeAtPosition.parent &&
+      nodeAtPosition.parent.type === "exposed_value" &&
+      nodeAtPosition.parent.parent &&
+      nodeAtPosition.parent.parent.parent &&
+      nodeAtPosition.parent.parent.parent.type === "import_clause"
+    ) {
+      const definitionFromOtherFile = this.findImportFromImportList(
+        uri,
+        nodeAtPosition.text,
+        "Function",
+        imports,
+      );
+
+      if (definitionFromOtherFile) {
+        return {
+          node: definitionFromOtherFile.node,
+          nodeType: "Function",
+          uri: definitionFromOtherFile.fromUri,
+        };
+      }
+    } else if (
+      nodeAtPosition.parent &&
+      nodeAtPosition.parent.type === "exposed_type" &&
+      nodeAtPosition.parent.parent &&
+      nodeAtPosition.parent.parent.parent &&
+      nodeAtPosition.parent.parent.parent.type === "import_clause"
+    ) {
+      const upperCaseQid = nodeAtPosition;
+      let definitionFromOtherFile = this.findImportFromImportList(
+        uri,
+        upperCaseQid.text,
+        "Type",
+        imports,
+      );
+      if (definitionFromOtherFile) {
+        return {
+          node: definitionFromOtherFile.node,
+          nodeType: "Type",
+          uri: definitionFromOtherFile.fromUri,
+        };
+      }
+
+      definitionFromOtherFile = this.findImportFromImportList(
+        uri,
+        upperCaseQid.text,
+        "TypeAlias",
+        imports,
+      );
+      if (definitionFromOtherFile) {
+        return {
+          node: definitionFromOtherFile.node,
+          nodeType: "TypeAlias",
+          uri: definitionFromOtherFile.fromUri,
+        };
+      }
+    } else if (
       nodeAtPosition.previousNamedSibling &&
       (nodeAtPosition.previousNamedSibling.type === "type" ||
         nodeAtPosition.previousNamedSibling.type === "type_alias")
