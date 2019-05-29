@@ -39,6 +39,15 @@ export class HoverProvider {
       );
 
       if (definitionNode) {
+        if (definitionNode.nodeType === "FunctionParameter") {
+          return {
+            contents: {
+              kind: MarkupKind.Markdown,
+              value: "Local parameter",
+            },
+          };
+        }
+
         return this.createMarkdownHoverFromDefinition(definitionNode.node);
       } else {
         const specialMatch = getEmptyTypes().find(

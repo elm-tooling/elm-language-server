@@ -3,6 +3,7 @@ import { IImport, IImports } from "../imports";
 
 export type NodeType =
   | "Function"
+  | "FunctionParameter"
   | "TypeAlias"
   | "Type"
   | "Operator"
@@ -783,6 +784,23 @@ export class TreeUtils {
       nodeAtPosition.parent &&
       nodeAtPosition.parent.type === "value_qid"
     ) {
+      const valueDeclaration = this.findTopLevelWrappingFunction(
+        nodeAtPosition,
+      );
+
+      if (valueDeclaration && valueDeclaration.firstChild) {
+        const match = valueDeclaration.firstChild.children.find(
+          a => a.text === nodeAtPosition.text,
+        );
+        if (match) {
+          return {
+            node: match,
+            nodeType: "FunctionParameter",
+            uri,
+          };
+        }
+      }
+
       const definitionNode = TreeUtils.findLowercaseQidNode(
         tree,
         nodeAtPosition.parent,
@@ -849,6 +867,24 @@ export class TreeUtils {
       }
       if (definitionNode) {
         return { node: definitionNode, uri, nodeType: "Operator" };
+      }
+    }
+  }
+
+  public static findTopLevelWrappingFunction(
+    node: SyntaxNode,
+  ): SyntaxNode | undefined {
+    if (node.parent) {
+      if (
+        node.parent.parent &&
+        node.parent.parent.type === "file" &&
+        node.parent.type === "value_declaration" &&
+        node.parent.firstChild &&
+        node.parent.firstChild.type === "function_declaration_left"
+      ) {
+        return node.parent;
+      } else {
+        return this.findTopLevelWrappingFunction(node.parent);
       }
     }
   }
