@@ -514,7 +514,15 @@ export class TreeUtils {
   ): SyntaxNode[] | undefined {
     const functions = this.findAllFunctionCalls(tree);
     if (functions) {
-      return functions.filter(a => a.text === functionName);
+      const callSites = functions.filter(a => a.text === functionName);
+      return callSites.map(a => {
+        const functionNode = a.descendantsOfType("lower_case_identifier");
+        if (functionNode) {
+          return functionNode[0];
+        } else {
+          return a;
+        }
+      });
     }
   }
 
@@ -879,7 +887,7 @@ export class TreeUtils {
       ) {
         if (node.parent.firstChild) {
           const match = node.parent.firstChild.children.find(
-            a => a.text === functionParameterName,
+            a => a.type === "lower_pattern" && a.text === functionParameterName,
           );
           if (match) {
             return match;
@@ -929,7 +937,7 @@ export class TreeUtils {
     }
   }
 
-  public static findImportNameNode(
+  public static findImportClauseByName(
     tree: Tree,
     moduleName: string,
   ): SyntaxNode | undefined {
@@ -941,6 +949,24 @@ export class TreeUtils {
           a.children[1].type === "upper_case_qid" &&
           a.children[1].text === moduleName,
       );
+    }
+  }
+
+  public static findImportNameNode(
+    tree: Tree,
+    moduleName: string,
+  ): SyntaxNode | undefined {
+    const allImports = this.findAllImportNameNodes(tree);
+    if (allImports) {
+      const match = allImports.find(
+        a =>
+          a.children.length > 1 &&
+          a.children[1].type === "upper_case_qid" &&
+          a.children[1].text === moduleName,
+      );
+      if (match) {
+        return match.children[1];
+      }
     }
   }
 }

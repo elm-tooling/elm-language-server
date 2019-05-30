@@ -8,83 +8,76 @@ import {
   WorkspaceEdit,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
+import { IImports } from "../imports";
+import { References } from "../util/references";
+import { TreeUtils } from "../util/treeUtils";
 
 export class RenameProvider {
-  private connection: IConnection;
-  private forest: IForest;
-
-  constructor(connection: IConnection, forest: IForest) {
-    this.connection = connection;
-    this.forest = forest;
-
+  constructor(
+    private connection: IConnection,
+    private forest: IForest,
+    private imports: IImports,
+  ) {
     this.connection.onRenameRequest(this.handleRenameRequest);
   }
 
   protected handleRenameRequest = async (
-    param: RenameParams,
+    params: RenameParams,
   ): Promise<WorkspaceEdit | null | undefined> => {
-    const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
+    const tree: Tree | undefined = this.forest.getTree(params.textDocument.uri);
 
     if (tree) {
       const nodeAtPosition = tree.rootNode.namedDescendantForPosition({
-        column: param.position.character,
-        row: param.position.line,
+        column: params.position.character,
+        row: params.position.line,
       });
 
-      if (nodeAtPosition) {
-        const references = tree.rootNode
-          .descendantsOfType("value_expr")
-          .filter(
-            a =>
-              a.firstNamedChild !== null &&
-              a.firstNamedChild.type === "value_qid" &&
-              a.firstNamedChild.lastNamedChild !== null &&
-              a.firstNamedChild.lastNamedChild.text === nodeAtPosition.text,
+      const definitionNode = TreeUtils.findDefinitonNodeByReferencingNode(
+        nodeAtPosition,
+        params.textDocument.uri,
+        tree,
+        this.imports,
+      );
+
+      if (definitionNode) {
+        const refTree = this.forest.getByUri(definitionNode.uri);
+        if (refTree && refTree.writeable) {
+          const references = References.find(
+            definitionNode,
+            this.forest,
+            this.imports,
           );
 
-        const declaration = tree.rootNode
-          .descendantsOfType("function_declaration_left")
-          .find(
-            a =>
-              a.firstNamedChild !== null &&
-              a.firstNamedChild.type === "lower_case_identifier" &&
-              a.firstNamedChild.text === nodeAtPosition.text,
-          );
+          if (references) {
+            const map: { [uri: string]: TextEdit[] } = {};
+            references.forEach(a => {
+              if (!map[a.uri]) {
+                map[a.uri] = [];
+              }
 
-        if (declaration && declaration.firstNamedChild) {
-          references.push(declaration.firstNamedChild);
-        }
-
-        const annotation = tree.rootNode
-          .descendantsOfType("type_annotation")
-          .find(
-            a =>
-              a.firstNamedChild !== null &&
-              a.firstNamedChild.type === "lower_case_identifier" &&
-              a.firstNamedChild.text === nodeAtPosition.text,
-          );
-
-        if (annotation && annotation.firstNamedChild) {
-          references.push(annotation.firstNamedChild);
-        }
-
-        if (references) {
-          return {
-            changes: {
-              [param.textDocument.uri]: references.map(a =>
+              map[a.uri].push(
                 TextEdit.replace(
                   Range.create(
                     Position.create(
-                      a.startPosition.row,
-                      a.startPosition.column,
+                      a.node.startPosition.row,
+                      a.node.startPosition.column,
                     ),
-                    Position.create(a.endPosition.row, a.endPosition.column),
+                    Position.create(
+                      a.node.endPosition.row,
+                      a.node.endPosition.column,
+                    ),
                   ),
-                  param.newName,
+                  params.newName,
                 ),
-              ),
-            },
-          };
+              );
+            });
+
+            if (map) {
+              return {
+                changes: map,
+              };
+            }
+          }
         }
       }
     }
