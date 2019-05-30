@@ -784,21 +784,17 @@ export class TreeUtils {
       nodeAtPosition.parent &&
       nodeAtPosition.parent.type === "value_qid"
     ) {
-      const valueDeclaration = this.findTopLevelWrappingFunction(
+      const functionParameter = this.findFunctionParameterDefinition(
         nodeAtPosition,
+        nodeAtPosition.text,
       );
 
-      if (valueDeclaration && valueDeclaration.firstChild) {
-        const match = valueDeclaration.firstChild.children.find(
-          a => a.text === nodeAtPosition.text,
-        );
-        if (match) {
-          return {
-            node: match,
-            nodeType: "FunctionParameter",
-            uri,
-          };
-        }
+      if (functionParameter) {
+        return {
+          node: functionParameter,
+          nodeType: "FunctionParameter",
+          uri,
+        };
       }
 
       const definitionNode = TreeUtils.findLowercaseQidNode(
@@ -871,20 +867,34 @@ export class TreeUtils {
     }
   }
 
-  public static findTopLevelWrappingFunction(
+  public static findFunctionParameterDefinition(
     node: SyntaxNode,
+    functionParameterName: string,
   ): SyntaxNode | undefined {
     if (node.parent) {
       if (
-        node.parent.parent &&
-        node.parent.parent.type === "file" &&
         node.parent.type === "value_declaration" &&
         node.parent.firstChild &&
         node.parent.firstChild.type === "function_declaration_left"
       ) {
-        return node.parent;
+        if (node.parent.firstChild) {
+          const match = node.parent.firstChild.children.find(
+            a => a.text === functionParameterName,
+          );
+          if (match) {
+            return match;
+          } else {
+            return this.findFunctionParameterDefinition(
+              node.parent,
+              functionParameterName,
+            );
+          }
+        }
       } else {
-        return this.findTopLevelWrappingFunction(node.parent);
+        return this.findFunctionParameterDefinition(
+          node.parent,
+          functionParameterName,
+        );
       }
     }
   }
