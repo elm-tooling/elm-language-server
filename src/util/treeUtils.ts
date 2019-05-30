@@ -450,10 +450,7 @@ export class TreeUtils {
   public static findAllFunctionDeclarations(
     tree: Tree,
   ): SyntaxNode[] | undefined {
-    const functions = this.findAllNamedChildsOfType(
-      "value_declaration",
-      tree.rootNode,
-    );
+    const functions = tree.rootNode.descendantsOfType("value_declaration");
     return functions;
   }
 
@@ -558,10 +555,7 @@ export class TreeUtils {
     tree: Tree,
     nodeAtPosition: SyntaxNode,
   ): SyntaxNode | undefined {
-    let definitionNode;
-    definitionNode = this.findFunction(tree, nodeAtPosition.text);
-
-    return definitionNode;
+    return this.findFunction(tree, nodeAtPosition.text);
   }
 
   public static findUppercaseQidNode(

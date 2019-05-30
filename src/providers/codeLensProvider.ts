@@ -1,4 +1,4 @@
-import { Tree } from "tree-sitter";
+import { SyntaxNode, Tree } from "tree-sitter";
 import {
   CodeLens,
   CodeLensParams,
@@ -38,160 +38,12 @@ export class CodeLensProvider {
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
     if (tree) {
-      tree.rootNode.children.forEach(node => {
-        if (node.type === "value_declaration") {
-          let exposed = false;
-          const functionName = TreeUtils.getFunctionNameNodeFromDefinition(
-            node,
-          );
+      codeLens.push(...this.getExposingCodeLenses(tree));
 
-          if (functionName) {
-            const definitionNode = TreeUtils.findDefinitonNodeByReferencingNode(
-              functionName,
-              param.textDocument.uri,
-              tree,
-              this.imports,
-            );
+      codeLens.push(
+        ...this.getReferencesCodeLenses(tree, param.textDocument.uri),
+      );
 
-            const references = References.find(
-              definitionNode,
-              this.forest,
-              this.imports,
-            );
-
-            exposed = TreeUtils.isExposedFunction(tree, functionName.text);
-            if (
-              node.previousNamedSibling &&
-              node.previousNamedSibling.type === "type_annotation"
-            ) {
-              codeLens.push(
-                CodeLens.create(
-                  Range.create(
-                    Position.create(
-                      node.previousNamedSibling.startPosition.row,
-                      node.previousNamedSibling.startPosition.column,
-                    ),
-                    Position.create(
-                      node.previousNamedSibling.endPosition.row,
-                      node.previousNamedSibling.endPosition.column,
-                    ),
-                  ),
-                  { codeLensType: "exposed", exposed },
-                ),
-
-                CodeLens.create(
-                  Range.create(
-                    Position.create(
-                      node.previousNamedSibling.startPosition.row,
-                      node.previousNamedSibling.startPosition.column,
-                    ),
-                    Position.create(
-                      node.previousNamedSibling.endPosition.row,
-                      node.previousNamedSibling.endPosition.column,
-                    ),
-                  ),
-                  {
-                    codeLensType: "referenceCounter",
-                    referenceNodeCount: references.length,
-                  },
-                ),
-              );
-            } else {
-              codeLens.push(
-                CodeLens.create(
-                  Range.create(
-                    Position.create(
-                      node.startPosition.row,
-                      node.startPosition.column,
-                    ),
-                    Position.create(
-                      node.endPosition.row,
-                      node.endPosition.column,
-                    ),
-                  ),
-                  { codeLensType: "exposed", exposed },
-                ),
-
-                CodeLens.create(
-                  Range.create(
-                    Position.create(
-                      node.startPosition.row,
-                      node.startPosition.column,
-                    ),
-                    Position.create(
-                      node.endPosition.row,
-                      node.endPosition.column,
-                    ),
-                  ),
-                  {
-                    codeLensType: "referenceCounter",
-                    referenceNodeCount: references.length,
-                  },
-                ),
-              );
-            }
-          }
-        } else if (
-          node.type === "type_declaration" ||
-          node.type === "type_alias_declaration"
-        ) {
-          let exposed = false;
-          const typeNode = TreeUtils.findFirstNamedChildOfType(
-            "upper_case_identifier",
-            node,
-          );
-
-          if (typeNode) {
-            const definitionNode = TreeUtils.findDefinitonNodeByReferencingNode(
-              typeNode,
-              param.textDocument.uri,
-              tree,
-              this.imports,
-            );
-
-            const references = References.find(
-              definitionNode,
-              this.forest,
-              this.imports,
-            );
-
-            exposed = TreeUtils.isExposedTypeOrTypeAlias(tree, typeNode.text);
-
-            codeLens.push(
-              CodeLens.create(
-                Range.create(
-                  Position.create(
-                    node.startPosition.row,
-                    node.startPosition.column,
-                  ),
-                  Position.create(
-                    node.endPosition.row,
-                    node.endPosition.column,
-                  ),
-                ),
-                { codeLensType: "exposed", exposed },
-              ),
-
-              CodeLens.create(
-                Range.create(
-                  Position.create(
-                    node.startPosition.row,
-                    node.startPosition.column,
-                  ),
-                  Position.create(
-                    node.endPosition.row,
-                    node.endPosition.column,
-                  ),
-                ),
-                {
-                  codeLensType: "referenceCounter",
-                  referenceNodeCount: references.length,
-                },
-              ),
-            );
-          }
-        }
-      });
       return codeLens;
     }
   };
@@ -230,4 +82,162 @@ export class CodeLensProvider {
 
     return codelens;
   };
+
+  private createExposingCodeLens(
+    node: SyntaxNode,
+    nameNode: SyntaxNode,
+    tree: Tree,
+    isFunction: boolean,
+  ) {
+    const exposed = isFunction
+      ? TreeUtils.isExposedFunction(tree, nameNode.text)
+      : TreeUtils.isExposedTypeOrTypeAlias(tree, nameNode.text);
+    return CodeLens.create(
+      Range.create(
+        Position.create(node.startPosition.row, node.startPosition.column),
+        Position.create(node.endPosition.row, node.endPosition.column),
+      ),
+      { codeLensType: "exposed", exposed },
+    );
+  }
+
+  private createReferenceCodeLens(
+    placementNode: SyntaxNode,
+    nameNode: SyntaxNode,
+    uri: string,
+    tree: Tree,
+  ) {
+    const definitionNode = TreeUtils.findDefinitonNodeByReferencingNode(
+      nameNode,
+      uri,
+      tree,
+      this.imports,
+    );
+
+    const references = References.find(
+      definitionNode,
+      this.forest,
+      this.imports,
+    );
+
+    return CodeLens.create(
+      Range.create(
+        Position.create(
+          placementNode.startPosition.row,
+          placementNode.startPosition.column,
+        ),
+        Position.create(
+          placementNode.endPosition.row,
+          placementNode.endPosition.column,
+        ),
+      ),
+      {
+        codeLensType: "referenceCounter",
+        referenceNodeCount: references.length,
+      },
+    );
+  }
+
+  private getExposingCodeLenses(tree: Tree): CodeLens[] {
+    const codeLens: CodeLens[] = [];
+    tree.rootNode.children.forEach(node => {
+      if (node.type === "value_declaration") {
+        const functionName = TreeUtils.getFunctionNameNodeFromDefinition(node);
+
+        if (functionName) {
+          if (
+            node.previousNamedSibling &&
+            node.previousNamedSibling.type === "type_annotation"
+          ) {
+            codeLens.push(
+              this.createExposingCodeLens(
+                node.previousNamedSibling,
+                functionName,
+                tree,
+                true,
+              ),
+            );
+          } else {
+            codeLens.push(
+              this.createExposingCodeLens(node, functionName, tree, true),
+            );
+          }
+        }
+      } else if (
+        node.type === "type_declaration" ||
+        node.type === "type_alias_declaration"
+      ) {
+        const typeNode = TreeUtils.findFirstNamedChildOfType(
+          "upper_case_identifier",
+          node,
+        );
+
+        if (typeNode) {
+          codeLens.push(
+            this.createExposingCodeLens(node, typeNode, tree, false),
+          );
+        }
+      }
+    });
+    return codeLens;
+  }
+
+  private getReferencesCodeLenses(tree: Tree, uri: string) {
+    const codeLens: CodeLens[] = [];
+    tree.rootNode.children.forEach(node => {
+      if (
+        node.type === "type_declaration" ||
+        node.type === "type_alias_declaration"
+      ) {
+        const typeNode = TreeUtils.findFirstNamedChildOfType(
+          "upper_case_identifier",
+          node,
+        );
+
+        if (typeNode) {
+          codeLens.push(
+            this.createReferenceCodeLens(node, typeNode, uri, tree),
+          );
+        }
+      }
+    });
+
+    tree.rootNode.descendantsOfType("value_declaration").forEach(node => {
+      const functionName = TreeUtils.getFunctionNameNodeFromDefinition(node);
+
+      if (functionName) {
+        if (
+          node.previousNamedSibling &&
+          node.previousNamedSibling.type === "type_annotation"
+        ) {
+          codeLens.push(
+            this.createReferenceCodeLens(
+              node.previousNamedSibling,
+              functionName,
+              uri,
+              tree,
+            ),
+          );
+        } else {
+          codeLens.push(
+            this.createReferenceCodeLens(node, functionName, uri, tree),
+          );
+        }
+      }
+    });
+
+    const moduleNameNode = TreeUtils.getModuleNameNode(tree);
+    if (moduleNameNode && moduleNameNode.lastChild) {
+      codeLens.push(
+        this.createReferenceCodeLens(
+          moduleNameNode,
+          moduleNameNode.lastChild,
+          uri,
+          tree,
+        ),
+      );
+    }
+
+    return codeLens;
+  }
 }
