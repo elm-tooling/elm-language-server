@@ -28,9 +28,9 @@ This server contributes the following settings:
 
 ## Editor Support
 
-### VSCode
-
-https://github.com/elm-tooling/elm-language-client-vscode
+| Editor | Link                                                                                        | Setup Instructions      | Supported Features       | Source Code                                                       |
+| ------ | ------------------------------------------------------------------------------------------- | ----------------------- | ------------------------ | ----------------------------------------------------------------- |
+| VSCode | [MarketPlace](https://marketplace.visualstudio.com/items?itemName=Elmtooling.elm-ls-vscode) | Just install the plugin | All features should work | [Link](https://github.com/elm-tooling/elm-language-client-vscode) |
 
 ### Vim
 
