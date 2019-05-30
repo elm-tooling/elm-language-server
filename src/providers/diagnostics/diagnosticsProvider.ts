@@ -65,7 +65,6 @@ export class DiagnosticsProvider {
 
     this.currentDiagnostics = { elmMake: new Map(), elmAnalyse: new Map() };
 
-    this.events.on("open", this.getDiagnostics);
     this.events.on("change", this.getDiagnostics);
     this.events.on("save", this.getDiagnostics);
   }
