@@ -91,7 +91,7 @@ export class Server implements ILanguageServer {
     new ReferencesProvider(connection, forest, imports);
     new DocumentSymbolProvider(connection, forest);
     new WorkspaceSymbolProvider(connection, forest);
-    new CodeLensProvider(connection, forest);
+    new CodeLensProvider(connection, forest, imports);
     new RenameProvider(connection, forest, imports);
   }
 }

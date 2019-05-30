@@ -1,13 +1,12 @@
 import { SyntaxNode } from "tree-sitter";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
-import { NodeType, TreeUtils } from "./treeUtils";
+import { IReferenceNode } from "./referenceNode";
+import { TreeUtils } from "./treeUtils";
 
 export class References {
   public static find(
-    definitionNode:
-      | { node: SyntaxNode; uri: string; nodeType: NodeType }
-      | undefined,
+    definitionNode: IReferenceNode | undefined,
     forest: IForest,
     imports: IImports,
   ): Array<{ node: SyntaxNode; uri: string }> {
