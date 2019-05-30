@@ -146,7 +146,9 @@ export class ASTProvider {
   protected handleChangeTextDocument = async (
     params: DidChangeTextDocumentParams,
   ): Promise<void> => {
-    this.connection.console.info("Changed text document, going to parse it");
+    this.connection.console.info(
+      `Changed text document, going to parse it. ${params.textDocument.uri}`,
+    );
     const document: VersionedTextDocumentIdentifier = params.textDocument;
     let tree: Tree | undefined = this.forest.getTree(document.uri);
     if (tree === undefined) {
