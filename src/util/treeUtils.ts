@@ -123,9 +123,9 @@ export class TreeUtils {
                   });
                 }
               });
-
-              return { moduleName: moduleName.text, exposing: exposed };
             }
+
+            return { moduleName: moduleName.text, exposing: exposed };
           }
         } else {
           const exposedOperators = exposingList.descendantsOfType(
