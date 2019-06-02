@@ -1,4 +1,4 @@
-import { Tree } from "tree-sitter";
+import { SyntaxNode, Tree } from "tree-sitter";
 import {
   CompletionItem,
   CompletionItemKind,
@@ -6,7 +6,6 @@ import {
   IConnection,
   InsertTextFormat,
   MarkupKind,
-  SymbolKind,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
@@ -28,18 +27,25 @@ export class CompletionProvider {
   }
 
   private handleCompletionRequest = (
-    param: CompletionParams,
+    params: CompletionParams,
   ): CompletionItem[] | null | undefined => {
     const completions: CompletionItem[] = [];
 
-    const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
+    const tree: Tree | undefined = this.forest.getTree(params.textDocument.uri);
 
     if (tree) {
+      const nodeAtPosition = tree.rootNode.namedDescendantForPosition({
+        column: params.position.character,
+        row: params.position.line,
+      });
       // Todo add variables from local let scopes
       completions.push(...this.getSameFileTopLevelCompletions(tree));
+      completions.push(
+        ...this.findFunctionParameterDefinitionsForScope(nodeAtPosition),
+      );
 
       completions.push(
-        ...this.getCompletionsFromOtherFile(param.textDocument.uri),
+        ...this.getCompletionsFromOtherFile(params.textDocument.uri),
       );
 
       completions.push(...this.createSnippets());
@@ -95,10 +101,12 @@ export class CompletionProvider {
 
   private getSameFileTopLevelCompletions(tree: Tree): CompletionItem[] {
     const completions: CompletionItem[] = [];
-    const functions = TreeUtils.findAllFunctionDeclarations(tree);
+    const topLevelFunctions = TreeUtils.findAllTopLeverFunctionDeclarations(
+      tree,
+    );
     // Add functions
-    if (functions) {
-      const declarations = functions.filter(
+    if (topLevelFunctions) {
+      const declarations = topLevelFunctions.filter(
         a =>
           a.firstNamedChild !== null &&
           a.firstNamedChild.type === "function_declaration_left" &&
@@ -166,7 +174,18 @@ export class CompletionProvider {
   ): CompletionItem {
     return this.createCompletion(
       markdownDocumentation,
-      SymbolKind.Function,
+      CompletionItemKind.Function,
+      label,
+    );
+  }
+
+  private createFunctionParameterCompletion(
+    markdownDocumentation: string | undefined,
+    label: string,
+  ): CompletionItem {
+    return this.createCompletion(
+      markdownDocumentation,
+      CompletionItemKind.Field,
       label,
     );
   }
@@ -175,7 +194,11 @@ export class CompletionProvider {
     markdownDocumentation: string | undefined,
     label: string,
   ): CompletionItem {
-    return this.createCompletion(markdownDocumentation, SymbolKind.Enum, label);
+    return this.createCompletion(
+      markdownDocumentation,
+      CompletionItemKind.Enum,
+      label,
+    );
   }
 
   private createTypeAliasCompletion(
@@ -184,7 +207,7 @@ export class CompletionProvider {
   ): CompletionItem {
     return this.createCompletion(
       markdownDocumentation,
-      SymbolKind.Struct,
+      CompletionItemKind.Struct,
       label,
     );
   }
@@ -195,13 +218,17 @@ export class CompletionProvider {
   ): CompletionItem {
     return this.createCompletion(
       markdownDocumentation,
-      SymbolKind.Operator,
+      CompletionItemKind.Operator,
       label,
     );
   }
 
   private createUnionConstructorCompletion(label: string): CompletionItem {
-    return this.createCompletion(undefined, SymbolKind.EnumMember, label);
+    return this.createCompletion(
+      undefined,
+      CompletionItemKind.EnumMember,
+      label,
+    );
   }
 
   private createCompletion(
@@ -217,6 +244,35 @@ export class CompletionProvider {
       kind,
       label,
     };
+  }
+
+  private findFunctionParameterDefinitionsForScope(
+    node: SyntaxNode,
+  ): CompletionItem[] {
+    const result: CompletionItem[] = [];
+    if (node.parent) {
+      if (
+        node.parent.type === "value_declaration" &&
+        node.parent.firstChild &&
+        node.parent.firstChild.type === "function_declaration_left"
+      ) {
+        node.parent.firstChild.children.forEach(child => {
+          if (child.type === "lower_pattern") {
+            result.push(
+              this.createFunctionParameterCompletion(
+                "Local parameter",
+                child.text,
+              ),
+            );
+          }
+        });
+      }
+      result.push(
+        ...this.findFunctionParameterDefinitionsForScope(node.parent),
+      );
+    }
+
+    return result;
   }
 
   private createSnippet(

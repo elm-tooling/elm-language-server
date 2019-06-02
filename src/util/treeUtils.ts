@@ -451,6 +451,12 @@ export class TreeUtils {
     return tree.rootNode.descendantsOfType("value_declaration");
   }
 
+  public static findAllTopLeverFunctionDeclarations(
+    tree: Tree,
+  ): SyntaxNode[] | undefined {
+    return tree.rootNode.children.filter(a => a.type === "value_declaration");
+  }
+
   public static findAllTypeOrTypeAliasCalls(
     tree: Tree,
   ): SyntaxNode[] | undefined {
