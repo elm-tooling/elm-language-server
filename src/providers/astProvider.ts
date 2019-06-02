@@ -81,6 +81,10 @@ export class ASTProvider {
           writeable: true,
         });
       }
+      elmFolders.push({
+        path: this.elmWorkspace.fsPath + "tests",
+        writeable: true,
+      });
 
       this.connection.console.info(elmFolders.length + " source-dirs found");
       const elmHome = this.findElmHome();
@@ -88,8 +92,11 @@ export class ASTProvider {
       const packagesRoot = `${elmHome}/${elmVersion}/package/`;
       const dependencies: { [index: string]: string } =
         type === "application"
-          ? elmJson.dependencies.direct
-          : elmJson.dependencies;
+          ? {
+              ...elmJson.dependencies.direct,
+              ...elmJson["test-dependencies"].direct,
+            }
+          : { ...elmJson.dependencies, ...elmJson["test-dependencies"] };
 
       for (const key in dependencies) {
         if (dependencies.hasOwnProperty(key)) {
