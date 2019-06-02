@@ -159,7 +159,8 @@ export class ASTProvider {
     const document: VersionedTextDocumentIdentifier = params.textDocument;
     let tree: Tree | undefined = this.forest.getTree(document.uri);
     if (tree === undefined) {
-      return;
+      const fileContent: string = await readFile(document.uri, "utf8");
+      tree = this.parser.parse(fileContent);
     }
 
     for (const changeEvent of params.contentChanges) {
