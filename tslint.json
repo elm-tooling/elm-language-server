@@ -2,12 +2,15 @@
   "defaultSeverity": "error",
   "extends": [
     "tslint:recommended",
+    "tslint-sonarts",
     "tslint-plugin-prettier",
     "tslint-config-prettier"
   ],
   "jsRules": {},
   "rules": {
-    "prettier": [true, ".prettierrc.yaml"]
+    "prettier": [true, ".prettierrc.yaml"],
+    "cognitive-complexity": false,
+    "no-big-function": false
   },
   "rulesDirectory": ["tslint-plugin-prettier"]
 }

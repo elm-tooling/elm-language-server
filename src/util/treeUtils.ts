@@ -14,9 +14,7 @@ export type Exposing = Array<{
   name: string;
   syntaxNode: SyntaxNode;
   type: NodeType;
-  exposedUnionConstructors:
-    | Array<{ name: string; syntaxNode: SyntaxNode }>
-    | undefined;
+  exposedUnionConstructors?: Array<{ name: string; syntaxNode: SyntaxNode }>;
 }>;
 
 export class TreeUtils {
@@ -450,21 +448,20 @@ export class TreeUtils {
   public static findAllFunctionDeclarations(
     tree: Tree,
   ): SyntaxNode[] | undefined {
-    const functions = tree.rootNode.descendantsOfType("value_declaration");
-    return functions;
+    return tree.rootNode.descendantsOfType("value_declaration");
   }
 
   public static findAllTypeOrTypeAliasCalls(
     tree: Tree,
   ): SyntaxNode[] | undefined {
-    let functions = tree.rootNode.descendantsOfType("type_ref");
-    if (functions.length > 0) {
-      functions = functions.filter(
+    let typeRefs = tree.rootNode.descendantsOfType("type_ref");
+    if (typeRefs.length > 0) {
+      typeRefs = typeRefs.filter(
         a => a.firstChild && a.firstChild.type === "upper_case_qid",
       );
     }
 
-    return functions;
+    return typeRefs;
   }
 
   public static findAllFunctionCalls(tree: Tree): SyntaxNode[] | undefined {
@@ -534,21 +531,16 @@ export class TreeUtils {
   }
 
   public static findAllTypeDeclarations(tree: Tree): SyntaxNode[] | undefined {
-    const typeDeclarations = this.findAllNamedChildsOfType(
-      "type_declaration",
-      tree.rootNode,
-    );
-    return typeDeclarations;
+    return this.findAllNamedChildsOfType("type_declaration", tree.rootNode);
   }
 
   public static findAllTypeAliasDeclarations(
     tree: Tree,
   ): SyntaxNode[] | undefined {
-    const typeAliasDeclarations = this.findAllNamedChildsOfType(
+    return this.findAllNamedChildsOfType(
       "type_alias_declaration",
       tree.rootNode,
     );
-    return typeAliasDeclarations;
   }
 
   public static findLowercaseQidNode(
@@ -618,11 +610,13 @@ export class TreeUtils {
         };
       }
     } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "exposed_value" &&
-      nodeAtPosition.parent.parent &&
-      nodeAtPosition.parent.parent.parent &&
-      nodeAtPosition.parent.parent.parent.type === "module_declaration"
+      (nodeAtPosition.parent &&
+        nodeAtPosition.parent.type === "exposed_value" &&
+        nodeAtPosition.parent.parent &&
+        nodeAtPosition.parent.parent.parent &&
+        nodeAtPosition.parent.parent.parent.type === "module_declaration") ||
+      (nodeAtPosition.parent &&
+        nodeAtPosition.parent.type === "function_declaration_left")
     ) {
       const definitionNode = TreeUtils.findLowercaseQidNode(
         tree,
@@ -637,11 +631,14 @@ export class TreeUtils {
         };
       }
     } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "exposed_type" &&
-      nodeAtPosition.parent.parent &&
-      nodeAtPosition.parent.parent.parent &&
-      nodeAtPosition.parent.parent.parent.type === "module_declaration"
+      (nodeAtPosition.parent &&
+        nodeAtPosition.parent.type === "exposed_type" &&
+        nodeAtPosition.parent.parent &&
+        nodeAtPosition.parent.parent.parent &&
+        nodeAtPosition.parent.parent.parent.type === "module_declaration") ||
+      (nodeAtPosition.previousNamedSibling &&
+        (nodeAtPosition.previousNamedSibling.type === "type" ||
+          nodeAtPosition.previousNamedSibling.type === "type_alias"))
     ) {
       const upperCaseQid = nodeAtPosition;
       const definitionNode = TreeUtils.findUppercaseQidNode(tree, upperCaseQid);
@@ -707,21 +704,6 @@ export class TreeUtils {
           node: definitionFromOtherFile.node,
           nodeType: "TypeAlias",
           uri: definitionFromOtherFile.fromUri,
-        };
-      }
-    } else if (
-      nodeAtPosition.previousNamedSibling &&
-      (nodeAtPosition.previousNamedSibling.type === "type" ||
-        nodeAtPosition.previousNamedSibling.type === "type_alias")
-    ) {
-      const upperCaseQid = nodeAtPosition;
-      const definitionNode = TreeUtils.findUppercaseQidNode(tree, upperCaseQid);
-
-      if (definitionNode) {
-        return {
-          node: definitionNode.node,
-          nodeType: definitionNode.nodeType,
-          uri,
         };
       }
     } else if (
@@ -820,22 +802,6 @@ export class TreeUtils {
           };
         }
       }
-
-      if (definitionNode) {
-        return {
-          node: definitionNode,
-          nodeType: "Function",
-          uri,
-        };
-      }
-    } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "function_declaration_left"
-    ) {
-      const definitionNode = TreeUtils.findLowercaseQidNode(
-        tree,
-        nodeAtPosition,
-      );
 
       if (definitionNode) {
         return {

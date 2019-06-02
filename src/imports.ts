@@ -1,6 +1,6 @@
 import Parser, { SyntaxNode, Tree } from "tree-sitter";
 import TreeSitterElm from "tree-sitter-elm";
-import { IForest } from "./forest";
+import { IForest, ITreeContainer } from "./forest";
 import { Exposing, NodeType, TreeUtils } from "./util/treeUtils";
 
 export interface IImport {
@@ -102,15 +102,11 @@ export class Imports implements IImports {
                         },
                       );
                       result.push(
-                        ...exposedNodes.map(a => {
-                          return {
-                            alias: a.name,
-                            fromModuleName: moduleNameNode.text,
-                            fromUri: foundModule.uri,
-                            node: a.syntaxNode,
-                            type: a.type,
-                          };
-                        }),
+                        ...this.exposedNodesToImports(
+                          exposedNodes,
+                          moduleNameNode,
+                          foundModule,
+                        ),
                       );
                     }
 
@@ -127,15 +123,11 @@ export class Imports implements IImports {
                         },
                       );
                       result.push(
-                        ...exposedNodes.map(a => {
-                          return {
-                            alias: a.name,
-                            fromModuleName: moduleNameNode.text,
-                            fromUri: foundModule.uri,
-                            node: a.syntaxNode,
-                            type: a.type,
-                          };
-                        }),
+                        ...this.exposedNodesToImports(
+                          exposedNodes,
+                          moduleNameNode,
+                          foundModule,
+                        ),
                       );
                     }
 
@@ -160,15 +152,11 @@ export class Imports implements IImports {
                         },
                       );
                       result.push(
-                        ...exposedNodes.map(a => {
-                          return {
-                            alias: a.name,
-                            fromModuleName: moduleNameNode.text,
-                            fromUri: foundModule.uri,
-                            node: a.syntaxNode,
-                            type: a.type,
-                          };
-                        }),
+                        ...this.exposedNodesToImports(
+                          exposedNodes,
+                          moduleNameNode,
+                          foundModule,
+                        ),
                       );
                     }
                   }
@@ -285,5 +273,29 @@ import Platform.Sub as Sub exposing ( Sub )
     });
 
     return result;
+  }
+
+  private exposedNodesToImports(
+    exposedNodes: Array<{
+      name: string;
+      syntaxNode: Parser.SyntaxNode;
+      type: NodeType;
+      exposedUnionConstructors?: Array<{
+        name: string;
+        syntaxNode: Parser.SyntaxNode;
+      }>;
+    }>,
+    moduleNameNode: SyntaxNode,
+    foundModule: ITreeContainer,
+  ): IImport[] {
+    return exposedNodes.map(a => {
+      return {
+        alias: a.name,
+        fromModuleName: moduleNameNode.text,
+        fromUri: foundModule.uri,
+        node: a.syntaxNode,
+        type: a.type,
+      };
+    });
   }
 }

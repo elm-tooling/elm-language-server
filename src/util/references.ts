@@ -22,13 +22,11 @@ export class References {
             const annotationNameNode = TreeUtils.getFunctionAnnotationNameNodeFromDefinition(
               definitionNode.node,
             );
-            if (annotationNameNode) {
-              if (refSourceTree.writeable) {
-                references.push({
-                  node: annotationNameNode,
-                  uri: definitionNode.uri,
-                });
-              }
+            if (annotationNameNode && refSourceTree.writeable) {
+              references.push({
+                node: annotationNameNode,
+                uri: definitionNode.uri,
+              });
             }
 
             const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(

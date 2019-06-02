@@ -3,10 +3,7 @@ import {
   DocumentSymbol,
   DocumentSymbolParams,
   IConnection,
-  Position,
-  Range,
   SymbolInformation,
-  SymbolKind,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
@@ -24,6 +21,7 @@ export class DocumentSymbolProvider {
 
   private handleDocumentSymbolRequest = async (
     param: DocumentSymbolParams,
+    // tslint:disable-next-line: max-union-size
   ): Promise<SymbolInformation[] | DocumentSymbol[] | null | undefined> => {
     const symbolInformations: SymbolInformation[] = [];
 

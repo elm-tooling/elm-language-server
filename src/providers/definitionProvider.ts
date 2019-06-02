@@ -9,7 +9,7 @@ import {
 } from "vscode-languageserver";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
-import { NodeType, TreeUtils } from "../util/treeUtils";
+import { TreeUtils } from "../util/treeUtils";
 
 export class DefinitionProvider {
   constructor(
@@ -22,6 +22,7 @@ export class DefinitionProvider {
 
   protected handleDefinitionRequest = async (
     param: TextDocumentPositionParams,
+    // tslint:disable-next-line: max-union-size
   ): Promise<Location | Location[] | LocationLink[] | null | undefined> => {
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 

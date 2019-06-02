@@ -56,9 +56,7 @@ export class DocumentFormattingProvider {
 
       const stdout = await format;
 
-      const ranges = this.getTextRangeChanges(text.getText(), stdout.stdout);
-
-      return ranges;
+      return this.getTextRangeChanges(text.getText(), stdout.stdout);
     } catch (error) {
       (error.message as string).includes("SYNTAX PROBLEM")
         ? this.connection.console.error(

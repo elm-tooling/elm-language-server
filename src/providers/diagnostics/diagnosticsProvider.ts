@@ -99,7 +99,9 @@ export class DiagnosticsProvider {
 
     this.elmAnalyseDiagnostics.updateFile(uri, text);
 
-    this.currentDiagnostics.elmMake = await this.elmMakeDiagnostics.createDiagnostics(uri);
+    this.currentDiagnostics.elmMake = await this.elmMakeDiagnostics.createDiagnostics(
+      uri,
+    );
     this.sendDiagnostics();
   }
 
