@@ -616,7 +616,9 @@ export class TreeUtils {
         nodeAtPosition.parent.parent.parent &&
         nodeAtPosition.parent.parent.parent.type === "module_declaration") ||
       (nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "function_declaration_left")
+        nodeAtPosition.parent.type === "function_declaration_left") ||
+      (nodeAtPosition.parent &&
+        nodeAtPosition.parent.type === "type_annotation")
     ) {
       const definitionNode = TreeUtils.findLowercaseQidNode(
         tree,
