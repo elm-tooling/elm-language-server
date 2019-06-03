@@ -16,7 +16,7 @@ export class ElmAnalyseDiagnostics {
   private connection: IConnection;
   private elmWorkspace: URI;
   private elmAnalyse: Promise<ElmApp>;
-  private filesWithDiagnostics = new Set();
+  private filesWithDiagnostics: Set<string> = new Set();
   private onNewDiagnostics: INewDiagnosticsCallback;
 
   constructor(
