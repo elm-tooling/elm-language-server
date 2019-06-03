@@ -3,6 +3,7 @@ import { ClientCapabilities, IConnection } from "vscode-languageserver";
 export interface IClientSettings {
   elmPath: string;
   elmFormatPath: string;
+  elmTestPath: string;
 }
 
 export class Settings {

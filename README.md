@@ -6,7 +6,7 @@ This is the language server implementation for the Elm programming language.
 
 | Feature          | Description                                                                                                                                         |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Diagnostics      | Provided via `elm-make` and `elm-analyse`                                                                                                           |
+| Diagnostics      | Provided via `elm`, `elm-test` and `elm-analyse`                                                                                                    |
 | Formatting       | Provided via `elm-format` and postprocessed to only return a diff of changes. This way it should not be as intrusive as running `elm-format` normal |
 | codeLenses       | Currently only shows if a type alias, custom type or function is exposed from that module                                                           |
 | completions      | Show completions for the current file and snippets                                                                                                  |
@@ -25,6 +25,7 @@ This server contributes the following settings:
 - `elmLS.trace.server`: Enable/disable trace logging of client and server communication
 - `elmLS.elmPath`: The path to your elm executeable.
 - `elmLS.elmFormatPath`: The path to your elm-format executeable.
+- `elmLS.elmTestPath`: The path to your elm-test executeable.
 
 ## Editor Support
 

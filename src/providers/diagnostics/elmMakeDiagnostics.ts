@@ -47,6 +47,8 @@ export class ElmMakeDiagnostics {
 
     return new Promise((resolve, reject) => {
       const makeCommand: string = settings.elmPath;
+      const testCommand: string = settings.elmTestPath;
+      const isTestFile = utils.isTestFile(filename, rootPath);
       const cwd: string = rootPath;
       let make: cp.ChildProcess;
       if (utils.isWindows) {
@@ -60,10 +62,11 @@ export class ElmMakeDiagnostics {
         "--output",
         "/dev/null",
       ];
+      const testOrMakeCommand = isTestFile ? testCommand : makeCommand;
       if (utils.isWindows) {
-        make = cp.exec(makeCommand + " " + args.join(" "), { cwd });
+        make = cp.exec(testOrMakeCommand + " " + args.join(" "), { cwd });
       } else {
-        make = cp.spawn(makeCommand, args, { cwd });
+        make = cp.spawn(testOrMakeCommand, args, { cwd });
       }
 
       if (!make.stderr) {
@@ -128,9 +131,15 @@ export class ElmMakeDiagnostics {
       make.on("error", (err: Error) => {
         errorLinesFromElmMake.close();
         if (err && (err as any).code === "ENOENT") {
-          connection.window.showErrorMessage(
-            "The 'elm make' compiler is not available. Install Elm via 'npm install -g elm'.",
-          );
+          if (isTestFile) {
+            connection.window.showErrorMessage(
+              "'elm-test' is not available. Install Elm via 'npm install -g elm-test'.",
+            );
+          } else {
+            connection.window.showErrorMessage(
+              "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.",
+            );
+          }
           resolve([]);
         } else {
           reject(err);

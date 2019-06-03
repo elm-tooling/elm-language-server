@@ -1,4 +1,5 @@
 import * as cp from "child_process";
+import * as path from "path";
 import { IConnection, SymbolKind } from "vscode-languageserver";
 import URI from "vscode-uri";
 
@@ -136,6 +137,14 @@ export function execCmd(
       childProcess.kill("SIGINT");
     }
   }
+}
+
+export function isTestFile(filename: string, rootPath: string): boolean {
+  const testFolder = path.join(rootPath, "tests");
+  if (filename.startsWith(testFolder)) {
+    return true;
+  }
+  return false;
 }
 
 // Special type that has no core mock https://github.com/elm/compiler/blob/51e20357137ebc9c3f6136cf0a3fe21c24027f39/compiler/src/Canonicalize/Environment/Foreign.hs#L62
