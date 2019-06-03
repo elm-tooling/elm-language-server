@@ -39,7 +39,7 @@ This server contributes the following settings:
 
 To enable support with [coc.nvim](https://github.com/neoclide/coc.nvim), run `:CocConfig` and add the language server config below.
 
-If needed, you can set the paths to `elm` and `elm-format` with the `elmPath` and `elmFormatPath` variables.
+If needed, you can set the paths to `elm`, `elm-test` and `elm-format` with the `elmPath`, `elmTestPath` and `elmFormatPath` variables.
 
 ```
 {
@@ -52,7 +52,8 @@ If needed, you can set the paths to `elm` and `elm-format` with the `elmPath` an
       "initializationOptions": {
         "runtime": "node",
         "elmPath": "elm",
-        "elmFormatPath": "elm-format"
+        "elmFormatPath": "elm-format",
+        "elmTestPath": "elm-test"
       }
     }
   }
@@ -69,4 +70,4 @@ For [ALE](https://github.com/w0rp/ale) support.
 | [Vundle](https://github.com/VundleVim/Vundle.vim) | `Plugin 'antew/vim-elm-language-server'`                                                      |
 | [Pathogen](https://github.com/tpope/vim-pathogen) | <pre>cd ~/.vim/bundle<br>git clone https://github.com/antew/vim-elm-language-server.git</pre> |
 
-If needed, you can set the paths to `elm` and `elm-format`. The configuration can be [found here](https://github.com/antew/vim-elm-language-server#configuration)
+If needed, you can set the paths to `elm`, `elmTestPath` and `elm-format`. The configuration can be [found here](https://github.com/antew/vim-elm-language-server#configuration)
