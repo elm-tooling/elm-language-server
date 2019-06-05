@@ -13,6 +13,8 @@ export class CodeActionProvider {
   constructor(connection: IConnection, elmAnalyse: ElmAnalyseDiagnostics) {
     this.connection = connection;
     this.elmAnalyse = elmAnalyse;
+    this.onCodeAction = this.onCodeAction.bind(this);
+    this.onExecuteCommand = this.onExecuteCommand.bind(this);
     this.connection.onCodeAction(this.onCodeAction);
     this.connection.onExecuteCommand(this.onExecuteCommand);
   }

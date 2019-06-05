@@ -5,8 +5,7 @@ import {
   Range,
   TextDocument,
 } from "vscode-languageserver";
-import { URI } from "vscode-uri";
-import { DocumentEvents } from "../../util/documentEvents";
+import URI from "vscode-uri";
 import { Settings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { ElmAnalyseDiagnostics } from "./elmAnalyseDiagnostics";
@@ -40,14 +39,14 @@ export class DiagnosticsProvider {
   constructor(
     private connection: IConnection,
     private elmWorkspaceFolder: URI,
-    documentEvents: DocumentEvents,
+    events: TextDocumentEvents,
     settings: Settings,
     elmAnalyse: ElmAnalyseDiagnostics,
   ) {
     this.getDiagnostics = this.getDiagnostics.bind(this);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmMakeIssueToDiagnostic = this.elmMakeIssueToDiagnostic.bind(this);
-    this.events = new TextDocumentEvents(documentEvents);
+    this.events = events;
     this.elmAnalyseDiagnostics = elmAnalyse;
 
     this.connection = connection;

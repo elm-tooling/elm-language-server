@@ -3,6 +3,7 @@ import {
   ServerCapabilities,
   TextDocumentSyncKind,
 } from "vscode-languageserver";
+import * as ElmAnalyseDiagnostics from "./providers/diagnostics/elmAnalyseDiagnostics";
 
 export class CapabilityCalculator {
   private clientCapabilities: ClientCapabilities;
@@ -30,7 +31,7 @@ export class CapabilityCalculator {
       documentRangeFormattingProvider: true,
       documentSymbolProvider: true,
       executeCommandProvider: {
-          commands: ["elm-analyse-fixer"]
+        commands: [ElmAnalyseDiagnostics.CODE_ACTION_ELM_ANALYSE],
       },
       foldingRangeProvider: true,
       hoverProvider: true,

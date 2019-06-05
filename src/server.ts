@@ -15,11 +15,12 @@ import { Forest } from "./forest";
 import { IForest } from "./forest";
 import { IImports, Imports } from "./imports";
 import { ASTProvider } from "./providers/astProvider";
+import { CodeActionProvider } from "./providers/codeActionProvider";
 import { CodeLensProvider } from "./providers/codeLensProvider";
 import { CompletionProvider } from "./providers/completionProvider";
 import { DefinitionProvider } from "./providers/definitionProvider";
 import { DiagnosticsProvider } from "./providers/diagnostics/diagnosticsProvider";
-import { ElmAnalyseDiagnostics } from "./providers/diagnostics/elmAnalyseDiagnostics"
+import { ElmAnalyseDiagnostics } from "./providers/diagnostics/elmAnalyseDiagnostics";
 import { DocumentFormattingProvider } from "./providers/documentFormatingProvider";
 import { DocumentSymbolProvider } from "./providers/documentSymbolProvider";
 import { FoldingRangeProvider } from "./providers/foldingProvider";
@@ -30,6 +31,7 @@ import { WorkspaceSymbolProvider } from "./providers/workspaceSymbolProvider";
 import { DocumentEvents } from "./util/documentEvents";
 import * as utils from "./util/elmUtils";
 import { Settings } from "./util/settings";
+import { TextDocumentEvents } from "./util/textDocumentEvents";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -228,17 +230,24 @@ export class Server implements ILanguageServer {
   ): void {
     this.initialize(connection, forest, elmWorkspace, imports, parser);
     const documentEvents = new DocumentEvents(connection);
-    const elmAnalyse = new ElmAnalyseDiagnostics(connection, elmWorkspace)
+    const textDocumentEvents = new TextDocumentEvents(documentEvents)
+    const elmAnalyse = new ElmAnalyseDiagnostics(connection, elmWorkspace, textDocumentEvents);
     // tslint:disable:no-unused-expression
     new ASTProvider(connection, forest, documentEvents, imports, parser);
     new FoldingRangeProvider(connection, forest);
     new CompletionProvider(connection, forest, imports);
     new HoverProvider(connection, forest, imports);
-    new DiagnosticsProvider(connection, elmWorkspace, documentEvents, settings, elmAnalyse);
+    new DiagnosticsProvider(
+      connection,
+      elmWorkspace,
+      textDocumentEvents,
+      settings,
+      elmAnalyse,
+    );
     new DocumentFormattingProvider(
       connection,
       elmWorkspace,
-      documentEvents,
+      textDocumentEvents,
       settings,
     );
     new DefinitionProvider(connection, forest, imports);
@@ -247,5 +256,6 @@ export class Server implements ILanguageServer {
     new WorkspaceSymbolProvider(connection, forest);
     new CodeLensProvider(connection, forest, imports);
     new RenameProvider(connection, forest, imports);
+    new CodeActionProvider(connection, elmAnalyse);
   }
 }

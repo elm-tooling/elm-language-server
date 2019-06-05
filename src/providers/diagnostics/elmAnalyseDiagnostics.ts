@@ -1,4 +1,4 @@
-import { ElmApp, Message, Report } from "elm-analyse/ts/domain";
+import { ElmApp, FixedFile, Message, Report } from "elm-analyse/ts/domain";
 import { EventEmitter } from "events";
 import * as fs from "fs";
 import * as path from "path";
@@ -11,9 +11,10 @@ import {
   DiagnosticSeverity,
   ExecuteCommandParams,
   IConnection,
-  WorkspaceEdit,
 } from "vscode-languageserver";
-import { URI } from "vscode-uri";
+import URI from "vscode-uri";
+import * as Diff from "../../util/diff";
+import { TextDocumentEvents } from "../../util/textDocumentEvents";
 
 const readFile = util.promisify(fs.readFile);
 const fixableErrors = [
@@ -27,6 +28,8 @@ const fixableErrors = [
   "DropConsOfItemAndList",
   "DuplicateImport",
 ];
+const ELM_ANALYSE = "elm-analyse";
+export const CODE_ACTION_ELM_ANALYSE = "elm-analyse-fixer";
 
 export interface IElmAnalyseEvents {
   on(event: "new-report", diagnostics: Map<string, Diagnostic[]>): this;
@@ -37,13 +40,19 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
   private elmWorkspace: URI;
   private elmAnalyse: Promise<ElmApp>;
   private filesWithDiagnostics: Set<string> = new Set();
+  private events: TextDocumentEvents;
 
-  constructor(connection: IConnection, elmWorkspace: URI) {
+  constructor(
+    connection: IConnection,
+    elmWorkspace: URI,
+    events: TextDocumentEvents,
+  ) {
     super();
     this.connection = connection;
     this.elmWorkspace = elmWorkspace;
     this.onExecuteCommand = this.onExecuteCommand.bind(this);
     this.onCodeAction = this.onCodeAction.bind(this);
+    this.events = events;
 
     this.elmAnalyse = this.setupElmAnalyse();
   }
@@ -60,66 +69,73 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
     const { uri } = params.textDocument;
-    if (params.context.diagnostics && params.context.diagnostics.length) {
-      return params.context.diagnostics
-        .filter(d => d.source === "elm-analyse" && this.isFixable(d))
-        .map(d => {
-          const command = {
-            arguments: [uri, d],
-            command: "elm-analyse-fixer",
-            title: d.message.split("\n")[0],
-          };
-          const action: CodeAction = {
-            command,
-            diagnostics: [d],
-            kind: CodeActionKind.QuickFix,
-            title: d.message.split("\n")[0],
-          };
-          return action;
-        });
-    }
-    return [];
+
+    return params.context.diagnostics
+      .filter(
+        diagnostic =>
+          diagnostic.source === ELM_ANALYSE && this.isFixable(diagnostic),
+      )
+      .map(diagnostic => {
+        const title = diagnostic.message.split("\n")[0];
+        return {
+          command: {
+            arguments: [uri, diagnostic],
+            command: CODE_ACTION_ELM_ANALYSE,
+            title,
+          },
+          diagnostics: [diagnostic],
+          kind: CodeActionKind.QuickFix,
+          title,
+        };
+      });
   }
 
   public async onExecuteCommand(params: ExecuteCommandParams) {
-    try {
-      if (params.command === "elm-analyse-fixer") {
-        const elmAnalyse = await this.elmAnalyse;
-        if (params.arguments && params.arguments.length === 2) {
-          const uri: URI = params.arguments[0];
-          const diagnostic: Diagnostic = params.arguments[1];
-          const code: number =
-            typeof diagnostic.code === "number" ? diagnostic.code : -1;
-          if (code !== -1) {
-            return new Promise(resolve => {
-              elmAnalyse.ports.onFixQuick.send(code);
-              elmAnalyse.ports.sendFixedFile.subscribe(fixedFile => {
-                const edit: WorkspaceEdit = {
-                  changes: {
-                    [uri.toString()]: [
-                      {
-                        newText: fixedFile.content,
-                        range: {
-                          end: { line: 9999999, character: 0 },
-                          start: { line: 0, character: 0 },
-                        },
-                      },
-                    ],
-                  },
-                };
+    if (params.command !== CODE_ACTION_ELM_ANALYSE) {
+      return;
+    }
 
-                return this.connection.workspace.applyEdit(edit);
-              });
-            });
-          }
-        }
-      }
-    } catch (e) {
-      this.connection.console.error(
-        `Error executing codeAction. ${e.message} ${e.stack}`,
+    if (!params.arguments || params.arguments.length !== 2) {
+      this.connection.console.warn(
+        "Received incorrect number of arguments for elm-analyse fixer. Returning early.",
       );
+      return;
+    }
+    const elmAnalyse = await this.elmAnalyse;
+    const uri: URI = params.arguments[0];
+    const diagnostic: Diagnostic = params.arguments[1];
+    const code: number =
+      typeof diagnostic.code === "number" ? diagnostic.code : -1;
+    if (code !== -1) {
+      return new Promise((resolve, reject) => {
+        // Naming the function here so that we can unsubscribe once we get the new file content
+        const fixedFileCallback = (fixedFile: FixedFile) => {
+          elmAnalyse.ports.sendFixedFile.unsubscribe(fixedFileCallback);
+          const oldText = this.events.get(uri.toString());
+          if (!oldText) {
+            return reject(
+              "Unable to apply elm-analyse fix, file content was unavailable.",
+            );
+          }
+
+          resolve(
+            this.connection.workspace.applyEdit({
+              changes: {
+                [uri.toString()]: Diff.getTextRangeChanges(
+                  oldText.getText(),
+                  fixedFile.content,
+                ),
+              },
+            }),
+          );
+        };
+
+        elmAnalyse.ports.onFixQuick.send(code);
+        elmAnalyse.ports.sendFixedFile.subscribe(fixedFileCallback);
+      });
     }
   }
+
   private async setupElmAnalyse(): Promise<ElmApp> {
     const fsPath = this.elmWorkspace.fsPath;
     const elmJson = await readFile(path.join(fsPath, "elm.json"), {
@@ -200,7 +216,7 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
           start: { line: 0, character: 0 },
         },
         severity: DiagnosticSeverity.Error,
-        source: "elm-analyse",
+        source: ELM_ANALYSE,
       };
     }
 
@@ -224,7 +240,7 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
         `See https://stil4m.github.io/elm-analyse/#/messages/${message.type}`,
       range,
       severity: DiagnosticSeverity.Warning,
-      source: "elm-analyse",
+      source: ELM_ANALYSE,
     };
   }
 }
