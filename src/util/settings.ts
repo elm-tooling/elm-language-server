@@ -1,21 +1,22 @@
 import { ClientCapabilities, IConnection } from "vscode-languageserver";
 
 export interface IClientSettings {
-  elmPath: string;
   elmFormatPath: string;
+  elmPath: string;
   elmTestPath: string;
 }
 
 export class Settings {
-  private fallbackSettings: IClientSettings;
-  private capabilities: ClientCapabilities;
+  private fallbackClientSettings: IClientSettings = {
+    elmFormatPath: "elm-format",
+    elmPath: "elm",
+    elmTestPath: "elm-test",
+  };
+
   constructor(
-    capabilities: ClientCapabilities,
-    fallbackSettings: IClientSettings,
-  ) {
-    this.capabilities = capabilities;
-    this.fallbackSettings = fallbackSettings;
-  }
+    private capabilities: ClientCapabilities,
+    private initializationOptions: IClientSettings,
+  ) {}
 
   public getSettings(connection: IConnection): Thenable<IClientSettings> {
     const supportsConfig =
@@ -24,7 +25,7 @@ export class Settings {
       this.capabilities.workspace.configuration;
 
     if (!supportsConfig) {
-      return Promise.resolve(this.fallbackSettings);
+      return Promise.resolve(this.initializationOptions);
     }
 
     return connection.workspace
@@ -34,7 +35,12 @@ export class Settings {
       .then(settings =>
         // Allow falling back to the preset params if we cant get the
         // settings from the workspace
-        Object.assign({}, this.fallbackSettings, settings),
+        Object.assign(
+          {},
+          this.fallbackClientSettings,
+          this.initializationOptions,
+          settings,
+        ),
       );
   }
 }
