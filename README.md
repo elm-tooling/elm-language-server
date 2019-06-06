@@ -27,6 +27,24 @@ This server contributes the following settings:
 - `elmLS.elmFormatPath`: The path to your elm-format executeable.
 - `elmLS.elmTestPath`: The path to your elm-test executeable.
 
+## Installation
+
+First, clone down this repo and compile it:
+```sh
+$ git clone git@github.com:elm-tooling/elm-language-server.git
+…
+$ cd elm-language-server && npm install && npm run compile && npm link
+
+```
+
+Then, you should be able to run the language server with the following command:
+```sh
+$ elm-language-server --stdio
+```
+
+Follow the instructions below to integrate the language server into your editor.
+
+
 ## Editor Support
 
 | Editor | Link                                                                                        | Setup Instructions      | Supported Features       | Source Code                                                       |
