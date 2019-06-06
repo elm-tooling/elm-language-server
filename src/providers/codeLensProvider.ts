@@ -4,6 +4,7 @@ import {
   CodeLensParams,
   Command,
   IConnection,
+  Location,
   Position,
   Range,
 } from "vscode-languageserver";
@@ -54,7 +55,7 @@ export class CodeLensProvider {
     const codelens = param;
     const data: {
       codeLensType: CodeLensType;
-      referenceNodeCount: number;
+      references: Location[];
       exposed: boolean;
     } = codelens.data;
     if (data.codeLensType) {
@@ -67,10 +68,11 @@ export class CodeLensProvider {
           break;
         case "referenceCounter":
           codelens.command = Command.create(
-            data.referenceNodeCount === 1
+            data.references.length === 1
               ? "1 reference"
-              : `${data.referenceNodeCount} references`,
-            "",
+              : `${data.references.length} references`,
+            "editor.action.showReferences",
+            data.references,
           );
 
           break;
@@ -120,6 +122,22 @@ export class CodeLensProvider {
       this.imports,
     );
 
+    let refLocations: Location[] = [];
+    if (references) {
+      refLocations = references.map(a =>
+        Location.create(
+          a.uri,
+          Range.create(
+            Position.create(
+              a.node.startPosition.row,
+              a.node.startPosition.column,
+            ),
+            Position.create(a.node.endPosition.row, a.node.endPosition.column),
+          ),
+        ),
+      );
+    }
+
     return CodeLens.create(
       Range.create(
         Position.create(
@@ -133,7 +151,7 @@ export class CodeLensProvider {
       ),
       {
         codeLensType: "referenceCounter",
-        referenceNodeCount: references.length,
+        references: refLocations,
       },
     );
   }
