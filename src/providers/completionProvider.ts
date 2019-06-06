@@ -183,7 +183,7 @@ export class CompletionProvider {
     markdownDocumentation: string | undefined,
     label: string,
   ): CompletionItem {
-    return this.createCompletion(
+    return this.createPreselectedCompletion(
       markdownDocumentation,
       CompletionItemKind.Field,
       label,
@@ -245,6 +245,21 @@ export class CompletionProvider {
       label,
     };
   }
+  private createPreselectedCompletion(
+    markdownDocumentation: string | undefined,
+    kind: CompletionItemKind,
+    label: string,
+  ): CompletionItem {
+    return {
+      documentation: {
+        kind: MarkupKind.Markdown,
+        value: markdownDocumentation ? markdownDocumentation : "",
+      },
+      kind,
+      label,
+      preselect: true,
+    };
+  }
 
   private findFunctionParameterDefinitionsForScope(
     node: SyntaxNode,
@@ -278,7 +293,7 @@ export class CompletionProvider {
   private createSnippet(
     label: string,
     snippetText: string | string[],
-    markdownDocumentation: string | undefined,
+    markdownDocumentation?: string,
   ): CompletionItem {
     return {
       documentation: {
