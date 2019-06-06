@@ -62,8 +62,8 @@ export class CodeLensProvider {
       switch (data.codeLensType) {
         case "exposed":
           codelens.command = data.exposed
-            ? Command.create("📖 exposed", "")
-            : Command.create("📕 local", "");
+            ? Command.create("exposed", "")
+            : Command.create("local", "");
 
           break;
         case "referenceCounter":
