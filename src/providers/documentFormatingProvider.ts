@@ -5,7 +5,7 @@ import {
   Range,
   TextEdit,
 } from "vscode-languageserver";
-import URI from "vscode-uri";
+import { URI } from "vscode-uri";
 import { DocumentEvents } from "../util/documentEvents";
 import { execCmd } from "../util/elmUtils";
 import { Settings } from "../util/settings";

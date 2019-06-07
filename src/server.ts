@@ -9,7 +9,7 @@ import {
   InitializeParams,
   InitializeResult,
 } from "vscode-languageserver";
-import URI from "vscode-uri";
+import { URI } from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { Forest } from "./forest";
 import { IForest } from "./forest";
@@ -141,9 +141,7 @@ export class Server implements ILanguageServer {
           // We should probably parse the elm json of a dependency, at some point down the line
           const pathToPackage =
             type === "application"
-              ? `${packagesRoot}${maintainer}/${packageName}/${
-                  dependencies[key]
-                }/src`
+              ? `${packagesRoot}${maintainer}/${packageName}/${dependencies[key]}/src`
               : `${packagesRoot}${maintainer}/${packageName}/${dependencies[
                   key
                 ].substring(0, elmVersion.indexOf(" "))}`;

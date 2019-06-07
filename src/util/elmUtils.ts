@@ -1,7 +1,7 @@
 import * as cp from "child_process";
 import * as path from "path";
 import { IConnection, SymbolKind } from "vscode-languageserver";
-import URI from "vscode-uri";
+import { URI } from "vscode-uri";
 
 export const isWindows = process.platform === "win32";
 
