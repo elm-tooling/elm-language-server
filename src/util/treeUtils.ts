@@ -244,10 +244,13 @@ export class TreeUtils {
   }
 
   public static findAllNamedChildsOfType(
-    type: string,
+    type: string | string[],
     node: SyntaxNode,
   ): SyntaxNode[] | undefined {
-    const result = node.children.filter(child => child.type === type);
+    const result =
+      type instanceof Array
+        ? node.children.filter(child => type.includes(child.type))
+        : node.children.filter(child => child.type === type);
     if (result.length === 0) {
       return undefined;
     }
@@ -774,7 +777,8 @@ export class TreeUtils {
       }
     } else if (
       nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "value_qid"
+      (nodeAtPosition.parent.type === "value_qid" ||
+        nodeAtPosition.parent.type === "lower_pattern")
     ) {
       const functionParameter = this.findFunctionParameterDefinition(
         nodeAtPosition,

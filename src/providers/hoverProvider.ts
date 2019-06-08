@@ -9,7 +9,7 @@ import { IForest } from "../forest";
 import { IImports } from "../imports";
 import { getEmptyTypes } from "../util/elmUtils";
 import { HintHelper } from "../util/hintHelper";
-import { TreeUtils } from "../util/treeUtils";
+import { TreeUtils, NodeType } from "../util/treeUtils";
 
 export class HoverProvider {
   constructor(
@@ -39,16 +39,7 @@ export class HoverProvider {
       );
 
       if (definitionNode) {
-        if (definitionNode.nodeType === "FunctionParameter") {
-          return {
-            contents: {
-              kind: MarkupKind.Markdown,
-              value: "Local parameter",
-            },
-          };
-        }
-
-        return this.createMarkdownHoverFromDefinition(definitionNode.node);
+        return this.createMarkdownHoverFromDefinition(definitionNode);
       } else {
         const specialMatch = getEmptyTypes().find(
           a => a.name === nodeAtPosition.text,
@@ -66,10 +57,15 @@ export class HoverProvider {
   };
 
   private createMarkdownHoverFromDefinition(
-    definitionNode: SyntaxNode | undefined,
+    definitionNode:
+      | { node: SyntaxNode; uri: string; nodeType: NodeType }
+      | undefined,
   ): Hover | undefined {
     if (definitionNode) {
-      const value = HintHelper.createHint(definitionNode);
+      const value =
+        definitionNode.nodeType === "FunctionParameter"
+          ? HintHelper.createHintFromFunctionParameter(definitionNode.node)
+          : HintHelper.createHint(definitionNode.node);
 
       if (value) {
         return {

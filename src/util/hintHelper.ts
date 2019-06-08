@@ -1,4 +1,5 @@
 import { SyntaxNode } from "tree-sitter";
+import { TreeUtils } from "./treeUtils";
 
 export class HintHelper {
   public static createHint(node: SyntaxNode | undefined): string | undefined {
@@ -9,6 +10,41 @@ export class HintHelper {
         return this.createHintFromDefinition(node);
       }
     }
+  }
+
+  public static createHintFromFunctionParameter(
+    node: SyntaxNode | undefined,
+  ): string {
+    if (
+      node &&
+      node.parent &&
+      node.parent.parent &&
+      node.parent.parent.previousNamedSibling &&
+      node.parent.parent.previousNamedSibling.type === "type_annotation" &&
+      node.parent.parent.previousNamedSibling.lastNamedChild
+    ) {
+      const functionParametrNodes = TreeUtils.findAllNamedChildsOfType(
+        ["pattern", "lower_pattern"],
+        node.parent,
+      );
+      if (functionParametrNodes) {
+        const matchIndex = functionParametrNodes.findIndex(a => a === node);
+
+        const typeAnnotationNodes = TreeUtils.findAllNamedChildsOfType(
+          ["type_ref", "type_expression"],
+          node.parent.parent.previousNamedSibling.lastNamedChild,
+        );
+        if (typeAnnotationNodes) {
+          const annotation = typeAnnotationNodes[matchIndex];
+
+          return this.formatHint(
+            annotation ? annotation.text : "",
+            "Local parameter",
+          );
+        }
+      }
+    }
+    return "Local parameter";
   }
 
   private static createHintFromDefinition(declaration: SyntaxNode | undefined) {

@@ -273,9 +273,12 @@ export class CompletionProvider {
       ) {
         node.parent.firstChild.children.forEach(child => {
           if (child.type === "lower_pattern") {
+            const markdownDocumentation = HintHelper.createHintFromFunctionParameter(
+              child,
+            );
             result.push(
               this.createFunctionParameterCompletion(
-                "Local parameter",
+                markdownDocumentation,
                 child.text,
               ),
             );
