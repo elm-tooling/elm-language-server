@@ -1,5 +1,5 @@
 {
-  "name": "elm-language-server",
+  "name": "@elm-tooling/elm-language-server",
   "description": "Implementation of an elm language server in node.",
   "version": "1.0.0",
   "author": "Kolja Lampe",
@@ -43,5 +43,15 @@
   },
   "bin": {
     "elm-language-server": "./out/index.js"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "elm",
+    "elm-lang",
+    "language server",
+    "language-server",
+    "lsp"
+  ]
 }
