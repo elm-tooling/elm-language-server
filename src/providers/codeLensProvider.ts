@@ -72,8 +72,7 @@ export class CodeLensProvider {
             data.references.length === 1
               ? "1 reference"
               : `${data.references.length} references`,
-            "editor.action.showReferences",
-            data.references,
+            "",
           );
 
           break;
