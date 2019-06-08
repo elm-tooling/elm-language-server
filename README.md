@@ -2,6 +2,16 @@
 
 This is the language server implementation for the Elm programming language.
 
+You will need to install `elm`, `elm-test` and `elm-format`, to get all diagnostics.
+
+```shell
+npm install -g elm
+npm install -g elm-test
+npm install -g elm-format
+```
+
+Or use them from your `node_modules`, if you want to do that you need to set the paths, via the settings.
+
 ## Features
 
 | Feature          | Description                                                                                                                                         |
@@ -30,6 +40,7 @@ This server contributes the following settings:
 ## Installation
 
 First, clone this repo and compile it:
+
 ```sh
 git clone git@github.com:elm-tooling/elm-language-server.git
 cd elm-language-server
@@ -39,12 +50,12 @@ npm link
 ```
 
 Then, you should be able to run the language server with the following command:
+
 ```sh
 elm-language-server --stdio
 ```
 
 Follow the instructions below to integrate the language server into your editor.
-
 
 ## Editor Support
 
@@ -90,3 +101,15 @@ For [ALE](https://github.com/w0rp/ale) support.
 | [Pathogen](https://github.com/tpope/vim-pathogen) | <pre>cd ~/.vim/bundle<br>git clone https://github.com/antew/vim-elm-language-server.git</pre> |
 
 If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The configuration can be [found here](https://github.com/antew/vim-elm-language-server#configuration)
+
+# Awesome libraries this is based on
+
+- [elm-analyse](https://github.com/stil4m/elm-analyser)
+- [elm-format](https://github.com/avh4/elm-format)
+- [elm-test](https://github.com/rtfeldman/node-test-runner)
+- [tree-sitter-elm](https://github.com/Razzeee/tree-sitter-elm)
+
+# Contributing
+
+Please do :)
+As the best thing about a language server is that multiple clients will improve that way.
