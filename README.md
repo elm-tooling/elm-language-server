@@ -14,6 +14,8 @@ Or use them from your `node_modules`, if you want to do that you need to set the
 
 ## Features
 
+Supports elm 0.19
+
 | Feature          | Description                                                                                                                                         |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Diagnostics      | Provided via `elm`, `elm-test` and `elm-analyse`                                                                                                    |
