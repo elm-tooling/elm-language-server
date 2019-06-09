@@ -12,10 +12,11 @@ import {
   ExecuteCommandParams,
   IConnection,
   TextDocument,
+  TextEdit,
 } from "vscode-languageserver";
 import URI from "vscode-uri";
 import * as Diff from "../../util/diff";
-import { Settings } from "../../util/settings";
+import { IClientSettings, Settings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { DocumentFormattingProvider } from "../documentFormatingProvider";
 
@@ -125,7 +126,21 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
     }
 
     const settings = await this.settings.getSettings(this.connection);
+    const edits = await this.getFixEdits(elmAnalyse, uri, settings, code);
 
+    return this.connection.workspace.applyEdit({
+      changes: {
+        [uri.toString()]: edits,
+      },
+    });
+  }
+
+  private async getFixEdits(
+    elmAnalyse: ElmApp,
+    uri: URI,
+    settings: IClientSettings,
+    code: number,
+  ): Promise<TextEdit[]> {
     return new Promise((resolve, reject) => {
       // Naming the function here so that we can unsubscribe once we get the new file content
       const fixedFileCallback = (fixedFile: FixedFile) => {
@@ -143,6 +158,7 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
           this.formattingProvider
             .formatText(settings.elmFormatPath, fixedFile.content)
             .then(elmFormatEdits => {
+              // Fake a `TextDocument` so that we can use `applyEdits` on `TextDocument`
               const formattedFile = TextDocument.create(
                 "file://fakefile.elm",
                 "elm",
@@ -150,14 +166,10 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
                 fixedFile.content,
               );
 
-              return this.connection.workspace.applyEdit({
-                changes: {
-                  [uri.toString()]: Diff.getTextRangeChanges(
-                    oldText.getText(),
-                    TextDocument.applyEdits(formattedFile, elmFormatEdits),
-                  ),
-                },
-              });
+              return Diff.getTextRangeChanges(
+                oldText.getText(),
+                TextDocument.applyEdits(formattedFile, elmFormatEdits),
+              );
             }),
         );
       };
