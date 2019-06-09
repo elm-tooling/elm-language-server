@@ -230,8 +230,20 @@ export class Server implements ILanguageServer {
   ): void {
     this.initialize(connection, forest, elmWorkspace, imports, parser);
     const documentEvents = new DocumentEvents(connection);
-    const textDocumentEvents = new TextDocumentEvents(documentEvents)
-    const elmAnalyse = new ElmAnalyseDiagnostics(connection, elmWorkspace, textDocumentEvents);
+    const textDocumentEvents = new TextDocumentEvents(documentEvents);
+    const documentFormatingProvider = new DocumentFormattingProvider(
+      connection,
+      elmWorkspace,
+      textDocumentEvents,
+      settings,
+    );
+    const elmAnalyse = new ElmAnalyseDiagnostics(
+      connection,
+      elmWorkspace,
+      textDocumentEvents,
+      settings,
+      documentFormatingProvider,
+    );
     // tslint:disable:no-unused-expression
     new ASTProvider(connection, forest, documentEvents, imports, parser);
     new FoldingRangeProvider(connection, forest);
@@ -243,12 +255,6 @@ export class Server implements ILanguageServer {
       textDocumentEvents,
       settings,
       elmAnalyse,
-    );
-    new DocumentFormattingProvider(
-      connection,
-      elmWorkspace,
-      textDocumentEvents,
-      settings,
     );
     new DefinitionProvider(connection, forest, imports);
     new ReferencesProvider(connection, forest, imports);

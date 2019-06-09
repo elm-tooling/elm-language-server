@@ -11,10 +11,13 @@ import {
   DiagnosticSeverity,
   ExecuteCommandParams,
   IConnection,
+  TextDocument,
 } from "vscode-languageserver";
 import URI from "vscode-uri";
 import * as Diff from "../../util/diff";
+import { Settings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
+import { DocumentFormattingProvider } from "../documentFormatingProvider";
 
 const readFile = util.promisify(fs.readFile);
 const fixableErrors = [
@@ -41,11 +44,15 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
   private elmAnalyse: Promise<ElmApp>;
   private filesWithDiagnostics: Set<string> = new Set();
   private events: TextDocumentEvents;
+  private settings: Settings;
+  private formattingProvider: DocumentFormattingProvider;
 
   constructor(
     connection: IConnection,
     elmWorkspace: URI,
     events: TextDocumentEvents,
+    settings: Settings,
+    formattingProvider: DocumentFormattingProvider,
   ) {
     super();
     this.connection = connection;
@@ -53,6 +60,8 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
     this.onExecuteCommand = this.onExecuteCommand.bind(this);
     this.onCodeAction = this.onCodeAction.bind(this);
     this.events = events;
+    this.settings = settings;
+    this.formattingProvider = formattingProvider;
 
     this.elmAnalyse = this.setupElmAnalyse();
   }
@@ -101,39 +110,61 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
       );
       return;
     }
+
     const elmAnalyse = await this.elmAnalyse;
     const uri: URI = params.arguments[0];
     const diagnostic: Diagnostic = params.arguments[1];
     const code: number =
       typeof diagnostic.code === "number" ? diagnostic.code : -1;
-    if (code !== -1) {
-      return new Promise((resolve, reject) => {
-        // Naming the function here so that we can unsubscribe once we get the new file content
-        const fixedFileCallback = (fixedFile: FixedFile) => {
-          elmAnalyse.ports.sendFixedFile.unsubscribe(fixedFileCallback);
-          const oldText = this.events.get(uri.toString());
-          if (!oldText) {
-            return reject(
-              "Unable to apply elm-analyse fix, file content was unavailable.",
-            );
-          }
 
-          resolve(
-            this.connection.workspace.applyEdit({
-              changes: {
-                [uri.toString()]: Diff.getTextRangeChanges(
-                  oldText.getText(),
-                  fixedFile.content,
-                ),
-              },
-            }),
-          );
-        };
-
-        elmAnalyse.ports.onFixQuick.send(code);
-        elmAnalyse.ports.sendFixedFile.subscribe(fixedFileCallback);
-      });
+    if (code === -1) {
+      this.connection.console.warn(
+        "Unable to apply elm-analyse fix, unknown error code",
+      );
+      return;
     }
+
+    const settings = await this.settings.getSettings(this.connection);
+
+    return new Promise((resolve, reject) => {
+      // Naming the function here so that we can unsubscribe once we get the new file content
+      const fixedFileCallback = (fixedFile: FixedFile) => {
+        elmAnalyse.ports.sendFixedFile.unsubscribe(fixedFileCallback);
+        const oldText = this.events.get(uri.toString());
+        if (!oldText) {
+          return reject(
+            "Unable to apply elm-analyse fix, file content was unavailable.",
+          );
+        }
+
+        // This formats the fixed file with elm-format first and then figures out the
+        // diffs from there, this prevents needing to chain sets of edits
+        resolve(
+          this.formattingProvider
+            .formatText(settings.elmFormatPath, fixedFile.content)
+            .then(elmFormatEdits => {
+              const formattedFile = TextDocument.create(
+                "file://fakefile.elm",
+                "elm",
+                0,
+                fixedFile.content,
+              );
+
+              return this.connection.workspace.applyEdit({
+                changes: {
+                  [uri.toString()]: Diff.getTextRangeChanges(
+                    oldText.getText(),
+                    TextDocument.applyEdits(formattedFile, elmFormatEdits),
+                  ),
+                },
+              });
+            }),
+        );
+      };
+
+      elmAnalyse.ports.onFixQuick.send(code);
+      elmAnalyse.ports.sendFixedFile.subscribe(fixedFileCallback);
+    });
   }
 
   private async setupElmAnalyse(): Promise<ElmApp> {

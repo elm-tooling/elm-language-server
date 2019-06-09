@@ -1,4 +1,8 @@
-import { DocumentFormattingParams, IConnection } from "vscode-languageserver";
+import {
+  DocumentFormattingParams,
+  IConnection,
+  TextEdit,
+} from "vscode-languageserver";
 import URI from "vscode-uri";
 import * as Diff from "../util/diff";
 import { execCmd } from "../util/elmUtils";
@@ -23,6 +27,29 @@ export class DocumentFormattingProvider {
     this.connection.onDocumentFormatting(this.handleFormattingRequest);
   }
 
+  public formatText = async (
+    elmFormatPath: string,
+    text: string,
+  ): Promise<TextEdit[]> => {
+    const options = {
+      cmdArguments: ["--stdin", "--elm-version 0.19", "--yes"],
+      notFoundText: "Install Elm-format via 'npm install -g elm-format",
+    };
+    const format = execCmd(
+      elmFormatPath,
+      options,
+      this.elmWorkspaceFolder,
+      this.connection,
+    );
+
+    format.stdin.write(text);
+    format.stdin.end();
+
+    const stdout = await format;
+
+    return Diff.getTextRangeChanges(text, stdout.stdout);
+  };
+
   protected handleFormattingRequest = async (
     params: DocumentFormattingParams,
   ) => {
@@ -34,23 +61,7 @@ export class DocumentFormattingProvider {
         return;
       }
 
-      const options = {
-        cmdArguments: ["--stdin", "--elm-version 0.19", "--yes"],
-        notFoundText: "Install Elm-format via 'npm install -g elm-format",
-      };
-      const format = execCmd(
-        settings.elmFormatPath,
-        options,
-        this.elmWorkspaceFolder,
-        this.connection,
-      );
-
-      format.stdin.write(text.getText());
-      format.stdin.end();
-
-      const stdout = await format;
-
-      return Diff.getTextRangeChanges(text.getText(), stdout.stdout);
+      return this.formatText(settings.elmFormatPath, text.getText());
     } catch (error) {
       (error.message as string).includes("SYNTAX PROBLEM")
         ? this.connection.console.error(
