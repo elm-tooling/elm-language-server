@@ -649,7 +649,7 @@ export class TreeUtils {
         nodeAtPosition.parent.parent.parent.type === "module_declaration") ||
       (nodeAtPosition.previousNamedSibling &&
         (nodeAtPosition.previousNamedSibling.type === "type" ||
-          nodeAtPosition.previousNamedSibling.type === "type_alias"))
+          nodeAtPosition.previousNamedSibling.type === "alias"))
     ) {
       const upperCaseQid = nodeAtPosition;
       const definitionNode = TreeUtils.findUppercaseQidNode(tree, upperCaseQid);
