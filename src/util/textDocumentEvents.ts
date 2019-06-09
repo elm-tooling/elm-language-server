@@ -1,3 +1,4 @@
+import { EventEmitter } from "events";
 import {
   DidChangeTextDocumentParams,
   DidCloseTextDocumentParams,
@@ -6,7 +7,6 @@ import {
   TextDocument,
   TextDocumentContentChangeEvent,
 } from "vscode-languageserver";
-import { EventEmitter } from "ws";
 import { DocumentEvents } from "./documentEvents";
 
 type DidChangeCallback = (document: TextDocument) => void;
