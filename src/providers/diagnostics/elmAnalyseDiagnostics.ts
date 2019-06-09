@@ -14,7 +14,7 @@ import {
   TextDocument,
   TextEdit,
 } from "vscode-languageserver";
-import URI from "vscode-uri";
+import { URI } from "vscode-uri";
 import * as Diff from "../../util/diff";
 import { IClientSettings, Settings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
