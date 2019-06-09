@@ -41,7 +41,7 @@ export class CompletionProvider {
       // Todo add variables from local let scopes
       completions.push(...this.getSameFileTopLevelCompletions(tree));
       completions.push(
-        ...this.findFunctionParameterDefinitionsForScope(nodeAtPosition),
+        ...this.findFunctionParameterDefinitionsForScope(nodeAtPosition, tree),
       );
 
       completions.push(
@@ -263,6 +263,7 @@ export class CompletionProvider {
 
   private findFunctionParameterDefinitionsForScope(
     node: SyntaxNode,
+    tree: Tree,
   ): CompletionItem[] {
     const result: CompletionItem[] = [];
     if (node.parent) {
@@ -282,11 +283,41 @@ export class CompletionProvider {
                 child.text,
               ),
             );
+
+            const annnotationTypeNode = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
+              child,
+            );
+            if (annnotationTypeNode) {
+              const typeDeclarationNode = TreeUtils.findTypeAliasDeclaration(
+                tree,
+                annnotationTypeNode.text,
+              );
+              if (typeDeclarationNode) {
+                const fields = TreeUtils.getAllFieldsFromTypeAlias(
+                  typeDeclarationNode,
+                );
+                if (fields) {
+                  fields.forEach(element => {
+                    const hint = HintHelper.createHintForTypeAliasReference(
+                      element.type,
+                      element.field,
+                      child.text,
+                    );
+                    result.push(
+                      this.createFunctionParameterCompletion(
+                        hint,
+                        child.text + "." + element.field,
+                      ),
+                    );
+                  });
+                }
+              }
+            }
           }
         });
       }
       result.push(
-        ...this.findFunctionParameterDefinitionsForScope(node.parent),
+        ...this.findFunctionParameterDefinitionsForScope(node.parent, tree),
       );
     }
 

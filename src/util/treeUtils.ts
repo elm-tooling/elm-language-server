@@ -941,4 +941,58 @@ export class TreeUtils {
       }
     }
   }
+
+  public static getTypeOrTypeAliasOfFunctionParameter(
+    node: SyntaxNode | undefined,
+  ): SyntaxNode | undefined {
+    if (
+      node &&
+      node.parent &&
+      node.parent.parent &&
+      node.parent.parent.previousNamedSibling &&
+      node.parent.parent.previousNamedSibling.type === "type_annotation" &&
+      node.parent.parent.previousNamedSibling.lastNamedChild
+    ) {
+      const functionParameterNodes = TreeUtils.findAllNamedChildsOfType(
+        ["pattern", "lower_pattern"],
+        node.parent,
+      );
+      if (functionParameterNodes) {
+        const matchIndex = functionParameterNodes.findIndex(a => a === node);
+
+        const typeAnnotationNodes = TreeUtils.findAllNamedChildsOfType(
+          ["type_ref", "type_expression"],
+          node.parent.parent.previousNamedSibling.lastNamedChild,
+        );
+        if (typeAnnotationNodes) {
+          return typeAnnotationNodes[matchIndex];
+        }
+      }
+    }
+  }
+
+  public static getAllFieldsFromTypeAlias(
+    node: SyntaxNode | undefined,
+  ): Array<{ field: string; type: string }> | undefined {
+    const result: Array<{ field: string; type: string }> = [];
+    if (node) {
+      const fieldTypes = node.descendantsOfType("field_type");
+      if (fieldTypes.length > 0) {
+        fieldTypes.forEach(a => {
+          const fieldName = TreeUtils.findFirstNamedChildOfType(
+            "lower_case_identifier",
+            a,
+          );
+          const typeExpression = TreeUtils.findFirstNamedChildOfType(
+            "type_expression",
+            a,
+          );
+          if (fieldName && typeExpression) {
+            result.push({ field: fieldName.text, type: typeExpression.text });
+          }
+        });
+      }
+    }
+    return result.length > 0 ? result : undefined;
+  }
 }
