@@ -174,8 +174,8 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
         );
       };
 
-      elmAnalyse.ports.onFixQuick.send(code);
       elmAnalyse.ports.sendFixedFile.subscribe(fixedFileCallback);
+      elmAnalyse.ports.onFixQuick.send(code);
     });
   }
 
