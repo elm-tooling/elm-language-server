@@ -109,14 +109,14 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The conf
 
 #### kak-lsp
 
-First install kak-lsp, and enable it - one way would be to add these lines to your .config/kak/kakrc file:
+First install [kak-lsp](https://github.com/ul/kak-lsp), and enable it in the kakrc.  One way would be to add these lines to your .config/kak/kakrc file:
 
 ```
 eval %sh{kak-lsp --kakoune -s $kak_session}
 lsp-enable
 ```
 
-Then, assuming installation of elm-language-server and optionally elm-format and elm-test, add this section to your .config/kak-lsp/kak-lsp.toml file:
+Then, assuming installation of elm-language-server, elm-format, and elm-test, add this section to your .config/kak-lsp/kak-lsp.toml file:
 
 ```
 [language.elm]
