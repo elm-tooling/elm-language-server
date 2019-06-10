@@ -33,7 +33,7 @@ const fixableErrors = [
   "DuplicateImport",
 ];
 const ELM_ANALYSE = "elm-analyse";
-export const CODE_ACTION_ELM_ANALYSE = "elmLanguageServer.elmAnalyseFixer";
+export const CODE_ACTION_ELM_ANALYSE = "elmLS.elmAnalyseFixer";
 
 export interface IElmAnalyseEvents {
   on(event: "new-report", diagnostics: Map<string, Diagnostic[]>): this;
