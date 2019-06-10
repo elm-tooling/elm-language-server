@@ -104,6 +104,35 @@ For [ALE](https://github.com/w0rp/ale) support.
 
 If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The configuration can be [found here](https://github.com/antew/vim-elm-language-server#configuration)
 
+
+### Kakoune
+
+#### kak-lsp
+
+First install kak-lsp, and enable it - one way would be to add these lines to your .config/kak/kakrc file:
+
+```
+eval %sh{kak-lsp --kakoune -s $kak_session}
+lsp-enable
+```
+
+Then, assuming installation of elm-language-server and optionally elm-format and elm-test, add this section to your .config/kak-lsp/kak-lsp.toml file:
+
+```
+[language.elm]
+filetypes = ["elm"]
+roots = ["elm.json"]
+command = "elm-language-server"
+args = ["--stdio"]
+
+[language.elm.initialization_options]
+runtime = "node"
+elmPath = "elm"
+elmFormatPath = "elm-format"
+elmTestPath = "elm-test"
+```
+
+
 # Awesome libraries this is based on
 
 - [elm-analyse](https://github.com/stil4m/elm-analyser)
