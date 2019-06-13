@@ -61,9 +61,12 @@ Follow the instructions below to integrate the language server into your editor.
 
 ## Editor Support
 
-| Editor | Link                                                                                        | Setup Instructions      | Supported Features       | Source Code                                                       |
-| ------ | ------------------------------------------------------------------------------------------- | ----------------------- | ------------------------ | ----------------------------------------------------------------- |
-| VSCode | [MarketPlace](https://marketplace.visualstudio.com/items?itemName=Elmtooling.elm-ls-vscode) | Just install the plugin | All features should work | [Link](https://github.com/elm-tooling/elm-language-client-vscode) |
+| Editor  | Setup Instructions                                                                                                       | Source Code                                                       | Diagnostics        | Formatting         | CodeLenses         | Completions        | Definitions        | DocumentSymbols    | Folding            | Hover              | References         | Rename             | Workspace Symbols  |
+| ------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ |
+| VSCode  | Just install the plugin from [MarketPlace](https://marketplace.visualstudio.com/items?itemName=Elmtooling.elm-ls-vscode) | [Link](https://github.com/elm-tooling/elm-language-client-vscode) | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| VIM CoC | [Link](https://github.com/elm-tooling/elm-language-server#cocnvim)                                                       |                                                                   | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    |
+| VIM ALE | [Link](https://github.com/elm-tooling/elm-language-server#ale)                                                           |                                                                   | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    |
+| Kakoune | [Link](hhttps://github.com/elm-tooling/elm-language-server#kak-lsp)                                                      |                                                                   | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    |
 
 ### Vim
 
@@ -104,12 +107,11 @@ For [ALE](https://github.com/w0rp/ale) support.
 
 If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The configuration can be [found here](https://github.com/antew/vim-elm-language-server#configuration)
 
-
 ### Kakoune
 
 #### kak-lsp
 
-First install [kak-lsp](https://github.com/ul/kak-lsp), and enable it in the kakrc.  One way would be to add these lines to your .config/kak/kakrc file:
+First install [kak-lsp](https://github.com/ul/kak-lsp), and enable it in the kakrc. One way would be to add these lines to your .config/kak/kakrc file:
 
 ```
 eval %sh{kak-lsp --kakoune -s $kak_session}
@@ -131,7 +133,6 @@ elmPath = "elm"
 elmFormatPath = "elm-format"
 elmTestPath = "elm-test"
 ```
-
 
 # Awesome libraries this is based on
 
