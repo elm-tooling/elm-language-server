@@ -41,14 +41,10 @@ This server contributes the following settings:
 
 ## Installation
 
-First, clone this repo and compile it:
+The server can be installed via `npm` (or from source).
 
 ```sh
-git clone git@github.com:elm-tooling/elm-language-server.git
-cd elm-language-server
-npm install
-npm run compile
-npm link
+npm install -g @elm-tooling/elm-language-server
 ```
 
 Then, you should be able to run the language server with the following command:
@@ -58,6 +54,19 @@ elm-language-server --stdio
 ```
 
 Follow the instructions below to integrate the language server into your editor.
+
+### Alternative: Compile and install from source
+
+First, clone this repo and compile it. `npm link` will add `elm-language-server` to the PATH.
+
+```sh
+git clone git@github.com:elm-tooling/elm-language-server.git
+cd elm-language-server
+npm install
+npm run compile
+npm link
+```
+
 
 ## Editor Support
 
