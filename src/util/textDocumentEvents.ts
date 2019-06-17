@@ -64,9 +64,7 @@ export class TextDocumentEvents extends EventEmitter
         if (document && TextDocumentEvents.isUpdateableDocument(document)) {
           if (td.version === null || td.version === void 0) {
             throw new Error(
-              `Received document change event for ${
-                td.uri
-              } without valid version identifier`,
+              `Received document change event for ${td.uri} without valid version identifier`,
             );
           }
           document.update(last, td.version);

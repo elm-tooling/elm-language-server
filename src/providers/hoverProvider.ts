@@ -9,7 +9,7 @@ import { IForest } from "../forest";
 import { IImports } from "../imports";
 import { getEmptyTypes } from "../util/elmUtils";
 import { HintHelper } from "../util/hintHelper";
-import { TreeUtils, NodeType } from "../util/treeUtils";
+import { NodeType, TreeUtils } from "../util/treeUtils";
 
 export class HoverProvider {
   constructor(

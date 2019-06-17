@@ -4,16 +4,7 @@ import { RemoteConsole } from "vscode-languageserver";
 import { Runtime } from "../index";
 
 function packageToGithubRepo(name: string): string {
-  let repo: string;
-  switch (name) {
-    case "tree-sitter":
-      repo = "node-tree-sitter";
-      break;
-    default:
-      repo = name;
-  }
-
-  return repo;
+  return name === "tree-sitter" ? "node-tree-sitter" : name;
 }
 
 function downloadUrl(
@@ -27,9 +18,7 @@ function downloadUrl(
   if (!treeSitterRepo) {
     urlBase = `https://github.com/razzeee/${repo}/releases/download/v${version}/`;
   }
-  const prebuild: string = `${name}-v${version}-${runtime}-v${
-    process.versions.modules
-  }-${process.platform}-${process.arch}.tar.gz`;
+  const prebuild: string = `${name}-v${version}-${runtime}-v${process.versions.modules}-${process.platform}-${process.arch}.tar.gz`;
 
   return `${urlBase}${prebuild}`;
 }
