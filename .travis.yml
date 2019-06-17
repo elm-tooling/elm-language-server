@@ -1,11 +1,15 @@
 language: node_js
 
-node_js:
-  - "stable"
-
 env:
   - CXX=clang++
 
 branches:
   only:
     - master
+
+before_script:
+  - npm install -g typescript
+
+script:
+  - npm run compile
+  - npm run lint
