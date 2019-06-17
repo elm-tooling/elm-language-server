@@ -94,7 +94,7 @@ export class Server implements ILanguageServer {
       // Find elm files and feed them to tree sitter
       const elmJson = require(path);
       const type = elmJson.type;
-      const elmFolders: Array<{ path: string; writeable: boolean }> = [];
+      const elmFolders: Array<{ path: string; writable: boolean }> = [];
       let elmVersion = "";
       if (type === "application") {
         elmVersion = elmJson["elm-version"];
@@ -102,7 +102,7 @@ export class Server implements ILanguageServer {
         sourceDirs.forEach(async (folder: string) => {
           elmFolders.push({
             path: elmWorkspace.fsPath + folder,
-            writeable: true,
+            writable: true,
           });
         });
       } else {
@@ -113,12 +113,12 @@ export class Server implements ILanguageServer {
         }
         elmFolders.push({
           path: elmWorkspace.fsPath + "src",
-          writeable: true,
+          writable: true,
         });
       }
       elmFolders.push({
         path: elmWorkspace.fsPath + "tests",
-        writeable: true,
+        writable: true,
       });
 
       connection.console.info(elmFolders.length + " source-dirs found");
@@ -145,7 +145,7 @@ export class Server implements ILanguageServer {
               : `${packagesRoot}${maintainer}/${packageName}/${dependencies[
                   key
                 ].substring(0, elmVersion.indexOf(" "))}`;
-          elmFolders.push({ path: pathToPackage, writeable: false });
+          elmFolders.push({ path: pathToPackage, writable: false });
         }
       }
 
@@ -166,7 +166,7 @@ export class Server implements ILanguageServer {
         tree = parser.parse(fileContent);
         forest.setTree(
           URI.file(filePath.path).toString(),
-          filePath.writeable,
+          filePath.writable,
           true,
           tree,
         );
@@ -199,9 +199,9 @@ export class Server implements ILanguageServer {
   }
 
   private findElmFilesInFolders(
-    elmFolders: Array<{ path: string; writeable: boolean }>,
-  ): Array<{ path: string; writeable: boolean }> {
-    let elmFilePaths: Array<{ path: string; writeable: boolean }> = [];
+    elmFolders: Array<{ path: string; writable: boolean }>,
+  ): Array<{ path: string; writable: boolean }> {
+    let elmFilePaths: Array<{ path: string; writable: boolean }> = [];
     for (const element of elmFolders) {
       elmFilePaths = elmFilePaths.concat(this.findElmFilesInFolder(element));
     }
@@ -210,10 +210,10 @@ export class Server implements ILanguageServer {
 
   private findElmFilesInFolder(element: {
     path: string;
-    writeable: boolean;
-  }): Array<{ path: string; writeable: boolean }> {
+    writable: boolean;
+  }): Array<{ path: string; writable: boolean }> {
     return glob.sync(element.path + "/**/*.elm").map((a: string) => {
-      return { path: a, writeable: element.writeable };
+      return { path: a, writable: element.writable };
     });
   }
 

@@ -25,7 +25,7 @@ connection.onInitialize(
           params.initializationOptions.runtime || "electron";
         const rebuildResult: [
           void | Error,
-          void | Error
+          void | Error,
         ] = await rebuildTreeSitter(connection.console, runtime);
         for (const result of rebuildResult) {
           if (result) {

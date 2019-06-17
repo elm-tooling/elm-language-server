@@ -1,0 +1,11 @@
+language: node_js
+
+env:
+  - CXX=clang++
+
+before_script:
+  - npm install -g typescript
+
+script:
+  - npm run compile
+  - npm run lint

@@ -21,7 +21,7 @@ export interface ITextDocumentEvents {
   on(event: "save", listener: DidSaveCallback): this;
 }
 
-interface IUpdateableDocument extends TextDocument {
+interface IUpdatableDocument extends TextDocument {
   update(event: TextDocumentContentChangeEvent, version: number): void;
 }
 
@@ -29,10 +29,10 @@ interface IUpdateableDocument extends TextDocument {
 // With some simplifications and the ability to support multiple listeners
 export class TextDocumentEvents extends EventEmitter
   implements ITextDocumentEvents {
-  public static isUpdateableDocument(
+  public static isUpdatableDocument(
     value: TextDocument,
-  ): value is IUpdateableDocument {
-    return typeof (value as IUpdateableDocument).update === "function";
+  ): value is IUpdatableDocument {
+    return typeof (value as IUpdatableDocument).update === "function";
   }
 
   private documents: { [uri: string]: TextDocument };
@@ -61,12 +61,10 @@ export class TextDocumentEvents extends EventEmitter
         changes.length > 0 ? changes[changes.length - 1] : undefined;
       if (last) {
         const document = this.documents[td.uri];
-        if (document && TextDocumentEvents.isUpdateableDocument(document)) {
+        if (document && TextDocumentEvents.isUpdatableDocument(document)) {
           if (td.version === null || td.version === void 0) {
             throw new Error(
-              `Received document change event for ${
-                td.uri
-              } without valid version identifier`,
+              `Received document change event for ${td.uri} without valid version identifier`,
             );
           }
           document.update(last, td.version);
@@ -94,7 +92,7 @@ export class TextDocumentEvents extends EventEmitter
 
   /**
    * Returns the document for the given URI. Returns undefined if
-   * the document is not mananged by this instance.
+   * the document is not managed by this instance.
    *
    * @param uri The text document's URI to retrieve.
    * @return the text document or `undefined`.
