@@ -45,6 +45,7 @@
   "scripts": {
     "compile": "tsc -b",
     "watch": "tsc -b -w",
+    "format:check": "prettier --config ./.prettierrc.yaml --list-different \"src/**/*{.ts,.js,.json}\"",
     "format:fix": "pretty-quick --staged",
     "lint": "tslint -p tsconfig.json",
     "tslint-check": "tslint-config-prettier-check ./tslint.json"
