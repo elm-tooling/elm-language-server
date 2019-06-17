@@ -47,9 +47,9 @@ export function execCmd(
   const { onStart, onStdout, onStderr, onExit } = options;
   let childProcess: cp.ChildProcess;
   let firstResponse = true;
-  let wasKilledbyUs = false;
+  let wasKilledByUs = false;
 
-  const IexecutingCmd: any = new Promise((resolve, reject) => {
+  const executingCmd: any = new Promise((resolve, reject) => {
     const cmdArguments = options ? options.cmdArguments : [];
 
     const fullCommand = cmd + " " + (cmdArguments || []).join(" ");
@@ -91,11 +91,11 @@ export function execCmd(
       stdout: string | Buffer,
       stderr: string | Buffer,
     ) {
-      IexecutingCmd.isRunning = false;
+      executingCmd.isRunning = false;
       if (onExit) {
         onExit();
       }
-      if (!wasKilledbyUs) {
+      if (!wasKilledByUs) {
         if (error) {
           if (options.showMessageOnError) {
             const cmdName = cmd.split(" ", 1)[0];
@@ -123,14 +123,14 @@ export function execCmd(
     }
   });
   // @ts-ignore
-  IexecutingCmd.stdin = childProcess.stdin;
-  IexecutingCmd.kill = killProcess;
-  IexecutingCmd.isRunning = true;
+  executingCmd.stdin = childProcess.stdin;
+  executingCmd.kill = killProcess;
+  executingCmd.isRunning = true;
 
-  return IexecutingCmd as IExecutingCmd;
+  return executingCmd as IExecutingCmd;
 
   function killProcess() {
-    wasKilledbyUs = true;
+    wasKilledByUs = true;
     if (isWindows) {
       cp.spawn("taskkill", ["/pid", childProcess.pid.toString(), "/f", "/t"]);
     } else {
@@ -152,13 +152,13 @@ export function getEmptyTypes() {
   return [
     {
       markdown: `An \`List\` is a list of items. Every item must be of the same type. Valid syntax for lists includes:
-    
-    [] 
+
+    []
     [42, 43]
     ["one", "two", "three"]
     [3.14, 0.1234]
     ['a', 'Z', '0']
-    
+
     `,
       name: "List",
       symbolKind: SymbolKind.Enum,

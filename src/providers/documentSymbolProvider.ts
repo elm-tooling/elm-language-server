@@ -23,7 +23,7 @@ export class DocumentSymbolProvider {
     param: DocumentSymbolParams,
     // tslint:disable-next-line: max-union-size
   ): Promise<SymbolInformation[] | DocumentSymbol[] | null | undefined> => {
-    const symbolInformations: SymbolInformation[] = [];
+    const symbolInformationList: SymbolInformation[] = [];
 
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
@@ -33,7 +33,7 @@ export class DocumentSymbolProvider {
         node,
       );
       if (symbolInformation) {
-        symbolInformations.push(symbolInformation);
+        symbolInformationList.push(symbolInformation);
       }
 
       for (const childNode of node.children) {
@@ -44,6 +44,6 @@ export class DocumentSymbolProvider {
       traverse(tree.rootNode);
     }
 
-    return symbolInformations;
+    return symbolInformationList;
   };
 }

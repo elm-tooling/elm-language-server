@@ -92,7 +92,7 @@ export class TreeUtils {
             const typeDeclarations = this.findAllTypeDeclarations(tree);
             if (typeDeclarations) {
               typeDeclarations.forEach(typeDeclaration => {
-                const unionCostructors: Array<{
+                const unionConstructors: Array<{
                   name: string;
                   syntaxNode: SyntaxNode;
                 }> = [];
@@ -104,7 +104,7 @@ export class TreeUtils {
                       variant,
                     );
                     if (name && name.parent) {
-                      unionCostructors.push({
+                      unionConstructors.push({
                         name: name.text,
                         syntaxNode: name.parent,
                       });
@@ -116,7 +116,7 @@ export class TreeUtils {
                 );
                 if (typeDeclarationName) {
                   exposed.push({
-                    exposedUnionConstructors: unionCostructors,
+                    exposedUnionConstructors: unionConstructors,
                     name: typeDeclarationName.text,
                     syntaxNode: typeDeclaration,
                     type: "Type",
@@ -174,7 +174,7 @@ export class TreeUtils {
                   name.text,
                 );
                 if (typeDeclaration) {
-                  const unionCostructors: Array<{
+                  const unionConstructors: Array<{
                     name: string;
                     syntaxNode: SyntaxNode;
                   }> = [];
@@ -186,7 +186,7 @@ export class TreeUtils {
                         variant,
                       );
                       if (unionConstructorName && unionConstructorName.parent) {
-                        unionCostructors.push({
+                        unionConstructors.push({
                           name: unionConstructorName.text,
                           syntaxNode: unionConstructorName.parent,
                         });
@@ -194,7 +194,7 @@ export class TreeUtils {
                     });
 
                   exposed.push({
-                    exposedUnionConstructors: unionCostructors,
+                    exposedUnionConstructors: unionConstructors,
                     name: name.text,
                     syntaxNode: typeDeclaration,
                     type: "Type",
@@ -243,7 +243,7 @@ export class TreeUtils {
     return node.children.find(child => child.type === type);
   }
 
-  public static findAllNamedChildsOfType(
+  public static findAllNamedChildrenOfType(
     type: string | string[],
     node: SyntaxNode,
   ): SyntaxNode[] | undefined {
@@ -386,7 +386,7 @@ export class TreeUtils {
     tree: Tree,
     operatorName: string,
   ): SyntaxNode | undefined {
-    const infixDeclarations = this.findAllNamedChildsOfType(
+    const infixDeclarations = this.findAllNamedChildrenOfType(
       "infix_declaration",
       tree.rootNode,
     );
@@ -540,13 +540,13 @@ export class TreeUtils {
   }
 
   public static findAllTypeDeclarations(tree: Tree): SyntaxNode[] | undefined {
-    return this.findAllNamedChildsOfType("type_declaration", tree.rootNode);
+    return this.findAllNamedChildrenOfType("type_declaration", tree.rootNode);
   }
 
   public static findAllTypeAliasDeclarations(
     tree: Tree,
   ): SyntaxNode[] | undefined {
-    return this.findAllNamedChildsOfType(
+    return this.findAllNamedChildrenOfType(
       "type_alias_declaration",
       tree.rootNode,
     );
@@ -577,7 +577,7 @@ export class TreeUtils {
     }
   }
 
-  public static findDefinitonNodeByReferencingNode(
+  public static findDefinitionNodeByReferencingNode(
     nodeAtPosition: SyntaxNode,
     uri: string,
     tree: Tree,
@@ -953,14 +953,14 @@ export class TreeUtils {
       node.parent.parent.previousNamedSibling.type === "type_annotation" &&
       node.parent.parent.previousNamedSibling.lastNamedChild
     ) {
-      const functionParameterNodes = TreeUtils.findAllNamedChildsOfType(
+      const functionParameterNodes = TreeUtils.findAllNamedChildrenOfType(
         ["pattern", "lower_pattern"],
         node.parent,
       );
       if (functionParameterNodes) {
         const matchIndex = functionParameterNodes.findIndex(a => a === node);
 
-        const typeAnnotationNodes = TreeUtils.findAllNamedChildsOfType(
+        const typeAnnotationNodes = TreeUtils.findAllNamedChildrenOfType(
           ["type_ref", "type_expression"],
           node.parent.parent.previousNamedSibling.lastNamedChild,
         );

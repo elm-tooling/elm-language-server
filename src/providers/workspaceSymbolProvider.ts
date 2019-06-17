@@ -8,10 +8,10 @@ import { IForest } from "../forest";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 
 export class WorkspaceSymbolProvider {
-  private connection: IConnection;
-  private forest: IForest;
-
-  constructor(connection: IConnection, forest: IForest) {
+  constructor(
+    private readonly connection: IConnection,
+    private readonly forest: IForest,
+  ) {
     this.connection = connection;
     this.forest = forest;
 
@@ -21,7 +21,7 @@ export class WorkspaceSymbolProvider {
   private workspaceSymbolRequest = async (
     param: WorkspaceSymbolParams,
   ): Promise<SymbolInformation[] | null | undefined> => {
-    const symbolInformations: SymbolInformation[] = [];
+    const symbolInformationList: SymbolInformation[] = [];
 
     this.forest.treeIndex.forEach(tree => {
       const traverse: (node: SyntaxNode) => void = (node: SyntaxNode): void => {
@@ -31,7 +31,7 @@ export class WorkspaceSymbolProvider {
             node,
           );
           if (symbolInformation) {
-            symbolInformations.push(symbolInformation);
+            symbolInformationList.push(symbolInformation);
           }
         }
 
@@ -45,6 +45,6 @@ export class WorkspaceSymbolProvider {
       }
     });
 
-    return symbolInformations;
+    return symbolInformationList;
   };
 }

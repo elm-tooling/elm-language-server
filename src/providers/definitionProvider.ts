@@ -32,7 +32,7 @@ export class DefinitionProvider {
         row: param.position.line,
       });
 
-      const definitionNode = TreeUtils.findDefinitonNodeByReferencingNode(
+      const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
         nodeAtPosition,
         param.textDocument.uri,
         tree,
