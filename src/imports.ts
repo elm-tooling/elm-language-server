@@ -27,7 +27,7 @@ export class Imports implements IImports {
 
   public updateImports(uri: string, tree: Tree, forest: IForest): void {
     const result: IImport[] = [];
-    let importNodes = TreeUtils.findAllNamedChildsOfType(
+    let importNodes = TreeUtils.findAllNamedChildrenOfType(
       "import_clause",
       tree.rootNode,
     );
@@ -110,7 +110,7 @@ export class Imports implements IImports {
                       );
                     }
 
-                    const exposedValues = TreeUtils.findAllNamedChildsOfType(
+                    const exposedValues = TreeUtils.findAllNamedChildrenOfType(
                       "exposed_value",
                       exposingList,
                     );
@@ -131,7 +131,7 @@ export class Imports implements IImports {
                       );
                     }
 
-                    const exposedType = TreeUtils.findAllNamedChildsOfType(
+                    const exposedType = TreeUtils.findAllNamedChildrenOfType(
                       "exposed_type",
                       exposingList,
                     );

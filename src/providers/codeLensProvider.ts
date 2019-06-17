@@ -109,7 +109,7 @@ export class CodeLensProvider {
     uri: string,
     tree: Tree,
   ) {
-    const definitionNode = TreeUtils.findDefinitonNodeByReferencingNode(
+    const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
       nameNode,
       uri,
       tree,

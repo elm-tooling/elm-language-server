@@ -135,7 +135,7 @@ export class CompletionProvider {
         if (name) {
           completions.push(this.createTypeCompletion(value, name.text));
         }
-        // Add types constuctors
+        // Add types constructors
         const unionVariants = declaration.descendantsOfType("union_variant");
         for (const unionVariant of unionVariants) {
           const unionVariantName = TreeUtils.findFirstNamedChildOfType(
@@ -284,13 +284,13 @@ export class CompletionProvider {
               ),
             );
 
-            const annnotationTypeNode = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
+            const annotationTypeNode = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
               child,
             );
-            if (annnotationTypeNode) {
+            if (annotationTypeNode) {
               const typeDeclarationNode = TreeUtils.findTypeAliasDeclaration(
                 tree,
-                annnotationTypeNode.text,
+                annotationTypeNode.text,
               );
               if (typeDeclarationNode) {
                 const fields = TreeUtils.getAllFieldsFromTypeAlias(

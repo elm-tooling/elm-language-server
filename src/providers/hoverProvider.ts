@@ -31,7 +31,7 @@ export class HoverProvider {
         row: params.position.line,
       });
 
-      const definitionNode = TreeUtils.findDefinitonNodeByReferencingNode(
+      const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
         nodeAtPosition,
         params.textDocument.uri,
         tree,
