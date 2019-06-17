@@ -3,7 +3,7 @@ import { Exposing, TreeUtils } from "./util/treeUtils";
 
 export interface ITreeContainer {
   uri: string;
-  writeable: boolean;
+  writable: boolean;
   referenced: boolean;
   moduleName: string;
   exposing: Exposing;
@@ -19,7 +19,7 @@ export interface IForest {
   getByUri(uri: string): ITreeContainer | undefined;
   setTree(
     uri: string,
-    writeable: boolean,
+    writable: boolean,
     referenced: boolean,
     tree: Tree,
   ): void;
@@ -80,7 +80,7 @@ export class Forest implements IForest {
 
   public setTree(
     uri: string,
-    writeable: boolean,
+    writable: boolean,
     referenced: boolean,
     tree: Tree,
   ): void {
@@ -97,7 +97,7 @@ export class Forest implements IForest {
           referenced,
           tree,
           uri,
-          writeable,
+          writable,
         });
       } else {
         this.treeIndex[existingTree] = {
@@ -106,7 +106,7 @@ export class Forest implements IForest {
           referenced,
           tree,
           uri,
-          writeable,
+          writable,
         };
       }
     }

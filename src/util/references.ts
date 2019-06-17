@@ -22,7 +22,7 @@ export class References {
             const annotationNameNode = TreeUtils.getFunctionAnnotationNameNodeFromDefinition(
               definitionNode.node,
             );
-            if (annotationNameNode && refSourceTree.writeable) {
+            if (annotationNameNode && refSourceTree.writable) {
               references.push({
                 node: annotationNameNode,
                 uri: definitionNode.uri,
@@ -33,7 +33,7 @@ export class References {
               definitionNode.node,
             );
             if (functionNameNode) {
-              if (refSourceTree.writeable) {
+              if (refSourceTree.writable) {
                 references.push({
                   node: functionNameNode,
                   uri: definitionNode.uri,
@@ -44,7 +44,7 @@ export class References {
                 refSourceTree.tree,
                 functionNameNode.text,
               );
-              if (localFunctions && refSourceTree.writeable) {
+              if (localFunctions && refSourceTree.writable) {
                 references.push(
                   ...localFunctions.map(node => {
                     return { node, uri: definitionNode.uri };
@@ -67,7 +67,7 @@ export class References {
                     functionNameNode.text,
                   );
 
-                  if (exposedNode && refSourceTree.writeable) {
+                  if (exposedNode && refSourceTree.writable) {
                     references.push({
                       node: exposedNode,
                       uri: definitionNode.uri,
@@ -100,7 +100,7 @@ export class References {
                               functionNameNode.text,
                             );
 
-                            if (exposedNode && treeToCheck.writeable) {
+                            if (exposedNode && treeToCheck.writable) {
                               references.push({
                                 node: exposedNode,
                                 uri,
@@ -113,7 +113,7 @@ export class References {
                               treeToCheck.tree,
                               a.alias,
                             );
-                            if (functions && treeToCheck.writeable) {
+                            if (functions && treeToCheck.writable) {
                               references.push(
                                 ...functions.map(node => {
                                   return { node, uri };
@@ -137,7 +137,7 @@ export class References {
             );
 
             if (typeOrTypeAliasNameNode) {
-              if (refSourceTree.writeable) {
+              if (refSourceTree.writable) {
                 references.push({
                   node: typeOrTypeAliasNameNode,
                   uri: definitionNode.uri,
@@ -148,7 +148,7 @@ export class References {
                 refSourceTree.tree,
                 typeOrTypeAliasNameNode.text,
               );
-              if (localFunctions && refSourceTree.writeable) {
+              if (localFunctions && refSourceTree.writable) {
                 references.push(
                   ...localFunctions.map(node => {
                     return { node, uri: definitionNode.uri };
@@ -171,7 +171,7 @@ export class References {
                     typeOrTypeAliasNameNode.text,
                   );
 
-                  if (exposedNode && refSourceTree.writeable) {
+                  if (exposedNode && refSourceTree.writable) {
                     references.push({
                       node: exposedNode,
                       uri: definitionNode.uri,
@@ -206,7 +206,7 @@ export class References {
                               typeOrTypeAliasNameNode.text,
                             );
 
-                            if (exposedNode && treeToCheck.writeable) {
+                            if (exposedNode && treeToCheck.writable) {
                               references.push({
                                 node: exposedNode,
                                 uri,
@@ -219,7 +219,7 @@ export class References {
                               treeToCheck.tree,
                               a.alias,
                             );
-                            if (functions && treeToCheck.writeable) {
+                            if (functions && treeToCheck.writable) {
                               references.push(
                                 ...functions.map(node => {
                                   return { node, uri };
@@ -239,7 +239,7 @@ export class References {
 
           case "Module":
             if (moduleNameNode) {
-              if (refSourceTree.writeable) {
+              if (refSourceTree.writable) {
                 references.push({
                   node: moduleNameNode,
                   uri: definitionNode.uri,
@@ -261,7 +261,7 @@ export class References {
                           treeToCheck.tree,
                           a.alias,
                         );
-                        if (importNameNode && treeToCheck.writeable) {
+                        if (importNameNode && treeToCheck.writable) {
                           references.push({ node: importNameNode, uri });
                         }
                       });
