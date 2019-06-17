@@ -4,10 +4,12 @@ export interface IClientSettings {
   elmFormatPath: string;
   elmPath: string;
   elmTestPath: string;
+  diagnosticsOn: "change" | "save";
 }
 
 export class Settings {
   private fallbackClientSettings: IClientSettings = {
+    diagnosticsOn: "change",
     elmFormatPath: "elm-format",
     elmPath: "elm",
     elmTestPath: "elm-test",
@@ -24,23 +26,21 @@ export class Settings {
       this.capabilities.workspace &&
       this.capabilities.workspace.configuration;
 
+    const defaultSettings = {
+      ...this.fallbackClientSettings,
+      ...this.initializationOptions,
+    };
+
     if (!supportsConfig) {
-      return Promise.resolve(this.initializationOptions);
+      return Promise.resolve(defaultSettings);
     }
 
-    return connection.workspace
-      .getConfiguration({
-        section: "elmLS",
-      })
-      .then(settings =>
+    return (
+      connection.workspace
+        .getConfiguration({ section: "elmLS" })
         // Allow falling back to the preset params if we cant get the
         // settings from the workspace
-        Object.assign(
-          {},
-          this.fallbackClientSettings,
-          this.initializationOptions,
-          settings,
-        ),
-      );
+        .then(settings => Object.assign({ ...defaultSettings, ...settings }))
+    );
   }
 }
