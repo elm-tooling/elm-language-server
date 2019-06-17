@@ -25,12 +25,14 @@ export class WorkspaceSymbolProvider {
 
     this.forest.treeIndex.forEach(tree => {
       const traverse: (node: SyntaxNode) => void = (node: SyntaxNode): void => {
-        const symbolInformation = SymbolInformationTranslator.translateNodeToSymbolInformation(
-          tree.uri,
-          node,
-        );
-        if (symbolInformation) {
-          symbolInformations.push(symbolInformation);
+        if (node.text.includes(param.query)) {
+          const symbolInformation = SymbolInformationTranslator.translateNodeToSymbolInformation(
+            tree.uri,
+            node,
+          );
+          if (symbolInformation) {
+            symbolInformations.push(symbolInformation);
+          }
         }
 
         for (const childNode of node.children) {
