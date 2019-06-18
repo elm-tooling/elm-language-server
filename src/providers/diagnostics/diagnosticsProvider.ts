@@ -6,7 +6,6 @@ import {
   TextDocument,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { DocumentEvents } from "../../util/documentEvents";
 import { Settings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { ElmAnalyseDiagnostics } from "./elmAnalyseDiagnostics";
@@ -28,6 +27,7 @@ export interface IElmIssue {
 }
 
 export class DiagnosticsProvider {
+  private connection: IConnection;
   private events: TextDocumentEvents;
   private elmMakeDiagnostics: ElmMakeDiagnostics;
   private elmAnalyseDiagnostics: ElmAnalyseDiagnostics;
@@ -35,32 +35,25 @@ export class DiagnosticsProvider {
     elmMake: Map<string, Diagnostic[]>;
     elmAnalyse: Map<string, Diagnostic[]>;
   };
-  private settings: Settings;
 
   constructor(
-    private connection: IConnection,
-    private elmWorkspaceFolder: URI,
-    documentEvents: DocumentEvents,
+    connection: IConnection,
+    elmWorkspaceFolder: URI,
+    events: TextDocumentEvents,
     settings: Settings,
+    elmAnalyse: ElmAnalyseDiagnostics,
   ) {
     this.getDiagnostics = this.getDiagnostics.bind(this);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmMakeIssueToDiagnostic = this.elmMakeIssueToDiagnostic.bind(this);
-    this.events = new TextDocumentEvents(documentEvents);
+    this.events = events;
+    this.elmAnalyseDiagnostics = elmAnalyse;
 
     this.connection = connection;
-    this.settings = settings;
-    this.elmWorkspaceFolder = elmWorkspaceFolder;
     this.elmMakeDiagnostics = new ElmMakeDiagnostics(
       connection,
       elmWorkspaceFolder,
       settings,
-    );
-
-    this.elmAnalyseDiagnostics = new ElmAnalyseDiagnostics(
-      connection,
-      elmWorkspaceFolder,
-      this.newElmAnalyseDiagnostics,
     );
 
     this.currentDiagnostics = { elmMake: new Map(), elmAnalyse: new Map() };
@@ -68,6 +61,10 @@ export class DiagnosticsProvider {
     this.events.on("open", this.getDiagnostics);
     this.events.on("change", this.getDiagnostics);
     this.events.on("save", this.getDiagnostics);
+    this.elmAnalyseDiagnostics.on(
+      "new-diagnostics",
+      this.newElmAnalyseDiagnostics,
+    );
   }
 
   private newElmAnalyseDiagnostics(diagnostics: Map<string, Diagnostic[]>) {

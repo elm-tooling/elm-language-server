@@ -3,6 +3,7 @@ import {
   ServerCapabilities,
   TextDocumentSyncKind,
 } from "vscode-languageserver";
+import * as ElmAnalyseDiagnostics from "./providers/diagnostics/elmAnalyseDiagnostics";
 
 export class CapabilityCalculator {
   private clientCapabilities: ClientCapabilities;
@@ -20,6 +21,7 @@ export class CapabilityCalculator {
       // Incremental sync is disabled for now due to not being able to get the
       // old text in ASTProvider
       // textDocumentSync: TextDocumentSyncKind.Incremental,
+      codeActionProvider: true,
       codeLensProvider: {
         resolveProvider: true,
       },
@@ -28,6 +30,9 @@ export class CapabilityCalculator {
       documentFormattingProvider: true,
       documentRangeFormattingProvider: true,
       documentSymbolProvider: true,
+      executeCommandProvider: {
+        commands: [ElmAnalyseDiagnostics.CODE_ACTION_ELM_ANALYSE],
+      },
       foldingRangeProvider: true,
       hoverProvider: true,
       referencesProvider: true,
