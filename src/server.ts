@@ -34,6 +34,11 @@ export interface ILanguageServer {
   readonly capabilities: InitializeResult;
 }
 
+interface IFolder {
+  path: string;
+  writable: boolean;
+}
+
 export class Server implements ILanguageServer {
   private calculator: CapabilityCalculator;
 
@@ -89,12 +94,12 @@ export class Server implements ILanguageServer {
     parser: Parser,
   ): void {
     try {
-      const path = elmWorkspace.fsPath + "elm.json";
-      connection.console.info("Reading elm.json from " + path);
+      const path = `${elmWorkspace.fsPath}elm.json`;
+      connection.console.info(`Reading elm.json from ${path}`);
       // Find elm files and feed them to tree sitter
       const elmJson = require(path);
       const type = elmJson.type;
-      const elmFolders: Array<{ path: string; writable: boolean }> = [];
+      const elmFolders: IFolder[] = [];
       let elmVersion = "";
       if (type === "application") {
         elmVersion = elmJson["elm-version"];
@@ -112,16 +117,16 @@ export class Server implements ILanguageServer {
           elmVersion = elmVersion.substring(0, elmVersion.indexOf(" "));
         }
         elmFolders.push({
-          path: elmWorkspace.fsPath + "src",
+          path: `${elmWorkspace.fsPath}src`,
           writable: true,
         });
       }
       elmFolders.push({
-        path: elmWorkspace.fsPath + "tests",
+        path: `${elmWorkspace.fsPath}tests`,
         writable: true,
       });
 
-      connection.console.info(elmFolders.length + " source-dirs found");
+      connection.console.info(`${elmFolders.length} source-dirs found`);
       const elmHome = this.findElmHome();
       // TODO find a way to detect this
       const packagesRoot = `${elmHome}/${elmVersion}/package/`;
@@ -151,13 +156,11 @@ export class Server implements ILanguageServer {
 
       const elmFilePaths = this.findElmFilesInFolders(elmFolders);
       connection.console.info(
-        "Found " +
-          elmFilePaths.length.toString() +
-          " files to add to the project",
+        `Found ${elmFilePaths.length.toString()} files to add to the project`,
       );
 
       for (const filePath of elmFilePaths) {
-        connection.console.info("Adding " + filePath.path.toString());
+        connection.console.info(`Adding ${filePath.path.toString()}`);
         const fileContent: string = readFileSync(
           filePath.path.toString(),
           "utf8",
@@ -173,7 +176,7 @@ export class Server implements ILanguageServer {
       }
 
       forest.treeIndex.forEach(item => {
-        connection.console.info("Adding imports " + item.uri.toString());
+        connection.console.info(`Adding imports ${item.uri.toString()}`);
         imports.updateImports(item.uri, item.tree, forest);
       });
 
@@ -190,31 +193,23 @@ export class Server implements ILanguageServer {
       return elmHomeVar;
     }
 
-    const homedir = os.homedir();
-    if (utils.isWindows) {
-      return homedir + "/AppData/Roaming/elm";
-    } else {
-      return homedir + "/.elm";
-    }
+    return utils.isWindows
+      ? `${os.homedir()}/AppData/Roaming/elm`
+      : `${os.homedir()}/.elm`;
   }
 
-  private findElmFilesInFolders(
-    elmFolders: Array<{ path: string; writable: boolean }>,
-  ): Array<{ path: string; writable: boolean }> {
-    let elmFilePaths: Array<{ path: string; writable: boolean }> = [];
+  private findElmFilesInFolders(elmFolders: IFolder[]): IFolder[] {
+    let elmFilePaths: IFolder[] = [];
     for (const element of elmFolders) {
       elmFilePaths = elmFilePaths.concat(this.findElmFilesInFolder(element));
     }
     return elmFilePaths;
   }
 
-  private findElmFilesInFolder(element: {
-    path: string;
-    writable: boolean;
-  }): Array<{ path: string; writable: boolean }> {
-    return glob.sync(element.path + "/**/*.elm").map((a: string) => {
-      return { path: a, writable: element.writable };
-    });
+  private findElmFilesInFolder(element: IFolder): IFolder[] {
+    return glob
+      .sync(`${element.path}/**/*.elm`)
+      .map(path => ({ path, writable: element.writable }));
   }
 
   private registerProviders(

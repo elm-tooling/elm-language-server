@@ -122,7 +122,7 @@ export class DiagnosticsProvider {
     );
     return Diagnostic.create(
       lineRange,
-      issue.overview + " - " + issue.details.replace(/\[\d+m/g, ""),
+      `${issue.overview} - ${issue.details.replace(/\[\d+m/g, "")}`,
       this.severityStringToDiagnosticSeverity(issue.type),
       undefined,
       "Elm",

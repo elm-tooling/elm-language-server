@@ -52,7 +52,7 @@ export class ElmMakeDiagnostics {
       const cwd: string = rootPath;
       let make: cp.ChildProcess;
       if (utils.isWindows) {
-        filename = '"' + filename + '"';
+        filename = `"${filename}"`;
       }
       const args = [
         "make",
@@ -64,7 +64,7 @@ export class ElmMakeDiagnostics {
       ];
       const testOrMakeCommand = isTestFile ? testCommand : makeCommand;
       if (utils.isWindows) {
-        make = cp.exec(testOrMakeCommand + " " + args.join(" "), { cwd });
+        make = cp.exec(`${testOrMakeCommand} ${args.join(" ")}`, { cwd });
       } else {
         make = cp.spawn(testOrMakeCommand, args, { cwd });
       }
@@ -86,9 +86,7 @@ export class ElmMakeDiagnostics {
             const problems = error.problems.map((problem: any) => ({
               details: problem.message
                 .map((message: any) =>
-                  typeof message === "string"
-                    ? message
-                    : "#" + message.string + "#",
+                  typeof message === "string" ? message : `#${message.string}#`,
                 )
                 .join(""),
               file: error.path,
@@ -195,7 +193,7 @@ export class ElmMakeDiagnostics {
     );
     return Diagnostic.create(
       lineRange,
-      issue.overview + " - " + issue.details.replace(/\[\d+m/g, ""),
+      `${issue.overview} - ${issue.details.replace(/\[\d+m/g, "")}`,
       this.severityStringToDiagnosticSeverity(issue.type),
       undefined,
       "Elm",

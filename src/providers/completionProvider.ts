@@ -306,7 +306,7 @@ export class CompletionProvider {
                     result.push(
                       this.createFunctionParameterCompletion(
                         hint,
-                        child.text + "." + element.field,
+                        `${child.text}.${element.field}`,
                       ),
                     );
                   });

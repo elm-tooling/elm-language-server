@@ -190,7 +190,7 @@ export class Imports implements IImports {
         case "TypeAlias":
         case "Type":
           result.push({
-            alias: importPrefix + "." + element.name,
+            alias: `${importPrefix}.${element.name}`,
             fromModuleName: moduleNameNode.text,
             fromUri: uri,
             node: element.syntaxNode,

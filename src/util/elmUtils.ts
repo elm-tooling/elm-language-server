@@ -52,7 +52,7 @@ export function execCmd(
   const executingCmd: any = new Promise((resolve, reject) => {
     const cmdArguments = options ? options.cmdArguments : [];
 
-    const fullCommand = cmd + " " + (cmdArguments || []).join(" ");
+    const fullCommand = `${cmd} ${(cmdArguments || []).join(" ")}`;
     childProcess = cp.exec(
       fullCommand,
       { cwd: elmRootPath.fsPath },
@@ -108,7 +108,7 @@ export function execCmd(
             if (cmdWasNotFound) {
               const notFoundText = options ? options.notFoundText : "";
               connection.window.showErrorMessage(
-                `${cmdName} is not available in your path. ` + notFoundText,
+                `${cmdName} is not available in your path. ${notFoundText}`,
               );
             } else {
               connection.window.showErrorMessage(error.message);

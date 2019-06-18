@@ -10,7 +10,8 @@
   "rules": {
     "prettier": [true, ".prettierrc.yaml"],
     "cognitive-complexity": false,
-    "no-big-function": false
+    "no-big-function": false,
+    "prefer-template": true
   },
   "rulesDirectory": ["tslint-plugin-prettier"]
 }
