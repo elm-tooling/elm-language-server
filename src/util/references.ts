@@ -83,7 +83,7 @@ export class References {
                         a =>
                           a.fromModuleName === moduleNameNode.text &&
                           a.type === "Function" &&
-                          (a.alias.endsWith("." + functionNameNode.text) ||
+                          (a.alias.endsWith(`.${functionNameNode.text}`) ||
                             a.alias === functionNameNode.text),
                       );
                       if (needsToBeChecked.length > 0) {
@@ -188,7 +188,7 @@ export class References {
                           a.fromModuleName === moduleNameNode.text &&
                           (a.type === "Type" || a.type === "TypeAlias") &&
                           (a.alias.endsWith(
-                            "." + typeOrTypeAliasNameNode.text,
+                            `.${typeOrTypeAliasNameNode.text}`,
                           ) ||
                             a.alias === typeOrTypeAliasNameNode.text),
                       );

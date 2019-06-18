@@ -4,17 +4,15 @@ This is the language server implementation for the Elm programming language.
 
 You will need to install `elm`, `elm-test` and `elm-format`, to get all diagnostics.
 
-```shell
-npm install -g elm
-npm install -g elm-test
-npm install -g elm-format
+```sh
+npm install -g elm elm-test elm-format
 ```
 
 Or use them from your `node_modules`, if you want to do that you need to set the paths, via the settings.
 
 ## Features
 
-Supports elm 0.19
+Supports Elm 0.19
 
 | Feature          | Description                                                                                                                                         |
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -24,7 +22,7 @@ Supports elm 0.19
 | completions      | Show completions for the current file and snippets                                                                                                  |
 | definitions      | Enables you to jump to the definition of a type alias, module, custom type or function                                                              |
 | documentSymbols  | Identifies all symbols in a document.                                                                                                               |
-| folding          | Let's you fold the code on certain elm constructs                                                                                                   |
+| folding          | Let's you fold the code on certain Elm constructs                                                                                                   |
 | hover            | Shows type annotations and documentation for a type alias, module, custom type or function                                                          |
 | references       | Lists all references to a type alias, module, custom type or function                                                                               |
 | rename           | Enables you to rename a type alias, module, custom type or function                                                                                 |
@@ -35,9 +33,9 @@ Supports elm 0.19
 This server contributes the following settings:
 
 - `elmLS.trace.server`: Enable/disable trace logging of client and server communication
-- `elmLS.elmPath`: The path to your elm executeable.
-- `elmLS.elmFormatPath`: The path to your elm-format executeable.
-- `elmLS.elmTestPath`: The path to your elm-test executeable.
+- `elmLS.elmPath`: The path to your `elm` executable.
+- `elmLS.elmFormatPath`: The path to your `elm-format` executable.
+- `elmLS.elmTestPath`: The path to your `elm-test` executable.
 
 ## Installation
 
@@ -67,7 +65,6 @@ npm run compile
 npm link
 ```
 
-
 ## Editor Support
 
 | Editor  | Setup Instructions                                                 | Source Code                                                       | Diagnostics        | Formatting         | CodeLenses         | Completions        | Definitions        | DocumentSymbols    | Folding            | Hover              | References         | Rename             | Workspace Symbols  |
@@ -89,7 +86,7 @@ To enable support with [coc.nvim](https://github.com/neoclide/coc.nvim), run `:C
 
 If needed, you can set the paths to `elm`, `elm-test` and `elm-format` with the `elmPath`, `elmTestPath` and `elmFormatPath` variables.
 
-```
+```json
 {
   "languageserver": {
     "elmLS": {
@@ -126,14 +123,14 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The conf
 
 First install [kak-lsp](https://github.com/ul/kak-lsp), and enable it in the kakrc. One way would be to add these lines to your .config/kak/kakrc file:
 
-```
+```sh
 eval %sh{kak-lsp --kakoune -s $kak_session}
 lsp-enable
 ```
 
-Then, assuming installation of elm-language-server, elm-format, and elm-test, add this section to your .config/kak-lsp/kak-lsp.toml file:
+Then, assuming installation of `elm-language-server`, `elm-format`, and `elm-test`, add this section to your `.config/kak-lsp/kak-lsp.toml` file:
 
-```
+```toml
 [language.elm]
 filetypes = ["elm"]
 roots = ["elm.json"]

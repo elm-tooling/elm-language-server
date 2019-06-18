@@ -134,10 +134,9 @@ export class ElmAnalyseDiagnostics {
       code: message.id,
       // Clean up the error message a bit, removing the end of the line, e.g.
       // "Record has only one field. Use the field's type or introduce a Type. At ((14,5),(14,20))"
-      message:
-        message.data.description.split(/at .+$/i)[0] +
-        "\n" +
-        `See https://stil4m.github.io/elm-analyse/#/messages/${message.type}`,
+      message: `${
+        message.data.description.split(/at .+$/i)[0]
+      }\nSee https://stil4m.github.io/elm-analyse/#/messages/${message.type}`,
       range,
       severity: DiagnosticSeverity.Warning,
       source: "elm-analyse",
