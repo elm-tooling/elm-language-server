@@ -70,8 +70,8 @@ npm link
 | Editor  | Setup Instructions                                                 | Source Code                                                       | Diagnostics        | Formatting         | CodeLenses         | Completions        | Definitions        | DocumentSymbols    | Folding            | Hover              | References         | Rename             | Workspace Symbols  |
 | ------- | ------------------------------------------------------------------ | ----------------------------------------------------------------- | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ |
 | VSCode  | [Link](https://github.com/elm-tooling/elm-language-server#vscode)  | [Link](https://github.com/elm-tooling/elm-language-client-vscode) | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| VIM CoC | [Link](https://github.com/elm-tooling/elm-language-server#cocnvim) |                                                                   | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    |
-| VIM ALE | [Link](https://github.com/elm-tooling/elm-language-server#ale)     |                                                                   | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    |
+| VIM CoC | [Link](https://github.com/elm-tooling/elm-language-server#cocnvim) |                                                                   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| VIM ALE | [Link](https://github.com/elm-tooling/elm-language-server#ale)     |                                                                   | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x:                | :heavy_check_mark: | :heavy_check_mark: | :x:                | :heavy_check_mark: |
 | Kakoune | [Link](https://github.com/elm-tooling/elm-language-server#kak-lsp) |                                                                   | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    |
 
 ### VSCode
@@ -86,7 +86,7 @@ To enable support with [coc.nvim](https://github.com/neoclide/coc.nvim), run `:C
 
 If needed, you can set the paths to `elm`, `elm-test` and `elm-format` with the `elmPath`, `elmTestPath` and `elmFormatPath` variables.
 
-```json
+```jsonc
 {
   "languageserver": {
     "elmLS": {
@@ -101,9 +101,27 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format` with the 
         "elmTestPath": "elm-test"
       }
     }
-  }
+  },
+  // If you use neovim you can enable codelenses with this
+  "coc.preferences.codeLens.enable": true
 }
 ```
+
+Much of this is covered in the [Example vim configuration](https://github.com/neoclide/coc.nvim#example-vim-configuration) section in Coc's readme.
+
+| Feature           | How to use it                                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Diagnostics       | `:CocList diagnostics`                                                                                                                                                   |
+| Formatting        | `:call CocAction('format')`                                                                                                                                              |
+| CodeLenses        | Requires Neovim. Add `"coc.preferences.codeLens.enable": true` to your `coc-settings.json` through `:CocConfig`                                                          |
+| Completions       | On by default, see [Completion with sources](https://github.com/neoclide/coc.nvim/wiki/Completion-with-sources) for customizations                                       |
+| Definitions       | Provided as `<Plug>` mapping so that you can set it yourself, e.g. <br /> `nmap <silent> gd <Plug>(coc-definition)` <br/> `nmap <silent> gy <Plug>(coc-type-definition)` |
+| DocumentSymbols   | `:CocList symbols`                                                                                                                                                       |
+| Folding           | You must `set foldmethod=manual` in your `vimrc`, one set Coc will handle folding with the usual commands, `zc`, `zo`, etc                                               |
+| Hover             | `:call CocAction('doHover')`                                                                                                                                             |
+| References        | Provided as a `<Plug>` mapping, e.g. `nmap <silent> gr <Plug>(coc-references)`                                                                                           |
+| Rename            | Provided as a `<Plug>` mapping, e.g. `nmap <leader>rn <Plug>(coc-rename)`                                                                                                |
+| Workspace Symbols | `:CocList symbols`                                                                                                                                                       |
 
 #### ALE
 
@@ -116,6 +134,20 @@ For [ALE](https://github.com/w0rp/ale) support.
 | [Pathogen](https://github.com/tpope/vim-pathogen) | <pre>cd ~/.vim/bundle<br>git clone https://github.com/antew/vim-elm-language-server.git</pre> |
 
 If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The configuration can be [found here](https://github.com/antew/vim-elm-language-server#configuration)
+
+| Feature           | How to use it                                                                                                         |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Diagnostics       | `:ALENext`/`:ALEPrevious`                                                                                             |
+| Formatting        | ALE doesn't currently support this through the language server integration, but `elm-format` is a supported ALE Fixer |
+| CodeLenses        | Not currently supported                                                                                               |
+| Completions       | On by default, see `:h ale-completion` for more info                                                                  |
+| Definitions       | `:ALEGoToDefinition`, `:ALEGoToTypeDefinition`, see `:h ale-go-to-definition` and `:h ale-go-to-type-definition`      |
+| DocumentSymbols   | `ALESymbolSearch <query>`, see `:h ale-symbol-search` for more info                                                   |
+| Folding           | Not currently supported                                                                                               |
+| Hover             | `:ALEHover`                                                                                                           |
+| References        | `:ALEFindReferences`                                                                                                  |
+| Rename            | Not currently supported                                                                                               |
+| Workspace Symbols | `:ALESymbolSearch <query>`                                                                                            |
 
 ### Kakoune
 
