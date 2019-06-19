@@ -71,7 +71,7 @@ npm link
 | ------- | ------------------------------------------------------------------ | ----------------------------------------------------------------- | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ |
 | VSCode  | [Link](https://github.com/elm-tooling/elm-language-server#vscode)  | [Link](https://github.com/elm-tooling/elm-language-client-vscode) | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | VIM CoC | [Link](https://github.com/elm-tooling/elm-language-server#cocnvim) |                                                                   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| VIM ALE | [Link](https://github.com/elm-tooling/elm-language-server#ale)     |                                                                   | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x:                | :heavy_check_mark: | :heavy_check_mark: | :x:                | :heavy_check_mark: |
+| VIM ALE | [Link](https://github.com/elm-tooling/elm-language-server#ale)     |                                                                   | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :x:                | :heavy_check_mark: |
 | Kakoune | [Link](https://github.com/elm-tooling/elm-language-server#kak-lsp) |                                                                   | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    |
 
 ### VSCode
@@ -142,7 +142,7 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The conf
 | CodeLenses        | Not currently supported                                                                                               |
 | Completions       | On by default, see `:h ale-completion` for more info                                                                  |
 | Definitions       | `:ALEGoToDefinition`, `:ALEGoToTypeDefinition`, see `:h ale-go-to-definition` and `:h ale-go-to-type-definition`      |
-| DocumentSymbols   | `ALESymbolSearch <query>`, see `:h ale-symbol-search` for more info                                                   |
+| DocumentSymbols   | Only workspace symbols are currently supported                                                                        |
 | Folding           | Not currently supported                                                                                               |
 | Hover             | `:ALEHover`                                                                                                           |
 | References        | `:ALEFindReferences`                                                                                                  |
