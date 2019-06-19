@@ -116,7 +116,7 @@ Much of this is covered in the [Example vim configuration](https://github.com/ne
 | CodeLenses        | Requires Neovim. Add `"coc.preferences.codeLens.enable": true` to your `coc-settings.json` through `:CocConfig`                                                          |
 | Completions       | On by default, see [Completion with sources](https://github.com/neoclide/coc.nvim/wiki/Completion-with-sources) for customizations                                       |
 | Definitions       | Provided as `<Plug>` mapping so that you can set it yourself, e.g. <br /> `nmap <silent> gd <Plug>(coc-definition)` <br/> `nmap <silent> gy <Plug>(coc-type-definition)` |
-| DocumentSymbols   | `:CocList symbols`                                                                                                                                                       |
+| DocumentSymbols   | `:CocList outline`                                                                                                                                                       |
 | Folding           | You must `set foldmethod=manual` in your `vimrc`, one set Coc will handle folding with the usual commands, `zc`, `zo`, etc                                               |
 | Hover             | `:call CocAction('doHover')`                                                                                                                                             |
 | References        | Provided as a `<Plug>` mapping, e.g. `nmap <silent> gr <Plug>(coc-references)`                                                                                           |
