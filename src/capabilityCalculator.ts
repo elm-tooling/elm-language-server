@@ -31,7 +31,10 @@ export class CapabilityCalculator {
       documentRangeFormattingProvider: true,
       documentSymbolProvider: true,
       executeCommandProvider: {
-        commands: [ElmAnalyseDiagnostics.CODE_ACTION_ELM_ANALYSE],
+        commands: [
+          ElmAnalyseDiagnostics.CODE_ACTION_ELM_ANALYSE,
+          ElmAnalyseDiagnostics.CODE_ACTION_ELM_ANALYSE_FIX_ALL,
+        ],
       },
       foldingRangeProvider: true,
       hoverProvider: true,
