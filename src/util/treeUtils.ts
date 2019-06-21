@@ -473,8 +473,10 @@ export class TreeUtils {
     return typeRefs;
   }
 
-  public static findAllFunctionCalls(tree: Tree): SyntaxNode[] | undefined {
-    let functions = tree.rootNode.descendantsOfType("value_expr");
+  public static findAllFunctionCallsAndParameters(
+    node: SyntaxNode,
+  ): SyntaxNode[] {
+    let functions = node.descendantsOfType("value_expr");
     if (functions.length > 0) {
       functions = functions.filter(
         a => a.firstChild && a.firstChild.type === "value_qid",
@@ -482,6 +484,10 @@ export class TreeUtils {
     }
 
     return functions;
+  }
+
+  public static findAllRecordBaseIdentifiers(node: SyntaxNode): SyntaxNode[] {
+    return node.descendantsOfType("record_base_identifier");
   }
 
   public static getFunctionNameNodeFromDefinition(node: SyntaxNode) {
@@ -512,21 +518,22 @@ export class TreeUtils {
   }
 
   public static findFunctionCalls(
-    tree: Tree,
+    node: SyntaxNode,
     functionName: string,
   ): SyntaxNode[] | undefined {
-    const functions = this.findAllFunctionCalls(tree);
-    if (functions) {
-      const callSites = functions.filter(a => a.text === functionName);
-      return callSites.map(a => {
-        const functionNode = a.descendantsOfType("lower_case_identifier");
-        if (functionNode) {
-          return functionNode[0];
-        } else {
-          return a;
-        }
-      });
-    }
+    const functions = this.findAllFunctionCallsAndParameters(node);
+    return functions.filter(a => a.text === functionName);
+  }
+
+  public static findParameterUsage(
+    node: SyntaxNode,
+    functionName: string,
+  ): SyntaxNode[] | undefined {
+    const parameters: SyntaxNode[] = [
+      ...this.findAllFunctionCallsAndParameters(node),
+      ...this.findAllRecordBaseIdentifiers(node),
+    ];
+    return parameters.filter(a => a.text === functionName);
   }
 
   public static findTypeOrTypeAliasCalls(
@@ -778,7 +785,8 @@ export class TreeUtils {
     } else if (
       nodeAtPosition.parent &&
       (nodeAtPosition.parent.type === "value_qid" ||
-        nodeAtPosition.parent.type === "lower_pattern")
+        nodeAtPosition.parent.type === "lower_pattern" ||
+        nodeAtPosition.parent.type === "record_base_identifier")
     ) {
       const functionParameter = this.findFunctionParameterDefinition(
         nodeAtPosition,

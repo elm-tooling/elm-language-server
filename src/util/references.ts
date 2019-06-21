@@ -41,7 +41,7 @@ export class References {
               }
 
               const localFunctions = TreeUtils.findFunctionCalls(
-                refSourceTree.tree,
+                refSourceTree.tree.rootNode,
                 functionNameNode.text,
               );
               if (localFunctions && refSourceTree.writable) {
@@ -110,7 +110,7 @@ export class References {
 
                           needsToBeChecked.forEach(a => {
                             const functions = TreeUtils.findFunctionCalls(
-                              treeToCheck.tree,
+                              treeToCheck.tree.rootNode,
                               a.alias,
                             );
                             if (functions && treeToCheck.writable) {
@@ -266,6 +266,37 @@ export class References {
                         }
                       });
                     }
+                  }
+                }
+              }
+            }
+            break;
+
+          case "FunctionParameter":
+            if (refSourceTree.writable) {
+              references.push({
+                node: definitionNode.node,
+                uri: definitionNode.uri,
+              });
+
+              if (
+                definitionNode.node.parent &&
+                definitionNode.node.parent.nextNamedSibling &&
+                definitionNode.node.parent.nextNamedSibling.nextNamedSibling
+              ) {
+                const functionBody =
+                  definitionNode.node.parent.nextNamedSibling.nextNamedSibling;
+                if (functionBody) {
+                  const parameters = TreeUtils.findParameterUsage(
+                    functionBody,
+                    definitionNode.node.text,
+                  );
+                  if (parameters) {
+                    references.push(
+                      ...parameters.map(node => {
+                        return { node, uri: definitionNode.uri };
+                      }),
+                    );
                   }
                 }
               }
