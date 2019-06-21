@@ -74,15 +74,16 @@ export class DiagnosticsProvider {
 
   private sendDiagnostics() {
     const allDiagnostics: Map<string, Diagnostic[]> = new Map();
-    for (const [uri, diagnostics] of this.currentDiagnostics.elmAnalyse) {
+
+    for (const [uri, diagnostics] of this.currentDiagnostics.elmMake) {
       allDiagnostics.set(uri, diagnostics);
     }
 
-    for (const [uri, diagnostics] of this.currentDiagnostics.elmMake) {
-      allDiagnostics.set(
-        uri,
-        (allDiagnostics.get(uri) || []).concat(diagnostics),
-      );
+    for (const [uri, diagnostics] of this.currentDiagnostics.elmAnalyse) {
+      const currentDiagnostics = allDiagnostics.get(uri) || [];
+      if (currentDiagnostics.length === 0) {
+        allDiagnostics.set(uri, diagnostics);
+      }
     }
 
     for (const [uri, diagnostics] of allDiagnostics) {
@@ -94,11 +95,14 @@ export class DiagnosticsProvider {
     const uri = URI.parse(document.uri);
     const text = document.getText();
 
-    this.elmAnalyseDiagnostics.updateFile(uri, text);
-
     this.currentDiagnostics.elmMake = await this.elmMakeDiagnostics.createDiagnostics(
       uri,
     );
+
+    if (this.currentDiagnostics.elmMake.get(uri.toString()) === []) {
+      this.elmAnalyseDiagnostics.updateFile(uri, text);
+    }
+
     this.sendDiagnostics();
   }
 
