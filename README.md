@@ -73,6 +73,7 @@ npm link
 | VIM CoC | [Link](https://github.com/elm-tooling/elm-language-server#cocnvim) |                                                                   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | VIM ALE | [Link](https://github.com/elm-tooling/elm-language-server#ale)     |                                                                   | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :x:                | :heavy_check_mark: |
 | Kakoune | [Link](https://github.com/elm-tooling/elm-language-server#kak-lsp) |                                                                   | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    |
+| Emacs   | [Link](https://github.com/elm-tooling/elm-language-server#emacs)   | [Link](https://github.com/emacs-lsp/lsp-mode)                     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 
 ### VSCode
 
@@ -175,6 +176,10 @@ elmPath = "elm"
 elmFormatPath = "elm-format"
 elmTestPath = "elm-test"
 ```
+
+### Emacs
+
+The language client is included in [lsp-mode](https://github.com/emacs-lsp/lsp-mode), specifically [here](https://github.com/emacs-lsp/lsp-mode/blob/master/lsp-elm.el). See specifically [this section](https://github.com/emacs-lsp/lsp-mode#use-package) for a minimal use-package configuration for lsp-mode.
 
 # Awesome libraries this is based on
 
