@@ -28,7 +28,6 @@ export class CapabilityCalculator {
       completionProvider: {},
       definitionProvider: true,
       documentFormattingProvider: true,
-      documentRangeFormattingProvider: true,
       documentSymbolProvider: true,
       executeCommandProvider: {
         commands: [ElmAnalyseDiagnostics.CODE_ACTION_ELM_ANALYSE],
