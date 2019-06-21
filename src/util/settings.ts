@@ -19,28 +19,23 @@ export class Settings {
   ) {}
 
   public getSettings(connection: IConnection): Thenable<IClientSettings> {
+    // Allow falling back to the preset params
+    const defaultSettings = {
+      ...this.fallbackClientSettings,
+      ...this.initializationOptions,
+    };
+
     const supportsConfig =
       this.capabilities &&
       this.capabilities.workspace &&
       this.capabilities.workspace.configuration;
 
     if (!supportsConfig) {
-      return Promise.resolve(this.initializationOptions);
+      return Promise.resolve(defaultSettings);
     }
 
     return connection.workspace
-      .getConfiguration({
-        section: "elmLS",
-      })
-      .then(settings =>
-        // Allow falling back to the preset params if we cant get the
-        // settings from the workspace
-        Object.assign(
-          {},
-          this.fallbackClientSettings,
-          this.initializationOptions,
-          settings,
-        ),
-      );
+      .getConfiguration({ section: "elmLS" })
+      .then(settings => Object.assign({ ...defaultSettings, ...settings }));
   }
 }
