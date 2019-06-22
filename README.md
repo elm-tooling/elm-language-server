@@ -112,7 +112,7 @@ Much of this is covered in the [Example vim configuration](https://github.com/ne
 
 | Feature           | How to use it                                                                                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Diagnostics       | `:CocList diagnostics`                                                                                                                                                   |
+| Diagnostics       | `:CocList diagnostics`<br />Configure refresh with `"diagnostic.refreshAfterSave": false`                                                                                                                                                   |
 | Formatting        | `:call CocAction('format')`                                                                                                                                              |
 | CodeLenses        | Requires Neovim. Add `"coc.preferences.codeLens.enable": true` to your `coc-settings.json` through `:CocConfig`                                                          |
 | Completions       | On by default, see [Completion with sources](https://github.com/neoclide/coc.nvim/wiki/Completion-with-sources) for customizations                                       |
@@ -138,7 +138,7 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The conf
 
 | Feature           | How to use it                                                                                                         |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Diagnostics       | `:ALENext`/`:ALEPrevious`                                                                                             |
+| Diagnostics       | `:ALENext`/`:ALEPrevious`<br />Configure refresh with `let g:ale_lint_on_text_changed = 0`<br />`let g:ale_lint_on_insert_leave = 1` <br /> `let g:ale_lint_on_save = 1`                                                                                          |
 | Formatting        | ALE doesn't currently support this through the language server integration, but `elm-format` is a supported ALE Fixer |
 | CodeLenses        | Not currently supported                                                                                               |
 | Completions       | On by default, see `:h ale-completion` for more info                                                                  |
