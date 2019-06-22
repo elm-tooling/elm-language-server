@@ -463,14 +463,21 @@ export class TreeUtils {
   public static findAllTypeOrTypeAliasCalls(
     tree: Tree,
   ): SyntaxNode[] | undefined {
-    let typeRefs = tree.rootNode.descendantsOfType("type_ref");
+    const result: SyntaxNode[] = [];
+    const typeRefs = tree.rootNode.descendantsOfType("type_ref");
     if (typeRefs.length > 0) {
-      typeRefs = typeRefs.filter(
-        a => a.firstChild && a.firstChild.type === "upper_case_qid",
-      );
+      typeRefs.forEach(a => {
+        if (
+          a.firstChild &&
+          a.firstChild.type === "upper_case_qid" &&
+          a.firstChild.firstChild
+        ) {
+          result.push(a.firstChild.firstChild);
+        }
+      });
     }
 
-    return typeRefs;
+    return result.length > 0 ? result : undefined;
   }
 
   public static findAllFunctionCallsAndParameters(
@@ -542,7 +549,9 @@ export class TreeUtils {
   ): SyntaxNode[] | undefined {
     const typeOrTypeAliasNodes = this.findAllTypeOrTypeAliasCalls(tree);
     if (typeOrTypeAliasNodes) {
-      return typeOrTypeAliasNodes.filter(a => a.text === typeOrTypeAliasName);
+      return typeOrTypeAliasNodes.filter(a => {
+        return a.text === typeOrTypeAliasName;
+      });
     }
   }
 
