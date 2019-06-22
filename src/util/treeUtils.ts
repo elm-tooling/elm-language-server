@@ -363,6 +363,23 @@ export class TreeUtils {
     }
   }
 
+  public static findUnionConstructorCalls(
+    tree: Tree,
+    unionConstructorName: string,
+  ): SyntaxNode[] | undefined {
+    const upperCaseQid = tree.rootNode.descendantsOfType("upper_case_qid");
+    if (upperCaseQid.length > 0) {
+      return upperCaseQid.filter(
+        a =>
+          a.firstChild !== null &&
+          a.firstChild.type === "upper_case_identifier" &&
+          a.firstChild.text === unionConstructorName &&
+          a.parent &&
+          a.parent.type !== "type_ref",
+      );
+    }
+  }
+
   public static findFunction(
     tree: Tree,
     functionName: string,

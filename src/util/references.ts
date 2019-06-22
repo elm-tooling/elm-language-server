@@ -303,6 +303,32 @@ export class References {
             }
             break;
 
+          case "UnionConstructor":
+            if (definitionNode.node.firstChild && moduleNameNode) {
+              const nameNode = definitionNode.node.firstChild;
+              if (refSourceTree.writable) {
+                references.push({
+                  node: nameNode,
+                  uri: definitionNode.uri,
+                });
+              }
+              const unionConstructorCalls = TreeUtils.findUnionConstructorCalls(
+                refSourceTree.tree,
+                nameNode.text,
+              );
+
+              if (unionConstructorCalls) {
+                references.push(
+                  ...unionConstructorCalls.map(a => {
+                    return { node: a, uri: definitionNode.uri };
+                  }),
+                );
+
+                // Todo
+              }
+            }
+            break;
+
           default:
             break;
         }
