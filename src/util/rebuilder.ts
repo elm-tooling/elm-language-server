@@ -46,7 +46,7 @@ function fetchPrebuild(
     runtime,
   );
   // tslint:disable-next-line: no-console
-  console.info(`Downloading from ${url}`);
+  console.info(`Downloading (or using local cache for) ${url}`);
 
   return new Promise((res, rej) => {
     prebuildInstall.download(url, { pkg, path: pkgRoot }, (err: Error) => {
