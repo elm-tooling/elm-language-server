@@ -14,7 +14,11 @@ export type Exposing = Array<{
   name: string;
   syntaxNode: SyntaxNode;
   type: NodeType;
-  exposedUnionConstructors?: Array<{ name: string; syntaxNode: SyntaxNode }>;
+  exposedUnionConstructors?: Array<{
+    name: string;
+    syntaxNode: SyntaxNode;
+    accessibleWithoutPrefix: boolean;
+  }>;
 }>;
 
 export class TreeUtils {
@@ -95,6 +99,7 @@ export class TreeUtils {
                 const unionConstructors: Array<{
                   name: string;
                   syntaxNode: SyntaxNode;
+                  accessibleWithoutPrefix: boolean;
                 }> = [];
                 typeDeclaration
                   .descendantsOfType("union_variant")
@@ -105,6 +110,7 @@ export class TreeUtils {
                     );
                     if (name && name.parent) {
                       unionConstructors.push({
+                        accessibleWithoutPrefix: false,
                         name: name.text,
                         syntaxNode: name.parent,
                       });
@@ -177,6 +183,7 @@ export class TreeUtils {
                   const unionConstructors: Array<{
                     name: string;
                     syntaxNode: SyntaxNode;
+                    accessibleWithoutPrefix: boolean;
                   }> = [];
                   typeDeclaration
                     .descendantsOfType("union_variant")
@@ -187,6 +194,7 @@ export class TreeUtils {
                       );
                       if (unionConstructorName && unionConstructorName.parent) {
                         unionConstructors.push({
+                          accessibleWithoutPrefix: true,
                           name: unionConstructorName.text,
                           syntaxNode: unionConstructorName.parent,
                         });

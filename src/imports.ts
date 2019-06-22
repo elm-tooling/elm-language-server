@@ -188,6 +188,14 @@ export class Imports implements IImports {
       switch (element.type) {
         case "Function":
         case "TypeAlias":
+          result.push({
+            alias: `${importPrefix}.${element.name}`,
+            fromModuleName: moduleNameNode.text,
+            fromUri: uri,
+            node: element.syntaxNode,
+            type: element.type,
+          });
+          break;
         case "Type":
           result.push({
             alias: `${importPrefix}.${element.name}`,
@@ -200,13 +208,27 @@ export class Imports implements IImports {
             result.push(
               ...element.exposedUnionConstructors.map(a => {
                 return {
-                  alias: a.name,
+                  alias: `${importPrefix}.${a.name}`,
                   fromModuleName: moduleNameNode.text,
                   fromUri: uri,
                   node: a.syntaxNode,
                   type: "UnionConstructor" as NodeType,
                 };
               }),
+            );
+
+            result.push(
+              ...element.exposedUnionConstructors
+                .filter(a => a.accessibleWithoutPrefix)
+                .map(a => {
+                  return {
+                    alias: `${a.name}`,
+                    fromModuleName: moduleNameNode.text,
+                    fromUri: uri,
+                    node: a.syntaxNode,
+                    type: "UnionConstructor" as NodeType,
+                  };
+                }),
             );
           }
           break;
