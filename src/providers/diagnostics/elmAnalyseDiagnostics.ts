@@ -263,12 +263,13 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
       };
     }
 
-    const [
-      lineStart,
-      colStart,
-      lineEnd,
-      colEnd,
-    ] = message.data.properties.range;
+    const rangeDefaults = [1, 1, 2, 1];
+    const [lineStart, colStart, lineEnd, colEnd] =
+      (message.data &&
+        message.data.properties &&
+        message.data.properties.range) ||
+      rangeDefaults;
+
     const range = {
       end: { line: lineEnd - 1, character: colEnd - 1 },
       start: { line: lineStart - 1, character: colStart - 1 },
