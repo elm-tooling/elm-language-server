@@ -735,6 +735,16 @@ export class TreeUtils {
       }
     } else if (
       nodeAtPosition.parent &&
+      nodeAtPosition.parent.type === "union_variant"
+    ) {
+      const definitionNode = nodeAtPosition.parent;
+      return {
+        node: definitionNode,
+        nodeType: "UnionConstructor",
+        uri,
+      };
+    } else if (
+      nodeAtPosition.parent &&
       nodeAtPosition.parent.type === "upper_case_qid"
     ) {
       const upperCaseQid = nodeAtPosition.parent;
