@@ -72,45 +72,116 @@ export class ElmMakeDiagnostics {
         make = cp.spawn(testOrMakeCommand, args, { cwd });
       }
 
-      if (!make.stderr) {
-        return;
+      const elmMakeOrTestResult = isTestFile
+        ? this.readElmTestResult(make, filename)
+        : this.readElmMakeResult(make);
+
+      if (elmMakeOrTestResult) {
+        const {
+          errorLinesFromElmMake: errorLinesFromElmMakeOrTest,
+          lines: lines,
+        } = elmMakeOrTestResult;
+        make.on("error", (err: Error) => {
+          errorLinesFromElmMakeOrTest.close();
+          if (err && (err as any).code === "ENOENT") {
+            connection.window.showErrorMessage(
+              isTestFile
+                ? "'elm-test' is not available. Install Elm via 'npm install -g elm-test'."
+                : "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.",
+            );
+            resolve([]);
+          } else {
+            reject(err);
+          }
+        });
+        make.on("close", (code: number, signal: string) => {
+          errorLinesFromElmMakeOrTest.close();
+
+          resolve(lines);
+        });
       }
-      const errorLinesFromElmMake: readline.ReadLine = readline.createInterface(
-        {
-          input: make.stderr,
-        },
-      );
-      const lines: IElmIssue[] = [];
-      errorLinesFromElmMake.on("line", (line: string) => {
-        const errorObject = JSON.parse(line);
+    });
+  }
 
-        if (errorObject.type === "compile-errors") {
-          errorObject.errors.forEach((error: any) => {
-            const problems = error.problems.map((problem: any) => ({
-              details: problem.message
-                .map((message: any) =>
-                  typeof message === "string" ? message : `#${message.string}#`,
-                )
-                .join(""),
-              file: error.path,
-              overview: problem.title,
-              region: problem.region,
-              subregion: "",
-              tag: "error",
-              type: "error",
-            }));
+  private readElmMakeResult(make: cp.ChildProcess) {
+    if (!make.stderr) {
+      return;
+    }
+    const errorLinesFromElmMake: readline.ReadLine = readline.createInterface({
+      input: make.stderr,
+    });
+    const lines: IElmIssue[] = [];
+    errorLinesFromElmMake.on("line", (line: string) => {
+      const errorObject = JSON.parse(line);
 
-            lines.push(...problems);
-          });
-        } else if (errorObject.type === "error") {
-          const problem = {
-            details: errorObject.message
+      if (errorObject.type === "compile-errors") {
+        errorObject.errors.forEach((error: any) => {
+          const problems = error.problems.map((problem: any) => ({
+            details: problem.message
               .map((message: any) =>
-                typeof message === "string" ? message : message.string,
+                typeof message === "string" ? message : `#${message.string}#`,
               )
               .join(""),
-            file: errorObject.path,
-            overview: errorObject.title,
+            file: error.path,
+            overview: problem.title,
+            region: problem.region,
+            subregion: "",
+            tag: "error",
+            type: "error",
+          }));
+
+          lines.push(...problems);
+        });
+      } else if (errorObject.type === "error") {
+        const problem = {
+          details: errorObject.message
+            .map((message: any) =>
+              typeof message === "string" ? message : message.string,
+            )
+            .join(""),
+          file: errorObject.path,
+          overview: errorObject.title,
+          region: {
+            end: {
+              column: 1,
+              line: 1,
+            },
+            start: {
+              column: 1,
+              line: 1,
+            },
+          },
+          subregion: "",
+          tag: "error",
+          type: "error",
+        };
+
+        lines.push(problem);
+      }
+    });
+    return { errorLinesFromElmMake, lines };
+  }
+
+  private readElmTestResult(make: cp.ChildProcess, filename: string) {
+    if (!make.stdout) {
+      return;
+    }
+    const errorLinesFromElmMake: readline.ReadLine = readline.createInterface({
+      input: make.stdout,
+    });
+    const lines: IElmIssue[] = [];
+    errorLinesFromElmMake.on("line", (line: string) => {
+      const errorObject = JSON.parse(line);
+
+      if (
+        errorObject.event === "testCompleted" &&
+        errorObject.status === "fail"
+      ) {
+        errorObject.failures.forEach((failure: any) => {
+          lines.push({
+            details: `Comparison: ${failure.reason.data.comparison}\n Expected: ${failure.reason.data.expected}\n Actual: ${failure.reason.data.actual}\n`,
+            file: filename,
+            overview: failure.reason.type,
             region: {
               end: {
                 column: 1,
@@ -122,36 +193,13 @@ export class ElmMakeDiagnostics {
               },
             },
             subregion: "",
-            tag: "error",
+            tag: "test",
             type: "error",
-          };
-
-          lines.push(problem);
-        }
-      });
-      make.on("error", (err: Error) => {
-        errorLinesFromElmMake.close();
-        if (err && (err as any).code === "ENOENT") {
-          if (isTestFile) {
-            connection.window.showErrorMessage(
-              "'elm-test' is not available. Install Elm via 'npm install -g elm-test'.",
-            );
-          } else {
-            connection.window.showErrorMessage(
-              "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.",
-            );
-          }
-          resolve([]);
-        } else {
-          reject(err);
-        }
-      });
-      make.on("close", (code: number, signal: string) => {
-        errorLinesFromElmMake.close();
-
-        resolve(lines);
-      });
+          });
+        });
+      }
     });
+    return { errorLinesFromElmMake, lines };
   }
 
   private severityStringToDiagnosticSeverity(
