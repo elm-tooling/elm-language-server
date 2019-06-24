@@ -81,6 +81,7 @@ export class References {
                       const element = imports.imports[uri];
                       const needsToBeChecked = element.filter(
                         a =>
+                          uri !== definitionNode.uri &&
                           a.fromModuleName === moduleNameNode.text &&
                           a.type === "Function" &&
                           (a.alias.endsWith(`.${functionNameNode.text}`) ||
@@ -185,6 +186,7 @@ export class References {
                       const element = imports.imports[uri];
                       const needsToBeChecked = element.filter(
                         a =>
+                          uri !== definitionNode.uri &&
                           a.fromModuleName === moduleNameNode.text &&
                           (a.type === "Type" || a.type === "TypeAlias") &&
                           (a.alias.endsWith(
@@ -215,13 +217,13 @@ export class References {
                           }
 
                           needsToBeChecked.forEach(a => {
-                            const functions = TreeUtils.findTypeOrTypeAliasCalls(
+                            const typeOrTypeAliasCalls = TreeUtils.findTypeOrTypeAliasCalls(
                               treeToCheck.tree,
                               a.alias,
                             );
-                            if (functions) {
+                            if (typeOrTypeAliasCalls) {
                               references.push(
-                                ...functions.map(node => {
+                                ...typeOrTypeAliasCalls.map(node => {
                                   return { node, uri };
                                 }),
                               );
@@ -250,7 +252,9 @@ export class References {
                 if (imports.imports.hasOwnProperty(uri)) {
                   const element = imports.imports[uri];
                   const needsToBeChecked = element.filter(
-                    a => a.fromModuleName === moduleNameNode.text,
+                    a =>
+                      uri !== definitionNode.uri &&
+                      a.fromModuleName === moduleNameNode.text,
                   );
                   if (needsToBeChecked.length > 0) {
                     const treeToCheck = forest.getByUri(uri);

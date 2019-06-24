@@ -497,7 +497,7 @@ export class TreeUtils {
           a.firstChild.type === "upper_case_qid" &&
           a.firstChild.firstChild
         ) {
-          result.push(a.firstChild.firstChild);
+          result.push(a.firstChild);
         }
       });
     }
@@ -574,9 +574,11 @@ export class TreeUtils {
   ): SyntaxNode[] | undefined {
     const typeOrTypeAliasNodes = this.findAllTypeOrTypeAliasCalls(tree);
     if (typeOrTypeAliasNodes) {
-      return typeOrTypeAliasNodes.filter(a => {
+      const result: SyntaxNode[] = typeOrTypeAliasNodes.filter(a => {
         return a.text === typeOrTypeAliasName;
       });
+
+      return result.length > 0 ? result : undefined;
     }
   }
 
