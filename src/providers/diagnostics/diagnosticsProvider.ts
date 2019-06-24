@@ -38,7 +38,7 @@ export class DiagnosticsProvider {
 
   constructor(
     connection: IConnection,
-    elmWorkspaceFolder: URI,
+    private elmWorkspaceFolder: URI,
     events: TextDocumentEvents,
     settings: Settings,
     elmAnalyse: ElmAnalyseDiagnostics,
@@ -93,17 +93,19 @@ export class DiagnosticsProvider {
 
   private async getDiagnostics(document: TextDocument): Promise<void> {
     const uri = URI.parse(document.uri);
-    const text = document.getText();
+    if (uri.toString().startsWith(this.elmWorkspaceFolder.toString())) {
+      const text = document.getText();
 
-    this.currentDiagnostics.elmMake = await this.elmMakeDiagnostics.createDiagnostics(
-      uri,
-    );
+      this.currentDiagnostics.elmMake = await this.elmMakeDiagnostics.createDiagnostics(
+        uri,
+      );
 
-    if (this.currentDiagnostics.elmMake.get(uri.toString()) === []) {
-      this.elmAnalyseDiagnostics.updateFile(uri, text);
+      if (this.currentDiagnostics.elmMake.get(uri.toString()) === []) {
+        this.elmAnalyseDiagnostics.updateFile(uri, text);
+      }
+
+      this.sendDiagnostics();
     }
-
-    this.sendDiagnostics();
   }
 
   private elmMakeIssueToDiagnostic(issue: IElmIssue): Diagnostic {
