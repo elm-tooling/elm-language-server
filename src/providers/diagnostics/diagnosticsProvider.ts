@@ -100,7 +100,13 @@ export class DiagnosticsProvider {
         uri,
       );
 
-      if (this.currentDiagnostics.elmMake.get(uri.toString()) === []) {
+      const elmMakeDiagnosticsForCurrentFile = this.currentDiagnostics.elmMake.get(
+        uri.toString(),
+      );
+      if (
+        elmMakeDiagnosticsForCurrentFile &&
+        elmMakeDiagnosticsForCurrentFile.length === 0
+      ) {
         this.elmAnalyseDiagnostics.updateFile(uri, text);
       }
 
