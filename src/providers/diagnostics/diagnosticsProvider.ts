@@ -43,7 +43,10 @@ export class DiagnosticsProvider {
     settings: Settings,
     elmAnalyse: ElmAnalyseDiagnostics,
   ) {
-    this.getDiagnostics = this.getDiagnostics.bind(this);
+    this.getDiagnosticsOnSaveOrOpen = this.getDiagnosticsOnSaveOrOpen.bind(
+      this,
+    );
+    this.getDiagnosticsOnChange = this.getDiagnosticsOnChange.bind(this);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmMakeIssueToDiagnostic = this.elmMakeIssueToDiagnostic.bind(this);
     this.events = events;
@@ -58,9 +61,9 @@ export class DiagnosticsProvider {
 
     this.currentDiagnostics = { elmMake: new Map(), elmAnalyse: new Map() };
 
-    this.events.on("open", this.getDiagnostics);
-    this.events.on("change", this.getDiagnostics);
-    this.events.on("save", this.getDiagnostics);
+    this.events.on("open", this.getDiagnosticsOnSaveOrOpen);
+    this.events.on("change", this.getDiagnosticsOnChange);
+    this.events.on("save", this.getDiagnosticsOnSaveOrOpen);
     this.elmAnalyseDiagnostics.on(
       "new-diagnostics",
       this.newElmAnalyseDiagnostics,
@@ -91,14 +94,29 @@ export class DiagnosticsProvider {
     }
   }
 
-  private async getDiagnostics(document: TextDocument): Promise<void> {
+  private async getDiagnosticsOnChange(document: TextDocument): Promise<void> {
+    this.getDiagnostics(document, false);
+  }
+
+  private async getDiagnosticsOnSaveOrOpen(
+    document: TextDocument,
+  ): Promise<void> {
+    this.getDiagnostics(document, true);
+  }
+
+  private async getDiagnostics(
+    document: TextDocument,
+    isSaveOrOpen: boolean,
+  ): Promise<void> {
     const uri = URI.parse(document.uri);
     if (uri.toString().startsWith(this.elmWorkspaceFolder.toString())) {
       const text = document.getText();
 
-      this.currentDiagnostics.elmMake = await this.elmMakeDiagnostics.createDiagnostics(
-        uri,
-      );
+      if (isSaveOrOpen) {
+        this.currentDiagnostics.elmMake = await this.elmMakeDiagnostics.createDiagnostics(
+          uri,
+        );
+      }
 
       const elmMakeDiagnosticsForCurrentFile = this.currentDiagnostics.elmMake.get(
         uri.toString(),
