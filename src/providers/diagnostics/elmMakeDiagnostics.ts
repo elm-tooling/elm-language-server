@@ -54,6 +54,7 @@ export class ElmMakeDiagnostics {
       if (utils.isWindows) {
         filename = `"${filename}"`;
       }
+
       const argsMake = [
         "make",
         filename,
@@ -62,7 +63,15 @@ export class ElmMakeDiagnostics {
         "--output",
         "/dev/null",
       ];
-      const argsTest = [filename.replace(cwd, ""), "--report", "json"];
+
+      const argsTest = [
+        "make",
+        filename.replace(cwd, ""),
+        "--report",
+        "json",
+        "--output",
+        "/dev/null",
+      ];
 
       const args = isTestFile ? argsTest : argsMake;
       const testOrMakeCommand = isTestFile ? testCommand : makeCommand;
