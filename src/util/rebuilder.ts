@@ -31,9 +31,10 @@ function fetchPrebuild(
 ): Promise<void | Error> {
   // tslint:disable-next-line: no-console
   console.info(`Fetching ${name}`);
-  const pkgRoot: string = path.resolve(
-    path.join(__dirname, "../../node_modules", name),
-  );
+  // Using require.resolve so that this works for both npm and yarn global installs, with
+  // npm our node modules are in `<npm global dir/lib/elm-language-server/node_modules/`, but in yarn they
+  // can be in a different location, like `<yarn global dir>/node_modules/tree-sitter`
+  const pkgRoot: string = path.dirname(require.resolve(`${name}/package.json`));
   // tslint:disable-next-line non-literal-require
   const pkg: {
     name: string;
