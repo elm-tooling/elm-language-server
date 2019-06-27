@@ -15,7 +15,7 @@
     "url": "https://github.com/elm-tooling/elm-language-server"
   },
   "dependencies": {
-    "elm-analyse": "github:elm-tooling/elm-analyse",
+    "elm-analyse": "github:elm-tooling/elm-analyse#29ef62033a76f4fd87983c70c6f131a0b07d07e5",
     "fast-diff": "^1.2.0",
     "glob": "^7.1.4",
     "prebuild-install": "^5.3.0",
