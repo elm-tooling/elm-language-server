@@ -1,3 +1,4 @@
+import * as crypto from "crypto";
 import { ElmApp, FixedFile, Message, Report } from "elm-analyse/ts/domain";
 import { EventEmitter } from "events";
 import * as fs from "fs";
@@ -33,8 +34,9 @@ const fixableErrors = [
   "DuplicateImport",
 ];
 const ELM_ANALYSE = "elm-analyse";
-export const CODE_ACTION_ELM_ANALYSE = "elmLS.elmAnalyseFixer";
-export const CODE_ACTION_ELM_ANALYSE_FIX_ALL = "elmLS.elmAnalyseFixer.fixAll";
+const RANDOM_ID = crypto.randomBytes(16).toString("hex");
+export const CODE_ACTION_ELM_ANALYSE = `elmLS.elmAnalyseFixer-${RANDOM_ID}`;
+export const CODE_ACTION_ELM_ANALYSE_FIX_ALL = `elmLS.elmAnalyseFixer.fixAll-${RANDOM_ID}`;
 
 export interface IElmAnalyseEvents {
   on(event: "new-report", diagnostics: Map<string, Diagnostic[]>): this;
