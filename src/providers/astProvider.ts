@@ -68,7 +68,7 @@ export class ASTProvider {
         }
         tree = this.parser.parse(text, tree);
       } else {
-        tree = this.parser.parse(changeEvent.text);
+        tree = this.parser.parse(changeEvent.text, tree);
       }
     }
     if (tree) {
