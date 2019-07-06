@@ -40,9 +40,7 @@ export class CompletionProvider {
       });
       // Todo add variables from local let scopes
       completions.push(...this.getSameFileTopLevelCompletions(tree));
-      completions.push(
-        ...this.findFunctionParameterDefinitionsForScope(nodeAtPosition, tree),
-      );
+      completions.push(...this.findDefinitionsForScope(nodeAtPosition, tree));
 
       completions.push(
         ...this.getCompletionsFromOtherFile(params.textDocument.uri),
@@ -261,12 +259,42 @@ export class CompletionProvider {
     };
   }
 
-  private findFunctionParameterDefinitionsForScope(
+  private findDefinitionsForScope(
     node: SyntaxNode,
     tree: Tree,
   ): CompletionItem[] {
     const result: CompletionItem[] = [];
     if (node.parent) {
+      if (node.parent.type === "let_in_expr") {
+        const inNode = TreeUtils.findFirstNamedChildOfType("in", node.parent);
+        if (inNode) {
+          let nodeToProcess = inNode.previousNamedSibling;
+          do {
+            if (nodeToProcess) {
+              if (
+                nodeToProcess.type === "value_declaration" &&
+                nodeToProcess.firstNamedChild !== null &&
+                nodeToProcess.firstNamedChild.type ===
+                  "function_declaration_left" &&
+                nodeToProcess.firstNamedChild.firstNamedChild !== null &&
+                nodeToProcess.firstNamedChild.firstNamedChild.type ===
+                  "lower_case_identifier"
+              ) {
+                const value = HintHelper.createHintFromDefinitionInLet(
+                  nodeToProcess,
+                );
+                result.push(
+                  this.createFunctionCompletion(
+                    value,
+                    nodeToProcess.firstNamedChild.firstNamedChild.text,
+                  ),
+                );
+              }
+              nodeToProcess = nodeToProcess.previousNamedSibling;
+            }
+          } while (nodeToProcess && nodeToProcess.type !== "let");
+        }
+      }
       if (
         node.parent.type === "value_declaration" &&
         node.parent.firstChild &&
@@ -316,9 +344,7 @@ export class CompletionProvider {
           }
         });
       }
-      result.push(
-        ...this.findFunctionParameterDefinitionsForScope(node.parent, tree),
-      );
+      result.push(...this.findDefinitionsForScope(node.parent, tree));
     }
 
     return result;

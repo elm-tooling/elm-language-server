@@ -6,6 +6,8 @@ export class HintHelper {
     if (node) {
       if (node.type === "module_declaration") {
         return this.createHintFromModule(node);
+      } else if (node.parent && node.parent.type === "let_in_expr") {
+        return this.createHintFromDefinitionInLet(node);
       } else {
         return this.createHintFromDefinition(node);
       }
@@ -31,6 +33,21 @@ export class HintHelper {
       annotation,
       `Refers to the \`${fieldName}\` field on \`${parentName}\``,
     );
+  }
+
+  public static createHintFromDefinitionInLet(
+    declaration: SyntaxNode | undefined,
+  ) {
+    if (declaration) {
+      const comment: string = "Defined in local let scope";
+      let annotation: string = "";
+      if (declaration.previousNamedSibling) {
+        if (declaration.previousNamedSibling.type === "type_annotation") {
+          annotation = declaration.previousNamedSibling.text;
+        }
+        return this.formatHint(annotation, comment);
+      }
+    }
   }
 
   private static createHintFromDefinition(declaration: SyntaxNode | undefined) {
