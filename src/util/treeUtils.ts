@@ -329,7 +329,10 @@ export class TreeUtils {
         }
       }
       const descendants = node.descendantsOfType("exposed_type");
-      return descendants.find(desc => desc.text.startsWith(typeName));
+      const match = descendants.find(desc => desc.text.startsWith(typeName));
+      if (match && match.firstNamedChild) {
+        return match.firstNamedChild;
+      }
     }
     return undefined;
   }
