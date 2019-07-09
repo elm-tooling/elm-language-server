@@ -224,7 +224,7 @@ export class Server implements ILanguageServer {
     parser: Parser,
   ): void {
     this.initialize(connection, forest, elmWorkspace, imports, parser);
-    const documentEvents = new DocumentEvents(connection);
+    const documentEvents = new DocumentEvents(connection, elmWorkspace);
     const textDocumentEvents = new TextDocumentEvents(documentEvents);
     const documentFormatingProvider = new DocumentFormattingProvider(
       connection,
