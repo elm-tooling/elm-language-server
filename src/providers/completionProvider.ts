@@ -296,6 +296,25 @@ export class CompletionProvider {
         }
       }
       if (
+        node.parent.type === "case_of_branch" &&
+        node.parent.firstNamedChild &&
+        node.parent.firstNamedChild.type === "pattern" &&
+        node.parent.firstNamedChild.firstNamedChild &&
+        node.parent.firstNamedChild.firstNamedChild.type === "union_pattern" &&
+        node.parent.firstNamedChild.firstNamedChild.childCount > 1 // Ignore cases of case branches with no params
+      ) {
+        const caseBranchVariableNodes = TreeUtils.findAllNamedChildrenOfType(
+          "lower_pattern",
+          node.parent.firstNamedChild.firstNamedChild,
+        );
+        if (caseBranchVariableNodes) {
+          caseBranchVariableNodes.forEach(a => {
+            const value = HintHelper.createHintFromDefinitionInCaseBranch();
+            result.push(this.createFunctionCompletion(value, a.text));
+          });
+        }
+      }
+      if (
         node.parent.type === "value_declaration" &&
         node.parent.firstChild &&
         node.parent.firstChild.type === "function_declaration_left"

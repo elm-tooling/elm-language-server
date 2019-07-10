@@ -50,6 +50,11 @@ export class HintHelper {
     }
   }
 
+  public static createHintFromDefinitionInCaseBranch() {
+    const comment: string = "Defined in local case branch";
+    return this.formatHint("", comment);
+  }
+
   private static createHintFromDefinition(declaration: SyntaxNode | undefined) {
     if (declaration) {
       let comment: string = "";
