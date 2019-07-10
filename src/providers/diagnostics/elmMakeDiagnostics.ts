@@ -1,15 +1,11 @@
 import * as cp from "child_process";
 import * as readline from "readline";
-import {
-  Diagnostic,
-  DiagnosticSeverity,
-  IConnection,
-  Range,
-} from "vscode-languageserver";
+import { Diagnostic, IConnection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import * as utils from "../../util/elmUtils";
 import { Settings } from "../../util/settings";
 import { IElmIssue } from "./diagnosticsProvider";
+import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 
 export class ElmMakeDiagnostics {
   constructor(
@@ -31,7 +27,10 @@ export class ElmMakeDiagnostics {
       filePath.fsPath,
     ).then(issues => {
       if (issues.length > 0) {
-        return this.issuesToDiagnosticMap(issues);
+        return ElmDiagnosticsHelper.issuesToDiagnosticMap(
+          issues,
+          this.elmWorkspaceFolder,
+        );
       } else {
         return new Map([[filePath.toString(), []]]);
       }
@@ -157,54 +156,5 @@ export class ElmMakeDiagnostics {
         resolve(lines);
       });
     });
-  }
-
-  private severityStringToDiagnosticSeverity(
-    severity: string,
-  ): DiagnosticSeverity {
-    switch (severity) {
-      case "error":
-        return DiagnosticSeverity.Error;
-      case "warning":
-        return DiagnosticSeverity.Warning;
-      default:
-        return DiagnosticSeverity.Error;
-    }
-  }
-
-  private issuesToDiagnosticMap(
-    issues: IElmIssue[],
-  ): Map<string, Diagnostic[]> {
-    return issues.reduce((acc, issue) => {
-      const uri = this.getUriFromIssue(issue);
-      const diagnostic = this.elmMakeIssueToDiagnostic(issue);
-      const arr = acc.get(uri) || [];
-      arr.push(diagnostic);
-      acc.set(uri, arr);
-      return acc;
-    }, new Map());
-  }
-
-  private getUriFromIssue(issue: IElmIssue): string {
-    if (issue.file.startsWith(".")) {
-      issue.file = this.elmWorkspaceFolder + issue.file.slice(1);
-    }
-    return URI.file(issue.file).toString();
-  }
-
-  private elmMakeIssueToDiagnostic(issue: IElmIssue): Diagnostic {
-    const lineRange: Range = Range.create(
-      issue.region.start.line - 1,
-      issue.region.start.column - 1,
-      issue.region.end.line - 1,
-      issue.region.end.column - 1,
-    );
-    return Diagnostic.create(
-      lineRange,
-      `${issue.overview} - ${issue.details.replace(/\[\d+m/g, "")}`,
-      this.severityStringToDiagnosticSeverity(issue.type),
-      undefined,
-      "Elm",
-    );
   }
 }
