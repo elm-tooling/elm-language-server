@@ -35,9 +35,9 @@ export class ElmDiagnosticsHelper {
     elmWorkspaceFolder: URI,
   ): string {
     if (issue.file.startsWith(".")) {
-      issue.file = elmWorkspaceFolder + issue.file.slice(1);
+      return URI.file(elmWorkspaceFolder + issue.file.slice(1)).toString();
     }
-    return URI.file(issue.file).toString();
+    return URI.file(elmWorkspaceFolder.fsPath + issue.file).toString();
   }
 
   private static elmMakeIssueToDiagnostic(issue: IElmIssue): Diagnostic {

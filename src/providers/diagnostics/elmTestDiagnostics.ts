@@ -1,4 +1,5 @@
 import * as cp from "child_process";
+import * as path from "path";
 import * as readline from "readline";
 import { Diagnostic, IConnection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -39,21 +40,20 @@ export class ElmTestDiagnostics {
 
   private async checkForErrors(
     connection: IConnection,
-    rootPath: string,
+    cwd: string,
     filename: string,
   ): Promise<IElmIssue[]> {
     const settings = await this.settings.getSettings(connection);
 
     return new Promise((resolve, reject) => {
-      const isTestFile = utils.isTestFile(filename, rootPath);
+      const isTestFile = utils.isTestFile(filename, cwd);
       if (isTestFile) {
         const testCommand: string = settings.elmTestPath;
-        const cwd: string = rootPath;
         let make: cp.ChildProcess;
         if (utils.isWindows) {
           filename = `"${filename}"`;
         }
-        const argsTest = [filename.replace(cwd, ""), "--report", "json"];
+        const argsTest = [path.relative(cwd, filename), "--report", "json"];
 
         if (utils.isWindows) {
           make = cp.exec(`${testCommand} ${argsTest.join(" ")}`, { cwd });
