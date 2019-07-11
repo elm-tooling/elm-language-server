@@ -39,7 +39,7 @@ export class DocumentEvents extends EventEmitter implements IDocumentEvents {
   }
 
   private emitForWorkspace(event: any, elmWorkspace: URI, eventType: string) {
-    if (event.textDocument.uri.startsWith(elmWorkspace.toString(true))) {
+    if (event.textDocument.uri.startsWith(elmWorkspace.toString())) {
       this.emit(eventType, event);
     }
   }
