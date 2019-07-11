@@ -46,16 +46,13 @@ export class ElmMakeDiagnostics {
     const settings = await this.settings.getSettings(connection);
 
     return new Promise((resolve, reject) => {
-      const makeCommand: string = settings.elmPath;
-      const testCommand: string = settings.elmTestPath;
-      const isTestFile = utils.isTestFile(filename, cwd);
-      let make: cp.ChildProcess;
+      let relativePathToFile = path.relative(cwd, filename);
       if (utils.isWindows) {
-        filename = `"${filename}"`;
+        relativePathToFile = `"${relativePathToFile}"`;
       }
       const argsMake = [
         "make",
-        path.relative(cwd, filename),
+        path.relative(cwd, relativePathToFile),
         "--report",
         "json",
         "--output",
@@ -64,15 +61,19 @@ export class ElmMakeDiagnostics {
 
       const argsTest = [
         "make",
-        path.relative(cwd, filename),
+        path.relative(cwd, relativePathToFile),
         "--report",
         "json",
         "--output",
         "/dev/null",
       ];
 
+      const makeCommand: string = settings.elmPath;
+      const testCommand: string = settings.elmTestPath;
+      const isTestFile = utils.isTestFile(filename, cwd);
       const args = isTestFile ? argsTest : argsMake;
       const testOrMakeCommand = isTestFile ? testCommand : makeCommand;
+      let make: cp.ChildProcess;
       if (utils.isWindows) {
         make = cp.exec(`${testOrMakeCommand} ${args.join(" ")}`, { cwd });
       } else {
