@@ -165,3 +165,28 @@ export function getEmptyTypes() {
     },
   ];
 }
+
+export async function getElmVersion(
+  elmPath: string,
+  elmWorkspaceFolder: URI,
+  connection: IConnection,
+): Promise<string | undefined> {
+  const options = {
+    cmdArguments: ["--version"],
+    notFoundText:
+      "Elm binary not found, did you install and setup the path to your binary?",
+  };
+  const result = await execCmd(
+    elmPath,
+    options,
+    elmWorkspaceFolder,
+    connection,
+  );
+
+  const version = result.stdout
+    .substring(0, result.stdout.indexOf("\n"))
+    .trim();
+  connection.console.info(`Elm version ${version} detected.`);
+
+  return Promise.resolve(version);
+}

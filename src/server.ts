@@ -95,6 +95,7 @@ export class Server implements ILanguageServer {
     elmWorkspace: URI,
     imports: IImports,
     parser: Parser,
+    elmVersion: string,
   ): void {
     try {
       const path = `${elmWorkspace.fsPath}elm.json`;
@@ -103,9 +104,7 @@ export class Server implements ILanguageServer {
       const elmJson = require(path);
       const type = elmJson.type;
       const elmFolders: IFolder[] = [];
-      let elmVersion = "";
       if (type === "application") {
-        elmVersion = elmJson["elm-version"];
         const sourceDirs = elmJson["source-directories"];
         sourceDirs.forEach(async (folder: string) => {
           elmFolders.push({
@@ -114,11 +113,6 @@ export class Server implements ILanguageServer {
           });
         });
       } else {
-        // Todo find a better way to do this
-        elmVersion = elmJson["elm-version"];
-        if (elmVersion.indexOf(" ") !== -1) {
-          elmVersion = elmVersion.substring(0, elmVersion.indexOf(" "));
-        }
         elmFolders.push({
           path: `${elmWorkspace.fsPath}src`,
           writable: true,
@@ -131,7 +125,6 @@ export class Server implements ILanguageServer {
 
       connection.console.info(`${elmFolders.length} source-dirs found`);
       const elmHome = this.findElmHome();
-      // TODO find a way to detect this
       const packagesRoot = `${elmHome}/${elmVersion}/package/`;
       const dependencies: { [index: string]: string } =
         type === "application"
@@ -146,13 +139,7 @@ export class Server implements ILanguageServer {
           const maintainer = key.substring(0, key.indexOf("/"));
           const packageName = key.substring(key.indexOf("/") + 1, key.length);
 
-          // We should probably parse the elm json of a dependency, at some point down the line
-          const pathToPackage =
-            type === "application"
-              ? `${packagesRoot}${maintainer}/${packageName}/${dependencies[key]}/src`
-              : `${packagesRoot}${maintainer}/${packageName}/${dependencies[
-                  key
-                ].substring(0, elmVersion.indexOf(" "))}`;
+          const pathToPackage = `${packagesRoot}${maintainer}/${packageName}/${dependencies[key]}/src`;
           elmFolders.push({ path: pathToPackage, writable: false });
         }
       }
@@ -223,40 +210,51 @@ export class Server implements ILanguageServer {
     settings: Settings,
     parser: Parser,
   ): void {
-    this.initialize(connection, forest, elmWorkspace, imports, parser);
-    const documentEvents = new DocumentEvents(connection, elmWorkspace);
-    const textDocumentEvents = new TextDocumentEvents(documentEvents);
-    const documentFormatingProvider = new DocumentFormattingProvider(
-      connection,
-      elmWorkspace,
-      textDocumentEvents,
-      settings,
-    );
-    const elmAnalyse = new ElmAnalyseDiagnostics(
-      connection,
-      elmWorkspace,
-      textDocumentEvents,
-      settings,
-      documentFormatingProvider,
-    );
-    // tslint:disable:no-unused-expression
-    new ASTProvider(connection, forest, documentEvents, imports, parser);
-    new FoldingRangeProvider(connection, forest);
-    new CompletionProvider(connection, forest, imports);
-    new HoverProvider(connection, forest, imports);
-    new DiagnosticsProvider(
-      connection,
-      elmWorkspace,
-      textDocumentEvents,
-      settings,
-      elmAnalyse,
-    );
-    new DefinitionProvider(connection, forest, imports);
-    new ReferencesProvider(connection, forest, imports);
-    new DocumentSymbolProvider(connection, forest);
-    new WorkspaceSymbolProvider(connection, forest);
-    new CodeLensProvider(connection, forest, imports);
-    new RenameProvider(connection, forest, imports);
-    new CodeActionProvider(connection, elmAnalyse);
+    utils.getElmVersion("elm", elmWorkspace, connection).then(version => {
+      if (version) {
+        this.initialize(
+          connection,
+          forest,
+          elmWorkspace,
+          imports,
+          parser,
+          version,
+        );
+        const documentEvents = new DocumentEvents(connection, elmWorkspace);
+        const textDocumentEvents = new TextDocumentEvents(documentEvents);
+        const documentFormatingProvider = new DocumentFormattingProvider(
+          connection,
+          elmWorkspace,
+          textDocumentEvents,
+          settings,
+        );
+        const elmAnalyse = new ElmAnalyseDiagnostics(
+          connection,
+          elmWorkspace,
+          textDocumentEvents,
+          settings,
+          documentFormatingProvider,
+        );
+        // tslint:disable:no-unused-expression
+        new ASTProvider(connection, forest, documentEvents, imports, parser);
+        new FoldingRangeProvider(connection, forest);
+        new CompletionProvider(connection, forest, imports);
+        new HoverProvider(connection, forest, imports);
+        new DiagnosticsProvider(
+          connection,
+          elmWorkspace,
+          textDocumentEvents,
+          settings,
+          elmAnalyse,
+        );
+        new DefinitionProvider(connection, forest, imports);
+        new ReferencesProvider(connection, forest, imports);
+        new DocumentSymbolProvider(connection, forest);
+        new WorkspaceSymbolProvider(connection, forest);
+        new CodeLensProvider(connection, forest, imports);
+        new RenameProvider(connection, forest, imports);
+        new CodeActionProvider(connection, elmAnalyse);
+      }
+    });
   }
 }

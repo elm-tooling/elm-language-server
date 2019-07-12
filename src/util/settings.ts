@@ -18,7 +18,7 @@ export class Settings {
     private initializationOptions: IClientSettings,
   ) {}
 
-  public getSettings(connection: IConnection): Thenable<IClientSettings> {
+  public getSettings(connection: IConnection): Promise<IClientSettings> {
     // Allow falling back to the preset params
     const defaultSettings = {
       ...this.fallbackClientSettings,
@@ -34,8 +34,10 @@ export class Settings {
       return Promise.resolve(defaultSettings);
     }
 
-    return connection.workspace
-      .getConfiguration({ section: "elmLS" })
-      .then(settings => Object.assign({ ...defaultSettings, ...settings }));
+    return Promise.resolve(
+      connection.workspace
+        .getConfiguration({ section: "elmLS" })
+        .then(settings => Object.assign({ ...defaultSettings, ...settings })),
+    );
   }
 }
