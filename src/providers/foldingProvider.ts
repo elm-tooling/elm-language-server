@@ -2,7 +2,6 @@ import { SyntaxNode, Tree } from "tree-sitter";
 import {
   FoldingRange,
   FoldingRangeKind,
-  FoldingRangeRequest,
   FoldingRangeRequestParam,
   IConnection,
 } from "vscode-languageserver";

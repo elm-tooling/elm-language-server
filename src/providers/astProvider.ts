@@ -6,7 +6,7 @@ import {
   VersionedTextDocumentIdentifier,
 } from "vscode-languageserver";
 import { IForest } from "../forest";
-import { Imports } from "../imports";
+import { IImports } from "../imports";
 import { Position } from "../position";
 import { DocumentEvents } from "../util/documentEvents";
 
@@ -15,7 +15,7 @@ export class ASTProvider {
     private connection: IConnection,
     private forest: IForest,
     events: DocumentEvents,
-    private imports: Imports,
+    private imports: IImports,
     private parser: Parser,
   ) {
     events.on("change", this.handleChangeTextDocument);
