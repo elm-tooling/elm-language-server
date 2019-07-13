@@ -24,12 +24,12 @@
     "tree-sitter": "^0.14.0",
     "tree-sitter-elm": "~2.2.4",
     "vscode-languageserver": "^5.2.1",
-    "vscode-uri": "^2.0.2",
-    "ws": "^7.0.0"
+    "vscode-uri": "^2.0.3",
+    "ws": "^7.1.0"
   },
   "devDependencies": {
     "@types/glob": "^7.1.1",
-    "@types/node": "12.0.10",
+    "@types/node": "12.6.2",
     "@types/request": "^2.48.1",
     "@types/ws": "^6.0.1",
     "husky": "^2.5.0",
@@ -41,7 +41,7 @@
     "tslint-config-prettier": "^1.18.0",
     "tslint-plugin-prettier": "^2.0.1",
     "tslint-sonarts": "^1.9.0",
-    "typescript": "3.5.2"
+    "typescript": "3.5.3"
   },
   "scripts": {
     "compile": "tsc -b",
