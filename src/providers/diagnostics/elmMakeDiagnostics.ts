@@ -1,12 +1,24 @@
 import * as cp from "child_process";
+import * as crypto from "crypto";
 import * as path from "path";
 import * as readline from "readline";
-import { Diagnostic, IConnection } from "vscode-languageserver";
+import {
+  CodeAction,
+  CodeActionKind,
+  CodeActionParams,
+  Diagnostic,
+  IConnection,
+  TextEdit,
+} from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import * as utils from "../../util/elmUtils";
 import { Settings } from "../../util/settings";
 import { IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
+
+const ELM_MAKE = "Elm";
+const RANDOM_ID = crypto.randomBytes(16).toString("hex");
+export const CODE_ACTION_ELM_MAKE = `elmLS.elmMakeFixer-${RANDOM_ID}`;
 
 export class ElmMakeDiagnostics {
   constructor(
@@ -37,6 +49,64 @@ export class ElmMakeDiagnostics {
       }
     });
   };
+
+  public onCodeAction(params: CodeActionParams): CodeAction[] {
+    const { uri } = params.textDocument;
+    const elmMakeDiagnostics: Diagnostic[] = this.filterElmMakeDiagnostics(
+      params.context.diagnostics,
+    );
+    const elmMakeCodeActions = this.convertDiagnosticsToCodeActions(
+      elmMakeDiagnostics,
+      uri,
+    );
+
+    return elmMakeCodeActions.length > 0 ? elmMakeCodeActions : [];
+  }
+
+  private convertDiagnosticsToCodeActions(
+    diagnostics: Diagnostic[],
+    uri: string,
+  ): CodeAction[] {
+    const result: CodeAction[] = [];
+    diagnostics.forEach(diagnostic => {
+      if (diagnostic.message.startsWith("NAMING ERROR")) {
+        // Offer the name suggestions from elm make to our users
+        const regex = /^\s{4}#(.*)#$/gm;
+        let matches;
+
+        // tslint:disable-next-line: no-conditional-assignment
+        while ((matches = regex.exec(diagnostic.message)) !== null) {
+          // This is necessary to avoid infinite loops with zero-width matches
+          if (matches.index === regex.lastIndex) {
+            regex.lastIndex++;
+          }
+
+          matches
+            .filter((_, groupIndex) => groupIndex === 1)
+            .forEach((match, _) => {
+              const map: { [uri: string]: TextEdit[] } = {};
+              if (!map[uri]) {
+                map[uri] = [];
+              }
+
+              map[uri].push(TextEdit.replace(diagnostic.range, match));
+
+              result.push({
+                diagnostics: [diagnostic],
+                edit: { changes: map },
+                kind: CodeActionKind.QuickFix,
+                title: match,
+              });
+            });
+        }
+      }
+    });
+    return result;
+  }
+
+  private filterElmMakeDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
+    return diagnostics.filter(diagnostic => diagnostic.source === ELM_MAKE);
+  }
 
   private async checkForErrors(
     connection: IConnection,
