@@ -10,20 +10,12 @@ import { Settings } from "../util/settings";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 
 export class DocumentFormattingProvider {
-  private events: TextDocumentEvents;
-  private settings: Settings;
-
   constructor(
     private connection: IConnection,
     private elmWorkspaceFolder: URI,
-    events: TextDocumentEvents,
-    settings: Settings,
+    private events: TextDocumentEvents,
+    private settings: Settings,
   ) {
-    this.connection = connection;
-    this.elmWorkspaceFolder = elmWorkspaceFolder;
-    this.events = events;
-    this.settings = settings;
-
     this.connection.onDocumentFormatting(this.handleFormattingRequest);
   }
 
@@ -55,13 +47,13 @@ export class DocumentFormattingProvider {
   ) => {
     this.connection.console.info(`Formatting was requested`);
     try {
-      const settings = await this.settings.getSettings(this.connection);
       const text = this.events.get(params.textDocument.uri);
       if (!text) {
         this.connection.console.error("Can't find file for formatting.");
         return;
       }
 
+      const settings = await this.settings.getSettings(this.connection);
       return this.formatText(settings.elmFormatPath, text.getText());
     } catch (error) {
       (error.message as string).includes("SYNTAX PROBLEM")
