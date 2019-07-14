@@ -47,9 +47,12 @@ export class ElmDiagnosticsHelper {
       issue.region.end.line - 1,
       issue.region.end.column - 1,
     );
+
+    const messagePrefix = issue.overview ? `${issue.overview} - ` : "";
+
     return Diagnostic.create(
       lineRange,
-      `${issue.overview} - ${issue.details.replace(/\[\d+m/g, "")}`,
+      `${messagePrefix}${issue.details.replace(/\[\d+m/g, "")}`,
       this.severityStringToDiagnosticSeverity(issue.type),
       undefined,
       "Elm",

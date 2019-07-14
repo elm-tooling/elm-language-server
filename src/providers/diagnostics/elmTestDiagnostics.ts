@@ -96,11 +96,11 @@ export class ElmTestDiagnostics {
     if (!make.stdout) {
       return;
     }
-    const errorLinesFromElmMake: readline.ReadLine = readline.createInterface({
+    const errorLinesFromElmTest: readline.ReadLine = readline.createInterface({
       input: make.stdout,
     });
     const lines: IElmIssue[] = [];
-    errorLinesFromElmMake.on("line", (line: string) => {
+    errorLinesFromElmTest.on("line", (line: string) => {
       const errorObject = JSON.parse(line);
 
       if (
@@ -109,9 +109,13 @@ export class ElmTestDiagnostics {
       ) {
         errorObject.failures.forEach((failure: any) => {
           lines.push({
-            details: `\nComparison: ${failure.reason.data.comparison}\n Expected: ${failure.reason.data.expected}\n Actual: ${failure.reason.data.actual}\n`,
+            details: `${errorObject.labels.join(" > ")}\nComparison: ${
+              failure.reason.data.comparison
+            }\n Expected: ${failure.reason.data.expected}\n Actual: ${
+              failure.reason.data.actual
+            }\n`,
             file: filename,
-            overview: errorObject.labels.join(" > "),
+            overview: "",
             region: {
               end: {
                 column: 1,
@@ -129,6 +133,6 @@ export class ElmTestDiagnostics {
         });
       }
     });
-    return { errorLinesFromElmTest: errorLinesFromElmMake, lines };
+    return { errorLinesFromElmTest, lines };
   }
 }
