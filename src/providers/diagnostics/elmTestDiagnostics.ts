@@ -48,20 +48,21 @@ export class ElmTestDiagnostics {
     return new Promise((resolve, reject) => {
       const isTestFile = utils.isTestFile(filename, cwd);
       if (isTestFile) {
-        const testCommand: string = settings.elmTestPath;
         let make: cp.ChildProcess;
+        let relativePathToFile = path.relative(cwd, filename);
         if (utils.isWindows) {
-          filename = `"${filename}"`;
+          relativePathToFile = `"${relativePathToFile}"`;
         }
-        const argsTest = [path.relative(cwd, filename), "--report", "json"];
+        const argsTest = [relativePathToFile, "--report", "json"];
 
+        const testCommand: string = settings.elmTestPath;
         if (utils.isWindows) {
           make = cp.exec(`${testCommand} ${argsTest.join(" ")}`, { cwd });
         } else {
           make = cp.spawn(testCommand, argsTest, { cwd });
         }
 
-        const elmTestResult = this.readElmTestResult(make, filename);
+        const elmTestResult = this.readElmTestResult(make, relativePathToFile);
 
         if (elmTestResult) {
           const {

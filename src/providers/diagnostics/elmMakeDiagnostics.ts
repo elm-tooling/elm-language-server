@@ -122,7 +122,7 @@ export class ElmMakeDiagnostics {
       }
       const argsMake = [
         "make",
-        path.relative(cwd, relativePathToFile),
+        relativePathToFile,
         "--report",
         "json",
         "--output",
@@ -131,7 +131,7 @@ export class ElmMakeDiagnostics {
 
       const argsTest = [
         "make",
-        path.relative(cwd, relativePathToFile),
+        relativePathToFile,
         "--report",
         "json",
         "--output",
