@@ -20,10 +20,12 @@ export class CodeActionProvider {
   }
 
   private onCodeAction(params: CodeActionParams): CodeAction[] {
+    this.connection.console.info("A code action was requested");
     return this.elmAnalyse.onCodeAction(params);
   }
 
   private async onExecuteCommand(params: ExecuteCommandParams) {
+    this.connection.console.info("A command execution was requested");
     return this.elmAnalyse.onExecuteCommand(params);
   }
 }

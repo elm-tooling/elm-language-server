@@ -21,6 +21,7 @@ export class WorkspaceSymbolProvider {
   private workspaceSymbolRequest = async (
     param: WorkspaceSymbolParams,
   ): Promise<SymbolInformation[] | null | undefined> => {
+    this.connection.console.info(`Workspace Symbols were requested`);
     const symbolInformationList: SymbolInformation[] = [];
 
     this.forest.treeIndex.forEach(tree => {

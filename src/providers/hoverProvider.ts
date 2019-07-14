@@ -23,6 +23,7 @@ export class HoverProvider {
   protected handleHoverRequest = (
     params: TextDocumentPositionParams,
   ): Hover | null | undefined => {
+    this.connection.console.info(`A hover was requested`);
     const tree: Tree | undefined = this.forest.getTree(params.textDocument.uri);
 
     if (tree) {

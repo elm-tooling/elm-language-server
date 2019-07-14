@@ -35,6 +35,9 @@ export class CodeLensProvider {
   protected handleCodeLensRequest = async (
     param: CodeLensParams,
   ): Promise<CodeLens[] | null | undefined> => {
+    this.connection.console.info(
+      `A code lens was requested for ${param.textDocument.uri}`,
+    );
     const codeLens: CodeLens[] = [];
 
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
@@ -59,6 +62,7 @@ export class CodeLensProvider {
       references: Location[];
       exposed: boolean;
     } = codelens.data;
+    this.connection.console.info(`A code lens resolve was requested`);
     if (data.codeLensType) {
       switch (data.codeLensType) {
         case "exposed":

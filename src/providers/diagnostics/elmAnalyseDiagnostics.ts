@@ -203,7 +203,7 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
     return new Promise((resolve, reject) => {
       // Naming the function here so that we can unsubscribe once we get the new file content
       const onFixComplete = (fixedFile: FixedFile) => {
-        this.connection.console.log(
+        this.connection.console.info(
           `Received fixed file from elm-analyse for path: ${filePath}`,
         );
         elmAnalyse.ports.sendFixedFile.unsubscribe(onFixComplete);
@@ -232,12 +232,12 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
       elmAnalyse.ports.sendFixedFile.subscribe(onFixComplete);
 
       if (typeof code === "number") {
-        this.connection.console.log(
+        this.connection.console.info(
           `Sending elm-analyse fix request for diagnostic id: ${code}`,
         );
         elmAnalyse.ports.onFixQuick.send(code);
       } else {
-        this.connection.console.log(
+        this.connection.console.info(
           `Sending elm-analyse fix request for file: ${relativePath}`,
         );
         elmAnalyse.ports.onFixFileQuick.send(relativePath);
@@ -296,7 +296,7 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
   }
 
   private onNewReport = (report: Report) => {
-    this.connection.console.log(
+    this.connection.console.info(
       `Received new elm-analyse report with ${report.messages.length} messages`,
     );
 

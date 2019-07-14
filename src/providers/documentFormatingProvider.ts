@@ -53,6 +53,7 @@ export class DocumentFormattingProvider {
   protected handleFormattingRequest = async (
     params: DocumentFormattingParams,
   ) => {
+    this.connection.console.info(`Formatting was requested`);
     try {
       const settings = await this.settings.getSettings(this.connection);
       const text = this.events.get(params.textDocument.uri);

@@ -24,6 +24,7 @@ export class DefinitionProvider {
     param: TextDocumentPositionParams,
     // tslint:disable-next-line: max-union-size
   ): Promise<Location | Location[] | LocationLink[] | null | undefined> => {
+    this.connection.console.info(`A definition was requested`);
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
     if (tree) {

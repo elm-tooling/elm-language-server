@@ -107,12 +107,18 @@ export class DiagnosticsProvider {
   }
 
   private async getDiagnosticsOnChange(document: TextDocument): Promise<void> {
+    this.connection.console.info(
+      "Diagnostics were requested due to a file change",
+    );
     this.getDiagnostics(document, false);
   }
 
   private async getDiagnosticsOnSaveOrOpen(
     document: TextDocument,
   ): Promise<void> {
+    this.connection.console.info(
+      "Diagnostics were requested due to a file open or save",
+    );
     this.getDiagnostics(document, true);
   }
 

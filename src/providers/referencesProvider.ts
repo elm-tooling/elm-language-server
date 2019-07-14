@@ -23,6 +23,7 @@ export class ReferencesProvider {
   protected handleReferencesRequest = async (
     params: ReferenceParams,
   ): Promise<Location[] | null | undefined> => {
+    this.connection.console.info(`References were requested`);
     const tree: Tree | undefined = this.forest.getTree(params.textDocument.uri);
 
     if (tree) {

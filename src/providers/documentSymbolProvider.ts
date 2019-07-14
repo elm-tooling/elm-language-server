@@ -23,6 +23,7 @@ export class DocumentSymbolProvider {
     param: DocumentSymbolParams,
     // tslint:disable-next-line: max-union-size
   ): Promise<SymbolInformation[] | DocumentSymbol[] | null | undefined> => {
+    this.connection.console.info(`Document Symbols were requested`);
     const symbolInformationList: SymbolInformation[] = [];
 
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);

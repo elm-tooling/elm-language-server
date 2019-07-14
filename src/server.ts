@@ -46,6 +46,14 @@ export class Server implements ILanguageServer {
   private calculator: CapabilityCalculator;
 
   constructor(connection: Connection, params: InitializeParams) {
+    connection.console.info(
+      `Starting language server for folder: ${
+        params.workspaceFolders
+          ? params.workspaceFolders.map(a => a.uri).join(", ")
+          : "no workspaceFolders"
+      }`,
+    );
+
     this.calculator = new CapabilityCalculator(params.capabilities);
     const forest = new Forest();
     const imports = new Imports();

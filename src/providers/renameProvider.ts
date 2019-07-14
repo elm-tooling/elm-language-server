@@ -1,4 +1,4 @@
-import { SyntaxNode, Tree } from "tree-sitter";
+import { Tree } from "tree-sitter";
 import {
   IConnection,
   Position,
@@ -24,6 +24,7 @@ export class RenameProvider {
   protected handleRenameRequest = async (
     params: RenameParams,
   ): Promise<WorkspaceEdit | null | undefined> => {
+    this.connection.console.info(`Renaming was requested`);
     const tree: Tree | undefined = this.forest.getTree(params.textDocument.uri);
 
     if (tree) {

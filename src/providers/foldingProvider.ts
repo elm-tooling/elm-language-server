@@ -29,6 +29,7 @@ export class FoldingRangeProvider {
   protected handleFoldingRange = async (
     param: FoldingRangeRequestParam,
   ): Promise<FoldingRange[]> => {
+    this.connection.console.info(`Folding ranges were requested`);
     const folds: FoldingRange[] = [];
 
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);

@@ -29,6 +29,7 @@ export class CompletionProvider {
   private handleCompletionRequest = (
     params: CompletionParams,
   ): CompletionItem[] | null | undefined => {
+    this.connection.console.info(`A completion was requested`);
     const completions: CompletionItem[] = [];
 
     const tree: Tree | undefined = this.forest.getTree(params.textDocument.uri);
