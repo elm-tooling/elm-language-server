@@ -108,9 +108,9 @@ export class ElmTestDiagnostics {
       ) {
         errorObject.failures.forEach((failure: any) => {
           lines.push({
-            details: `Comparison: ${failure.reason.data.comparison}\n Expected: ${failure.reason.data.expected}\n Actual: ${failure.reason.data.actual}\n`,
+            details: `\nComparison: ${failure.reason.data.comparison}\n Expected: ${failure.reason.data.expected}\n Actual: ${failure.reason.data.actual}\n`,
             file: filename,
-            overview: failure.reason.type,
+            overview: errorObject.labels.join(" > "),
             region: {
               end: {
                 column: 1,
