@@ -5,6 +5,7 @@ import Parser, { Tree } from "tree-sitter";
 import TreeSitterElm from "tree-sitter-elm";
 import {
   Connection,
+  DidChangeConfigurationNotification,
   IConnection,
   InitializeParams,
   InitializeResult,
@@ -46,50 +47,63 @@ interface IFolder {
 export class Server implements ILanguageServer {
   private calculator: CapabilityCalculator;
 
-  constructor(connection: Connection, params: InitializeParams) {
-    connection.console.info(
+  constructor(
+    private connection: Connection,
+    private params: InitializeParams,
+  ) {
+    this.calculator = new CapabilityCalculator(params.capabilities);
+
+    this.connection.console.info(
       `Starting language server for folder: ${
-        params.workspaceFolders
-          ? params.workspaceFolders.map(a => a.uri).join(", ")
+        this.params.workspaceFolders
+          ? this.params.workspaceFolders.map(a => a.uri).join(", ")
           : "no workspaceFolders"
       }`,
     );
-
-    this.calculator = new CapabilityCalculator(params.capabilities);
     const forest = new Forest();
     const imports = new Imports();
     const parser = new Parser();
     try {
       parser.setLanguage(TreeSitterElm);
     } catch (error) {
-      connection.console.info(error.toString());
+      this.connection.console.info(error.toString());
     }
 
     const elmWorkspaceFallback =
       // Add a trailing slash if not present
-      params.rootUri && params.rootUri.replace(/\/?$/, "/");
+      this.params.rootUri && this.params.rootUri.replace(/\/?$/, "/");
     const elmWorkspace = URI.parse(
-      params.initializationOptions.elmWorkspace || elmWorkspaceFallback,
+      this.params.initializationOptions.elmWorkspace || elmWorkspaceFallback,
     );
 
     const settings = new Settings(
-      params.capabilities,
-      params.initializationOptions,
+      this.params.capabilities,
+      this.params.initializationOptions,
     );
 
-    if (elmWorkspace) {
-      connection.console.info(`initializing - folder: "${elmWorkspace}"`);
-      this.registerProviders(
-        connection,
-        forest,
-        elmWorkspace,
-        imports,
-        settings,
-        parser,
+    connection.onInitialized(() => {
+      // Register for all configuration changes.
+      connection.client.register(
+        DidChangeConfigurationNotification.type,
+        undefined,
       );
-    } else {
-      connection.console.info(`No workspace.`);
-    }
+
+      if (elmWorkspace) {
+        this.connection.console.info(
+          `initializing - folder: "${elmWorkspace}"`,
+        );
+        this.registerProviders(
+          this.connection,
+          forest,
+          elmWorkspace,
+          imports,
+          settings,
+          parser,
+        );
+      } else {
+        this.connection.console.info(`No workspace.`);
+      }
+    });
   }
 
   get capabilities(): InitializeResult {
@@ -219,7 +233,7 @@ export class Server implements ILanguageServer {
     settings: Settings,
     parser: Parser,
   ): void {
-    utils.getElmVersion("elm", elmWorkspace, connection).then(version => {
+    utils.getElmVersion(settings, elmWorkspace, connection).then(version => {
       if (version) {
         this.initialize(
           connection,

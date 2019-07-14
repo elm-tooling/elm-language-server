@@ -47,13 +47,5 @@ connection.onInitialize(
   },
 );
 
-connection.onInitialized(() => {
-  // Register for all configuration changes.
-  connection.client.register(
-    DidChangeConfigurationNotification.type,
-    undefined,
-  );
-});
-
 // Listen on the connection
 connection.listen();
