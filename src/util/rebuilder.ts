@@ -1,3 +1,4 @@
+import * as fs from "fs";
 import * as path from "path";
 import * as prebuildInstall from "prebuild-install";
 import { RemoteConsole } from "vscode-languageserver";
@@ -50,9 +51,23 @@ function fetchPrebuild(
   console.info(`Downloading (or using local cache for) ${url}`);
 
   return new Promise((res, rej) => {
-    prebuildInstall.download(url, { pkg, path: pkgRoot }, (err: Error) => {
-      err ? rej(err) : res();
-    });
+    // try to download+unpack the definition files only if they aren't already
+    fs.access(
+      `${pkgRoot}/build/Release`,
+      fs.constants.F_OK,
+      (accessErr: NodeJS.ErrnoException | null) => {
+        if (!accessErr) {
+          return res();
+        }
+        if (accessErr.code !== "ENOENT") {
+          return rej(accessErr);
+        }
+
+        prebuildInstall.download(url, { pkg, path: pkgRoot }, (err: Error) => {
+          err ? rej(err) : res();
+        });
+      },
+    );
   });
 }
 
