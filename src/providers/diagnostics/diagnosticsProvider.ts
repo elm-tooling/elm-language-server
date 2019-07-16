@@ -4,7 +4,6 @@ import { Settings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { ElmAnalyseDiagnostics } from "./elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
-import { ElmTestDiagnostics } from "./elmTestDiagnostics";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -25,7 +24,6 @@ export class DiagnosticsProvider {
   private connection: IConnection;
   private events: TextDocumentEvents;
   private elmMakeDiagnostics: ElmMakeDiagnostics;
-  private elmTestDiagnostics: ElmTestDiagnostics;
   private elmAnalyseDiagnostics: ElmAnalyseDiagnostics;
   private currentDiagnostics: {
     elmMake: Map<string, Diagnostic[]>;
@@ -51,11 +49,6 @@ export class DiagnosticsProvider {
     this.elmAnalyseDiagnostics = elmAnalyse;
 
     this.connection = connection;
-    this.elmTestDiagnostics = new ElmTestDiagnostics(
-      connection,
-      elmWorkspaceFolder,
-      settings,
-    );
 
     this.currentDiagnostics = {
       elmAnalyse: new Map(),
@@ -140,11 +133,6 @@ export class DiagnosticsProvider {
         elmMakeDiagnosticsForCurrentFile &&
         elmMakeDiagnosticsForCurrentFile.length === 0
       ) {
-        if (isSaveOrOpen) {
-          this.currentDiagnostics.elmTest = await this.elmTestDiagnostics.createDiagnostics(
-            uri,
-          );
-        }
         this.elmAnalyseDiagnostics.updateFile(uri, text);
       }
 
