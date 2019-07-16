@@ -170,7 +170,9 @@ export class ElmMakeDiagnostics {
                   typeof message === "string" ? message : `#${message.string}#`,
                 )
                 .join(""),
-              file: error.path,
+              file: path.isAbsolute(error.path)
+                ? path.relative(cwd, error.path)
+                : error.path,
               overview: problem.title,
               region: problem.region,
               subregion: "",
