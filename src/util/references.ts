@@ -1,4 +1,4 @@
-import { SyntaxNode } from "tree-sitter";
+import { SyntaxNode } from "web-tree-sitter";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
 import { IReferenceNode } from "./referenceNode";

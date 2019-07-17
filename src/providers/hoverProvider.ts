@@ -1,10 +1,10 @@
-import { SyntaxNode, Tree } from "tree-sitter";
 import {
   Hover,
   IConnection,
   MarkupKind,
   TextDocumentPositionParams,
 } from "vscode-languageserver";
+import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
 import { getEmptyTypes } from "../util/elmUtils";

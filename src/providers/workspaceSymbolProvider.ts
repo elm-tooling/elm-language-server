@@ -1,9 +1,9 @@
-import { SyntaxNode } from "tree-sitter";
 import {
   IConnection,
   SymbolInformation,
   WorkspaceSymbolParams,
 } from "vscode-languageserver";
+import { SyntaxNode } from "web-tree-sitter";
 import { IForest } from "../forest";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 

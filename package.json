@@ -18,13 +18,11 @@
     "elm-analyse": "github:elm-tooling/elm-analyse#29ef62033a76f4fd87983c70c6f131a0b07d07e5",
     "fast-diff": "^1.2.0",
     "glob": "^7.1.4",
-    "prebuild-install": "^5.3.0",
     "request": "^2.88.0",
     "rxjs": "^6.5.2",
-    "tree-sitter": "^0.14.0",
-    "tree-sitter-elm": "~2.2.4",
     "vscode-languageserver": "^5.2.1",
     "vscode-uri": "^2.0.3",
+    "web-tree-sitter": "^0.15.7",
     "ws": "^7.1.0"
   },
   "devDependencies": {
@@ -37,6 +35,8 @@
     "prebuild": "^9.0.0",
     "prettier": "^1.18.2",
     "pretty-quick": "^1.11.1",
+    "tree-sitter-cli": "^0.15.6",
+    "tree-sitter-elm": "^2.5.0",
     "tslint": "^5.18.0",
     "tslint-config-prettier": "^1.18.0",
     "tslint-plugin-prettier": "^2.0.1",
@@ -44,11 +44,13 @@
     "typescript": "3.5.3"
   },
   "scripts": {
-    "compile": "tsc -b",
-    "watch": "tsc -b -w",
-    "format:fix": "pretty-quick --staged",
+    "copy-wasm": "mkdir -p ./out/ && cp ./tree-sitter-elm.wasm ./out/",
+    "compile": "npm run copy-wasm && tsc -p ./",
+    "watch": "npm run copy-wasm && tsc -watch -p ./",
     "lint": "tslint -p tsconfig.json",
-    "tslint-check": "tslint-config-prettier-check ./tslint.json"
+    "format:fix": "pretty-quick --staged",
+    "tslint-check": "tslint-config-prettier-check ./tslint.json",
+    "build-tree-sitter": "tree-sitter build-wasm ./node_modules/tree-sitter-elm"
   },
   "husky": {
     "hooks": {

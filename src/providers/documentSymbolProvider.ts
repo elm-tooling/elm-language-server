@@ -1,10 +1,10 @@
-import { SyntaxNode, Tree } from "tree-sitter";
 import {
   DocumentSymbol,
   DocumentSymbolParams,
   IConnection,
   SymbolInformation,
 } from "vscode-languageserver";
+import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IForest } from "../forest";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 

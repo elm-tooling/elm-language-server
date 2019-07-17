@@ -1,8 +1,6 @@
 import { readFileSync } from "fs";
 import glob from "glob";
 import os from "os";
-import Parser, { Tree } from "tree-sitter";
-import TreeSitterElm from "tree-sitter-elm";
 import {
   Connection,
   DidChangeConfigurationNotification,
@@ -11,6 +9,7 @@ import {
   InitializeResult,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import Parser, { Tree } from "web-tree-sitter";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { Forest } from "./forest";
 import { IForest } from "./forest";
@@ -50,6 +49,7 @@ export class Server implements ILanguageServer {
   constructor(
     private connection: Connection,
     private params: InitializeParams,
+    parser: Parser,
   ) {
     this.calculator = new CapabilityCalculator(params.capabilities);
 
@@ -61,13 +61,7 @@ export class Server implements ILanguageServer {
       }`,
     );
     const forest = new Forest();
-    const imports = new Imports();
-    const parser = new Parser();
-    try {
-      parser.setLanguage(TreeSitterElm);
-    } catch (error) {
-      this.connection.console.info(error.toString());
-    }
+    const imports = new Imports(parser);
 
     const elmWorkspaceFallback =
       // Add a trailing slash if not present
