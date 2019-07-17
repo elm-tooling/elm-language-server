@@ -38,7 +38,11 @@ export class DocumentEvents extends EventEmitter implements IDocumentEvents {
     );
   }
 
-  private emitForWorkspace(event: any, elmWorkspace: URI, eventType: string) {
+  private emitForWorkspace(
+    event: any,
+    elmWorkspace: URI,
+    eventType: string,
+  ): void {
     const documentUri = URI.parse(event.textDocument.uri);
     if (documentUri.toString().startsWith(elmWorkspace.toString())) {
       this.emit(eventType, event);

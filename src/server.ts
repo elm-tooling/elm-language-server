@@ -272,7 +272,6 @@ export class Server implements ILanguageServer {
           connection,
           elmWorkspace,
           textDocumentEvents,
-          settings,
           elmAnalyse,
           elmMake,
         );

@@ -21,8 +21,6 @@ export interface IElmIssue {
 }
 
 export class DiagnosticsProvider {
-  private connection: IConnection;
-  private events: TextDocumentEvents;
   private elmMakeDiagnostics: ElmMakeDiagnostics;
   private elmAnalyseDiagnostics: ElmAnalyseDiagnostics;
   private currentDiagnostics: {
@@ -32,10 +30,9 @@ export class DiagnosticsProvider {
   };
 
   constructor(
-    connection: IConnection,
+    private connection: IConnection,
     private elmWorkspaceFolder: URI,
-    events: TextDocumentEvents,
-    settings: Settings,
+    private events: TextDocumentEvents,
     elmAnalyse: ElmAnalyseDiagnostics,
     elmMake: ElmMakeDiagnostics,
   ) {
@@ -44,11 +41,8 @@ export class DiagnosticsProvider {
     );
     this.getDiagnosticsOnChange = this.getDiagnosticsOnChange.bind(this);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
-    this.events = events;
     this.elmMakeDiagnostics = elmMake;
     this.elmAnalyseDiagnostics = elmAnalyse;
-
-    this.connection = connection;
 
     this.currentDiagnostics = {
       elmAnalyse: new Map(),
