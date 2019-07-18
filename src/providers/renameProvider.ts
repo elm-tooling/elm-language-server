@@ -1,4 +1,3 @@
-import { Tree } from "tree-sitter";
 import {
   IConnection,
   Position,
@@ -7,6 +6,7 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver";
+import { Tree } from "web-tree-sitter";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
 import { References } from "../util/references";

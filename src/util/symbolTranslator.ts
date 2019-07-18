@@ -1,10 +1,10 @@
-import { SyntaxNode } from "tree-sitter";
 import {
   Position,
   Range,
   SymbolInformation,
   SymbolKind,
 } from "vscode-languageserver";
+import { SyntaxNode } from "web-tree-sitter";
 import { TreeUtils } from "./treeUtils";
 
 export class SymbolInformationTranslator {

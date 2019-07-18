@@ -1,5 +1,5 @@
-import { Point as TSPosition } from "tree-sitter";
 import { Position as VSPosition } from "vscode-languageserver";
+import { Point as TSPosition } from "web-tree-sitter";
 
 export class Position {
   public static FROM_VS_POSITION(position: VSPosition): Position {

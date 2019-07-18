@@ -1,10 +1,11 @@
 import { readFileSync } from "fs";
-import Parser, { Point, SyntaxNode, Tree } from "tree-sitter";
+
 import {
   DidChangeTextDocumentParams,
   IConnection,
   VersionedTextDocumentIdentifier,
 } from "vscode-languageserver";
+import Parser, { Point, SyntaxNode, Tree } from "web-tree-sitter";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
 import { Position } from "../position";

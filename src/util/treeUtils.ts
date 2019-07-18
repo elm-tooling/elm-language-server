@@ -1,4 +1,4 @@
-import { SyntaxNode, Tree } from "tree-sitter";
+import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IImport, IImports } from "../imports";
 
 export type NodeType =

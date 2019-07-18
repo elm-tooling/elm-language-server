@@ -1,4 +1,4 @@
-import { SyntaxNode } from "tree-sitter";
+import { SyntaxNode } from "web-tree-sitter";
 import { TreeUtils } from "./treeUtils";
 
 export class HintHelper {

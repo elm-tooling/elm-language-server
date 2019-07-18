@@ -1,10 +1,10 @@
-import { SyntaxNode, Tree } from "tree-sitter";
 import {
   FoldingRange,
   FoldingRangeKind,
   FoldingRangeRequestParam,
   IConnection,
 } from "vscode-languageserver";
+import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IForest } from "../forest";
 
 export class FoldingRangeProvider {
