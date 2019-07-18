@@ -84,24 +84,40 @@ export class ElmMakeDiagnostics {
           matches
             .filter((_, groupIndex) => groupIndex === 1)
             .forEach((match, _) => {
-              const map: { [uri: string]: TextEdit[] } = {};
-              if (!map[uri]) {
-                map[uri] = [];
-              }
-
-              map[uri].push(TextEdit.replace(diagnostic.range, match));
-
-              result.push({
-                diagnostics: [diagnostic],
-                edit: { changes: map },
-                kind: CodeActionKind.QuickFix,
-                title: match,
-              });
+              result.push(this.createQuickFix(uri, match, diagnostic));
             });
+        }
+      } else if (diagnostic.message.startsWith("MODULE NAME MISMATCH")) {
+        // Offer the name suggestions from elm make to our users
+        const regex = /# -> #(.*)#$/gm;
+
+        const matches = regex.exec(diagnostic.message);
+        if (matches !== null) {
+          result.push(this.createQuickFix(uri, matches[1], diagnostic));
         }
       }
     });
     return result;
+  }
+
+  private createQuickFix(
+    uri: string,
+    replaceWith: string,
+    diagnostic: Diagnostic,
+  ): CodeAction {
+    const map: {
+      [uri: string]: TextEdit[];
+    } = {};
+    if (!map[uri]) {
+      map[uri] = [];
+    }
+    map[uri].push(TextEdit.replace(diagnostic.range, replaceWith));
+    return {
+      diagnostics: [diagnostic],
+      edit: { changes: map },
+      kind: CodeActionKind.QuickFix,
+      title: replaceWith,
+    };
   }
 
   private filterElmMakeDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
