@@ -75,13 +75,7 @@ export class Server implements ILanguageServer {
       this.params.initializationOptions,
     );
 
-    connection.onInitialized(() => {
-      // Register for all configuration changes.
-      connection.client.register(
-        DidChangeConfigurationNotification.type,
-        undefined,
-      );
-
+    connection.onInitialized(async () => {
       if (elmWorkspace) {
         this.connection.console.info(
           `initializing - folder: "${elmWorkspace}"`,
@@ -227,56 +221,48 @@ export class Server implements ILanguageServer {
     settings: Settings,
     parser: Parser,
   ): void {
-    utils.getElmVersion(settings, elmWorkspace, connection).then(version => {
-      if (version) {
-        this.initialize(
-          connection,
-          forest,
-          elmWorkspace,
-          imports,
-          parser,
-          version,
-        );
-        const documentEvents = new DocumentEvents(connection, elmWorkspace);
-        const textDocumentEvents = new TextDocumentEvents(documentEvents);
-        const documentFormatingProvider = new DocumentFormattingProvider(
-          connection,
-          elmWorkspace,
-          textDocumentEvents,
-          settings,
-        );
-        const elmAnalyse = new ElmAnalyseDiagnostics(
-          connection,
-          elmWorkspace,
-          textDocumentEvents,
-          settings,
-          documentFormatingProvider,
-        );
-        const elmMake = new ElmMakeDiagnostics(
-          connection,
-          elmWorkspace,
-          settings,
-        );
-        // tslint:disable:no-unused-expression
-        new ASTProvider(connection, forest, documentEvents, imports, parser);
-        new FoldingRangeProvider(connection, forest);
-        new CompletionProvider(connection, forest, imports);
-        new HoverProvider(connection, forest, imports);
-        new DiagnosticsProvider(
-          connection,
-          elmWorkspace,
-          textDocumentEvents,
-          elmAnalyse,
-          elmMake,
-        );
-        new DefinitionProvider(connection, forest, imports);
-        new ReferencesProvider(connection, forest, imports);
-        new DocumentSymbolProvider(connection, forest);
-        new WorkspaceSymbolProvider(connection, forest);
-        new CodeLensProvider(connection, forest, imports);
-        new RenameProvider(connection, forest, imports);
-        new CodeActionProvider(connection, elmAnalyse, elmMake);
-      }
-    });
+    this.initialize(
+      connection,
+      forest,
+      elmWorkspace,
+      imports,
+      parser,
+      "0.19.0",
+    );
+    const documentEvents = new DocumentEvents(connection, elmWorkspace);
+    const textDocumentEvents = new TextDocumentEvents(documentEvents);
+    const documentFormatingProvider = new DocumentFormattingProvider(
+      connection,
+      elmWorkspace,
+      textDocumentEvents,
+      settings,
+    );
+    const elmAnalyse = new ElmAnalyseDiagnostics(
+      connection,
+      elmWorkspace,
+      textDocumentEvents,
+      settings,
+      documentFormatingProvider,
+    );
+    const elmMake = new ElmMakeDiagnostics(connection, elmWorkspace, settings);
+    // tslint:disable:no-unused-expression
+    new ASTProvider(connection, forest, documentEvents, imports, parser);
+    new FoldingRangeProvider(connection, forest);
+    new CompletionProvider(connection, forest, imports);
+    new HoverProvider(connection, forest, imports);
+    new DiagnosticsProvider(
+      connection,
+      elmWorkspace,
+      textDocumentEvents,
+      elmAnalyse,
+      elmMake,
+    );
+    new DefinitionProvider(connection, forest, imports);
+    new ReferencesProvider(connection, forest, imports);
+    new DocumentSymbolProvider(connection, forest);
+    new WorkspaceSymbolProvider(connection, forest);
+    new CodeLensProvider(connection, forest, imports);
+    new RenameProvider(connection, forest, imports);
+    new CodeActionProvider(connection, elmAnalyse, elmMake);
   }
 }

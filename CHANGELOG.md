@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.2.1
+
+- Revert determination of used elm compiler version, as it was causing file open to go unnoticed
+
 ## 1.2.0
 
 - Use WASM version of tree-sitter and updated tree-sitter - This mean multiple parsing improvements
