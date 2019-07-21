@@ -36,7 +36,7 @@ connection.onInitialize(
 
         resolve(server.capabilities);
       } catch (error) {
-        connection.console.info(error.message);
+        connection.console.error(error.stack);
         reject();
       }
     });

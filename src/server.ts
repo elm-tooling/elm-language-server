@@ -183,7 +183,7 @@ export class Server implements ILanguageServer {
 
       connection.console.info("Done parsing all files.");
     } catch (error) {
-      connection.console.info(error.toString());
+      connection.console.error(error.stack);
     }
   }
 
