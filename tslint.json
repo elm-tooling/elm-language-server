@@ -11,6 +11,7 @@
     "prettier": [true, ".prettierrc.yaml"],
     "cognitive-complexity": false,
     "no-big-function": false,
+    "prefer-const": true,
     "prefer-template": true
   },
   "rulesDirectory": ["tslint-plugin-prettier"]

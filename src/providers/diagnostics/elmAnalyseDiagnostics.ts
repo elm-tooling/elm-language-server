@@ -145,7 +145,7 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
 
         if (code === -1) {
           this.connection.console.warn(
-            "Unable to apply elm-analyse fix, unknown diagnotic code",
+            "Unable to apply elm-analyse fix, unknown diagnostic code",
           );
           return;
         }

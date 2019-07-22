@@ -39,14 +39,12 @@ export class ElmMakeDiagnostics {
       this.elmWorkspaceFolder.fsPath,
       filePath.fsPath,
     ).then(issues => {
-      if (issues.length > 0) {
-        return ElmDiagnosticsHelper.issuesToDiagnosticMap(
-          issues,
-          this.elmWorkspaceFolder,
-        );
-      } else {
-        return new Map([[filePath.toString(), []]]);
-      }
+      return issues.length === 0
+        ? new Map([[filePath.toString(), []]])
+        : ElmDiagnosticsHelper.issuesToDiagnosticMap(
+            issues,
+            this.elmWorkspaceFolder,
+          );
     });
   };
 
@@ -55,12 +53,8 @@ export class ElmMakeDiagnostics {
     const elmMakeDiagnostics: Diagnostic[] = this.filterElmMakeDiagnostics(
       params.context.diagnostics,
     );
-    const elmMakeCodeActions = this.convertDiagnosticsToCodeActions(
-      elmMakeDiagnostics,
-      uri,
-    );
 
-    return elmMakeCodeActions.length > 0 ? elmMakeCodeActions : [];
+    return this.convertDiagnosticsToCodeActions(elmMakeDiagnostics, uri);
   }
 
   private convertDiagnosticsToCodeActions(
