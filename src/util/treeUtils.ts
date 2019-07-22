@@ -255,14 +255,11 @@ export class TreeUtils {
     type: string | string[],
     node: SyntaxNode,
   ): SyntaxNode[] | undefined {
-    const result =
-      type instanceof Array
-        ? node.children.filter(child => type.includes(child.type))
-        : node.children.filter(child => child.type === type);
-    if (result.length === 0) {
-      return undefined;
-    }
-    return result;
+    const result = Array.isArray(type)
+      ? node.children.filter(child => type.includes(child.type))
+      : node.children.filter(child => child.type === type);
+
+    return result.length === 0 ? undefined : result;
   }
 
   public static findExposedFunctionNode(
@@ -505,7 +502,7 @@ export class TreeUtils {
       });
     }
 
-    return result.length > 0 ? result : undefined;
+    return result.length === 0 ? undefined : result;
   }
 
   public static findAllFunctionCallsAndParameters(
@@ -581,7 +578,7 @@ export class TreeUtils {
         return a.text === typeOrTypeAliasName;
       });
 
-      return result.length > 0 ? result : undefined;
+      return result.length === 0 ? undefined : result;
     }
   }
 
@@ -959,11 +956,8 @@ export class TreeUtils {
     const result = tree.rootNode.children.filter(
       a => a.type === "import_clause",
     );
-    if (result.length > 0) {
-      return result;
-    } else {
-      return undefined;
-    }
+
+    return result.length === 0 ? undefined : result;
   }
 
   public static findImportClauseByName(
@@ -1050,6 +1044,6 @@ export class TreeUtils {
         });
       }
     }
-    return result.length > 0 ? result : undefined;
+    return result.length === 0 ? undefined : result;
   }
 }

@@ -3,7 +3,6 @@
 import * as Path from "path";
 import {
   createConnection,
-  DidChangeConfigurationParams,
   IConnection,
   InitializeParams,
   InitializeResult,
@@ -15,9 +14,7 @@ import { ILanguageServer } from "./server";
 export type Runtime = "node" | "electron";
 const connection: IConnection = createConnection(ProposedFeatures.all);
 
-connection.onDidChangeConfiguration((params: DidChangeConfigurationParams) => {
-  return undefined;
-});
+connection.onDidChangeConfiguration(params => undefined);
 
 connection.onInitialize(
   async (params: InitializeParams): Promise<InitializeResult> => {

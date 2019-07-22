@@ -238,7 +238,7 @@ export class CompletionProvider {
     return {
       documentation: {
         kind: MarkupKind.Markdown,
-        value: markdownDocumentation ? markdownDocumentation : "",
+        value: markdownDocumentation || "",
       },
       kind,
       label,
@@ -252,7 +252,7 @@ export class CompletionProvider {
     return {
       documentation: {
         kind: MarkupKind.Markdown,
-        value: markdownDocumentation ? markdownDocumentation : "",
+        value: markdownDocumentation || "",
       },
       kind,
       label,
@@ -378,10 +378,11 @@ export class CompletionProvider {
     return {
       documentation: {
         kind: MarkupKind.Markdown,
-        value: markdownDocumentation ? markdownDocumentation : "",
+        value: markdownDocumentation || "",
       },
-      insertText:
-        snippetText instanceof Array ? snippetText.join("\n") : snippetText,
+      insertText: Array.isArray(snippetText)
+        ? snippetText.join("\n")
+        : snippetText,
       insertTextFormat: InsertTextFormat.Snippet,
       kind: CompletionItemKind.Snippet,
       label,
