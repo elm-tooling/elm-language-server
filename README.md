@@ -126,15 +126,22 @@ Much of this is covered in the [Example vim configuration](https://github.com/ne
 
 #### ALE
 
-For [ALE](https://github.com/w0rp/ale) support.
+[ALE](https://github.com/w0rp/ale) contains the `elm_ls` linter.
 
-| Package Manager                                   | Command                                                                                       |
-| ------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| [Vim-Plug](https://github.com/junegunn/vim-plug)  | `Plug 'antew/vim-elm-language-server'`                                                        |
-| [Vundle](https://github.com/VundleVim/Vundle.vim) | `Plugin 'antew/vim-elm-language-server'`                                                      |
-| [Pathogen](https://github.com/tpope/vim-pathogen) | <pre>cd ~/.vim/bundle<br>git clone https://github.com/antew/vim-elm-language-server.git</pre> |
+```
+let g:ale_linters = { 'elm': ['elm_ls'] }
+```
 
-If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The configuration can be [found here](https://github.com/antew/vim-elm-language-server#configuration)
+If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The configuration can be [found here](https://github.com/w0rp/ale/blob/master/doc/ale-elm.txt)
+
+```
+let g:ale_elm_ls_use_global = 1
+let g:ale_elm_ls_elm_path = "/path/to/elm"
+let g:ale_elm_ls_elm_format_path = "/path/to/elm-format"
+let g:ale_elm_ls_elm_test_path = "/path/to/elm-test"
+let g:ale_elm_ls_executable = "/path/to/elm-language-server"
+```
+
 
 | Feature           | How to use it                                                                                                         |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------- |
@@ -183,7 +190,7 @@ The language client is included in [lsp-mode](https://github.com/emacs-lsp/lsp-m
 
 # Awesome libraries this is based on
 
-- [elm-analyse](https://github.com/stil4m/elm-analyser)
+- [elm-analyse](https://github.com/stil4m/elm-analyse)
 - [elm-format](https://github.com/avh4/elm-format)
 - [elm-test](https://github.com/rtfeldman/node-test-runner)
 - [tree-sitter-elm](https://github.com/Razzeee/tree-sitter-elm)
