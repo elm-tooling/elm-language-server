@@ -135,7 +135,10 @@ export class CompletionProvider {
           completions.push(this.createTypeCompletion(value, name.text));
         }
         // Add types constructors
-        const unionVariants = declaration.descendantsOfType("union_variant");
+        const unionVariants = TreeUtils.descendantsOfType(
+          declaration,
+          "union_variant",
+        );
         for (const unionVariant of unionVariants) {
           const unionVariantName = TreeUtils.findFirstNamedChildOfType(
             "upper_case_identifier",

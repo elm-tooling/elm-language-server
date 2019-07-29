@@ -223,29 +223,31 @@ export class CodeLensProvider {
       }
     });
 
-    tree.rootNode.descendantsOfType("value_declaration").forEach(node => {
-      const functionName = TreeUtils.getFunctionNameNodeFromDefinition(node);
+    TreeUtils.descendantsOfType(tree.rootNode, "value_declaration").forEach(
+      node => {
+        const functionName = TreeUtils.getFunctionNameNodeFromDefinition(node);
 
-      if (functionName) {
-        if (
-          node.previousNamedSibling &&
-          node.previousNamedSibling.type === "type_annotation"
-        ) {
-          codeLens.push(
-            this.createReferenceCodeLens(
-              node.previousNamedSibling,
-              functionName,
-              uri,
-              tree,
-            ),
-          );
-        } else {
-          codeLens.push(
-            this.createReferenceCodeLens(node, functionName, uri, tree),
-          );
+        if (functionName) {
+          if (
+            node.previousNamedSibling &&
+            node.previousNamedSibling.type === "type_annotation"
+          ) {
+            codeLens.push(
+              this.createReferenceCodeLens(
+                node.previousNamedSibling,
+                functionName,
+                uri,
+                tree,
+              ),
+            );
+          } else {
+            codeLens.push(
+              this.createReferenceCodeLens(node, functionName, uri, tree),
+            );
+          }
         }
-      }
-    });
+      },
+    );
 
     const moduleNameNode = TreeUtils.getModuleNameNode(tree);
     if (moduleNameNode && moduleNameNode.lastChild) {

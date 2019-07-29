@@ -85,7 +85,8 @@ export class Imports implements IImports {
                       ),
                     );
                   } else {
-                    const exposedOperators = exposingList.descendantsOfType(
+                    const exposedOperators = TreeUtils.descendantsOfType(
+                      exposingList,
                       "operator_identifier",
                     );
                     if (exposedOperators.length > 0) {
