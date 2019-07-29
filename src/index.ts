@@ -11,7 +11,6 @@ import {
 import Parser from "web-tree-sitter";
 import { ILanguageServer } from "./server";
 
-export type Runtime = "node" | "electron";
 const connection: IConnection = createConnection(ProposedFeatures.all);
 
 connection.onDidChangeConfiguration(params => undefined);

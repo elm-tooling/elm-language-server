@@ -96,7 +96,6 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format` with the 
       "filetypes": ["elm"],
       "rootPatterns": ["elm.json"],
       "initializationOptions": {
-        "runtime": "node",
         "elmPath": "elm",
         "elmFormatPath": "elm-format",
         "elmTestPath": "elm-test"
@@ -112,7 +111,7 @@ Much of this is covered in the [Example vim configuration](https://github.com/ne
 
 | Feature           | How to use it                                                                                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Diagnostics       | `:CocList diagnostics`<br />Configure refresh with `"diagnostic.refreshAfterSave": false`                                                                                                                                                   |
+| Diagnostics       | `:CocList diagnostics`<br />Configure refresh with `"diagnostic.refreshAfterSave": false`                                                                                |
 | Formatting        | `:call CocAction('format')`                                                                                                                                              |
 | CodeLenses        | Requires Neovim. Add `"coc.preferences.codeLens.enable": true` to your `coc-settings.json` through `:CocConfig`                                                          |
 | Completions       | On by default, see [Completion with sources](https://github.com/neoclide/coc.nvim/wiki/Completion-with-sources) for customizations                                       |
@@ -142,20 +141,19 @@ let g:ale_elm_ls_elm_test_path = "/path/to/elm-test"
 let g:ale_elm_ls_executable = "/path/to/elm-language-server"
 ```
 
-
-| Feature           | How to use it                                                                                                         |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Diagnostics       | `:ALENext`/`:ALEPrevious`<br />Configure refresh with `let g:ale_lint_on_text_changed = 0`<br />`let g:ale_lint_on_insert_leave = 1` <br /> `let g:ale_lint_on_save = 1`                                                                                          |
-| Formatting        | ALE doesn't currently support this through the language server integration, but `elm-format` is a supported ALE Fixer |
-| CodeLenses        | Not currently supported                                                                                               |
-| Completions       | On by default, see `:h ale-completion` for more info                                                                  |
-| Definitions       | `:ALEGoToDefinition`, `:ALEGoToTypeDefinition`, see `:h ale-go-to-definition` and `:h ale-go-to-type-definition`      |
-| DocumentSymbols   | Only workspace symbols are currently supported                                                                        |
-| Folding           | Not currently supported                                                                                               |
-| Hover             | `:ALEHover`                                                                                                           |
-| References        | `:ALEFindReferences`                                                                                                  |
-| Rename            | Not currently supported                                                                                               |
-| Workspace Symbols | `:ALESymbolSearch <query>`                                                                                            |
+| Feature           | How to use it                                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Diagnostics       | `:ALENext`/`:ALEPrevious`<br />Configure refresh with `let g:ale_lint_on_text_changed = 0`<br />`let g:ale_lint_on_insert_leave = 1` <br /> `let g:ale_lint_on_save = 1` |
+| Formatting        | ALE doesn't currently support this through the language server integration, but `elm-format` is a supported ALE Fixer                                                    |
+| CodeLenses        | Not currently supported                                                                                                                                                  |
+| Completions       | On by default, see `:h ale-completion` for more info                                                                                                                     |
+| Definitions       | `:ALEGoToDefinition`, `:ALEGoToTypeDefinition`, see `:h ale-go-to-definition` and `:h ale-go-to-type-definition`                                                         |
+| DocumentSymbols   | Only workspace symbols are currently supported                                                                                                                           |
+| Folding           | Not currently supported                                                                                                                                                  |
+| Hover             | `:ALEHover`                                                                                                                                                              |
+| References        | `:ALEFindReferences`                                                                                                                                                     |
+| Rename            | Not currently supported                                                                                                                                                  |
+| Workspace Symbols | `:ALESymbolSearch <query>`                                                                                                                                               |
 
 ### Kakoune
 
@@ -178,7 +176,6 @@ command = "elm-language-server"
 args = ["--stdio"]
 
 [language.elm.initialization_options]
-runtime = "node"
 elmPath = "elm"
 elmFormatPath = "elm-format"
 elmTestPath = "elm-test"
