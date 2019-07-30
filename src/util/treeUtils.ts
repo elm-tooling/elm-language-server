@@ -1067,14 +1067,6 @@ export class TreeUtils {
     node: SyntaxNode,
     type: string,
   ): SyntaxNode[] {
-    const result: SyntaxNode[] = [];
-    node.children.forEach((a: SyntaxNode) => {
-      if (a.type === type) {
-        result.push(a);
-      }
-
-      result.push(...TreeUtils.descendantsOfType(a, type));
-    });
-    return result;
+    return node.descendantsOfType(type);
   }
 }

@@ -22,8 +22,8 @@
     "rxjs": "^6.5.2",
     "vscode-languageserver": "^5.2.1",
     "vscode-uri": "^2.0.3",
-    "web-tree-sitter": "^0.15.7",
-    "ws": "^7.1.0"
+    "web-tree-sitter": "^0.15.9",
+    "ws": "^7.1.1"
   },
   "devDependencies": {
     "@types/glob": "^7.1.1",
