@@ -5,6 +5,7 @@ import {
   IConnection,
   VersionedTextDocumentIdentifier,
 } from "vscode-languageserver";
+import { URI } from "vscode-uri";
 import Parser, { Point, SyntaxNode, Tree } from "web-tree-sitter";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
@@ -31,7 +32,10 @@ export class ASTProvider {
     const document: VersionedTextDocumentIdentifier = params.textDocument;
     let tree: Tree | undefined = this.forest.getTree(document.uri);
     if (tree === undefined) {
-      const fileContent: string = readFileSync(document.uri, "utf8");
+      const fileContent: string = readFileSync(
+        URI.parse(document.uri).fsPath,
+        "utf8",
+      );
       tree = this.parser.parse(fileContent);
     }
 
