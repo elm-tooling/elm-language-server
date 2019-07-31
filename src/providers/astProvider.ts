@@ -70,10 +70,10 @@ export class ASTProvider {
               range.start,
             ).toTSPosition(),
           });
+          tree = this.parser.parse(text, tree);
         }
-        tree = this.parser.parse(text, tree);
       } else {
-        tree = this.parser.parse(changeEvent.text, tree);
+        tree = this.parser.parse(changeEvent.text);
       }
     }
     if (tree) {
