@@ -39,6 +39,8 @@ This server contributes the following settings:
 
 ## Installation
 
+Note for VSCode users: The plugin contains the language-server. No installation necessary.
+
 The server can be installed via `npm` (or from source).
 
 ```sh
