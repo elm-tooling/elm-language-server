@@ -76,6 +76,7 @@ npm link
 | VIM ALE | [Link](https://github.com/elm-tooling/elm-language-server#ale)     |                                                                   | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :x:                | :heavy_check_mark: |
 | Kakoune | [Link](https://github.com/elm-tooling/elm-language-server#kak-lsp) |                                                                   | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    |
 | Emacs   | [Link](https://github.com/elm-tooling/elm-language-server#emacs)   | [Link](https://github.com/emacs-lsp/lsp-mode)                     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| Sublime | [Link](https://github.com/elm-tooling/elm-language-server#sublime) |                                                                   | :heavy_check_mark: | :heavy_check_mark: | :x:                | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 
 ### VSCode
 
@@ -186,6 +187,40 @@ elmTestPath = "elm-test"
 ### Emacs
 
 The language client is included in [lsp-mode](https://github.com/emacs-lsp/lsp-mode), specifically [here](https://github.com/emacs-lsp/lsp-mode/blob/master/lsp-elm.el). See specifically [this section](https://github.com/emacs-lsp/lsp-mode#use-package) for a minimal use-package configuration for lsp-mode.
+
+### Sublime
+
+Firnt install the language server via npm `npm i -g @elm-tooling/elm-language-server`
+Install [Elm Language Support](https://packagecontrol.io/packages/Elm%20Language%20Support) from Package Control for syntax highlighting. You might want to disable all other features.
+Then we also need the [LSP Package](https://packagecontrol.io/packages/LSP) to be able to connect from Sublime to the Language Server.
+
+Add this to your LSP settings under the `clients` node:
+
+```json
+"elm": {
+    "command": [
+        "elm-language-server",
+        "--stdio"
+    ],
+    "enabled": true,
+    "languageId": "elm",
+    "scopes":
+    [
+        "source.elm"
+    ],
+    "syntaxes":
+    [
+        "Packages/Elm Language Support/Syntaxes/Elm.sublime-syntax"
+    ],
+    "initializationOptions": {
+        "elmPath": "elm",
+        "elmFormatPath": "elm-format",
+        "elmTestPath": "elm-test"
+    }
+}
+```
+
+You should now be able to use the integrations from Sublime.
 
 # Awesome libraries this is based on
 
