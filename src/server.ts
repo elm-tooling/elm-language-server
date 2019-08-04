@@ -66,13 +66,16 @@ export class Server implements ILanguageServer {
     const elmWorkspaceFallback =
       // Add a trailing slash if not present
       this.params.rootUri && this.params.rootUri.replace(/\/?$/, "/");
+
+    const initializationOptions = this.params.initializationOptions || {};
+
     const elmWorkspace = URI.parse(
-      this.params.initializationOptions.elmWorkspace || elmWorkspaceFallback,
+      initializationOptions.elmWorkspace || elmWorkspaceFallback,
     );
 
     const settings = new Settings(
       this.params.capabilities,
-      this.params.initializationOptions,
+      initializationOptions,
     );
 
     connection.onInitialized(async () => {
