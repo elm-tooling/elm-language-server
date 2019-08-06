@@ -84,6 +84,8 @@ Just install the plugin from the [VSCode MarketPlace](https://marketplace.visual
 
 ### Vim
 
+[General Elm Vim tooling](https://github.com/elm-tooling/elm-vim)
+
 #### coc.nvim
 
 To enable support with [coc.nvim](https://github.com/neoclide/coc.nvim), run `:CocConfig` and add the language server config below.
