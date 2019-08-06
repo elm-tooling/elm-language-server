@@ -108,7 +108,7 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format` with the 
     }
   },
   // If you use neovim you can enable codelenses with this
-  "coc.preferences.codeLens.enable": true
+  "codeLens.enable": true,
 }
 ```
 
