@@ -21,7 +21,7 @@ export interface IDocumentEvents {
 }
 
 export class DocumentEvents extends EventEmitter implements IDocumentEvents {
-  constructor(connection: Connection, elmWorkspace: URI) {
+  constructor(private connection: Connection, elmWorkspace: URI) {
     super();
 
     connection.onDidChangeTextDocument(event =>
@@ -45,6 +45,9 @@ export class DocumentEvents extends EventEmitter implements IDocumentEvents {
   ): void {
     const documentUri = URI.parse(event.textDocument.uri);
     if (documentUri.toString().startsWith(elmWorkspace.toString())) {
+      this.connection.console.log(
+        `Received ${eventType} for ${elmWorkspace.toString()}`,
+      );
       this.emit(eventType, event);
     }
   }

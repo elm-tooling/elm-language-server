@@ -2,7 +2,7 @@ import * as cp from "child_process";
 import * as path from "path";
 import { IConnection, SymbolKind } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { Settings } from "./settings";
+import { IClientSettings } from "./settings";
 
 export const isWindows = process.platform === "win32";
 
@@ -168,7 +168,7 @@ export function getEmptyTypes() {
 }
 
 export async function getElmVersion(
-  settings: Settings,
+  settings: IClientSettings,
   elmWorkspaceFolder: URI,
   connection: IConnection,
 ): Promise<string | undefined> {
@@ -178,10 +178,8 @@ export async function getElmVersion(
       "Elm binary not found, did you install and setup the path to your binary?",
   };
 
-  const resolvedSettings = await settings.getSettings(connection);
-
   const result = await execCmd(
-    resolvedSettings.elmPath,
+    settings.elmPath,
     options,
     elmWorkspaceFolder,
     connection,

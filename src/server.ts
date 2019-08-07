@@ -3,8 +3,6 @@ import glob from "glob";
 import os from "os";
 import {
   Connection,
-  DidChangeConfigurationNotification,
-  IConnection,
   InitializeParams,
   InitializeResult,
 } from "vscode-languageserver";
@@ -12,7 +10,6 @@ import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { Forest } from "./forest";
-import { IForest } from "./forest";
 import { IImports, Imports } from "./imports";
 import { ASTProvider } from "./providers/astProvider";
 import { CodeActionProvider } from "./providers/codeActionProvider";
@@ -36,6 +33,8 @@ import { TextDocumentEvents } from "./util/textDocumentEvents";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
+  registerInitializeProviders(): Promise<void>;
+  registerInitializedProviders(): void;
 }
 
 interface IFolder {
@@ -45,56 +44,37 @@ interface IFolder {
 
 export class Server implements ILanguageServer {
   private calculator: CapabilityCalculator;
+  private forest: Forest = new Forest();
+  private imports: IImports;
+  private elmWorkspace: URI;
+  private settings: Settings;
 
   constructor(
     private connection: Connection,
     private params: InitializeParams,
-    parser: Parser,
+    private parser: Parser,
   ) {
     this.calculator = new CapabilityCalculator(params.capabilities);
 
-    this.connection.console.info(
-      `Starting language server for folder: ${
-        this.params.workspaceFolders
-          ? this.params.workspaceFolders.map(a => a.uri).join(", ")
-          : "no workspaceFolders"
-      }`,
-    );
-    const forest = new Forest();
-    const imports = new Imports(parser);
+    this.imports = new Imports(parser);
 
     const elmWorkspaceFallback =
       // Add a trailing slash if not present
       this.params.rootUri && this.params.rootUri.replace(/\/?$/, "/");
 
     const initializationOptions = this.params.initializationOptions || {};
-
-    const elmWorkspace = URI.parse(
+    this.elmWorkspace = URI.parse(
       initializationOptions.elmWorkspace || elmWorkspaceFallback,
     );
 
-    const settings = new Settings(
+    this.connection.console.info(
+      `Starting language server for folder: ${this.elmWorkspace}`,
+    );
+
+    this.settings = new Settings(
       this.params.capabilities,
       initializationOptions,
     );
-
-    connection.onInitialized(async () => {
-      if (elmWorkspace) {
-        this.connection.console.info(
-          `initializing - folder: "${elmWorkspace}"`,
-        );
-        this.registerProviders(
-          this.connection,
-          forest,
-          elmWorkspace,
-          imports,
-          settings,
-          parser,
-        );
-      } else {
-        this.connection.console.info(`No workspace.`);
-      }
-    });
   }
 
   get capabilities(): InitializeResult {
@@ -103,17 +83,70 @@ export class Server implements ILanguageServer {
     };
   }
 
-  private initialize(
-    connection: IConnection,
-    forest: IForest,
-    elmWorkspace: URI,
-    imports: IImports,
-    parser: Parser,
-    elmVersion: string,
-  ): void {
+  public async registerInitializeProviders(): Promise<void> {
+    return;
+  }
+
+  public async registerInitializedProviders() {
+    await this.init();
+
+    const documentEvents = new DocumentEvents(
+      this.connection,
+      this.elmWorkspace,
+    );
+    const textDocumentEvents = new TextDocumentEvents(documentEvents);
+    const documentFormatingProvider = new DocumentFormattingProvider(
+      this.connection,
+      this.elmWorkspace,
+      textDocumentEvents,
+      this.settings,
+    );
+    const elmAnalyse = new ElmAnalyseDiagnostics(
+      this.connection,
+      this.elmWorkspace,
+      textDocumentEvents,
+      this.settings,
+      documentFormatingProvider,
+    );
+    const elmMake = new ElmMakeDiagnostics(
+      this.connection,
+      this.elmWorkspace,
+      this.settings,
+    );
+    // tslint:disable:no-unused-expression
+    new ASTProvider(
+      this.connection,
+      this.forest,
+      documentEvents,
+      this.imports,
+      this.parser,
+    );
+    new FoldingRangeProvider(this.connection, this.forest);
+    new CompletionProvider(this.connection, this.forest, this.imports);
+    new HoverProvider(this.connection, this.forest, this.imports);
+    new DiagnosticsProvider(
+      this.connection,
+      this.elmWorkspace,
+      textDocumentEvents,
+      elmAnalyse,
+      elmMake,
+    );
+    new DefinitionProvider(this.connection, this.forest, this.imports);
+    new ReferencesProvider(this.connection, this.forest, this.imports);
+    new DocumentSymbolProvider(this.connection, this.forest);
+    new WorkspaceSymbolProvider(this.connection, this.forest);
+    new CodeLensProvider(this.connection, this.forest, this.imports);
+    new RenameProvider(this.connection, this.forest, this.imports);
+    new CodeActionProvider(this.connection, elmAnalyse, elmMake);
+    Promise.resolve();
+  }
+
+  public async init() {
     try {
-      const path = `${elmWorkspace.fsPath}elm.json`;
-      connection.console.info(`Reading elm.json from ${path}`);
+      const elmVersion = "0.19.0";
+
+      const path = `${this.elmWorkspace.fsPath}elm.json`;
+      this.connection.console.info(`Reading elm.json from ${path}`);
       // Find elm files and feed them to tree sitter
       const elmJson = require(path);
       const type = elmJson.type;
@@ -122,22 +155,22 @@ export class Server implements ILanguageServer {
         const sourceDirs = elmJson["source-directories"];
         sourceDirs.forEach(async (folder: string) => {
           elmFolders.push({
-            path: elmWorkspace.fsPath + folder,
+            path: this.elmWorkspace.fsPath + folder,
             writable: true,
           });
         });
       } else {
         elmFolders.push({
-          path: `${elmWorkspace.fsPath}src`,
+          path: `${this.elmWorkspace.fsPath}src`,
           writable: true,
         });
       }
       elmFolders.push({
-        path: `${elmWorkspace.fsPath}tests`,
+        path: `${this.elmWorkspace.fsPath}tests`,
         writable: true,
       });
 
-      connection.console.info(`${elmFolders.length} source-dirs found`);
+      this.connection.console.info(`${elmFolders.length} source-dirs found`);
       const elmHome = this.findElmHome();
       const packagesRoot = `${elmHome}/${elmVersion}/package/`;
       const dependencies: { [index: string]: string } =
@@ -159,19 +192,19 @@ export class Server implements ILanguageServer {
       }
 
       const elmFilePaths = this.findElmFilesInFolders(elmFolders);
-      connection.console.info(
+      this.connection.console.info(
         `Found ${elmFilePaths.length.toString()} files to add to the project`,
       );
 
       for (const filePath of elmFilePaths) {
-        connection.console.info(`Adding ${filePath.path.toString()}`);
+        this.connection.console.info(`Adding ${filePath.path.toString()}`);
         const fileContent: string = readFileSync(
           filePath.path.toString(),
           "utf8",
         );
         let tree: Tree | undefined;
-        tree = parser.parse(fileContent);
-        forest.setTree(
+        tree = this.parser.parse(fileContent);
+        this.forest.setTree(
           URI.file(filePath.path).toString(),
           filePath.writable,
           true,
@@ -179,14 +212,14 @@ export class Server implements ILanguageServer {
         );
       }
 
-      forest.treeIndex.forEach(item => {
-        connection.console.info(`Adding imports ${item.uri.toString()}`);
-        imports.updateImports(item.uri, item.tree, forest);
+      this.forest.treeIndex.forEach(item => {
+        this.connection.console.info(`Adding imports ${item.uri.toString()}`);
+        this.imports.updateImports(item.uri, item.tree, this.forest);
       });
 
-      connection.console.info("Done parsing all files.");
+      this.connection.console.info("Done parsing all files.");
     } catch (error) {
-      connection.console.error(error.stack);
+      this.connection.console.error(error.stack);
     }
   }
 
@@ -214,58 +247,5 @@ export class Server implements ILanguageServer {
     return glob
       .sync(`${element.path}/**/*.elm`)
       .map(path => ({ path, writable: element.writable }));
-  }
-
-  private registerProviders(
-    connection: IConnection,
-    forest: Forest,
-    elmWorkspace: URI,
-    imports: Imports,
-    settings: Settings,
-    parser: Parser,
-  ): void {
-    this.initialize(
-      connection,
-      forest,
-      elmWorkspace,
-      imports,
-      parser,
-      "0.19.0",
-    );
-    const documentEvents = new DocumentEvents(connection, elmWorkspace);
-    const textDocumentEvents = new TextDocumentEvents(documentEvents);
-    const documentFormatingProvider = new DocumentFormattingProvider(
-      connection,
-      elmWorkspace,
-      textDocumentEvents,
-      settings,
-    );
-    const elmAnalyse = new ElmAnalyseDiagnostics(
-      connection,
-      elmWorkspace,
-      textDocumentEvents,
-      settings,
-      documentFormatingProvider,
-    );
-    const elmMake = new ElmMakeDiagnostics(connection, elmWorkspace, settings);
-    // tslint:disable:no-unused-expression
-    new ASTProvider(connection, forest, documentEvents, imports, parser);
-    new FoldingRangeProvider(connection, forest);
-    new CompletionProvider(connection, forest, imports);
-    new HoverProvider(connection, forest, imports);
-    new DiagnosticsProvider(
-      connection,
-      elmWorkspace,
-      textDocumentEvents,
-      elmAnalyse,
-      elmMake,
-    );
-    new DefinitionProvider(connection, forest, imports);
-    new ReferencesProvider(connection, forest, imports);
-    new DocumentSymbolProvider(connection, forest);
-    new WorkspaceSymbolProvider(connection, forest);
-    new CodeLensProvider(connection, forest, imports);
-    new RenameProvider(connection, forest, imports);
-    new CodeActionProvider(connection, elmAnalyse, elmMake);
   }
 }

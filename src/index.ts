@@ -5,39 +5,42 @@ import {
   createConnection,
   IConnection,
   InitializeParams,
-  InitializeResult,
   ProposedFeatures,
 } from "vscode-languageserver";
 import Parser from "web-tree-sitter";
 import { ILanguageServer } from "./server";
 
 const connection: IConnection = createConnection(ProposedFeatures.all);
+let server: ILanguageServer;
 
-connection.onDidChangeConfiguration(params => undefined);
+connection.onInitialize(async (params: InitializeParams) => {
+  await Parser.init();
+  const absolute = Path.join(__dirname, "tree-sitter-elm.wasm");
+  const pathToWasm = Path.relative(process.cwd(), absolute);
+  connection.console.info(`Loading Elm tree-sitter syntax from ${pathToWasm}`);
+  const language = await Parser.Language.load(pathToWasm);
+  const parser = new Parser();
+  parser.setLanguage(language);
 
-connection.onInitialize(
-  async (params: InitializeParams): Promise<InitializeResult> => {
-    return new Promise<InitializeResult>(async (resolve, reject) => {
-      try {
-        connection.console.info("Activating tree-sitter...");
-        await Parser.init();
-        const absolute = Path.join(__dirname, "tree-sitter-elm.wasm");
-        const pathToWasm = Path.relative(process.cwd(), absolute);
-        const language = await Parser.Language.load(pathToWasm);
-        const parser = new Parser();
-        parser.setLanguage(language);
+  const { Server } = await import("./server");
+  server = new Server(connection, params, parser);
+  await server.registerInitializeProviders();
 
-        const { Server } = await import("./server");
-        const server: ILanguageServer = new Server(connection, params, parser);
+  return server.capabilities;
+});
 
-        resolve(server.capabilities);
-      } catch (error) {
-        connection.console.error(error.stack);
-        reject();
-      }
-    });
-  },
-);
+connection.onInitialized(async () => {
+  server.registerInitializedProviders();
+});
+
+connection.onDidChangeConfiguration(async () => undefined);
 
 // Listen on the connection
 connection.listen();
+
+// Don't die on unhandled Promise rejections
+process.on("unhandledRejection", (reason, p) => {
+  connection.console.error(
+    `Unhandled Rejection at: Promise ${p} reason:, ${reason}`,
+  );
+});
