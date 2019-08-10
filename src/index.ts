@@ -29,14 +29,12 @@ connection.onInitialize(
     const { Server } = await import("./server");
     server = new Server(connection, params, parser);
     await server.init();
+    // Not awaiting the async result here!
+    server.registerInitializedProviders();
 
     return server.capabilities;
   },
 );
-
-connection.onInitialized(async () => {
-  server.registerInitializedProviders();
-});
 
 // Listen on the connection
 connection.listen();

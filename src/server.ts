@@ -88,6 +88,7 @@ export class Server implements ILanguageServer {
 
     await this.initWorkspace();
   }
+
   public async registerInitializedProviders() {
     const documentEvents = new DocumentEvents(
       this.connection,
@@ -137,7 +138,6 @@ export class Server implements ILanguageServer {
     new CodeLensProvider(this.connection, this.forest, this.imports);
     new RenameProvider(this.connection, this.forest, this.imports);
     new CodeActionProvider(this.connection, elmAnalyse, elmMake);
-    Promise.resolve();
   }
 
   public async initWorkspace() {
