@@ -3,7 +3,10 @@ import { Range, TextEdit } from "vscode-languageserver";
 // Given two strings (`before`, `after`), return a list of all substrings
 // that appear in `after` but not in `before`, and the positions of each
 // of the substrings within `after`.
-export function getTextRangeChanges(before: string, after: string): TextEdit[] {
+export function getTextRangeChanges(
+  before: string,
+  after: string,
+): Promise<TextEdit[]> {
   const newRanges: TextEdit[] = [];
   let lineNumber = 0;
   let column = 0;
@@ -50,5 +53,5 @@ export function getTextRangeChanges(before: string, after: string): TextEdit[] {
       });
     }
   });
-  return newRanges;
+  return Promise.resolve(newRanges);
 }

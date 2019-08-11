@@ -219,12 +219,13 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
         resolve(
           this.formattingProvider
             .formatText(settings.elmFormatPath, fixedFile.content)
-            .then(elmFormatEdits =>
-              this.createEdits(
-                oldText.getText(),
-                fixedFile.content,
-                elmFormatEdits,
-              ),
+            .then(
+              async elmFormatEdits =>
+                await this.createEdits(
+                  oldText.getText(),
+                  fixedFile.content,
+                  elmFormatEdits,
+                ),
             ),
         );
       };
@@ -245,7 +246,7 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
     });
   }
 
-  private createEdits(
+  private async createEdits(
     oldText: string,
     newText: string,
     elmFormatEdits: TextEdit[],
