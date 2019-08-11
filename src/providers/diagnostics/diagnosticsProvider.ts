@@ -32,6 +32,7 @@ export class DiagnosticsProvider {
   constructor(
     private connection: IConnection,
     private elmWorkspaceFolder: URI,
+    private settings: Settings,
     private events: TextDocumentEvents,
     elmAnalyse: ElmAnalyseDiagnostics,
     elmMake: ElmMakeDiagnostics,
@@ -51,12 +52,18 @@ export class DiagnosticsProvider {
     };
 
     this.events.on("open", this.getDiagnosticsOnSaveOrOpen);
-    this.events.on("change", this.getDiagnosticsOnChange);
     this.events.on("save", this.getDiagnosticsOnSaveOrOpen);
     this.elmAnalyseDiagnostics.on(
       "new-diagnostics",
       this.newElmAnalyseDiagnostics,
     );
+
+    // register onChange listener if settings are not on-save only
+    this.settings.getClientSettings().then(({ diagnosticsOnSaveOnly }) => {
+      if (!diagnosticsOnSaveOnly) {
+        this.events.on("change", this.getDiagnosticsOnChange);
+      }
+    });
   }
 
   private newElmAnalyseDiagnostics(diagnostics: Map<string, Diagnostic[]>) {

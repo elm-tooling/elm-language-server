@@ -36,6 +36,7 @@ This server contributes the following settings:
 - `elmLS.elmPath`: The path to your `elm` executable.
 - `elmLS.elmFormatPath`: The path to your `elm-format` executable.
 - `elmLS.elmTestPath`: The path to your `elm-test` executable.
+- `elmLS.diagnosticsOnSaveOnly`: Diagnostic updates triggered _only_ on save. `true/false` (default: `false`)
 
 ## Installation
 
@@ -103,12 +104,13 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format` with the 
       "initializationOptions": {
         "elmPath": "elm",
         "elmFormatPath": "elm-format",
-        "elmTestPath": "elm-test"
+        "elmTestPath": "elm-test",
+        "diagnosticsOnSaveOnly": false
       }
     }
   },
   // If you use neovim you can enable codelenses with this
-  "codeLens.enable": true,
+  "codeLens.enable": true
 }
 ```
 
@@ -184,6 +186,7 @@ args = ["--stdio"]
 elmPath = "elm"
 elmFormatPath = "elm-format"
 elmTestPath = "elm-test"
+diagnosticsOnSaveOnly = false
 ```
 
 ### Emacs
@@ -217,7 +220,8 @@ Add this to your LSP settings under the `clients` node:
     "initializationOptions": {
         "elmPath": "elm",
         "elmFormatPath": "elm-format",
-        "elmTestPath": "elm-test"
+        "elmTestPath": "elm-test",
+        "diagnosticsOnSaveOnly": false
     }
 }
 ```

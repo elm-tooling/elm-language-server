@@ -113,6 +113,7 @@ export class Server implements ILanguageServer {
     new DiagnosticsProvider(
       this.connection,
       this.elmWorkspace,
+      this.settings,
       this.textDocumentEvents,
       elmAnalyse,
       elmMake,
