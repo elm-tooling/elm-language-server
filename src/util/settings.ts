@@ -1,4 +1,4 @@
-import { ClientCapabilities, IConnection } from "vscode-languageserver";
+import { IConnection } from "vscode-languageserver";
 
 export interface IClientSettings {
   diagnosticsOnSaveOnly: boolean;
@@ -9,14 +9,6 @@ export interface IClientSettings {
 }
 
 export class Settings {
-  private fallbackClientSettings: IClientSettings = {
-    diagnosticsOnSaveOnly: false,
-    elmFormatPath: "elm-format",
-    elmPath: "elm",
-    elmTestPath: "elm-test",
-    trace: { server: "off" },
-  };
-
   private clientSettings: IClientSettings = {
     diagnosticsOnSaveOnly: false,
     elmFormatPath: "elm-format",
@@ -35,13 +27,10 @@ export class Settings {
     this.updateSettings(
       await this.connection.workspace.getConfiguration("elmLS"),
     );
-    return Promise.resolve(this.clientSettings);
+    return this.clientSettings;
   }
 
   public updateSettings(config: any): void {
-    this.clientSettings = Object.assign({
-      ...this.fallbackClientSettings,
-      ...config,
-    });
+    this.clientSettings = { ...this.clientSettings, ...config };
   }
 }
