@@ -53,7 +53,7 @@ export class DocumentFormattingProvider {
         return;
       }
 
-      const settings = await this.settings.getSettings(this.connection);
+      const settings = this.settings.getClientSettings;
       return this.formatText(settings.elmFormatPath, text.getText());
     } catch (error) {
       (error.message as string).includes("SYNTAX PROBLEM")

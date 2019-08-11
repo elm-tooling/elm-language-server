@@ -171,7 +171,7 @@ export async function getElmVersion(
   settings: IClientSettings,
   elmWorkspaceFolder: URI,
   connection: IConnection,
-): Promise<string | undefined> {
+): Promise<string> {
   const options = {
     cmdArguments: ["--version"],
     notFoundText:

@@ -123,7 +123,7 @@ export class ElmMakeDiagnostics {
     cwd: string,
     filename: string,
   ): Promise<IElmIssue[]> {
-    const settings = await this.settings.getSettings(connection);
+    const settings = this.settings.getClientSettings;
 
     return new Promise((resolve, reject) => {
       let relativePathToFile = path.relative(cwd, filename);

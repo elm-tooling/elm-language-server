@@ -4,6 +4,7 @@ export interface IClientSettings {
   elmFormatPath: string;
   elmPath: string;
   elmTestPath: string;
+  trace: { server: string };
 }
 
 export class Settings {
@@ -11,33 +12,24 @@ export class Settings {
     elmFormatPath: "elm-format",
     elmPath: "elm",
     elmTestPath: "elm-test",
+    trace: { server: "off" },
   };
 
-  constructor(
-    private capabilities: ClientCapabilities,
-    private initializationOptions: IClientSettings,
-  ) {}
+  private clientSettings: IClientSettings = {
+    elmFormatPath: "elm-format",
+    elmPath: "elm",
+    elmTestPath: "elm-test",
+    trace: { server: "off" },
+  };
 
-  public getSettings(connection: IConnection): Promise<IClientSettings> {
-    // Allow falling back to the preset params
-    const defaultSettings = {
+  public get getClientSettings(): IClientSettings {
+    return this.clientSettings;
+  }
+
+  public updateSettings(config: any): void {
+    this.clientSettings = Object.assign({
       ...this.fallbackClientSettings,
-      ...this.initializationOptions,
-    };
-
-    const supportsConfig =
-      this.capabilities &&
-      this.capabilities.workspace &&
-      this.capabilities.workspace.configuration;
-
-    if (!supportsConfig) {
-      return Promise.resolve(defaultSettings);
-    }
-
-    return Promise.resolve(
-      connection.workspace
-        .getConfiguration({ section: "elmLS" })
-        .then(settings => Object.assign({ ...defaultSettings, ...settings })),
-    );
+      ...config,
+    });
   }
 }

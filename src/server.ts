@@ -3,6 +3,7 @@ import glob from "glob";
 import os from "os";
 import {
   Connection,
+  DidChangeConfigurationParams,
   InitializeParams,
   InitializeResult,
 } from "vscode-languageserver";
@@ -33,7 +34,7 @@ import { TextDocumentEvents } from "./util/textDocumentEvents";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
-  registerInitializeProviders(): Promise<void>;
+  init(): Promise<void>;
   registerInitializedProviders(): void;
 }
 
@@ -71,10 +72,9 @@ export class Server implements ILanguageServer {
       `Starting language server for folder: ${this.elmWorkspace}`,
     );
 
-    this.settings = new Settings(
-      this.params.capabilities,
-      initializationOptions,
-    );
+    this.settings = new Settings();
+
+    this.settings.updateSettings(initializationOptions);
   }
 
   get capabilities(): InitializeResult {
@@ -83,13 +83,12 @@ export class Server implements ILanguageServer {
     };
   }
 
-  public async registerInitializeProviders(): Promise<void> {
-    return;
+  public async init() {
+    this.setupConfigListeners();
+
+    await this.initWorkspace();
   }
-
   public async registerInitializedProviders() {
-    await this.init();
-
     const documentEvents = new DocumentEvents(
       this.connection,
       this.elmWorkspace,
@@ -141,10 +140,20 @@ export class Server implements ILanguageServer {
     Promise.resolve();
   }
 
-  public async init() {
+  public async initWorkspace() {
+    let elmVersion;
     try {
-      const elmVersion = "0.19.0";
-
+      elmVersion = await utils.getElmVersion(
+        this.settings.getClientSettings,
+        this.elmWorkspace,
+        this.connection,
+      );
+    } catch {
+      this.connection.console.warn(
+        "Could not figure out elm version, this will impact how good the server works.",
+      );
+    }
+    try {
       const path = `${this.elmWorkspace.fsPath}elm.json`;
       this.connection.console.info(`Reading elm.json from ${path}`);
       // Find elm files and feed them to tree sitter
@@ -169,10 +178,14 @@ export class Server implements ILanguageServer {
         path: `${this.elmWorkspace.fsPath}tests`,
         writable: true,
       });
+      this.connection.console.info(
+        `${elmFolders.length} source-dirs and test folders found`,
+      );
 
-      this.connection.console.info(`${elmFolders.length} source-dirs found`);
       const elmHome = this.findElmHome();
-      const packagesRoot = `${elmHome}/${elmVersion}/package/`;
+      const packagesRoot = `${elmHome}/${elmVersion}/${this.packageOrPackagesFolder(
+        elmVersion,
+      )}/`;
       const dependencies: { [index: string]: string } =
         type === "application"
           ? {
@@ -247,5 +260,17 @@ export class Server implements ILanguageServer {
     return glob
       .sync(`${element.path}/**/*.elm`)
       .map(path => ({ path, writable: element.writable }));
+  }
+
+  private setupConfigListeners() {
+    this.connection.onDidChangeConfiguration(
+      ({ settings }: DidChangeConfigurationParams) => {
+        this.settings.updateSettings(settings.elmLS);
+      },
+    );
+  }
+
+  private packageOrPackagesFolder(elmVersion: string | undefined): string {
+    return elmVersion === "0.19.0" ? "package" : "packages";
   }
 }
