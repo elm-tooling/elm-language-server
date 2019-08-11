@@ -175,7 +175,7 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
    */
   private async fixer(uri: URI, diagnosticId?: number) {
     const elmAnalyse = await this.elmAnalyse;
-    const settings = this.settings.getClientSettings;
+    const settings = await this.settings.getClientSettings();
 
     const edits = await this.getFixEdits(
       elmAnalyse,

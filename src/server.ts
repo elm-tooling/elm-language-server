@@ -72,7 +72,7 @@ export class Server implements ILanguageServer {
       `Starting language server for folder: ${this.elmWorkspace}`,
     );
 
-    this.settings = new Settings();
+    this.settings = new Settings(this.connection);
 
     this.settings.updateSettings(initializationOptions);
   }
@@ -144,13 +144,13 @@ export class Server implements ILanguageServer {
     let elmVersion;
     try {
       elmVersion = await utils.getElmVersion(
-        this.settings.getClientSettings,
+        this.settings.getStartupClientSettings,
         this.elmWorkspace,
         this.connection,
       );
-    } catch {
+    } catch (e) {
       this.connection.console.warn(
-        "Could not figure out elm version, this will impact how good the server works.",
+        `Could not figure out elm version, this will impact how good the server works. \n ${e.stack}`,
       );
     }
     try {

@@ -22,8 +22,17 @@ export class Settings {
     trace: { server: "off" },
   };
 
-  public get getClientSettings(): IClientSettings {
+  constructor(private connection: IConnection) {}
+
+  public get getStartupClientSettings(): IClientSettings {
     return this.clientSettings;
+  }
+
+  public async getClientSettings(): Promise<IClientSettings> {
+    this.updateSettings(
+      await this.connection.workspace.getConfiguration("elmLS"),
+    );
+    return Promise.resolve(this.clientSettings);
   }
 
   public updateSettings(config: any): void {
