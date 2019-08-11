@@ -1,6 +1,7 @@
 import { ClientCapabilities, IConnection } from "vscode-languageserver";
 
 export interface IClientSettings {
+  diagnosticsOnSaveOnly: boolean;
   elmFormatPath: string;
   elmPath: string;
   elmTestPath: string;
@@ -9,6 +10,7 @@ export interface IClientSettings {
 
 export class Settings {
   private fallbackClientSettings: IClientSettings = {
+    diagnosticsOnSaveOnly: false,
     elmFormatPath: "elm-format",
     elmPath: "elm",
     elmTestPath: "elm-test",
@@ -16,6 +18,7 @@ export class Settings {
   };
 
   private clientSettings: IClientSettings = {
+    diagnosticsOnSaveOnly: false,
     elmFormatPath: "elm-format",
     elmPath: "elm",
     elmTestPath: "elm-test",
