@@ -3,7 +3,6 @@ import glob from "glob";
 import os from "os";
 import {
   Connection,
-  DidChangeConfigurationParams,
   InitializeParams,
   InitializeResult,
 } from "vscode-languageserver";
@@ -49,6 +48,8 @@ export class Server implements ILanguageServer {
   private imports: IImports;
   private elmWorkspace: URI;
   private settings: Settings;
+  private documentEvents: DocumentEvents;
+  private textDocumentEvents: TextDocumentEvents;
 
   constructor(
     private connection: Connection,
@@ -75,6 +76,12 @@ export class Server implements ILanguageServer {
     this.settings = new Settings(this.connection);
 
     this.settings.updateSettings(initializationOptions);
+
+    this.documentEvents = new DocumentEvents(
+      this.connection,
+      this.elmWorkspace,
+    );
+    this.textDocumentEvents = new TextDocumentEvents(this.documentEvents);
   }
 
   get capabilities(): InitializeResult {
@@ -84,26 +91,16 @@ export class Server implements ILanguageServer {
   }
 
   public async init() {
-    this.setupConfigListeners();
-
-    await this.initWorkspace();
-  }
-  public async registerInitializedProviders() {
-    const documentEvents = new DocumentEvents(
-      this.connection,
-      this.elmWorkspace,
-    );
-    const textDocumentEvents = new TextDocumentEvents(documentEvents);
     const documentFormatingProvider = new DocumentFormattingProvider(
       this.connection,
       this.elmWorkspace,
-      textDocumentEvents,
+      this.textDocumentEvents,
       this.settings,
     );
     const elmAnalyse = new ElmAnalyseDiagnostics(
       this.connection,
       this.elmWorkspace,
-      textDocumentEvents,
+      this.textDocumentEvents,
       this.settings,
       documentFormatingProvider,
     );
@@ -113,32 +110,36 @@ export class Server implements ILanguageServer {
       this.settings,
     );
     // tslint:disable:no-unused-expression
+    new DiagnosticsProvider(
+      this.connection,
+      this.elmWorkspace,
+      this.settings,
+      this.textDocumentEvents,
+      elmAnalyse,
+      elmMake,
+    );
+    new CodeActionProvider(this.connection, elmAnalyse, elmMake);
+
+    await this.initWorkspace();
+  }
+  public async registerInitializedProviders() {
+    // tslint:disable:no-unused-expression
     new ASTProvider(
       this.connection,
       this.forest,
-      documentEvents,
+      this.documentEvents,
       this.imports,
       this.parser,
     );
     new FoldingRangeProvider(this.connection, this.forest);
     new CompletionProvider(this.connection, this.forest, this.imports);
     new HoverProvider(this.connection, this.forest, this.imports);
-    new DiagnosticsProvider(
-      this.connection,
-      this.elmWorkspace,
-      this.settings,
-      textDocumentEvents,
-      elmAnalyse,
-      elmMake,
-    );
     new DefinitionProvider(this.connection, this.forest, this.imports);
     new ReferencesProvider(this.connection, this.forest, this.imports);
     new DocumentSymbolProvider(this.connection, this.forest);
     new WorkspaceSymbolProvider(this.connection, this.forest);
     new CodeLensProvider(this.connection, this.forest, this.imports);
     new RenameProvider(this.connection, this.forest, this.imports);
-    new CodeActionProvider(this.connection, elmAnalyse, elmMake);
-    Promise.resolve();
   }
 
   public async initWorkspace() {
@@ -261,14 +262,6 @@ export class Server implements ILanguageServer {
     return glob
       .sync(`${element.path}/**/*.elm`)
       .map(path => ({ path, writable: element.writable }));
-  }
-
-  private setupConfigListeners() {
-    this.connection.onDidChangeConfiguration(
-      ({ settings }: DidChangeConfigurationParams) => {
-        this.settings.updateSettings(settings.elmLS);
-      },
-    );
   }
 
   private packageOrPackagesFolder(elmVersion: string | undefined): string {
