@@ -34,7 +34,7 @@ connection.onInitialize(
   },
 );
 
-connection.onInitialized(async () => {
+connection.onInitialized(() => {
   server.registerInitializedProviders();
 });
 
