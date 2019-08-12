@@ -17,20 +17,26 @@ export class Settings {
     trace: { server: "off" },
   };
 
-  constructor(private connection: IConnection) {}
+  private initDone = false;
 
-  public get getStartupClientSettings(): IClientSettings {
-    return this.clientSettings;
+  constructor(private connection: IConnection, config: any) {
+    this.updateSettings(config);
+  }
+
+  public initFinished() {
+    this.initDone = true;
   }
 
   public async getClientSettings(): Promise<IClientSettings> {
-    this.updateSettings(
-      await this.connection.workspace.getConfiguration("elmLS"),
-    );
+    if (this.initDone) {
+      this.updateSettings(
+        await this.connection.workspace.getConfiguration("elmLS"),
+      );
+    }
     return this.clientSettings;
   }
 
-  public updateSettings(config: any): void {
+  private updateSettings(config: any): void {
     this.clientSettings = { ...this.clientSettings, ...config };
   }
 }

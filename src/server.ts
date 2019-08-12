@@ -73,9 +73,7 @@ export class Server implements ILanguageServer {
       `Starting language server for folder: ${this.elmWorkspace}`,
     );
 
-    this.settings = new Settings(this.connection);
-
-    this.settings.updateSettings(initializationOptions);
+    this.settings = new Settings(this.connection, initializationOptions);
 
     this.documentEvents = new DocumentEvents(
       this.connection,
@@ -123,6 +121,8 @@ export class Server implements ILanguageServer {
     await this.initWorkspace();
   }
   public async registerInitializedProviders() {
+    // We can now query the client for up to date settings
+    this.settings.initFinished();
     // tslint:disable:no-unused-expression
     new ASTProvider(
       this.connection,
@@ -146,7 +146,7 @@ export class Server implements ILanguageServer {
     let elmVersion;
     try {
       elmVersion = await utils.getElmVersion(
-        this.settings.getStartupClientSettings,
+        await this.settings.getClientSettings(),
         this.elmWorkspace,
         this.connection,
       );
