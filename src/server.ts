@@ -1,6 +1,7 @@
-import { readFileSync } from "fs";
+import { readdirSync, readFileSync } from "fs";
 import glob from "glob";
 import os from "os";
+import * as Path from "path";
 import {
   Connection,
   InitializeParams,
@@ -163,8 +164,7 @@ export class Server implements ILanguageServer {
       const type = elmJson.type;
       const elmFolders: IFolder[] = [];
       if (type === "application") {
-        const sourceDirs = elmJson["source-directories"];
-        sourceDirs.forEach(async (folder: string) => {
+        elmJson["source-directories"].forEach(async (folder: string) => {
           elmFolders.push({
             path: this.elmWorkspace.fsPath + folder,
             writable: true,
@@ -196,13 +196,48 @@ export class Server implements ILanguageServer {
             }
           : { ...elmJson.dependencies, ...elmJson["test-dependencies"] };
 
-      for (const key in dependencies) {
-        if (dependencies.hasOwnProperty(key)) {
-          const maintainer = key.substring(0, key.indexOf("/"));
-          const packageName = key.substring(key.indexOf("/") + 1, key.length);
+      if (type === "application") {
+        for (const key in dependencies) {
+          if (dependencies.hasOwnProperty(key)) {
+            const maintainer = key.substring(0, key.indexOf("/"));
+            const packageName = key.substring(key.indexOf("/") + 1, key.length);
 
-          const pathToPackage = `${packagesRoot}${maintainer}/${packageName}/${dependencies[key]}/src`;
-          elmFolders.push({ path: pathToPackage, writable: false });
+            const pathToPackageWithVersion = `${packagesRoot}${maintainer}/${packageName}/${dependencies[key]}/src`;
+            elmFolders.push({
+              path: pathToPackageWithVersion,
+              writable: false,
+            });
+          }
+        }
+      } else {
+        for (const key in dependencies) {
+          if (dependencies.hasOwnProperty(key)) {
+            const maintainer = key.substring(0, key.indexOf("/"));
+            const packageName = key.substring(key.indexOf("/") + 1, key.length);
+
+            const pathToPackage = `${packagesRoot}${maintainer}/${packageName}/`;
+            const allVersionFolders = readdirSync(pathToPackage, "utf8").map(
+              folderName => {
+                return {
+                  version: folderName,
+                  versionPath: `${pathToPackage}${folderName}`,
+                };
+              },
+            );
+            // TODO Actually honor the version constraints here
+            const matchedFolder = allVersionFolders.find(
+              (it: { version: string; versionPath: string }) =>
+                dependencies[key].includes(it.version),
+            );
+            const pathToPackageWithVersion = matchedFolder
+              ? `${matchedFolder.versionPath}/src`
+              : `${allVersionFolders[allVersionFolders.length - 1].versionPath}/src`;
+
+            elmFolders.push({
+              path: pathToPackageWithVersion,
+              writable: false,
+            });
+          }
         }
       }
 
