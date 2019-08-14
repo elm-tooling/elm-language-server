@@ -17,7 +17,7 @@
   "dependencies": {
     "elm-analyse": "github:elm-tooling/elm-analyse#f2a983fc7bab262a3e44b46732735d8510d18876",
     "fast-diff": "^1.2.0",
-    "glob": "^7.1.4",
+    "globby": "^10.0.1",
     "request": "^2.88.0",
     "rxjs": "^6.5.2",
     "vscode-languageserver": "^5.2.1",
