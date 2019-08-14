@@ -1,3 +1,4 @@
+import { Position } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IImport, IImports } from "../imports";
 
@@ -1068,5 +1069,34 @@ export class TreeUtils {
     type: string,
   ): SyntaxNode[] {
     return node.descendantsOfType(type);
+  }
+
+  public static getNamedDescendantForPosition(
+    node: SyntaxNode,
+    position: Position,
+  ): SyntaxNode {
+    const previousCharColumn =
+      position.character === 0 ? 0 : position.character - 1;
+    const charBeforeCursor = node.text
+      .split("\n")
+      [position.line].substring(previousCharColumn, position.character);
+
+    if (charBeforeCursor === " " || charBeforeCursor === "") {
+      return node.namedDescendantForPosition({
+        column: position.character,
+        row: position.line,
+      });
+    } else {
+      return node.namedDescendantForPosition(
+        {
+          column: previousCharColumn,
+          row: position.line,
+        },
+        {
+          column: position.character,
+          row: position.line,
+        },
+      );
+    }
   }
 }

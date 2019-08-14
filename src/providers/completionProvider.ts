@@ -35,10 +35,11 @@ export class CompletionProvider {
     const tree: Tree | undefined = this.forest.getTree(params.textDocument.uri);
 
     if (tree) {
-      const nodeAtPosition = tree.rootNode.namedDescendantForPosition({
-        column: params.position.character,
-        row: params.position.line,
-      });
+      const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
+        tree.rootNode,
+        params.position,
+      );
+
       // Todo add variables from local let scopes
       completions.push(...this.getSameFileTopLevelCompletions(tree));
       completions.push(...this.findDefinitionsForScope(nodeAtPosition, tree));

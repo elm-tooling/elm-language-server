@@ -28,10 +28,10 @@ export class RenameProvider {
     const tree: Tree | undefined = this.forest.getTree(params.textDocument.uri);
 
     if (tree) {
-      const nodeAtPosition = tree.rootNode.namedDescendantForPosition({
-        column: params.position.character,
-        row: params.position.line,
-      });
+      const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
+        tree.rootNode,
+        params.position,
+      );
 
       const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
         nodeAtPosition,

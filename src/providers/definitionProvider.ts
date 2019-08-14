@@ -28,10 +28,10 @@ export class DefinitionProvider {
     const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
 
     if (tree) {
-      const nodeAtPosition = tree.rootNode.namedDescendantForPosition({
-        column: param.position.character,
-        row: param.position.line,
-      });
+      const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
+        tree.rootNode,
+        param.position,
+      );
 
       const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
         nodeAtPosition,
