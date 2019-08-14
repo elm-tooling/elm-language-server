@@ -1,14 +1,48 @@
 # elm-language-server
 
+[![Build Status](https://travis-ci.org/elm-tooling/elm-language-server.svg?branch=master)](https://travis-ci.org/elm-tooling/elm-language-server)
+
 This is the language server implementation for the Elm programming language.
 
-You will need to install `elm`, `elm-test` and `elm-format`, to get all diagnostics.
+## Installation
+
+Note for VSCode users: The plugin contains the language-server. No installation necessary.
+
+The server can be installed via `npm` (or from source).
+
+```sh
+npm install -g @elm-tooling/elm-language-server
+```
+
+Then, you should be able to run the language server with the following command:
+
+```sh
+elm-language-server --stdio
+```
+
+Follow the instructions below to integrate the language server into your editor.
+
+### Alternative: Compile and install from source
+
+First, clone this repo and compile it. `npm link` will add `elm-language-server` to the `PATH`.
+
+```sh
+git clone git@github.com:elm-tooling/elm-language-server.git
+cd elm-language-server
+npm install
+npm run compile
+npm link
+```
+
+## Requirements
+
+You will need to install `elm` and `elm-test` to get all diagnostics and `elm-format` for formatting.
 
 ```sh
 npm install -g elm elm-test elm-format
 ```
 
-Or use them from your `node_modules`, if you want to do that you need to set the paths, via the settings.
+Or use local versions from your `node_modules` directory, if you want to do that you need to set the paths, via the settings (e.g. set `elmPath` to `./node_modules/.bin/elm`).
 
 ## Features
 
@@ -37,36 +71,6 @@ This server contributes the following settings:
 - `elmLS.elmFormatPath`: The path to your `elm-format` executable.
 - `elmLS.elmTestPath`: The path to your `elm-test` executable.
 - `elmLS.diagnosticsOnSaveOnly`: Diagnostic updates triggered _only_ on save. `true/false` (default: `false`)
-
-## Installation
-
-Note for VSCode users: The plugin contains the language-server. No installation necessary.
-
-The server can be installed via `npm` (or from source).
-
-```sh
-npm install -g @elm-tooling/elm-language-server
-```
-
-Then, you should be able to run the language server with the following command:
-
-```sh
-elm-language-server --stdio
-```
-
-Follow the instructions below to integrate the language server into your editor.
-
-### Alternative: Compile and install from source
-
-First, clone this repo and compile it. `npm link` will add `elm-language-server` to the PATH.
-
-```sh
-git clone git@github.com:elm-tooling/elm-language-server.git
-cd elm-language-server
-npm install
-npm run compile
-npm link
-```
 
 ## Editor Support
 
@@ -228,14 +232,14 @@ Add this to your LSP settings under the `clients` node:
 
 You should now be able to use the integrations from Sublime.
 
-# Awesome libraries this is based on
+## Awesome libraries this is based on
 
 - [elm-analyse](https://github.com/stil4m/elm-analyse)
 - [elm-format](https://github.com/avh4/elm-format)
 - [elm-test](https://github.com/rtfeldman/node-test-runner)
 - [tree-sitter-elm](https://github.com/Razzeee/tree-sitter-elm)
 
-# Contributing
+## Contributing
 
 Please do :)
 As the best thing about a language server is that multiple clients will improve that way.
