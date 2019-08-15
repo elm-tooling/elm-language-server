@@ -6,7 +6,7 @@ This is the language server implementation for the Elm programming language.
 
 ## Installation
 
-Note for VSCode users: The plugin contains the language-server. No installation necessary.
+Note for VSCode users: The [plugin](https://github.com/elm-tooling/elm-language-client-vscode) contains the language-server. No installation necessary.
 
 The server can be installed via `npm` (or from source).
 
@@ -74,18 +74,18 @@ This server contributes the following settings:
 
 ## Editor Support
 
-| Editor  | Setup Instructions                                                 | Source Code                                                       | Diagnostics        | Formatting         | CodeLenses         | Completions        | Definitions        | DocumentSymbols    | Folding            | Hover              | References         | Rename             | Workspace Symbols  |
-| ------- | ------------------------------------------------------------------ | ----------------------------------------------------------------- | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ | ------------------ |
-| VSCode  | [Link](https://github.com/elm-tooling/elm-language-server#vscode)  | [Link](https://github.com/elm-tooling/elm-language-client-vscode) | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| VIM CoC | [Link](https://github.com/elm-tooling/elm-language-server#cocnvim) |                                                                   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| VIM ALE | [Link](https://github.com/elm-tooling/elm-language-server#ale)     |                                                                   | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :x:                | :heavy_check_mark: |
-| Kakoune | [Link](https://github.com/elm-tooling/elm-language-server#kak-lsp) |                                                                   | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    |
-| Emacs   | [Link](https://github.com/elm-tooling/elm-language-server#emacs)   | [Link](https://github.com/emacs-lsp/lsp-mode)                     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| Sublime | [Link](https://github.com/elm-tooling/elm-language-server#sublime) |                                                                   | :heavy_check_mark: | :heavy_check_mark: | :x:                | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| Editor                                                                |    Diagnostics     |     Formatting     |    Code Lenses     |    Completions     |    Definitions     |  Document Symbols  |      Folding       |       Hover        |     References     |       Rename       | Workspace Symbols  |
+| --------------------------------------------------------------------- | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: |
+| [VSCode](https://github.com/elm-tooling/elm-language-server#vscode)   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| [VIM CoC](https://github.com/elm-tooling/elm-language-server#cocnvim) | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| [VIM ALE](https://github.com/elm-tooling/elm-language-server#ale)     | :heavy_check_mark: |        :x:         |        :x:         | :heavy_check_mark: | :heavy_check_mark: |        :x:         |        :x:         | :heavy_check_mark: | :heavy_check_mark: |        :x:         | :heavy_check_mark: |
+| [Kakoune](https://github.com/elm-tooling/elm-language-server#kak-lsp) | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   |
+| [Emacs](https://github.com/elm-tooling/elm-language-server#emacs)     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| [Sublime](https://github.com/elm-tooling/elm-language-server#sublime) | :heavy_check_mark: | :heavy_check_mark: |        :x:         | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 
 ### VSCode
 
-Just install the plugin from the [VSCode MarketPlace](https://marketplace.visualstudio.com/items?itemName=Elmtooling.elm-ls-vscode)
+Just install the [`elm-tooling/elm-language-client-vscode`](https://github.com/elm-tooling/elm-language-client-vscode) plugin from the [VSCode MarketPlace](https://marketplace.visualstudio.com/items?itemName=Elmtooling.elm-ls-vscode)
 
 ### Vim
 
