@@ -179,9 +179,9 @@ export class ElmWorkspace {
               },
             );
             // TODO Actually honor the version constraints here
-            const matchedFolder = allVersionFolders.find(
-              (it: { version: string; versionPath: string }) =>
-                dependencies[key].includes(it.version),
+            const matchedFolder = utils.findDepVersion(
+              allVersionFolders,
+              dependencies[key],
             );
             const pathToPackageWithVersion = matchedFolder
               ? `${matchedFolder.versionPath}/src`
