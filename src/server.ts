@@ -31,15 +31,15 @@ export class Server implements ILanguageServer {
     const initializationOptions = this.params.initializationOptions || {};
     this.settings = new Settings(this.connection, initializationOptions);
 
-    // Use only the 0 elment as that should be the correct one, the docs are weird about this https://github.com/microsoft/vscode-languageserver-node/issues/285
-    if (params.rootUri) {
-      const uri = URI.parse(params.rootUri);
+    const uri = this.getWorkspaceUri(params);
+
+    if (uri) {
       const elmJsonGlob = `${uri.fsPath}/**/elm.json`;
 
       const elmJsons = globby.sync([elmJsonGlob, "**/node_modules/**"]);
       if (elmJsons.length > 0) {
         connection.console.info(
-          `Found ${elmJsons.length} elm.json files for workspace ${params.rootUri}`,
+          `Found ${elmJsons.length} elm.json files for workspace ${uri.fsPath}`,
         );
         connection.console.info(`${JSON.stringify(elmJsons)}`);
         const listOfElmJsonFolders = elmJsons.map(a =>
@@ -49,7 +49,7 @@ export class Server implements ILanguageServer {
           listOfElmJsonFolders,
         );
         connection.console.info(
-          `Found ${topLevelElmJsons.size} unique elmWorkspaces for workspace ${params.rootUri}`,
+          `Found ${topLevelElmJsons.size} unique elmWorkspaces for workspace ${uri.fsPath}`,
         );
 
         topLevelElmJsons.forEach(elmWorkspace => {
@@ -112,5 +112,15 @@ export class Server implements ILanguageServer {
     });
 
     return result;
+  }
+
+  private getWorkspaceUri(params: InitializeParams) {
+    if (params.rootUri) {
+      return URI.parse(params.rootUri);
+    } else if (params.rootPath) {
+      return URI.file(params.rootPath);
+    } else {
+      return null;
+    }
   }
 }
