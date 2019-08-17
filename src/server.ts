@@ -38,6 +38,10 @@ export class Server implements ILanguageServer {
 
       const elmJsons = globby.sync([elmJsonGlob, "**/node_modules/**"]);
       if (elmJsons.length > 0) {
+        connection.console.info(
+          `Found ${elmJsons.length} elm.json files for workspace ${params.rootUri}`,
+        );
+        connection.console.info(`${JSON.stringify(elmJsons)}`);
         const listOfElmJsonFolders = elmJsons.map(a =>
           this.getElmJsonFolder(a),
         );
