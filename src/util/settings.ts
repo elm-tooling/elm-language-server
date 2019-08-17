@@ -1,16 +1,18 @@
 import { IConnection } from "vscode-languageserver";
 
 export interface IClientSettings {
-  diagnosticsOnSaveOnly: boolean;
   elmFormatPath: string;
   elmPath: string;
   elmTestPath: string;
+  elmAnalyseTrigger: ElmAnalyseTrigger;
   trace: { server: string };
 }
 
+export type ElmAnalyseTrigger = "change" | "save" | "never";
+
 export class Settings {
   private clientSettings: IClientSettings = {
-    diagnosticsOnSaveOnly: false,
+    elmAnalyseTrigger: "change",
     elmFormatPath: "elm-format",
     elmPath: "elm",
     elmTestPath: "elm-test",

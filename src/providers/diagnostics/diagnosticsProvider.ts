@@ -1,6 +1,6 @@
 import { Diagnostic, IConnection, TextDocument } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { Settings } from "../../util/settings";
+import { ElmAnalyseTrigger, Settings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { ElmAnalyseDiagnostics } from "./elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
@@ -37,10 +37,6 @@ export class DiagnosticsProvider {
     elmAnalyse: ElmAnalyseDiagnostics,
     elmMake: ElmMakeDiagnostics,
   ) {
-    this.getDiagnosticsOnSaveOrOpen = this.getDiagnosticsOnSaveOrOpen.bind(
-      this,
-    );
-    this.getDiagnosticsOnChange = this.getDiagnosticsOnChange.bind(this);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmMakeDiagnostics = elmMake;
     this.elmAnalyseDiagnostics = elmAnalyse;
@@ -51,17 +47,22 @@ export class DiagnosticsProvider {
       elmTest: new Map(),
     };
 
-    this.events.on("open", this.getDiagnosticsOnSaveOrOpen);
-    this.events.on("save", this.getDiagnosticsOnSaveOrOpen);
-    this.elmAnalyseDiagnostics.on(
-      "new-diagnostics",
-      this.newElmAnalyseDiagnostics,
-    );
-
     // register onChange listener if settings are not on-save only
-    this.settings.getClientSettings().then(({ diagnosticsOnSaveOnly }) => {
-      if (!diagnosticsOnSaveOnly) {
-        this.events.on("change", this.getDiagnosticsOnChange);
+    this.settings.getClientSettings().then(({ elmAnalyseTrigger }) => {
+      this.events.on("open", d =>
+        this.getDiagnostics(d, true, elmAnalyseTrigger),
+      );
+      this.events.on("save", d =>
+        this.getDiagnostics(d, true, elmAnalyseTrigger),
+      );
+      this.elmAnalyseDiagnostics.on(
+        "new-diagnostics",
+        this.newElmAnalyseDiagnostics,
+      );
+      if (elmAnalyseTrigger === "change") {
+        this.events.on("change", d =>
+          this.getDiagnostics(d, false, elmAnalyseTrigger),
+        );
       }
     });
   }
@@ -97,26 +98,17 @@ export class DiagnosticsProvider {
     }
   }
 
-  private async getDiagnosticsOnChange(document: TextDocument): Promise<void> {
-    this.connection.console.info(
-      "Diagnostics were requested due to a file change",
-    );
-    this.getDiagnostics(document, false);
-  }
-
-  private async getDiagnosticsOnSaveOrOpen(
-    document: TextDocument,
-  ): Promise<void> {
-    this.connection.console.info(
-      "Diagnostics were requested due to a file open or save",
-    );
-    this.getDiagnostics(document, true);
-  }
-
   private async getDiagnostics(
     document: TextDocument,
     isSaveOrOpen: boolean,
+    elmAnalyseTrigger: ElmAnalyseTrigger,
   ): Promise<void> {
+    this.connection.console.info(
+      `Diagnostics were requested due to a file ${
+        isSaveOrOpen ? "open or save" : "change"
+      }`,
+    );
+
     const uri = URI.parse(document.uri);
     if (uri.toString().startsWith(this.elmWorkspaceFolder.toString())) {
       const text = document.getText();
@@ -130,7 +122,9 @@ export class DiagnosticsProvider {
       const elmMakeDiagnosticsForCurrentFile = this.currentDiagnostics.elmMake.get(
         uri.toString(),
       );
+
       if (
+        elmAnalyseTrigger !== "never" &&
         elmMakeDiagnosticsForCurrentFile &&
         elmMakeDiagnosticsForCurrentFile.length === 0
       ) {
