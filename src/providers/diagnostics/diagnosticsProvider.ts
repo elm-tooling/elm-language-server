@@ -22,7 +22,7 @@ export interface IElmIssue {
 
 export class DiagnosticsProvider {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
-  private elmAnalyseDiagnostics: ElmAnalyseDiagnostics;
+  private elmAnalyseDiagnostics: ElmAnalyseDiagnostics | null;
   private currentDiagnostics: {
     elmMake: Map<string, Diagnostic[]>;
     elmAnalyse: Map<string, Diagnostic[]>;
@@ -34,7 +34,7 @@ export class DiagnosticsProvider {
     private elmWorkspaceFolder: URI,
     private settings: Settings,
     private events: TextDocumentEvents,
-    elmAnalyse: ElmAnalyseDiagnostics,
+    elmAnalyse: ElmAnalyseDiagnostics | null,
     elmMake: ElmMakeDiagnostics,
   ) {
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
@@ -55,10 +55,12 @@ export class DiagnosticsProvider {
       this.events.on("save", d =>
         this.getDiagnostics(d, true, elmAnalyseTrigger),
       );
-      this.elmAnalyseDiagnostics.on(
-        "new-diagnostics",
-        this.newElmAnalyseDiagnostics,
-      );
+      if (this.elmAnalyseDiagnostics) {
+        this.elmAnalyseDiagnostics.on(
+          "new-diagnostics",
+          this.newElmAnalyseDiagnostics,
+        );
+      }
       if (elmAnalyseTrigger === "change") {
         this.events.on("change", d =>
           this.getDiagnostics(d, false, elmAnalyseTrigger),
@@ -124,6 +126,7 @@ export class DiagnosticsProvider {
       );
 
       if (
+        this.elmAnalyseDiagnostics &&
         elmAnalyseTrigger !== "never" &&
         elmMakeDiagnosticsForCurrentFile &&
         elmMakeDiagnosticsForCurrentFile.length === 0

@@ -9,12 +9,12 @@ import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
 
 export class CodeActionProvider {
   private connection: IConnection;
-  private elmAnalyse: ElmAnalyseDiagnostics;
+  private elmAnalyse: ElmAnalyseDiagnostics | null;
   private elmMake: ElmMakeDiagnostics;
 
   constructor(
     connection: IConnection,
-    elmAnalyse: ElmAnalyseDiagnostics,
+    elmAnalyse: ElmAnalyseDiagnostics | null,
     elmMake: ElmMakeDiagnostics,
   ) {
     this.connection = connection;
@@ -28,13 +28,14 @@ export class CodeActionProvider {
 
   private onCodeAction(params: CodeActionParams): CodeAction[] {
     this.connection.console.info("A code action was requested");
-    return this.elmAnalyse
-      .onCodeAction(params)
-      .concat(this.elmMake.onCodeAction(params));
+    const analyse =
+      (this.elmAnalyse && this.elmAnalyse.onCodeAction(params)) || [];
+    const make = this.elmMake.onCodeAction(params);
+    return [...analyse, ...make];
   }
 
   private async onExecuteCommand(params: ExecuteCommandParams) {
     this.connection.console.info("A command execution was requested");
-    return this.elmAnalyse.onExecuteCommand(params);
+    return this.elmAnalyse && this.elmAnalyse.onExecuteCommand(params);
   }
 }

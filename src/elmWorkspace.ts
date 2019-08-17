@@ -78,24 +78,32 @@ export class ElmWorkspace {
   }
 
   public async init() {
+    const settings = await this.settings.getClientSettings();
+
     const documentFormatingProvider = new DocumentFormattingProvider(
       this.connection,
       this.elmWorkspace,
       this.textDocumentEvents,
       this.settings,
     );
-    const elmAnalyse = new ElmAnalyseDiagnostics(
-      this.connection,
-      this.elmWorkspace,
-      this.textDocumentEvents,
-      this.settings,
-      documentFormatingProvider,
-    );
+
+    const elmAnalyse =
+      settings.elmAnalyseTrigger !== "never"
+        ? new ElmAnalyseDiagnostics(
+            this.connection,
+            this.elmWorkspace,
+            this.textDocumentEvents,
+            this.settings,
+            documentFormatingProvider,
+          )
+        : null;
+
     const elmMake = new ElmMakeDiagnostics(
       this.connection,
       this.elmWorkspace,
       this.settings,
     );
+
     // tslint:disable:no-unused-expression
     new DiagnosticsProvider(
       this.connection,
@@ -105,6 +113,7 @@ export class ElmWorkspace {
       elmAnalyse,
       elmMake,
     );
+
     new CodeActionProvider(this.connection, elmAnalyse, elmMake);
 
     await this.initWorkspace();

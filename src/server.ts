@@ -81,9 +81,7 @@ export class Server implements ILanguageServer {
   }
 
   public async init() {
-    this.elmWorkspaceMap.forEach(it => {
-      return it.init();
-    });
+    this.elmWorkspaceMap.forEach(it => it.init());
   }
 
   public async registerInitializedProviders() {
