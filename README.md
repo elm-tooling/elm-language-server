@@ -70,7 +70,9 @@ This server contributes the following settings:
 - `elmLS.elmPath`: The path to your `elm` executable.
 - `elmLS.elmFormatPath`: The path to your `elm-format` executable.
 - `elmLS.elmTestPath`: The path to your `elm-test` executable.
-- `elmLS.diagnosticsOnSaveOnly`: Diagnostic updates triggered _only_ on save. `true/false` (default: `false`)
+- `elmLS.elmAnalyseTrigger`: `elm-analyse` executed on `'change'`, `'save'` or `'never'` (default: `'change'`)
+
+Settings may need a restart to be applied.
 
 ## Editor Support
 
@@ -109,7 +111,7 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format` with the 
         "elmPath": "elm",
         "elmFormatPath": "elm-format",
         "elmTestPath": "elm-test",
-        "diagnosticsOnSaveOnly": false
+        "elmAnalyseTrigger": "change"
       }
     }
   },
@@ -190,7 +192,7 @@ args = ["--stdio"]
 elmPath = "elm"
 elmFormatPath = "elm-format"
 elmTestPath = "elm-test"
-diagnosticsOnSaveOnly = false
+elmAnalyseTrigger = "change"
 ```
 
 ### Emacs
@@ -225,7 +227,7 @@ Add this to your LSP settings under the `clients` node:
         "elmPath": "elm",
         "elmFormatPath": "elm-format",
         "elmTestPath": "elm-test",
-        "diagnosticsOnSaveOnly": false
+        "elmAnalyseTrigger": "change"
     }
 }
 ```
