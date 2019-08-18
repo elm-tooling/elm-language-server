@@ -192,3 +192,13 @@ export async function getElmVersion(
 
   return Promise.resolve(version);
 }
+
+export function findDepVersion(
+  allVersionFolders: Array<{ version: string; versionPath: string }>,
+  versionRange: string,
+) {
+  return allVersionFolders.find(
+    (it: { version: string; versionPath: string }) =>
+      versionRange.includes(it.version),
+  );
+}
