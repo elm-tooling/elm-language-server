@@ -1,36 +1,14 @@
-import { readdirSync, readFileSync } from "fs";
-import glob from "glob";
-import os from "os";
-import * as Path from "path";
+import globby from "globby";
 import {
   Connection,
   InitializeParams,
   InitializeResult,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import Parser, { Tree } from "web-tree-sitter";
+import Parser from "web-tree-sitter";
 import { CapabilityCalculator } from "./capabilityCalculator";
-import { Forest } from "./forest";
-import { IImports, Imports } from "./imports";
-import { ASTProvider } from "./providers/astProvider";
-import { CodeActionProvider } from "./providers/codeActionProvider";
-import { CodeLensProvider } from "./providers/codeLensProvider";
-import { CompletionProvider } from "./providers/completionProvider";
-import { DefinitionProvider } from "./providers/definitionProvider";
-import { DiagnosticsProvider } from "./providers/diagnostics/diagnosticsProvider";
-import { ElmAnalyseDiagnostics } from "./providers/diagnostics/elmAnalyseDiagnostics";
-import { ElmMakeDiagnostics } from "./providers/diagnostics/elmMakeDiagnostics";
-import { DocumentFormattingProvider } from "./providers/documentFormatingProvider";
-import { DocumentSymbolProvider } from "./providers/documentSymbolProvider";
-import { FoldingRangeProvider } from "./providers/foldingProvider";
-import { HoverProvider } from "./providers/hoverProvider";
-import { ReferencesProvider } from "./providers/referencesProvider";
-import { RenameProvider } from "./providers/renameProvider";
-import { WorkspaceSymbolProvider } from "./providers/workspaceSymbolProvider";
-import { DocumentEvents } from "./util/documentEvents";
-import * as utils from "./util/elmUtils";
+import { ElmWorkspace } from "./elmWorkspace";
 import { Settings } from "./util/settings";
-import { TextDocumentEvents } from "./util/textDocumentEvents";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -38,19 +16,10 @@ export interface ILanguageServer {
   registerInitializedProviders(): void;
 }
 
-interface IFolder {
-  path: string;
-  writable: boolean;
-}
-
 export class Server implements ILanguageServer {
   private calculator: CapabilityCalculator;
-  private forest: Forest = new Forest();
-  private imports: IImports;
-  private elmWorkspace: URI;
   private settings: Settings;
-  private documentEvents: DocumentEvents;
-  private textDocumentEvents: TextDocumentEvents;
+  private elmWorkspaceMap: Map<string, ElmWorkspace> = new Map();
 
   constructor(
     private connection: Connection,
@@ -59,28 +28,50 @@ export class Server implements ILanguageServer {
   ) {
     this.calculator = new CapabilityCalculator(params.capabilities);
 
-    this.imports = new Imports(parser);
-
-    const elmWorkspaceFallback =
-      // Add a trailing slash if not present
-      this.params.rootUri && this.params.rootUri.replace(/\/?$/, "/");
-
     const initializationOptions = this.params.initializationOptions || {};
-    this.elmWorkspace = URI.parse(
-      initializationOptions.elmWorkspace || elmWorkspaceFallback,
-    );
-
-    this.connection.console.info(
-      `Starting language server for folder: ${this.elmWorkspace}`,
-    );
-
     this.settings = new Settings(this.connection, initializationOptions);
 
-    this.documentEvents = new DocumentEvents(
-      this.connection,
-      this.elmWorkspace,
-    );
-    this.textDocumentEvents = new TextDocumentEvents(this.documentEvents);
+    const uri = this.getWorkspaceUri(params);
+
+    if (uri) {
+      const elmJsonGlob = `${uri.fsPath}/**/elm.json`;
+
+      const elmJsons = globby.sync([
+        elmJsonGlob,
+        "!**/node_modules/**",
+        "!**/elm-stuff/**",
+      ]);
+      if (elmJsons.length > 0) {
+        connection.console.info(
+          `Found ${elmJsons.length} elm.json files for workspace ${uri.fsPath}`,
+        );
+        const listOfElmJsonFolders = elmJsons.map(a =>
+          this.getElmJsonFolder(a),
+        );
+        const topLevelElmJsons: Map<string, URI> = this.findTopLevelFolders(
+          listOfElmJsonFolders,
+        );
+        connection.console.info(
+          `Found ${topLevelElmJsons.size} unique elmWorkspaces for workspace ${uri.fsPath}`,
+        );
+
+        topLevelElmJsons.forEach(elmWorkspace => {
+          this.elmWorkspaceMap.set(
+            elmWorkspace.toString(),
+            new ElmWorkspace(
+              elmWorkspace,
+              connection,
+              this.settings,
+              this.parser,
+            ),
+          );
+        });
+      } else {
+        this.connection.console.info(`No elm.json found`);
+      }
+    } else {
+      this.connection.console.info(`No workspace was setup by the client`);
+    }
   }
 
   get capabilities(): InitializeResult {
@@ -90,216 +81,49 @@ export class Server implements ILanguageServer {
   }
 
   public async init() {
-    const documentFormatingProvider = new DocumentFormattingProvider(
-      this.connection,
-      this.elmWorkspace,
-      this.textDocumentEvents,
-      this.settings,
-    );
-    const elmAnalyse = new ElmAnalyseDiagnostics(
-      this.connection,
-      this.elmWorkspace,
-      this.textDocumentEvents,
-      this.settings,
-      documentFormatingProvider,
-    );
-    const elmMake = new ElmMakeDiagnostics(
-      this.connection,
-      this.elmWorkspace,
-      this.settings,
-    );
-    // tslint:disable:no-unused-expression
-    new DiagnosticsProvider(
-      this.connection,
-      this.elmWorkspace,
-      this.settings,
-      this.textDocumentEvents,
-      elmAnalyse,
-      elmMake,
-    );
-    new CodeActionProvider(this.connection, elmAnalyse, elmMake);
-
-    await this.initWorkspace();
+    this.elmWorkspaceMap.forEach(it => {
+      return it.init();
+    });
   }
+
   public async registerInitializedProviders() {
     // We can now query the client for up to date settings
     this.settings.initFinished();
-    // tslint:disable:no-unused-expression
-    new ASTProvider(
-      this.connection,
-      this.forest,
-      this.documentEvents,
-      this.imports,
-      this.parser,
-    );
-    new FoldingRangeProvider(this.connection, this.forest);
-    new CompletionProvider(this.connection, this.forest, this.imports);
-    new HoverProvider(this.connection, this.forest, this.imports);
-    new DefinitionProvider(this.connection, this.forest, this.imports);
-    new ReferencesProvider(this.connection, this.forest, this.imports);
-    new DocumentSymbolProvider(this.connection, this.forest);
-    new WorkspaceSymbolProvider(this.connection, this.forest);
-    new CodeLensProvider(this.connection, this.forest, this.imports);
-    new RenameProvider(this.connection, this.forest, this.imports);
+
+    this.elmWorkspaceMap.forEach(it => it.registerInitializedProviders());
   }
 
-  public async initWorkspace() {
-    let elmVersion;
-    try {
-      elmVersion = await utils.getElmVersion(
-        await this.settings.getClientSettings(),
-        this.elmWorkspace,
-        this.connection,
-      );
-    } catch (e) {
-      this.connection.console.warn(
-        `Could not figure out elm version, this will impact how good the server works. \n ${e.stack}`,
-      );
-    }
-    try {
-      const path = `${this.elmWorkspace.fsPath}elm.json`;
-      this.connection.console.info(`Reading elm.json from ${path}`);
-      // Find elm files and feed them to tree sitter
-      const elmJson = require(path);
-      const type = elmJson.type;
-      const elmFolders: IFolder[] = [];
-      if (type === "application") {
-        elmJson["source-directories"].forEach(async (folder: string) => {
-          elmFolders.push({
-            path: this.elmWorkspace.fsPath + folder,
-            writable: true,
-          });
-        });
-      } else {
-        elmFolders.push({
-          path: `${this.elmWorkspace.fsPath}src`,
-          writable: true,
-        });
-      }
-      elmFolders.push({
-        path: `${this.elmWorkspace.fsPath}tests`,
-        writable: true,
-      });
-      this.connection.console.info(
-        `${elmFolders.length} source-dirs and test folders found`,
-      );
+  private getElmJsonFolder(uri: string): URI {
+    return URI.file(uri.replace("elm.json", ""));
+  }
 
-      const elmHome = this.findElmHome();
-      const packagesRoot = `${elmHome}/${elmVersion}/${this.packageOrPackagesFolder(
-        elmVersion,
-      )}/`;
-      const dependencies: { [index: string]: string } =
-        type === "application"
-          ? {
-              ...elmJson.dependencies.direct,
-              ...elmJson["test-dependencies"].direct,
-            }
-          : { ...elmJson.dependencies, ...elmJson["test-dependencies"] };
+  private findTopLevelFolders(listOfElmJsonFolders: URI[]) {
+    const result: Map<string, URI> = new Map();
+    listOfElmJsonFolders.forEach(element => {
+      result.set(element.toString(), element);
+    });
 
-      if (type === "application") {
-        for (const key in dependencies) {
-          if (dependencies.hasOwnProperty(key)) {
-            const maintainer = key.substring(0, key.indexOf("/"));
-            const packageName = key.substring(key.indexOf("/") + 1, key.length);
-
-            const pathToPackageWithVersion = `${packagesRoot}${maintainer}/${packageName}/${dependencies[key]}/src`;
-            elmFolders.push({
-              path: pathToPackageWithVersion,
-              writable: false,
-            });
-          }
+    listOfElmJsonFolders.forEach(a => {
+      listOfElmJsonFolders.forEach(b => {
+        if (
+          b.toString() !== a.toString() &&
+          b.toString().startsWith(a.toString())
+        ) {
+          result.delete(b.toString());
         }
-      } else {
-        for (const key in dependencies) {
-          if (dependencies.hasOwnProperty(key)) {
-            const maintainer = key.substring(0, key.indexOf("/"));
-            const packageName = key.substring(key.indexOf("/") + 1, key.length);
-
-            const pathToPackage = `${packagesRoot}${maintainer}/${packageName}/`;
-            const allVersionFolders = readdirSync(pathToPackage, "utf8").map(
-              folderName => {
-                return {
-                  version: folderName,
-                  versionPath: `${pathToPackage}${folderName}`,
-                };
-              },
-            );
-            // TODO Actually honor the version constraints here
-            const matchedFolder = allVersionFolders.find(
-              (it: { version: string; versionPath: string }) =>
-                dependencies[key].includes(it.version),
-            );
-            const pathToPackageWithVersion = matchedFolder
-              ? `${matchedFolder.versionPath}/src`
-              : `${allVersionFolders[allVersionFolders.length - 1].versionPath}/src`;
-
-            elmFolders.push({
-              path: pathToPackageWithVersion,
-              writable: false,
-            });
-          }
-        }
-      }
-
-      const elmFilePaths = this.findElmFilesInFolders(elmFolders);
-      this.connection.console.info(
-        `Found ${elmFilePaths.length.toString()} files to add to the project`,
-      );
-
-      for (const filePath of elmFilePaths) {
-        this.connection.console.info(`Adding ${filePath.path.toString()}`);
-        const fileContent: string = readFileSync(
-          filePath.path.toString(),
-          "utf8",
-        );
-        let tree: Tree | undefined;
-        tree = this.parser.parse(fileContent);
-        this.forest.setTree(
-          URI.file(filePath.path).toString(),
-          filePath.writable,
-          true,
-          tree,
-        );
-      }
-
-      this.forest.treeIndex.forEach(item => {
-        this.connection.console.info(`Adding imports ${item.uri.toString()}`);
-        this.imports.updateImports(item.uri, item.tree, this.forest);
       });
+    });
 
-      this.connection.console.info("Done parsing all files.");
-    } catch (error) {
-      this.connection.console.error(error.stack);
+    return result;
+  }
+
+  private getWorkspaceUri(params: InitializeParams) {
+    if (params.rootUri) {
+      return URI.parse(params.rootUri);
+    } else if (params.rootPath) {
+      return URI.file(params.rootPath);
+    } else {
+      return null;
     }
-  }
-
-  private findElmHome() {
-    const elmHomeVar = process.env.ELM_HOME;
-
-    if (elmHomeVar) {
-      return elmHomeVar;
-    }
-
-    return utils.isWindows
-      ? `${os.homedir()}/AppData/Roaming/elm`
-      : `${os.homedir()}/.elm`;
-  }
-
-  private findElmFilesInFolders(elmFolders: IFolder[]): IFolder[] {
-    let elmFilePaths: IFolder[] = [];
-    for (const element of elmFolders) {
-      elmFilePaths = elmFilePaths.concat(this.findElmFilesInFolder(element));
-    }
-    return elmFilePaths;
-  }
-
-  private findElmFilesInFolder(element: IFolder): IFolder[] {
-    return glob
-      .sync(`${element.path}/**/*.elm`)
-      .map(path => ({ path, writable: element.writable }));
-  }
-
-  private packageOrPackagesFolder(elmVersion: string | undefined): string {
-    return elmVersion === "0.19.0" ? "package" : "packages";
   }
 }
