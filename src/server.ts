@@ -36,6 +36,7 @@ export class Server implements ILanguageServer {
     if (uri) {
       const elmJsonGlob = `${uri.fsPath}/**/elm.json`;
 
+      connection.console.info(elmJsonGlob);
       const elmJsons = globby.sync([elmJsonGlob, "**/node_modules/**"]);
       if (elmJsons.length > 0) {
         connection.console.info(
