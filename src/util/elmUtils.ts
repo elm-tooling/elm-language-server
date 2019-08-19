@@ -197,8 +197,69 @@ export function findDepVersion(
   allVersionFolders: Array<{ version: string; versionPath: string }>,
   versionRange: string,
 ) {
-  return allVersionFolders.find(
-    (it: { version: string; versionPath: string }) =>
-      versionRange.includes(it.version),
-  );
+  const regex = /^(\d+\.\d+\.\d+) (<|<=) v (<|<=) (\d+\.\d+\.\d+)$/gm;
+
+  const m = regex.exec(versionRange);
+  if (m) {
+    const lowerRange = m[1];
+    const lowerOperator = m[2];
+    const upperOperator = m[3];
+    const upperRange = m[4];
+
+    const filteredVersionList = allVersionFolders
+      .filter(a => filterSemver(a.version, lowerRange, lowerOperator))
+      .filter(a => filterSemver(upperRange, a.version, upperOperator));
+
+    const latestVersionInRange = filteredVersionList
+      .map(a => a.version)
+      .sort(cmp)
+      .reverse()[0];
+    return allVersionFolders.find(a => a.version === latestVersionInRange);
+  } else {
+    // Regex did not work, probably not a version range
+    return allVersionFolders.find(
+      (it: { version: string; versionPath: string }) =>
+        versionRange.includes(it.version),
+    );
+  }
+}
+
+function filterSemver(lower: string, upper: string, operator: string) {
+  const currentCompare = cmp(lower, upper);
+  switch (operator) {
+    case "<=":
+      if (currentCompare === -1) {
+        return false;
+      } else {
+        return true;
+      }
+    case "<":
+      if (currentCompare === -1 || currentCompare === 0) {
+        return false;
+      } else {
+        return true;
+      }
+  }
+}
+
+function cmp(a: string, b: string) {
+  const pa = a.split(".");
+  const pb = b.split(".");
+  for (let i = 0; i < 3; i++) {
+    const na = Number(pa[i]);
+    const nb = Number(pb[i]);
+    if (na > nb) {
+      return 1;
+    }
+    if (nb > na) {
+      return -1;
+    }
+    if (!isNaN(na) && isNaN(nb)) {
+      return 1;
+    }
+    if (isNaN(na) && !isNaN(nb)) {
+      return -1;
+    }
+  }
+  return 0;
 }
