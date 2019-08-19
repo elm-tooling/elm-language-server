@@ -219,7 +219,7 @@ Add this to your LSP settings under the `clients` node:
     ],
     "syntaxes":
     [
-        "Packages/Elm Language Support/Syntaxes/Elm.sublime-syntax"
+        "Packages/Elm Language Highlighting/src/elm.sublime-syntax"
     ],
     "initializationOptions": {
         "elmPath": "elm",
