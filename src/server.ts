@@ -34,7 +34,9 @@ export class Server implements ILanguageServer {
     const uri = this.getWorkspaceUri(params);
 
     if (uri) {
-      const elmJsonGlob = `${uri.fsPath}/**/elm.json`;
+      // Cleanup the path on windows, as globby does not like backslashes
+      const globUri = uri.fsPath.replace(/\\/g, "/");
+      const elmJsonGlob = `${globUri}/**/elm.json`;
 
       const elmJsons = globby.sync([
         elmJsonGlob,
@@ -43,7 +45,7 @@ export class Server implements ILanguageServer {
       ]);
       if (elmJsons.length > 0) {
         connection.console.info(
-          `Found ${elmJsons.length} elm.json files for workspace ${uri.fsPath}`,
+          `Found ${elmJsons.length} elm.json files for workspace ${globUri}`,
         );
         const listOfElmJsonFolders = elmJsons.map(a =>
           this.getElmJsonFolder(a),
@@ -52,7 +54,7 @@ export class Server implements ILanguageServer {
           listOfElmJsonFolders,
         );
         connection.console.info(
-          `Found ${topLevelElmJsons.size} unique elmWorkspaces for workspace ${uri.fsPath}`,
+          `Found ${topLevelElmJsons.size} unique elmWorkspaces for workspace ${globUri}`,
         );
 
         topLevelElmJsons.forEach(elmWorkspace => {
