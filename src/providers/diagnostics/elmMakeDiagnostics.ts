@@ -20,6 +20,40 @@ const ELM_MAKE = "Elm";
 const RANDOM_ID = crypto.randomBytes(16).toString("hex");
 export const CODE_ACTION_ELM_MAKE = `elmLS.elmMakeFixer-${RANDOM_ID}`;
 
+export interface IElmCompilerError {
+  type: string;
+  errors: IError[];
+}
+
+export interface IElmError {
+  title: string;
+  type: string;
+  path: string;
+  message: Array<string | IStyledString>;
+}
+
+export interface IError {
+  path: string | null;
+  name: string;
+  problems: IProblem[];
+}
+
+export interface IProblem {
+  title: string;
+  region: {
+    start: { line: number; column: number };
+    end: { line: number; column: number };
+  };
+  message: Array<string | IStyledString>;
+}
+
+export interface IStyledString {
+  bold: boolean;
+  underline: boolean;
+  color: string;
+  string: string;
+}
+
 export class ElmMakeDiagnostics {
   constructor(
     private connection: IConnection,
@@ -173,33 +207,39 @@ export class ElmMakeDiagnostics {
         const errorObject = JSON.parse(line);
 
         if (errorObject.type === "compile-errors") {
-          errorObject.errors.forEach((error: any) => {
-            const problems = error.problems.map((problem: any) => ({
-              details: problem.message
-                .map((message: any) =>
-                  typeof message === "string" ? message : `#${message.string}#`,
-                )
-                .join(""),
-              file: path.isAbsolute(error.path)
-                ? path.relative(cwd, error.path)
-                : error.path,
-              overview: problem.title,
-              region: problem.region,
-              subregion: "",
-              tag: "error",
-              type: "error",
-            }));
+          errorObject.errors.forEach((error: IError) => {
+            const problems: IElmIssue[] = error.problems.map(
+              (problem: IProblem) => ({
+                details: problem.message
+                  .map((message: string | IStyledString) =>
+                    typeof message === "string"
+                      ? message
+                      : `#${message.string}#`,
+                  )
+                  .join(""),
+                file: error.path
+                  ? path.isAbsolute(error.path)
+                    ? path.relative(cwd, error.path)
+                    : error.path
+                  : relativePathToFile,
+                overview: problem.title,
+                region: problem.region,
+                subregion: "",
+                tag: "error",
+                type: "error",
+              }),
+            );
 
             lines.push(...problems);
           });
         } else if (errorObject.type === "error") {
-          const problem = {
+          const problem: IElmIssue = {
             details: errorObject.message
-              .map((message: any) =>
+              .map((message: string | IStyledString) =>
                 typeof message === "string" ? message : message.string,
               )
               .join(""),
-            file: errorObject.path,
+            file: errorObject.path ? errorObject.path : relativePathToFile,
             overview: errorObject.title,
             region: {
               end: {
