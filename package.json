@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "elm-analyse": "github:elm-tooling/elm-analyse#f2a983fc7bab262a3e44b46732735d8510d18876",
+    "execa": "^2.0.4",
     "fast-diff": "^1.2.0",
     "globby": "^10.0.1",
     "request": "^2.88.0",

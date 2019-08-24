@@ -22,24 +22,24 @@ export class DocumentFormattingProvider {
   public formatText = async (
     elmFormatPath: string,
     text: string,
-  ): Promise<TextEdit[]> => {
+  ): Promise<TextEdit[] | undefined> => {
     const options = {
-      cmdArguments: ["--stdin", "--elm-version 0.19", "--yes"],
-      notFoundText: "Install Elm-format via 'npm install -g elm-format",
+      cmdArguments: ["--stdin", "--elm-version", "0.19", "--yes"],
+      notFoundText: "Install elm-format via 'npm install -g elm-format",
     };
-    const format = execCmd(
-      elmFormatPath,
-      options,
-      this.elmWorkspaceFolder,
-      this.connection,
-    );
 
-    format.stdin.write(text);
-    format.stdin.end();
-
-    const stdout = await format;
-
-    return Diff.getTextRangeChanges(text, stdout.stdout);
+    try {
+      const format = await execCmd(
+        elmFormatPath,
+        options,
+        this.elmWorkspaceFolder.fsPath,
+        this.connection,
+        text,
+      );
+      return Diff.getTextRangeChanges(text, format.stdout);
+    } catch (error) {
+      this.connection.console.warn(JSON.stringify(error));
+    }
   };
 
   protected handleFormattingRequest = async (
