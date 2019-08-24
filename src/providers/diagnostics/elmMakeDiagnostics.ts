@@ -181,6 +181,9 @@ export class ElmMakeDiagnostics {
       const isTestFile = utils.isTestFile(filename, cwd);
       const args = isTestFile ? argsTest : argsMake;
       const testOrMakeCommand = isTestFile ? testCommand : makeCommand;
+      const testOrMakeCommandWithOmittedSettings = isTestFile
+        ? "elm-test"
+        : "elm";
       const options = {
         cmdArguments: args,
         notFoundText: isTestFile
@@ -190,7 +193,13 @@ export class ElmMakeDiagnostics {
 
       try {
         // Do nothing on success, but return that there were no errors
-        await execCmd(testOrMakeCommand, options, cwd, this.connection);
+        await execCmd(
+          testOrMakeCommand,
+          testOrMakeCommandWithOmittedSettings,
+          options,
+          cwd,
+          this.connection,
+        );
         resolve([]);
       } catch (error) {
         if (typeof error === "string") {

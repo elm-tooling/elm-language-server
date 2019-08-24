@@ -19,19 +19,23 @@ export interface IExecCmdOptions {
 
 /** Executes a command. Shows an error message if the command isn't found */
 export async function execCmd(
-  cmd: string,
+  cmdFromUser: string,
+  cmdStatic: string,
   options: IExecCmdOptions = {},
   cwd: string,
   connection: IConnection,
   input?: string,
 ) {
+  const cmd = cmdFromUser === "" ? cmdStatic : cmdFromUser;
+  const preferLocal = cmdFromUser === "";
+
   const cmdArguments = options ? options.cmdArguments : [];
 
   try {
     return await execa(cmd, cmdArguments, {
       cwd,
       input,
-      preferLocal: true,
+      preferLocal,
     });
   } catch (error) {
     if (error.errno === "ENOENT") {
@@ -87,6 +91,7 @@ export async function getElmVersion(
 
   const result = await execCmd(
     settings.elmPath,
+    "elm",
     options,
     elmWorkspaceFolder.fsPath,
     connection,

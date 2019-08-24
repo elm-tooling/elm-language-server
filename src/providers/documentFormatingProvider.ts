@@ -31,6 +31,7 @@ export class DocumentFormattingProvider {
     try {
       const format = await execCmd(
         elmFormatPath,
+        "elm-format",
         options,
         this.elmWorkspaceFolder.fsPath,
         this.connection,
