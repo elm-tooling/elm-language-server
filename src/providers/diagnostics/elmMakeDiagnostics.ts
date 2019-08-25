@@ -154,10 +154,7 @@ export class ElmMakeDiagnostics {
     const settings = await this.settings.getClientSettings();
 
     return new Promise(async (resolve, reject) => {
-      let relativePathToFile = path.relative(cwd, filename);
-      if (utils.isWindows) {
-        relativePathToFile = `"${relativePathToFile}"`;
-      }
+      const relativePathToFile = path.relative(cwd, filename);
       const argsMake = [
         "make",
         relativePathToFile,
