@@ -1,7 +1,6 @@
-import * as cp from "child_process";
 import * as crypto from "crypto";
+import execa = require("execa");
 import * as path from "path";
-import * as readline from "readline";
 import {
   CodeAction,
   CodeActionKind,
@@ -11,6 +10,7 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import { execCmd } from "../../util/elmUtils";
 import * as utils from "../../util/elmUtils";
 import { Settings } from "../../util/settings";
 import { IElmIssue } from "./diagnosticsProvider";
@@ -59,17 +59,12 @@ export class ElmMakeDiagnostics {
     private connection: IConnection,
     private elmWorkspaceFolder: URI,
     private settings: Settings,
-  ) {
-    this.connection = connection;
-    this.elmWorkspaceFolder = elmWorkspaceFolder;
-    this.settings = settings;
-  }
+  ) {}
 
   public createDiagnostics = async (
     filePath: URI,
   ): Promise<Map<string, Diagnostic[]>> => {
     return await this.checkForErrors(
-      this.connection,
       this.elmWorkspaceFolder.fsPath,
       filePath.fsPath,
     ).then(issues => {
@@ -153,17 +148,13 @@ export class ElmMakeDiagnostics {
   }
 
   private async checkForErrors(
-    connection: IConnection,
     cwd: string,
     filename: string,
   ): Promise<IElmIssue[]> {
     const settings = await this.settings.getClientSettings();
 
-    return new Promise((resolve, reject) => {
-      let relativePathToFile = path.relative(cwd, filename);
-      if (utils.isWindows) {
-        relativePathToFile = `"${relativePathToFile}"`;
-      }
+    return new Promise(async (resolve, reject) => {
+      const relativePathToFile = path.relative(cwd, filename);
       const argsMake = [
         "make",
         relativePathToFile,
@@ -187,97 +178,91 @@ export class ElmMakeDiagnostics {
       const isTestFile = utils.isTestFile(filename, cwd);
       const args = isTestFile ? argsTest : argsMake;
       const testOrMakeCommand = isTestFile ? testCommand : makeCommand;
-      let make: cp.ChildProcess;
-      if (utils.isWindows) {
-        make = cp.exec(`${testOrMakeCommand} ${args.join(" ")}`, { cwd });
-      } else {
-        make = cp.spawn(testOrMakeCommand, args, { cwd });
-      }
+      const testOrMakeCommandWithOmittedSettings = isTestFile
+        ? "elm-test"
+        : "elm";
+      const options = {
+        cmdArguments: args,
+        notFoundText: isTestFile
+          ? "'elm-test' is not available. Install Elm via 'npm install -g elm-test'."
+          : "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.",
+      };
 
-      if (!make.stderr) {
-        return;
-      }
-      const errorLinesFromElmMake: readline.ReadLine = readline.createInterface(
-        {
-          input: make.stderr,
-        },
-      );
-      const lines: IElmIssue[] = [];
-      errorLinesFromElmMake.on("line", (line: string) => {
-        const errorObject = JSON.parse(line);
+      try {
+        // Do nothing on success, but return that there were no errors
+        await execCmd(
+          testOrMakeCommand,
+          testOrMakeCommandWithOmittedSettings,
+          options,
+          cwd,
+          this.connection,
+        );
+        resolve([]);
+      } catch (error) {
+        if (typeof error === "string") {
+          resolve([]);
+        } else {
+          const execaError = error as execa.ExecaReturnValue<string>;
+          const lines: IElmIssue[] = [];
+          execaError.stderr.split("\n").forEach((line: string) => {
+            const errorObject = JSON.parse(line);
 
-        if (errorObject.type === "compile-errors") {
-          errorObject.errors.forEach((error: IError) => {
-            const problems: IElmIssue[] = error.problems.map(
-              (problem: IProblem) => ({
-                details: problem.message
+            if (errorObject.type === "compile-errors") {
+              errorObject.errors.forEach((error: IError) => {
+                const problems: IElmIssue[] = error.problems.map(
+                  (problem: IProblem) => ({
+                    details: problem.message
+                      .map((message: string | IStyledString) =>
+                        typeof message === "string"
+                          ? message
+                          : `#${message.string}#`,
+                      )
+                      .join(""),
+                    file: error.path
+                      ? path.isAbsolute(error.path)
+                        ? path.relative(cwd, error.path)
+                        : error.path
+                      : relativePathToFile,
+                    overview: problem.title,
+                    region: problem.region,
+                    subregion: "",
+                    tag: "error",
+                    type: "error",
+                  }),
+                );
+
+                lines.push(...problems);
+              });
+            } else if (errorObject.type === "error") {
+              const problem: IElmIssue = {
+                details: errorObject.message
                   .map((message: string | IStyledString) =>
-                    typeof message === "string"
-                      ? message
-                      : `#${message.string}#`,
+                    typeof message === "string" ? message : message.string,
                   )
                   .join(""),
-                file: error.path
-                  ? path.isAbsolute(error.path)
-                    ? path.relative(cwd, error.path)
-                    : error.path
-                  : relativePathToFile,
-                overview: problem.title,
-                region: problem.region,
+                file: errorObject.path ? errorObject.path : relativePathToFile,
+                overview: errorObject.title,
+                region: {
+                  end: {
+                    column: 1,
+                    line: 1,
+                  },
+                  start: {
+                    column: 1,
+                    line: 1,
+                  },
+                },
                 subregion: "",
                 tag: "error",
                 type: "error",
-              }),
-            );
+              };
 
-            lines.push(...problems);
+              lines.push(problem);
+            }
           });
-        } else if (errorObject.type === "error") {
-          const problem: IElmIssue = {
-            details: errorObject.message
-              .map((message: string | IStyledString) =>
-                typeof message === "string" ? message : message.string,
-              )
-              .join(""),
-            file: errorObject.path ? errorObject.path : relativePathToFile,
-            overview: errorObject.title,
-            region: {
-              end: {
-                column: 1,
-                line: 1,
-              },
-              start: {
-                column: 1,
-                line: 1,
-              },
-            },
-            subregion: "",
-            tag: "error",
-            type: "error",
-          };
-
-          lines.push(problem);
+          resolve(lines);
         }
-      });
-
-      make.on("error", (err: Error) => {
-        errorLinesFromElmMake.close();
-        if (err && (err as any).code === "ENOENT") {
-          connection.window.showErrorMessage(
-            isTestFile
-              ? "'elm-test' is not available. Install Elm via 'npm install -g elm-test'."
-              : "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.",
-          );
-          resolve([]);
-        } else {
-          reject(err);
-        }
-      });
-      make.on("close", (code: number, signal: string) => {
-        errorLinesFromElmMake.close();
-
-        resolve(lines);
-      });
+      }
     });
   }
 }

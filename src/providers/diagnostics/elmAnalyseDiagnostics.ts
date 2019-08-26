@@ -249,20 +249,23 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
   private async createEdits(
     oldText: string,
     newText: string,
-    elmFormatEdits: TextEdit[],
+    elmFormatEdits: TextEdit[] | undefined,
   ) {
-    // Fake a `TextDocument` so that we can use `applyEdits` on `TextDocument`
-    const formattedFile = TextDocument.create(
-      "file://fakefile.elm",
-      "elm",
-      0,
-      newText,
-    );
-
-    return Diff.getTextRangeChanges(
-      oldText,
-      TextDocument.applyEdits(formattedFile, elmFormatEdits),
-    );
+    if (elmFormatEdits) {
+      // Fake a `TextDocument` so that we can use `applyEdits` on `TextDocument`
+      const formattedFile = TextDocument.create(
+        "file://fakefile.elm",
+        "elm",
+        0,
+        newText,
+      );
+      return Diff.getTextRangeChanges(
+        oldText,
+        TextDocument.applyEdits(formattedFile, elmFormatEdits),
+      );
+    } else {
+      return Diff.getTextRangeChanges(oldText, newText);
+    }
   }
 
   private async setupElmAnalyse(): Promise<ElmApp> {

@@ -13,9 +13,9 @@ export type ElmAnalyseTrigger = "change" | "save" | "never";
 export class Settings {
   private clientSettings: IClientSettings = {
     elmAnalyseTrigger: "change",
-    elmFormatPath: "elm-format",
-    elmPath: "elm",
-    elmTestPath: "elm-test",
+    elmFormatPath: "",
+    elmPath: "",
+    elmTestPath: "",
     trace: { server: "off" },
   };
 

@@ -36,7 +36,7 @@ npm link
 
 ## Requirements
 
-You will need to install `elm` and `elm-test` to get all diagnostics and `elm-format` for formatting.
+You will need to install `elm` and `elm-test` to get all diagnostics and `elm-format` for formatting. Alternatively you can also just install these to your local npm `package.json`.
 
 ```sh
 npm install -g elm elm-test elm-format
@@ -67,9 +67,9 @@ Supports Elm 0.19
 This server contributes the following settings:
 
 - `elmLS.trace.server`: Enable/disable trace logging of client and server communication
-- `elmLS.elmPath`: The path to your `elm` executable.
-- `elmLS.elmFormatPath`: The path to your `elm-format` executable.
-- `elmLS.elmTestPath`: The path to your `elm-test` executable.
+- `elmLS.elmPath`: The path to your `elm` executable. Should be empty by default, in that case it will assume the name and try to first get it from a local npm installation or a global one. If you set it manually it will not try to load from the npm folder.
+- `elmLS.elmFormatPath`: The path to your `elm-format` executable. Should be empty by default, in that case it will assume the name and try to first get it from a local npm installation or a global one. If you set it manually it will not try to load from the npm folder.
+- `elmLS.elmTestPath`: The path to your `elm-test` executable. Should be empty by default, in that case it will assume the name and try to first get it from a local npm installation or a global one. If you set it manually it will not try to load from the npm folder.
 - `elmLS.elmAnalyseTrigger`: `elm-analyse` executed on `'change'`, `'save'` or `'never'` (default: `'change'`)
 
 Settings may need a restart to be applied.
@@ -108,9 +108,6 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format` with the 
       "filetypes": ["elm"],
       "rootPatterns": ["elm.json"],
       "initializationOptions": {
-        "elmPath": "elm",
-        "elmFormatPath": "elm-format",
-        "elmTestPath": "elm-test",
         "elmAnalyseTrigger": "change"
       }
     }
@@ -189,9 +186,6 @@ command = "elm-language-server"
 args = ["--stdio"]
 
 [language.elm.initialization_options]
-elmPath = "elm"
-elmFormatPath = "elm-format"
-elmTestPath = "elm-test"
 elmAnalyseTrigger = "change"
 ```
 
@@ -224,9 +218,6 @@ Add this to your LSP settings under the `clients` node:
         "Packages/Elm Syntax Highlighting/src/elm.sublime-syntax"
     ],
     "initializationOptions": {
-        "elmPath": "elm",
-        "elmFormatPath": "elm-format",
-        "elmTestPath": "elm-test",
         "elmAnalyseTrigger": "change"
     }
 }
