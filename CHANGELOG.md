@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.3.1
+
+- Fix problem on init on windows systems
+
 ## 1.3.0
 
 - Updated and clarified the readme in multiple ways, also added sublime text instructions
