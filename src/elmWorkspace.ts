@@ -1,10 +1,8 @@
 import { readdirSync, readFileSync } from "fs";
-import globby = require("globby");
 import os from "os";
 import { IConnection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { Tree } from "web-tree-sitter";
-import Parser from "web-tree-sitter";
+import Parser, { Tree } from "web-tree-sitter";
 import { Forest } from "./forest";
 import { IImports, Imports } from "./imports";
 import { ASTProvider } from "./providers/astProvider";
@@ -26,6 +24,7 @@ import { DocumentEvents } from "./util/documentEvents";
 import * as utils from "./util/elmUtils";
 import { Settings } from "./util/settings";
 import { TextDocumentEvents } from "./util/textDocumentEvents";
+import globby = require("globby");
 
 interface IFolder {
   path: string;
@@ -242,8 +241,11 @@ export class ElmWorkspace {
   }
 
   private findElmFilesInFolder(element: [string, boolean]): IFolder[] {
+    // Cleanup the path on windows, as globby does not like backslashes
+    const globUri = element[0].replace(/\\/g, "/");
+
     return globby
-      .sync(`${element[0]}/**/*.elm`)
+      .sync(`${globUri}/**/*.elm`)
       .map(path => ({ path, writable: element[1] }));
   }
 
