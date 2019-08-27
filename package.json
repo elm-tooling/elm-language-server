@@ -32,6 +32,7 @@
     "@types/node": "12.7.2",
     "@types/request": "^2.48.2",
     "@types/ws": "^6.0.1",
+    "copyfiles": "^2.1.1",
     "jest": "^24.9.0",
     "prettier": "^1.18.2",
     "pretty-quick": "^1.11.1",
@@ -45,7 +46,7 @@
     "typescript": "3.5.3"
   },
   "scripts": {
-    "copy-wasm": "mkdir -p ./out/ && cp ./tree-sitter-elm.wasm ./out/",
+    "copy-wasm": "copyfiles ./tree-sitter-elm.wasm out",
     "compile": "npm run copy-wasm && tsc -p ./",
     "watch": "npm run copy-wasm && tsc -watch -p ./",
     "lint": "tslint -p tsconfig.json",
