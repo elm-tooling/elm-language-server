@@ -11,6 +11,11 @@ import {
 import Parser from "web-tree-sitter";
 import { ILanguageServer } from "./server";
 
+// default setting `--stdio`
+if (process.argv.length === 2) {
+  process.argv.push("--stdio");
+}
+
 const connection: IConnection = createConnection(ProposedFeatures.all);
 let server: ILanguageServer;
 

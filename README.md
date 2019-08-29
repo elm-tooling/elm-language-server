@@ -17,7 +17,7 @@ npm install -g @elm-tooling/elm-language-server
 Then, you should be able to run the language server with the following command:
 
 ```sh
-elm-language-server --stdio
+elm-language-server
 ```
 
 Follow the instructions below to integrate the language server into your editor.
@@ -104,7 +104,6 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format` with the 
   "languageserver": {
     "elmLS": {
       "command": "elm-language-server",
-      "args": ["--stdio"],
       "filetypes": ["elm"],
       "rootPatterns": ["elm.json"],
       "initializationOptions": {
@@ -183,7 +182,6 @@ Then, assuming installation of `elm-language-server`, `elm-format`, and `elm-tes
 filetypes = ["elm"]
 roots = ["elm.json"]
 command = "elm-language-server"
-args = ["--stdio"]
 
 [language.elm.initialization_options]
 elmAnalyseTrigger = "change"
@@ -204,8 +202,7 @@ Add this to your LSP settings under the `clients` node:
 ```json
 "elm": {
     "command": [
-        "elm-language-server",
-        "--stdio"
+        "elm-language-server"
     ],
     "enabled": true,
     "languageId": "elm",
