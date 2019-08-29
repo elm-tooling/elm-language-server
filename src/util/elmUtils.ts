@@ -36,6 +36,7 @@ export async function execCmd(
       cwd,
       input,
       preferLocal,
+      stripFinalNewline: false,
     });
   } catch (error) {
     if (error.errno === "ENOENT") {
@@ -97,7 +98,8 @@ export async function getElmVersion(
     connection,
   );
 
-  const version = result.stdout;
+  const version = result.stdout.trim();
+
   connection.console.info(`Elm version ${version} detected.`);
 
   return Promise.resolve(version);
