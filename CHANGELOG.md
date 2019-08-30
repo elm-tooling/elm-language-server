@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.3.2
+
+- Fixed case where elm-format might have strip the last line from you files
+
 ## 1.3.1
 
 - Fix problem on init on windows systems
