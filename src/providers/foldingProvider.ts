@@ -17,6 +17,7 @@ export class FoldingRangeProvider {
     "type_alias_declaration",
     "type_declaration",
     "record_expr",
+    "case_of_branch",
   ]);
 
   constructor(connection: IConnection, forest: IForest) {
