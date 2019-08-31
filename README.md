@@ -134,13 +134,13 @@ Much of this is covered in the [Example vim configuration](https://github.com/ne
 
 #### ALE
 
-[ALE](https://github.com/w0rp/ale) contains the `elm_ls` linter.
+[ALE](https://github.com/dense-analysis/ale) contains the `elm_ls` linter.
 
 ```
 let g:ale_linters = { 'elm': ['elm_ls'] }
 ```
 
-If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The configuration can be [found here](https://github.com/w0rp/ale/blob/master/doc/ale-elm.txt)
+If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The configuration can be [found here](https://github.com/dense-analysis/ale/blob/master/doc/ale-elm.txt)
 
 ```
 let g:ale_elm_ls_use_global = 1
