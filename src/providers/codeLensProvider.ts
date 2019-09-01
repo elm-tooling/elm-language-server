@@ -59,6 +59,7 @@ export class CodeLensProvider {
     const data: {
       codeLensType: CodeLensType;
       references: Location[];
+      uri: string;
       exposed: boolean;
     } = codelens.data;
     this.connection.console.info(`A code lens resolve was requested`);
@@ -75,7 +76,12 @@ export class CodeLensProvider {
             data.references.length === 1
               ? "1 reference"
               : `${data.references.length} references`,
-            "",
+            "editor.action.showReferences",
+            {
+              range: param.range,
+              references: data.references,
+              uri: data.uri,
+            },
           );
 
           break;
@@ -155,6 +161,7 @@ export class CodeLensProvider {
       {
         codeLensType: "referenceCounter",
         references: refLocations,
+        uri,
       },
     );
   }
