@@ -11,13 +11,17 @@ export class FoldingRangeProvider {
   private connection: IConnection;
   private forest: IForest;
   private readonly REGION_CONSTRUCTS: Set<string> = new Set([
-    "if_else_expr",
     "case_of_expr",
     "value_declaration",
     "type_alias_declaration",
     "type_declaration",
     "record_expr",
     "case_of_branch",
+    "let",
+    "in",
+    "if",
+    "then",
+    "else",
   ]);
 
   constructor(connection: IConnection, forest: IForest) {
