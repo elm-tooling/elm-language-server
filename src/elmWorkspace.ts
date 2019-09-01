@@ -1,5 +1,7 @@
-import { readdirSync, readFileSync } from "fs";
+import fs from "fs";
+import globby from "globby";
 import os from "os";
+import util from "util";
 import { IConnection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
@@ -24,7 +26,9 @@ import { DocumentEvents } from "./util/documentEvents";
 import * as utils from "./util/elmUtils";
 import { Settings } from "./util/settings";
 import { TextDocumentEvents } from "./util/textDocumentEvents";
-import globby = require("globby");
+
+const readFile = util.promisify(fs.readFile);
+const readdir = util.promisify(fs.readdir);
 
 interface IFolder {
   path: string;
@@ -178,14 +182,14 @@ export class ElmWorkspace {
             const packageName = key.substring(key.indexOf("/") + 1, key.length);
 
             const pathToPackage = `${packagesRoot}${maintainer}/${packageName}/`;
-            const allVersionFolders = readdirSync(pathToPackage, "utf8").map(
-              folderName => {
-                return {
-                  version: folderName,
-                  versionPath: `${pathToPackage}${folderName}`,
-                };
-              },
-            );
+            const readDir = await readdir(pathToPackage, "utf8");
+
+            const allVersionFolders = readDir.map(folderName => {
+              return {
+                version: folderName,
+                versionPath: `${pathToPackage}${folderName}`,
+              };
+            });
             // TODO Actually honor the version constraints here
             const matchedFolder = utils.findDepVersion(
               allVersionFolders,
@@ -205,21 +209,11 @@ export class ElmWorkspace {
         `Found ${elmFilePaths.length.toString()} files to add to the project`,
       );
 
+      const promiseList = [];
       for (const filePath of elmFilePaths) {
-        this.connection.console.info(`Adding ${filePath.path.toString()}`);
-        const fileContent: string = readFileSync(
-          filePath.path.toString(),
-          "utf8",
-        );
-        let tree: Tree | undefined;
-        tree = this.parser.parse(fileContent);
-        this.forest.setTree(
-          URI.file(filePath.path).toString(),
-          filePath.writable,
-          true,
-          tree,
-        );
+        promiseList.push(this.readAndAddToForest(filePath));
       }
+      Promise.all(promiseList);
 
       this.forest.treeIndex.forEach(item => {
         this.connection.console.info(`Adding imports ${item.uri.toString()}`);
@@ -263,5 +257,28 @@ export class ElmWorkspace {
     return utils.isWindows
       ? `${os.homedir()}/AppData/Roaming/elm`
       : `${os.homedir()}/.elm`;
+  }
+
+  private async readAndAddToForest(filePath: IFolder): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+      try {
+        this.connection.console.info(`Adding ${filePath.path.toString()}`);
+        const fileContent: string = await readFile(filePath.path.toString(), {
+          encoding: "utf-8",
+        });
+
+        const tree: Tree | undefined = this.parser.parse(fileContent);
+        this.forest.setTree(
+          URI.file(filePath.path).toString(),
+          filePath.writable,
+          true,
+          tree,
+        );
+        resolve();
+      } catch (error) {
+        this.connection.console.error(error.stack);
+        reject(error);
+      }
+    });
   }
 }
