@@ -1,5 +1,4 @@
-import * as crypto from "crypto";
-import execa = require("execa");
+import { randomBytes } from "crypto";
 import * as path from "path";
 import {
   CodeAction,
@@ -10,14 +9,15 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { execCmd } from "../../util/elmUtils";
 import * as utils from "../../util/elmUtils";
+import { execCmd } from "../../util/elmUtils";
 import { Settings } from "../../util/settings";
 import { IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
+import execa = require("execa");
 
 const ELM_MAKE = "Elm";
-const RANDOM_ID = crypto.randomBytes(16).toString("hex");
+const RANDOM_ID = randomBytes(16).toString("hex");
 export const CODE_ACTION_ELM_MAKE = `elmLS.elmMakeFixer-${RANDOM_ID}`;
 
 export interface IElmCompilerError {
