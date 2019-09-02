@@ -213,7 +213,7 @@ export class ElmWorkspace {
       for (const filePath of elmFilePaths) {
         promiseList.push(this.readAndAddToForest(filePath));
       }
-      Promise.all(promiseList);
+      await Promise.all(promiseList);
 
       this.forest.treeIndex.forEach(item => {
         this.connection.console.info(`Adding imports ${item.uri.toString()}`);
