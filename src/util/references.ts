@@ -19,7 +19,7 @@ export class References {
         const moduleNameNode = TreeUtils.getModuleNameNode(refSourceTree.tree);
         switch (definitionNode.nodeType) {
           case "Function":
-            const annotationNameNode = TreeUtils.getFunctionAnnotationNameNodeFromDefinition(
+            const annotationNameNode = this.getFunctionAnnotationNameNodeFromDefinition(
               definitionNode.node,
             );
             if (annotationNameNode && refSourceTree.writable) {
@@ -40,34 +40,25 @@ export class References {
                 });
               }
 
-              if (
+              const localFunctions =
                 definitionNode.node.parent &&
                 definitionNode.node.parent.type === "let" &&
                 definitionNode.node.parent.nextNamedSibling
-              ) {
-                const localFunctions = this.findFunctionCalls(
-                  definitionNode.node.parent.nextNamedSibling,
-                  functionNameNode.text,
+                  ? this.findFunctionCalls(
+                      definitionNode.node.parent.nextNamedSibling,
+                      functionNameNode.text,
+                    )
+                  : this.findFunctionCalls(
+                      refSourceTree.tree.rootNode,
+                      functionNameNode.text,
+                    );
+
+              if (localFunctions && refSourceTree.writable) {
+                references.push(
+                  ...localFunctions.map(node => {
+                    return { node, uri: definitionNode.uri };
+                  }),
                 );
-                if (localFunctions && refSourceTree.writable) {
-                  references.push(
-                    ...localFunctions.map(node => {
-                      return { node, uri: definitionNode.uri };
-                    }),
-                  );
-                }
-              } else {
-                const localFunctions = this.findFunctionCalls(
-                  refSourceTree.tree.rootNode,
-                  functionNameNode.text,
-                );
-                if (localFunctions && refSourceTree.writable) {
-                  references.push(
-                    ...localFunctions.map(node => {
-                      return { node, uri: definitionNode.uri };
-                    }),
-                  );
-                }
               }
 
               if (
@@ -423,5 +414,18 @@ export class References {
 
   private static findAllRecordBaseIdentifiers(node: SyntaxNode): SyntaxNode[] {
     return TreeUtils.descendantsOfType(node, "record_base_identifier");
+  }
+
+  private static getFunctionAnnotationNameNodeFromDefinition(
+    node: SyntaxNode,
+  ): SyntaxNode | undefined {
+    if (
+      node.previousNamedSibling &&
+      node.previousNamedSibling.type === "type_annotation" &&
+      node.previousNamedSibling.firstChild &&
+      node.previousNamedSibling.firstChild.type === "lower_case_identifier"
+    ) {
+      return node.previousNamedSibling.firstChild;
+    }
   }
 }

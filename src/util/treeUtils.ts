@@ -530,19 +530,6 @@ export class TreeUtils {
     }
   }
 
-  public static getFunctionAnnotationNameNodeFromDefinition(
-    node: SyntaxNode,
-  ): SyntaxNode | undefined {
-    if (
-      node.previousNamedSibling &&
-      node.previousNamedSibling.type === "type_annotation" &&
-      node.previousNamedSibling.firstChild &&
-      node.previousNamedSibling.firstChild.type === "lower_case_identifier"
-    ) {
-      return node.previousNamedSibling.firstChild;
-    }
-  }
-
   public static getTypeOrTypeAliasNameNodeFromDefinition(node: SyntaxNode) {
     return TreeUtils.findFirstNamedChildOfType("upper_case_identifier", node);
   }
