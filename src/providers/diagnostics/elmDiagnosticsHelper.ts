@@ -1,3 +1,4 @@
+import path from "path";
 import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { IElmIssue } from "./diagnosticsProvider";
@@ -35,9 +36,13 @@ export class ElmDiagnosticsHelper {
     elmWorkspaceFolder: URI,
   ): string {
     if (issue.file.startsWith(".")) {
-      return URI.file(elmWorkspaceFolder + issue.file.slice(1)).toString();
+      return URI.file(
+        path.join(elmWorkspaceFolder.fsPath, issue.file.slice(1)),
+      ).toString();
     }
-    return URI.file(elmWorkspaceFolder.fsPath + issue.file).toString();
+    return URI.file(
+      path.join(elmWorkspaceFolder.fsPath, issue.file),
+    ).toString();
   }
 
   private static elmMakeIssueToDiagnostic(issue: IElmIssue): Diagnostic {
