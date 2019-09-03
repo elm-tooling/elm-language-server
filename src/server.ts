@@ -30,7 +30,11 @@ export class Server implements ILanguageServer {
     this.calculator = new CapabilityCalculator(params.capabilities);
 
     const initializationOptions = this.params.initializationOptions || {};
-    this.settings = new Settings(this.connection, initializationOptions);
+    this.settings = new Settings(
+      this.connection,
+      initializationOptions,
+      params.capabilities,
+    );
 
     const uri = this.getWorkspaceUri(params);
 
