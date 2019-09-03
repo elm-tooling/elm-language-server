@@ -241,7 +241,7 @@ export class ElmWorkspace {
 
     return globby
       .sync(`${globUri}/**/*.elm`)
-      .map(path => ({ path, writable: element[1] }));
+      .map(matchingPath => ({ path: matchingPath, writable: element[1] }));
   }
 
   private packageOrPackagesFolder(elmVersion: string | undefined): string {

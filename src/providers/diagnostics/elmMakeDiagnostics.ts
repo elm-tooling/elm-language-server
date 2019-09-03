@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import execa = require("execa");
 import * as path from "path";
 import {
   CodeAction,
@@ -14,7 +15,6 @@ import { execCmd } from "../../util/elmUtils";
 import { Settings } from "../../util/settings";
 import { IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
-import execa = require("execa");
 
 const ELM_MAKE = "Elm";
 const RANDOM_ID = randomBytes(16).toString("hex");
