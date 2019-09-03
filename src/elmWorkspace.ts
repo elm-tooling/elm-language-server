@@ -1,6 +1,7 @@
 import fs from "fs";
 import globby from "globby";
 import os from "os";
+import path from "path";
 import util from "util";
 import { IConnection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -136,20 +137,20 @@ export class ElmWorkspace {
       );
     }
     try {
-      const path = `${this.elmWorkspace.fsPath}elm.json`;
-      this.connection.console.info(`Reading elm.json from ${path}`);
+      const pathToElmJson = path.join(this.elmWorkspace.fsPath, "elm.json");
+      this.connection.console.info(`Reading elm.json from ${pathToElmJson}`);
       // Find elm files and feed them to tree sitter
-      const elmJson = require(path);
+      const elmJson = require(pathToElmJson);
       const type = elmJson.type;
       const elmFolders: Map<string, boolean> = new Map();
       if (type === "application") {
         elmJson["source-directories"].forEach(async (folder: string) => {
-          elmFolders.set(this.elmWorkspace.fsPath + folder, true);
+          elmFolders.set(path.join(this.elmWorkspace.fsPath, folder), true);
         });
       } else {
-        elmFolders.set(`${this.elmWorkspace.fsPath}src`, true);
+        elmFolders.set(path.join(this.elmWorkspace.fsPath, "src"), true);
       }
-      elmFolders.set(`${this.elmWorkspace.fsPath}tests`, true);
+      elmFolders.set(path.join(this.elmWorkspace.fsPath, "tests"), true);
       this.connection.console.info(
         `${elmFolders.size} source-dirs and test folders found`,
       );

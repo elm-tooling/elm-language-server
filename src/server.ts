@@ -1,4 +1,5 @@
 import globby from "globby";
+import path from "path";
 import {
   Connection,
   InitializeParams,
@@ -94,7 +95,7 @@ export class Server implements ILanguageServer {
   }
 
   private getElmJsonFolder(uri: string): URI {
-    return URI.file(uri.replace("elm.json", ""));
+    return URI.file(path.dirname(uri));
   }
 
   private findTopLevelFolders(listOfElmJsonFolders: URI[]) {
