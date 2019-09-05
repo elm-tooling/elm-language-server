@@ -2,5 +2,6 @@
 - Increase the version in `package.json`
 - Run `npm install`
 - Run `npm run compile`
+- Push the code to github and wait for the CI
 - Run `npm publish`
 - Tag the new version on github

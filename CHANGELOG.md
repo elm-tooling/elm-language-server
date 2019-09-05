@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.4.1
+
+- Fallback to old configuration flow when clients don't support the new one
+- Add elm make code actions for more compiler errors
+
 ## 1.4.0
 
 - Various improvements to folding
