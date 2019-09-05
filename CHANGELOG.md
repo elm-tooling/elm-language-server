@@ -1,5 +1,20 @@
 # Change Log
 
+## 1.4.0
+
+- Various improvements to folding
+- Process files on init in parallel
+- Reference codelenses can now be clicked
+- Fixed some problems with references not being correct
+- Get rid of crypto deprecation warnings
+
+- Updated tree-sitter syntax parsing
+	- Add glsl parsing
+	- Nest if/then/else expressions
+	- Let and in now correctly nest
+	- Change when block_comments are set, should now be better for annotations
+	- End functions/case as early as possible, so they don't include whitespace
+
 ## 1.3.2
 
 - Fixed case where elm-format might have strip the last line from you files
