@@ -1,4 +1,4 @@
-import { IConnection } from "vscode-languageserver";
+import { ClientCapabilities, IConnection } from "vscode-languageserver";
 
 export interface IClientSettings {
   elmFormatPath: string;
@@ -21,7 +21,11 @@ export class Settings {
 
   private initDone = false;
 
-  constructor(private connection: IConnection, config: any) {
+  constructor(
+    private connection: IConnection,
+    config: any,
+    private clientCapabilities: ClientCapabilities,
+  ) {
     this.updateSettings(config);
   }
 
@@ -30,7 +34,11 @@ export class Settings {
   }
 
   public async getClientSettings(): Promise<IClientSettings> {
-    if (this.initDone) {
+    if (
+      this.initDone &&
+      this.clientCapabilities.workspace &&
+      this.clientCapabilities.workspace.configuration
+    ) {
       this.updateSettings(
         await this.connection.workspace.getConfiguration("elmLS"),
       );
