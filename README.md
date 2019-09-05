@@ -144,10 +144,11 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The conf
 
 ```
 let g:ale_elm_ls_use_global = 1
+let g:ale_elm_ls_executable = "/path/to/elm-language-server"
+let g:ale_elm_ls_elm_analyse_trigger = 'change'
 let g:ale_elm_ls_elm_path = "/path/to/elm"
 let g:ale_elm_ls_elm_format_path = "/path/to/elm-format"
 let g:ale_elm_ls_elm_test_path = "/path/to/elm-test"
-let g:ale_elm_ls_executable = "/path/to/elm-language-server"
 ```
 
 | Feature           | How to use it                                                                                                                                                            |
