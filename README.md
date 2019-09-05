@@ -78,12 +78,13 @@ Settings may need a restart to be applied.
 
 | Editor                                                                |    Diagnostics     |     Formatting     |    Code Lenses     |    Completions     |    Definitions     |  Document Symbols  |      Folding       |       Hover        |     References     |       Rename       | Workspace Symbols  |
 | --------------------------------------------------------------------- | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: |
-| [VSCode](https://github.com/elm-tooling/elm-language-server#vscode)   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| [VIM CoC](https://github.com/elm-tooling/elm-language-server#cocnvim) | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| [VIM ALE](https://github.com/elm-tooling/elm-language-server#ale)     | :heavy_check_mark: |        :x:         |        :x:         | :heavy_check_mark: | :heavy_check_mark: |        :x:         |        :x:         | :heavy_check_mark: | :heavy_check_mark: |        :x:         | :heavy_check_mark: |
-| [Kakoune](https://github.com/elm-tooling/elm-language-server#kak-lsp) | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   |
-| [Emacs](https://github.com/elm-tooling/elm-language-server#emacs)     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| [Sublime](https://github.com/elm-tooling/elm-language-server#sublime) | :heavy_check_mark: | :heavy_check_mark: |        :x:         | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| [VSCode](https://github.com/elm-tooling/elm-language-server#vscode)     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| [VIM CoC](https://github.com/elm-tooling/elm-language-server#cocnvim)   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| [VIM LanguageClient](https://github.com/autozimu/LanguageClient-neovim) | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    | :grey_question:    |
+| [VIM ALE](https://github.com/elm-tooling/elm-language-server#ale)       | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :x:                | :heavy_check_mark: |
+| [Kakoune](https://github.com/elm-tooling/elm-language-server#kak-lsp)   | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    |
+| [Emacs](https://github.com/elm-tooling/elm-language-server#emacs)       | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :grey_question:    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| [Sublime](https://github.com/elm-tooling/elm-language-server#sublime)   | :heavy_check_mark: | :heavy_check_mark: | :x:                | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 
 ### VSCode
 
@@ -164,6 +165,21 @@ let g:ale_elm_ls_elm_test_path = "/path/to/elm-test"
 | References        | `:ALEFindReferences`                                                                                                                                                     |
 | Rename            | Not currently supported                                                                                                                                                  |
 | Workspace Symbols | `:ALESymbolSearch <query>`                                                                                                                                               |
+
+#### LanguageClient
+
+To use this language server with [LanguageClient](https://github.com/autozimu/LanguageClient-neovim)
+add the following configuration to you neovim/vim.
+
+```viml
+let g:LanguageClient_serverCommands = {
+  \ 'elm': ['elm-language-server', '--stdio'],
+  \ }
+
+let g:LanguageClient_rootMarkers = {
+  \ 'elm': ['elm.json'],
+  \ }
+```
 
 ### Kakoune
 
