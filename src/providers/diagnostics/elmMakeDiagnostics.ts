@@ -92,7 +92,13 @@ export class ElmMakeDiagnostics {
   ): CodeAction[] {
     const result: CodeAction[] = [];
     diagnostics.forEach(diagnostic => {
-      if (diagnostic.message.startsWith("NAMING ERROR")) {
+      if (
+        diagnostic.message.startsWith("NAMING ERROR") ||
+        diagnostic.message.startsWith("BAD IMPORT") ||
+        diagnostic.message.startsWith("UNKNOWN LICENSE") ||
+        diagnostic.message.startsWith("UNKNOWN PACKAGE") ||
+        diagnostic.message.startsWith("UNKNOWN EXPORT")
+      ) {
         // Offer the name suggestions from elm make to our users
         const regex = /^\s{4}#(.*)#$/gm;
         let matches;
@@ -110,7 +116,10 @@ export class ElmMakeDiagnostics {
               result.push(this.createQuickFix(uri, match, diagnostic));
             });
         }
-      } else if (diagnostic.message.startsWith("MODULE NAME MISMATCH")) {
+      } else if (
+        diagnostic.message.startsWith("MODULE NAME MISMATCH") ||
+        diagnostic.message.startsWith("UNEXPECTED SYMBOL")
+      ) {
         // Offer the name suggestions from elm make to our users
         const regex = /# -> #(.*)#$/gm;
 
