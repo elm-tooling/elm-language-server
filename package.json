@@ -5,7 +5,9 @@
   "author": "Kolja Lampe",
   "license": "MIT",
   "files": [
-    "out"
+    "out/tree-sitter-elm.wasm",
+    "out/tree-sitter.wasm",
+    "out/index.js"
   ],
   "engines": {
     "node": "*"
@@ -27,29 +29,44 @@
     "web-tree-sitter": "^0.16.0"
   },
   "devDependencies": {
+    "@types/copy-webpack-plugin": "^5.0.0",
+    "@types/glob": "^7.1.1",
     "@types/jest": "^25.1.3",
     "@types/node": "13.7.4",
+    "@types/request": "^2.48.4",
+    "@types/ws": "^7.2.1",
+    "clean-webpack-plugin": "^3.0.0",
+    "copy-webpack-plugin": "^5.1.1",
     "copyfiles": "^2.2.0",
+    "exports-loader": "^0.7.0",
+    "file-loader": "^5.1.0",
+    "fork-ts-checker-webpack-plugin": "^4.0.4",
     "jest": "^25.1.0",
     "prettier": "^1.19.1",
     "pretty-quick": "^2.0.1",
+    "shebang-loader": "0.0.1",
+    "source-map-support": "^0.5.16",
     "tree-sitter-cli": "^0.16.4",
     "tree-sitter-elm": "^2.7.6",
     "ts-jest": "^25.2.1",
-    "tslint": "^6.0.0",
+    "ts-loader": "^6.2.1",
+    "ts-node": "^8.6.2",
     "tslint-config-prettier": "^1.18.0",
     "tslint-plugin-prettier": "^2.1.0",
     "tslint-sonarts": "^1.9.0",
-    "typescript": "3.8.2"
+    "tslint": "^6.0.0",
+    "typescript": "3.8.2",
+    "webpack-cli": "^3.3.11",
+    "webpack": "^4.41.6"
   },
   "scripts": {
     "copy-wasm": "copyfiles ./tree-sitter-elm.wasm out",
-    "compile": "npm run copy-wasm && tsc -p ./",
-    "watch": "npm run copy-wasm && tsc -watch -p ./",
+    "compile": "webpack -p",
+    "watch": "webpack -w -d",
     "lint": "tslint -p tsconfig.json",
     "format:fix": "pretty-quick --staged",
     "tslint-check": "tslint-config-prettier-check ./tslint.json",
-    "build-tree-sitter": "tree-sitter build-wasm ./node_modules/tree-sitter-elm",
+    "build-tree-sitter": "tree-sitter build-wasm ./node_modules/tree-sitter-elm && npm run copy-wasm",
     "test": "jest"
   },
   "bin": {

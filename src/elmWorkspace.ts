@@ -86,7 +86,7 @@ export class ElmWorkspace {
     this.connection.console.info(`Reading elm.json from ${pathToElmJson}`);
     try {
       // Find elm files and feed them to tree sitter
-      const elmJson = require(pathToElmJson);
+      const elmJson = JSON.parse(fs.readFileSync(pathToElmJson, "utf8"));
       const type = elmJson.type;
       if (type === "application") {
         elmJson["source-directories"].forEach(async (folder: string) => {
