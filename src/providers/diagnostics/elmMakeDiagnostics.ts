@@ -249,7 +249,10 @@ export class ElmMakeDiagnostics {
                     typeof message === "string" ? message : message.string,
                   )
                   .join(""),
-                file: errorObject.path ? errorObject.path : relativePathToFile,
+                // elm-test might supply absolute paths to files
+                file: errorObject.path
+                  ? path.relative(cwd, errorObject.path)
+                  : relativePathToFile,
                 overview: errorObject.title,
                 region: {
                   end: {
