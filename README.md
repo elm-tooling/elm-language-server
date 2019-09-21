@@ -76,7 +76,7 @@ Settings may need a restart to be applied.
 
 ### Elm-Analyse Configuration
 
-`elm-analyse` is provides for static code analysis. All checks are enabled by default. An (optional) `elm-analyse.json` configuration file will be respected, if added to the project.
+`elm-analyse` is used for static code analysis. All checks are enabled by default. An (optional) `elm-analyse.json` configuration file will be respected, if added to your project.
 See its documentation for details regarding [`configuration`](https://stil4m.github.io/elm-analyse/#/configuration) and [`checks`](https://stil4m.github.io/elm-analyse/#/messages).
 
 ## Editor Support
