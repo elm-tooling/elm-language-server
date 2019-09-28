@@ -61,6 +61,7 @@ export class CodeLensProvider {
       references: Location[];
       uri: string;
       exposed: boolean;
+      nameNode: SyntaxNode;
     } = codelens.data;
     this.connection.console.info(`A code lens resolve was requested`);
     if (data.codeLensType) {
@@ -72,17 +73,56 @@ export class CodeLensProvider {
 
           break;
         case "referenceCounter":
-          codelens.command = Command.create(
-            data.references.length === 1
-              ? "1 reference"
-              : `${data.references.length} references`,
-            "editor.action.showReferences",
-            {
-              range: param.range,
-              references: data.references,
-              uri: data.uri,
-            },
-          );
+          const tree = this.forest.getTree(data.uri);
+          if (tree) {
+            const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
+              tree.rootNode,
+              param.range.start,
+            );
+            const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
+              nodeAtPosition,
+              data.uri,
+              tree,
+              this.imports,
+            );
+
+            const references = References.find(
+              definitionNode,
+              this.forest,
+              this.imports,
+            );
+
+            let refLocations: Location[] = [];
+            if (references) {
+              refLocations = references.map(a =>
+                Location.create(
+                  a.uri,
+                  Range.create(
+                    Position.create(
+                      a.node.startPosition.row,
+                      a.node.startPosition.column,
+                    ),
+                    Position.create(
+                      a.node.endPosition.row,
+                      a.node.endPosition.column,
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            codelens.command = Command.create(
+              references.length === 1
+                ? "1 reference"
+                : `${references.length} references`,
+              "editor.action.showReferences",
+              {
+                range: param.range,
+                references: refLocations,
+                uri: data.uri,
+              },
+            );
+          }
 
           break;
 
@@ -112,41 +152,7 @@ export class CodeLensProvider {
     );
   }
 
-  private createReferenceCodeLens(
-    placementNode: SyntaxNode,
-    nameNode: SyntaxNode,
-    uri: string,
-    tree: Tree,
-  ) {
-    const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
-      nameNode,
-      uri,
-      tree,
-      this.imports,
-    );
-
-    const references = References.find(
-      definitionNode,
-      this.forest,
-      this.imports,
-    );
-
-    let refLocations: Location[] = [];
-    if (references) {
-      refLocations = references.map(a =>
-        Location.create(
-          a.uri,
-          Range.create(
-            Position.create(
-              a.node.startPosition.row,
-              a.node.startPosition.column,
-            ),
-            Position.create(a.node.endPosition.row, a.node.endPosition.column),
-          ),
-        ),
-      );
-    }
-
+  private createReferenceCodeLens(placementNode: SyntaxNode, uri: string) {
     return CodeLens.create(
       Range.create(
         Position.create(
@@ -160,7 +166,6 @@ export class CodeLensProvider {
       ),
       {
         codeLensType: "referenceCounter",
-        references: refLocations,
         uri,
       },
     );
@@ -223,9 +228,7 @@ export class CodeLensProvider {
         );
 
         if (typeNode) {
-          codeLens.push(
-            this.createReferenceCodeLens(node, typeNode, uri, tree),
-          );
+          codeLens.push(this.createReferenceCodeLens(node, uri));
         }
       }
     });
@@ -240,17 +243,10 @@ export class CodeLensProvider {
             node.previousNamedSibling.type === "type_annotation"
           ) {
             codeLens.push(
-              this.createReferenceCodeLens(
-                node.previousNamedSibling,
-                functionName,
-                uri,
-                tree,
-              ),
+              this.createReferenceCodeLens(node.previousNamedSibling, uri),
             );
           } else {
-            codeLens.push(
-              this.createReferenceCodeLens(node, functionName, uri, tree),
-            );
+            codeLens.push(this.createReferenceCodeLens(node, uri));
           }
         }
       },
@@ -258,14 +254,7 @@ export class CodeLensProvider {
 
     const moduleNameNode = TreeUtils.getModuleNameNode(tree);
     if (moduleNameNode && moduleNameNode.lastChild) {
-      codeLens.push(
-        this.createReferenceCodeLens(
-          moduleNameNode,
-          moduleNameNode.lastChild,
-          uri,
-          tree,
-        ),
-      );
+      codeLens.push(this.createReferenceCodeLens(moduleNameNode, uri));
     }
 
     return codeLens;
