@@ -61,7 +61,6 @@ export class CodeLensProvider {
       references: Location[];
       uri: string;
       exposed: boolean;
-      nameNode: SyntaxNode;
     } = codelens.data;
     this.connection.console.info(`A code lens resolve was requested`);
     if (data.codeLensType) {
