@@ -19,6 +19,7 @@
     "execa": "^2.0.4",
     "fast-diff": "^1.2.0",
     "globby": "^10.0.1",
+    "project-version": "1.2.0",
     "request": "^2.88.0",
     "rxjs": "^6.5.3",
     "vscode-languageserver": "^5.2.1",
