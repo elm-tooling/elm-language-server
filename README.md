@@ -34,6 +34,14 @@ npm run compile
 npm link
 ```
 
+### Alternative: Install with [Nix](https://nixos.org)
+
+`elm-languager-server` and its [dependencies](https://github.com/elm-tooling/elm-language-server#requirements) are available in [`nixpkgs`](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/compilers/elm/default.nix).
+
+```sh
+nix-env -i -A nixpkgs.elmPackages.elm-language-server
+```
+
 ## Requirements
 
 You will need to install `elm` and `elm-test` to get all diagnostics and `elm-format` for formatting. Alternatively you can also just install these to your local npm `package.json`.
