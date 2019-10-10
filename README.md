@@ -186,7 +186,7 @@ add the following configuration to you neovim/vim.
 
 ```viml
 let g:LanguageClient_serverCommands = {
-  \ 'elm': ['elm-language-server', '--stdio'],
+  \ 'elm': ['elm-language-server'],
   \ }
 
 let g:LanguageClient_rootMarkers = {
