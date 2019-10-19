@@ -1,5 +1,13 @@
 # Change Log
 
+## 1.4.2
+
+- Completions should be much nicer to use now
+- Improved performance for codeLenses
+- Do not crash when the elm compiler generates invalid json
+- Fix codeLens bug showing wrong count for types
+- Print version with `-v` or `--version`
+
 ## 1.4.1
 
 - Fallback to old configuration flow when clients don't support the new one
