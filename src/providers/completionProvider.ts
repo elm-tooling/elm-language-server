@@ -436,6 +436,7 @@ export class CompletionProvider {
     label: string,
     snippetText: string | string[],
     markdownDocumentation?: string,
+    kind?: CompletionItemKind,
   ): CompletionItem {
     return {
       documentation: {
@@ -446,7 +447,7 @@ export class CompletionProvider {
         ? snippetText.join("\n")
         : snippetText,
       insertTextFormat: InsertTextFormat.Snippet,
-      kind: CompletionItemKind.Snippet,
+      kind: kind || CompletionItemKind.Snippet,
       label,
     };
   }
@@ -464,6 +465,12 @@ export class CompletionProvider {
         "import",
         "import ${1:Name} exposing (${2:..})",
         "Unqualified import",
+      ),
+      this.createSnippet(
+        "of",
+        ["of", "   $0"],
+        "The of keyword",
+        CompletionItemKind.Keyword,
       ),
       this.createSnippet(
         "case of",
