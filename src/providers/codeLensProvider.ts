@@ -228,7 +228,7 @@ export class CodeLensProvider {
         );
 
         if (typeNode) {
-          codeLens.push(this.createReferenceCodeLens(node, uri));
+          codeLens.push(this.createReferenceCodeLens(typeNode, uri));
         }
       }
     });
