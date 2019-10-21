@@ -15,7 +15,7 @@ import { ILanguageServer } from "./server";
 if (process.argv[2] === "-v" || process.argv[2] === "--version") {
   // require is used to avoid loading package if not necessary (~30ms time difference)
   // tslint:disable-next-line no-var-requires
-  process.stdout.write(`${require("project-version")}\n`);
+  process.stdout.write(`${require("pjson").version}\n`);
   process.exit(0);
 }
 
