@@ -24,3 +24,7 @@ jobs:
           npm test
         env:
           CI: true
+      - name: run and print version
+        run: |
+          npm link
+          elm-language-server --version
