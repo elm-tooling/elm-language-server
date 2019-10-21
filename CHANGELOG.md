@@ -2,7 +2,7 @@
 
 ## 1.4.3
 
-- Remove completions commiting when space is pressed
+- Remove completions committing when space is pressed
 
 ## 1.4.2
 
