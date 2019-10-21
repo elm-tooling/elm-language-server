@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.4.3
+
+- Remove completions commiting when space is pressed
+
 ## 1.4.2
 
 - Completions should be much nicer to use now

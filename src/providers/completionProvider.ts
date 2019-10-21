@@ -291,7 +291,6 @@ export class CompletionProvider {
     range: Range,
   ): CompletionItem {
     return {
-      commitCharacters: [" "],
       documentation: {
         kind: MarkupKind.Markdown,
         value: markdownDocumentation || "",
@@ -309,7 +308,6 @@ export class CompletionProvider {
     range: Range,
   ): CompletionItem {
     return {
-      commitCharacters: [" "],
       documentation: {
         kind: MarkupKind.Markdown,
         value: markdownDocumentation || "",
