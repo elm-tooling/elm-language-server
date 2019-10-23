@@ -210,7 +210,7 @@ export class ElmWorkspace {
         `Found ${elmFilePaths.length.toString()} files to add to the project`,
       );
 
-      const promiseList = [];
+      const promiseList: Promise<void>[] = [];
       for (const filePath of elmFilePaths) {
         promiseList.push(this.readAndAddToForest(filePath));
       }
@@ -240,7 +240,7 @@ export class ElmWorkspace {
     const globUri = element[0].replace(/\\/g, "/");
 
     return globby
-      .sync(`${globUri}/**/*.elm`)
+      .sync(`${globUri}/**/*.elm`, { suppressErrors: true })
       .map(matchingPath => ({ path: matchingPath, writable: element[1] }));
   }
 
