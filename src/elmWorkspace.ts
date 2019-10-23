@@ -210,7 +210,7 @@ export class ElmWorkspace {
         `Found ${elmFilePaths.length.toString()} files to add to the project`,
       );
 
-      const promiseList: Promise<void>[] = [];
+      const promiseList: Array<Promise<void>> = [];
       for (const filePath of elmFilePaths) {
         promiseList.push(this.readAndAddToForest(filePath));
       }
