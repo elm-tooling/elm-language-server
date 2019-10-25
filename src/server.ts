@@ -47,7 +47,9 @@ export class Server implements ILanguageServer {
         elmJsonGlob,
         "!**/node_modules/**",
         "!**/elm-stuff/**",
-      ]);
+      ], {
+        suppressErrors: true
+      });
       if (elmJsons.length > 0) {
         connection.console.info(
           `Found ${elmJsons.length} elm.json files for workspace ${globUri}`,
