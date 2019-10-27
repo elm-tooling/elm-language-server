@@ -210,6 +210,12 @@ export class ElmWorkspace {
         `Found ${elmFilePaths.length.toString()} files to add to the project`,
       );
 
+      if (elmFilePaths.every(a => !a.writable)) {
+        this.connection.window.showErrorMessage(
+          "The path or paths you entered in the 'source-directories' field of your 'elm.json' does not contain any elm files.",
+        );
+      }
+
       const promiseList: Array<Promise<void>> = [];
       for (const filePath of elmFilePaths) {
         promiseList.push(this.readAndAddToForest(filePath));

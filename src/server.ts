@@ -73,6 +73,9 @@ export class Server implements ILanguageServer {
           );
         });
       } else {
+        this.connection.window.showErrorMessage(
+          "No elm.json found. Please run 'elm init' in your main directory.",
+        );
         this.connection.console.info(`No elm.json found`);
       }
     } else {
