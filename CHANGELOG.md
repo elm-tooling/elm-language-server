@@ -1,5 +1,12 @@
 # Change Log
 
+## 1.4.4
+
+- Add more feedback on init for common errors 
+- Test if ci can link and execute and show version
+- Make sure a file without permissions doesn't crash the server
+- `-v` to print version was not working
+
 ## 1.4.3
 
 - Remove completions committing when space is pressed
