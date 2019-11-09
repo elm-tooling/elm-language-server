@@ -26,7 +26,9 @@ export class CapabilityCalculator {
       codeLensProvider: {
         resolveProvider: true,
       },
-      completionProvider: {},
+      completionProvider: {
+        triggerCharacters: ["."],
+      },
       definitionProvider: true,
       documentFormattingProvider: true,
       documentSymbolProvider: true,
