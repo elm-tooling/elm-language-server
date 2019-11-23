@@ -20,6 +20,8 @@ export class CompletionProvider {
   private connection: IConnection;
   private forest: IForest;
   private imports: IImports;
+  private qidRegex = /[a-zA-Z0-9\.]+/;
+  private qidAtStartOfLineRegex = /^[a-zA-Z0-9 \.]*$/;
 
   constructor(connection: IConnection, forest: IForest, imports: IImports) {
     this.connection = connection;
@@ -43,19 +45,110 @@ export class CompletionProvider {
         params.position,
       );
 
+      const nodeAtLineBefore = TreeUtils.getNamedDescendantForLineBeforePosition(
+        tree.rootNode,
+        params.position,
+      );
+
+      const nodeAtLineAfter = TreeUtils.getNamedDescendantForLineAfterPosition(
+        tree.rootNode,
+        params.position,
+      );
+
       const targetLine = tree.rootNode.text.split("\n")[params.position.line];
 
       let currentCharacter = params.position.character;
       while (
         currentCharacter - 1 >= 0 &&
-        targetLine[currentCharacter - 1] !== " "
+        this.qidRegex.test(targetLine[currentCharacter - 1])
       ) {
         currentCharacter--;
       }
+
       const replaceRange = Range.create(
         Position.create(params.position.line, currentCharacter),
         params.position,
       );
+
+      const previousWord = this.findPreviousWord(currentCharacter, targetLine);
+
+      const isAtStartOfLine = this.qidAtStartOfLineRegex.test(
+        targetLine.slice(0, params.position.character - 1),
+      );
+
+      if (
+        isAtStartOfLine &&
+        nodeAtLineBefore.type === "lower_case_identifier" &&
+        nodeAtLineBefore.parent &&
+        nodeAtLineBefore.parent.type === "type_annotation"
+      ) {
+        return [
+          this.createCompletion(
+            undefined,
+            CompletionItemKind.Text,
+            nodeAtLineBefore.text,
+            replaceRange,
+          ),
+        ];
+      } else if (
+        isAtStartOfLine &&
+        nodeAtLineAfter.type === "lower_case_identifier" &&
+        nodeAtLineAfter.parent &&
+        (nodeAtLineAfter.parent.type === "value_qid" ||
+          nodeAtLineAfter.parent.type === "function_declaration_left")
+      ) {
+        return [
+          this.createCompletion(
+            undefined,
+            CompletionItemKind.Text,
+            nodeAtLineAfter.text,
+            replaceRange,
+          ),
+        ];
+      } else if (previousWord && previousWord === "module") {
+        return undefined;
+      } else if (
+        nodeAtPosition.parent &&
+        nodeAtPosition.parent.type === "module_declaration" &&
+        nodeAtPosition &&
+        nodeAtPosition.type === "exposing_list"
+      ) {
+        return this.getSameFileTopLevelCompletions(tree, replaceRange, true);
+      } else if (
+        nodeAtPosition.parent &&
+        nodeAtPosition.parent.type === "exposing_list" &&
+        nodeAtPosition.parent.parent &&
+        nodeAtPosition.parent.parent.type === "module_declaration" &&
+        nodeAtPosition &&
+        (nodeAtPosition.type === "comma" ||
+          nodeAtPosition.type === "right_parenthesis")
+      ) {
+        return this.getSameFileTopLevelCompletions(tree, replaceRange, true);
+      } else if (previousWord && previousWord === "import") {
+        return this.getImportableModules(replaceRange);
+      } else if (
+        nodeAtPosition.parent &&
+        nodeAtPosition.parent.type === "exposing_list" &&
+        nodeAtPosition.parent.parent &&
+        nodeAtPosition.parent.parent.type === "import_clause" &&
+        nodeAtPosition.parent.firstNamedChild &&
+        nodeAtPosition.parent.firstNamedChild.type === "exposing"
+      ) {
+        return this.getExposedFromModule(nodeAtPosition.parent, replaceRange);
+      } else if (
+        (nodeAtPosition.type === "comma" ||
+          nodeAtPosition.type === "right_parenthesis") &&
+        nodeAtPosition.parent &&
+        nodeAtPosition.parent.type === "ERROR" &&
+        nodeAtPosition.parent.parent &&
+        nodeAtPosition.parent.parent.type === "exposing_list"
+      ) {
+        return this.getExposedFromModule(
+          nodeAtPosition.parent.parent,
+          replaceRange,
+        );
+      }
+
       completions.push(
         ...this.getSameFileTopLevelCompletions(tree, replaceRange),
       );
@@ -75,6 +168,64 @@ export class CompletionProvider {
       return completions;
     }
   };
+
+  private findPreviousWord(currentCharacter: number, targetLine: string) {
+    currentCharacter--;
+    const previousWordEnd = currentCharacter;
+    while (
+      currentCharacter - 1 >= 0 &&
+      this.qidRegex.test(targetLine[currentCharacter - 1])
+    ) {
+      currentCharacter--;
+    }
+    return targetLine.slice(currentCharacter, previousWordEnd);
+  }
+
+  private getImportableModules(range: Range): CompletionItem[] {
+    return this.forest.treeIndex.map(a =>
+      this.createModuleCompletion(a.moduleName, range),
+    );
+  }
+
+  private getExposedFromModule(
+    exposingListNode: SyntaxNode,
+    range: Range,
+  ): CompletionItem[] | undefined {
+    // Skip as clause to always get Module Name
+    if (
+      exposingListNode.previousNamedSibling &&
+      exposingListNode.previousNamedSibling.type === "as_clause" &&
+      exposingListNode.previousNamedSibling.previousNamedSibling
+    ) {
+      exposingListNode = exposingListNode.previousNamedSibling;
+    }
+
+    if (
+      exposingListNode.previousNamedSibling &&
+      exposingListNode.previousNamedSibling.type === "upper_case_qid"
+    ) {
+      const moduleName = exposingListNode.previousNamedSibling.text;
+      const exposedByModule = this.forest.getExposingByModuleName(moduleName);
+      if (exposedByModule) {
+        return exposedByModule.flatMap(a => {
+          const value = HintHelper.createHint(a.syntaxNode);
+          switch (a.type) {
+            case "TypeAlias":
+              return this.createTypeAliasCompletion(value, a.name, range);
+            case "Type":
+              return a.exposedUnionConstructors
+                ? [
+                    this.createTypeCompletion(value, `${a.name}(..)`, range),
+                    this.createTypeCompletion(value, a.name, range),
+                  ]
+                : this.createTypeCompletion(value, a.name, range);
+            default:
+              return this.createFunctionCompletion(value, a.name, range);
+          }
+        });
+      }
+    }
+  }
 
   private getCompletionsFromOtherFile(
     uri: string,
@@ -129,6 +280,7 @@ export class CompletionProvider {
   private getSameFileTopLevelCompletions(
     tree: Tree,
     range: Range,
+    moduleDefinition: boolean = false,
   ): CompletionItem[] {
     const completions: CompletionItem[] = [];
     const topLevelFunctions = TreeUtils.findAllTopLeverFunctionDeclarations(
@@ -165,6 +317,11 @@ export class CompletionProvider {
         );
         if (name) {
           completions.push(this.createTypeCompletion(value, name.text, range));
+          if (moduleDefinition) {
+            completions.push(
+              this.createTypeCompletion(value, `${name.text}(..)`, range),
+            );
+          }
         }
         // Add types constructors
         const unionVariants = TreeUtils.descendantsOfType(
@@ -279,6 +436,15 @@ export class CompletionProvider {
     return this.createCompletion(
       undefined,
       CompletionItemKind.EnumMember,
+      label,
+      range,
+    );
+  }
+
+  private createModuleCompletion(label: string, range: Range): CompletionItem {
+    return this.createCompletion(
+      undefined,
+      CompletionItemKind.Module,
       label,
       range,
     );

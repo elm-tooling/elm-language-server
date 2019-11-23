@@ -9,7 +9,7 @@
     "outDir": "out",
     "rootDir": "src",
     "strict": true,
-    "lib": ["es6"],
+    "lib": ["es2019"],
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "composite": true

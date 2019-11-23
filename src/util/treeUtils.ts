@@ -1060,6 +1060,30 @@ export class TreeUtils {
     }
   }
 
+  public static getNamedDescendantForLineBeforePosition(
+    node: SyntaxNode,
+    position: Position,
+  ): SyntaxNode {
+    const previousLine = position.line === 0 ? 0 : position.line - 1;
+
+    return node.namedDescendantForPosition({
+      column: 0,
+      row: previousLine,
+    });
+  }
+
+  public static getNamedDescendantForLineAfterPosition(
+    node: SyntaxNode,
+    position: Position,
+  ): SyntaxNode {
+    const followingLine = position.line + 1;
+
+    return node.namedDescendantForPosition({
+      column: 0,
+      row: followingLine,
+    });
+  }
+
   // tslint:disable-next-line: no-identical-functions
   private static findAllImportNameNodes(tree: Tree): SyntaxNode[] | undefined {
     const result = tree.rootNode.children.filter(
