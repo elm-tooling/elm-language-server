@@ -22,17 +22,14 @@ export class Imports implements IImports {
 
   public updateImports(uri: string, tree: Tree, forest: IForest): void {
     const result: IImport[] = [];
-    let importNodes = TreeUtils.findAllNamedChildrenOfType(
-      "import_clause",
-      tree.rootNode,
+    // Add standard imports
+    let importNodes = this.getVirtualImports();
+
+    importNodes = importNodes.concat(
+      TreeUtils.findAllNamedChildrenOfType("import_clause", tree.rootNode) ||
+        [],
     );
     if (importNodes) {
-      // Add standard imports
-      const virtualImports = this.getVirtualImports();
-      if (virtualImports) {
-        importNodes = importNodes.concat(virtualImports);
-      }
-
       importNodes.forEach(importNode => {
         const moduleNameNode = TreeUtils.findFirstNamedChildOfType(
           "upper_case_qid",
