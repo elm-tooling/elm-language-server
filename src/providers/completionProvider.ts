@@ -20,6 +20,8 @@ export class CompletionProvider {
   private connection: IConnection;
   private forest: IForest;
   private imports: IImports;
+  private qidRegex = /[a-zA-Z0-9\.]+/;
+  private qidAtStartOfLineRegex = /^[a-zA-Z0-9 \.]*$/;
 
   constructor(connection: IConnection, forest: IForest, imports: IImports) {
     this.connection = connection;
@@ -43,36 +45,67 @@ export class CompletionProvider {
         params.position,
       );
 
+      const nodeAtLineBefore = TreeUtils.getNamedDescendantForLineBeforePosition(
+        tree.rootNode,
+        params.position,
+      );
+
+      const nodeAtLineAfter = TreeUtils.getNamedDescendantForLineAfterPosition(
+        tree.rootNode,
+        params.position,
+      );
+
       const targetLine = tree.rootNode.text.split("\n")[params.position.line];
 
       let currentCharacter = params.position.character;
       while (
         currentCharacter - 1 >= 0 &&
-        (targetLine[currentCharacter - 1] !== " " &&
-          targetLine[currentCharacter - 1] !== "," &&
-          targetLine[currentCharacter - 1] !== "(")
+        this.qidRegex.test(targetLine[currentCharacter - 1])
       ) {
         currentCharacter--;
       }
+
       const replaceRange = Range.create(
         Position.create(params.position.line, currentCharacter),
         params.position,
       );
 
-      currentCharacter--;
-      const previousWordEnd = currentCharacter;
-      while (
-        currentCharacter - 1 >= 0 &&
-        (targetLine[currentCharacter - 1] !== " " &&
-          targetLine[currentCharacter - 1] !== "," &&
-          targetLine[currentCharacter - 1] !== "(")
+      const previousWord = this.findPreviousWord(currentCharacter, targetLine);
+
+      const isAtStartOfLine = this.qidAtStartOfLineRegex.test(
+        targetLine.slice(0, params.position.character - 1),
+      );
+
+      if (
+        isAtStartOfLine &&
+        nodeAtLineBefore.type === "lower_case_identifier" &&
+        nodeAtLineBefore.parent &&
+        nodeAtLineBefore.parent.type === "type_annotation"
       ) {
-        currentCharacter--;
-      }
-
-      const previousWord = targetLine.slice(currentCharacter, previousWordEnd);
-
-      if (previousWord && previousWord === "module") {
+        return [
+          this.createCompletion(
+            undefined,
+            CompletionItemKind.Text,
+            nodeAtLineBefore.text,
+            replaceRange,
+          ),
+        ];
+      } else if (
+        isAtStartOfLine &&
+        nodeAtLineAfter.type === "lower_case_identifier" &&
+        nodeAtLineAfter.parent &&
+        (nodeAtLineAfter.parent.type === "value_qid" ||
+          nodeAtLineAfter.parent.type === "function_declaration_left")
+      ) {
+        return [
+          this.createCompletion(
+            undefined,
+            CompletionItemKind.Text,
+            nodeAtLineAfter.text,
+            replaceRange,
+          ),
+        ];
+      } else if (previousWord && previousWord === "module") {
         return undefined;
       } else if (
         nodeAtPosition.parent &&
@@ -135,6 +168,18 @@ export class CompletionProvider {
       return completions;
     }
   };
+
+  private findPreviousWord(currentCharacter: number, targetLine: string) {
+    currentCharacter--;
+    const previousWordEnd = currentCharacter;
+    while (
+      currentCharacter - 1 >= 0 &&
+      this.qidRegex.test(targetLine[currentCharacter - 1])
+    ) {
+      currentCharacter--;
+    }
+    return targetLine.slice(currentCharacter, previousWordEnd);
+  }
 
   private getImportableModules(range: Range): CompletionItem[] {
     return this.forest.treeIndex.map(a =>
@@ -322,7 +367,7 @@ export class CompletionProvider {
   private createFunctionCompletion(
     markdownDocumentation: string | undefined,
     label: string,
-    range: Range | undefined,
+    range: Range,
   ): CompletionItem {
     return this.createCompletion(
       markdownDocumentation,
@@ -409,7 +454,7 @@ export class CompletionProvider {
     markdownDocumentation: string | undefined,
     kind: CompletionItemKind,
     label: string,
-    range: Range | undefined,
+    range: Range,
   ): CompletionItem {
     return {
       documentation: {
@@ -418,7 +463,7 @@ export class CompletionProvider {
       },
       kind,
       label,
-      textEdit: range ? TextEdit.replace(range, label) : undefined,
+      textEdit: TextEdit.replace(range, label),
     };
   }
 
