@@ -198,7 +198,9 @@ export class ElmWorkspace {
             );
             const pathToPackageWithVersion = matchedFolder
               ? `${matchedFolder.versionPath}/src`
-              : `${allVersionFolders[allVersionFolders.length - 1].versionPath}/src`;
+              : `${
+                  allVersionFolders[allVersionFolders.length - 1].versionPath
+                }/src`;
 
             elmFolders.set(pathToPackageWithVersion, false);
           }
