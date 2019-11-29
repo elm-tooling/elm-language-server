@@ -1,8 +1,13 @@
 # Change Log
 
+## 1.4.5
+
+- Improved completions for type annotations, functions, import and module statements
+- Fixed a bug where files without imports would not index the virtual imports
+
 ## 1.4.4
 
-- Add more feedback on init for common errors 
+- Add more feedback on init for common errors
 - Make sure a file without permissions doesn't crash the server
 - `-v` to print version was not working
 
