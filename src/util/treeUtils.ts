@@ -986,7 +986,9 @@ export class TreeUtils {
         node.parent,
       );
       if (functionParameterNodes) {
-        const matchIndex = functionParameterNodes.findIndex(a => a === node);
+        const matchIndex = functionParameterNodes.findIndex(
+          a => a.text === node.text,
+        );
 
         const typeAnnotationNodes = TreeUtils.findAllNamedChildrenOfType(
           ["type_ref", "type_expression"],
