@@ -5,8 +5,8 @@ export interface ITreeContainer {
   uri: string;
   writable: boolean;
   referenced: boolean;
-  moduleName: string;
-  exposing: Exposing;
+  moduleName?: string;
+  exposing?: Exposing;
   tree: Tree;
 }
 
@@ -61,25 +61,27 @@ export class Forest implements IForest {
     tree: Tree,
   ): void {
     const moduleResult = TreeUtils.getModuleNameAndExposing(tree);
+    let moduleName: string | undefined;
+    let exposing: Exposing | undefined;
     if (moduleResult) {
-      const { moduleName, exposing } = moduleResult;
+      ({ moduleName, exposing } = moduleResult);
+    }
 
-      const existingTree = this.treeIndex.findIndex(a => a.uri === uri);
+    const existingTree = this.treeIndex.findIndex(a => a.uri === uri);
 
-      const treeContainer = {
-        exposing,
-        moduleName,
-        referenced,
-        tree,
-        uri,
-        writable,
-      };
+    const treeContainer = {
+      exposing,
+      moduleName,
+      referenced,
+      tree,
+      uri,
+      writable,
+    };
 
-      if (existingTree === -1) {
-        this.treeIndex.push(treeContainer);
-      } else {
-        this.treeIndex[existingTree] = treeContainer;
-      }
+    if (existingTree === -1) {
+      this.treeIndex.push(treeContainer);
+    } else {
+      this.treeIndex[existingTree] = treeContainer;
     }
   }
 

@@ -182,9 +182,9 @@ export class CompletionProvider {
   }
 
   private getImportableModules(range: Range): CompletionItem[] {
-    return this.forest.treeIndex.map(a =>
-      this.createModuleCompletion(a.moduleName, range),
-    );
+    return this.forest.treeIndex
+      .filter(a => a.moduleName)
+      .map(a => this.createModuleCompletion(a.moduleName!, range));
   }
 
   private getExposedFromModule(
