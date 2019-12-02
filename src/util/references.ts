@@ -383,7 +383,9 @@ export class References {
     functionName: string,
   ): SyntaxNode[] | undefined {
     const functions = this.findAllFunctionCallsAndParameters(node);
-    const result = functions.filter(a => a.text === functionName);
+    const result = functions
+      .filter(a => a.text === functionName)
+      .map(a => a.lastChild!);
     return result.length === 0 ? undefined : result;
   }
 
@@ -392,9 +394,9 @@ export class References {
   ): SyntaxNode[] {
     let functions = TreeUtils.descendantsOfType(node, "value_expr");
     if (functions.length > 0) {
-      functions = functions.filter(
-        a => a.firstChild && a.firstChild.type === "value_qid",
-      );
+      functions = functions
+        .filter(a => a.firstChild && a.firstChild.type === "value_qid")
+        .map(a => a.firstChild!);
     }
 
     return functions;
