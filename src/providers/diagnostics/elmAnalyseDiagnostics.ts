@@ -35,6 +35,7 @@ const fixableErrors = [
 ];
 const ELM_ANALYSE = "elm-analyse";
 const RANDOM_ID = randomBytes(16).toString("hex");
+export const ELM_ANALYSE_MATCHER = `elmLS.elmAnalyse`;
 export const CODE_ACTION_ELM_ANALYSE = `elmLS.elmAnalyseFixer-${RANDOM_ID}`;
 export const CODE_ACTION_ELM_ANALYSE_FIX_ALL = `elmLS.elmAnalyseFixer.fixAll-${RANDOM_ID}`;
 

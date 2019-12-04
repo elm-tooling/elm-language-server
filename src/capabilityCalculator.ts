@@ -3,6 +3,10 @@ import {
   ServerCapabilities,
   TextDocumentSyncKind,
 } from "vscode-languageserver";
+import {
+  COMMAND_RUN_TESTS,
+  COMMAND_RUN_TESTS_CURRENT_FILE,
+} from "./providers/codeActionProvider";
 import * as ElmAnalyseDiagnostics from "./providers/diagnostics/elmAnalyseDiagnostics";
 import * as ElmMakeDiagnostics from "./providers/diagnostics/elmMakeDiagnostics";
 
@@ -37,6 +41,8 @@ export class CapabilityCalculator {
           ElmAnalyseDiagnostics.CODE_ACTION_ELM_ANALYSE,
           ElmAnalyseDiagnostics.CODE_ACTION_ELM_ANALYSE_FIX_ALL,
           ElmMakeDiagnostics.CODE_ACTION_ELM_MAKE,
+          COMMAND_RUN_TESTS,
+          COMMAND_RUN_TESTS_CURRENT_FILE,
         ],
       },
       foldingRangeProvider: true,
