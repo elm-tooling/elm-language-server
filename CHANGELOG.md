@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.4.6
+
+- Fix type annotations not showing for local parameters
+- Fix files without module declaration not getting added to our index
+- Fix rename devouring Module prefixes
+
 ## 1.4.5
 
 - Improved completions for type annotations, functions, import and module statements
@@ -36,12 +42,7 @@
 - Fixed some problems with references not being correct
 - Get rid of crypto deprecation warnings
 
-- Updated tree-sitter syntax parsing
-	- Add glsl parsing
-	- Nest if/then/else expressions
-	- Let and in now correctly nest
-	- Change when block_comments are set, should now be better for annotations
-	- End functions/case as early as possible, so they don't include whitespace
+- Updated tree-sitter syntax parsing - Add glsl parsing - Nest if/then/else expressions - Let and in now correctly nest - Change when block_comments are set, should now be better for annotations - End functions/case as early as possible, so they don't include whitespace
 
 ## 1.3.2
 
