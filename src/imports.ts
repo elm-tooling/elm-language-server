@@ -7,6 +7,7 @@ export interface IImport {
   node: SyntaxNode;
   fromUri: string;
   fromModuleName: string;
+  maintainerAndPackageName?: string;
   type: NodeType;
 }
 
@@ -46,6 +47,7 @@ export class Imports implements IImports {
                 alias: moduleNameNode.text,
                 fromModuleName: moduleNameNode.text,
                 fromUri: foundModule.uri,
+                maintainerAndPackageName: foundModule.maintainerAndPackageName,
                 node: foundModuleNode,
                 type: "Module",
               });
@@ -60,6 +62,7 @@ export class Imports implements IImports {
                     importNode,
                     exposedFromRemoteModule,
                     foundModule.uri,
+                    foundModule.maintainerAndPackageName,
                   ),
                 );
 
@@ -79,6 +82,7 @@ export class Imports implements IImports {
                         exposedFromRemoteModule,
                         moduleNameNode.text,
                         foundModule.uri,
+                        foundModule.maintainerAndPackageName,
                       ),
                     );
                   } else {
@@ -171,6 +175,7 @@ export class Imports implements IImports {
     importNode: SyntaxNode,
     exposed: Exposing,
     uri: string,
+    maintainerAndPackageName?: string,
   ): IImport[] {
     const result: IImport[] = [];
 
@@ -185,6 +190,7 @@ export class Imports implements IImports {
             alias: `${importPrefix}.${element.name}`,
             fromModuleName: moduleNameNode.text,
             fromUri: uri,
+            maintainerAndPackageName,
             node: element.syntaxNode,
             type: element.type,
           });
@@ -194,6 +200,7 @@ export class Imports implements IImports {
             alias: `${importPrefix}.${element.name}`,
             fromModuleName: moduleNameNode.text,
             fromUri: uri,
+            maintainerAndPackageName,
             node: element.syntaxNode,
             type: element.type,
           });
@@ -204,6 +211,7 @@ export class Imports implements IImports {
                   alias: `${importPrefix}.${a.name}`,
                   fromModuleName: moduleNameNode.text,
                   fromUri: uri,
+                  maintainerAndPackageName,
                   node: a.syntaxNode,
                   type: "UnionConstructor" as NodeType,
                 };
@@ -218,6 +226,7 @@ export class Imports implements IImports {
                     alias: `${a.name}`,
                     fromModuleName: moduleNameNode.text,
                     fromUri: uri,
+                    maintainerAndPackageName,
                     node: a.syntaxNode,
                     type: "UnionConstructor" as NodeType,
                   };
@@ -274,6 +283,7 @@ import Platform.Sub as Sub exposing ( Sub )
     exposed: Exposing,
     moduleName: string,
     uri: string,
+    maintainerAndPackageName?: string,
   ): IImport[] {
     const result: IImport[] = [];
 
@@ -282,6 +292,7 @@ import Platform.Sub as Sub exposing ( Sub )
         alias: element.name,
         fromModuleName: moduleName,
         fromUri: uri,
+        maintainerAndPackageName,
         node: element.syntaxNode,
         type: element.type,
       });
@@ -308,6 +319,7 @@ import Platform.Sub as Sub exposing ( Sub )
         alias: a.name,
         fromModuleName: moduleNameNode.text,
         fromUri: foundModule.uri,
+        maintainerAndPackageName: foundModule.maintainerAndPackageName,
         node: a.syntaxNode,
         type: a.type,
       };

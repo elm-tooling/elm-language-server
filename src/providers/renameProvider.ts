@@ -42,7 +42,7 @@ export class RenameProvider {
 
       if (definitionNode) {
         const refTree = this.forest.getByUri(definitionNode.uri);
-        if (refTree && refTree.writable) {
+        if (refTree && refTree.writeable) {
           const references = References.find(
             definitionNode,
             this.forest,
