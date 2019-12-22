@@ -29,7 +29,7 @@ export class CodeActionProvider {
   private onCodeAction(params: CodeActionParams): CodeAction[] {
     this.connection.console.info("A code action was requested");
     const analyse =
-      (this.elmAnalyse && this.elmAnalyse.onCodeAction(params)) || [];
+      (this.elmAnalyse && this.elmAnalyse.onCodeAction(params)) ?? [];
     const make = this.elmMake.onCodeAction(params);
     return [...analyse, ...make];
   }

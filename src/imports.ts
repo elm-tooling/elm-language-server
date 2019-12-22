@@ -26,7 +26,7 @@ export class Imports implements IImports {
     let importNodes = this.getVirtualImports();
 
     importNodes = importNodes.concat(
-      TreeUtils.findAllNamedChildrenOfType("import_clause", tree.rootNode) ||
+      TreeUtils.findAllNamedChildrenOfType("import_clause", tree.rootNode) ??
         [],
     );
     if (importNodes) {

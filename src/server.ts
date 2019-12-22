@@ -29,7 +29,7 @@ export class Server implements ILanguageServer {
   ) {
     this.calculator = new CapabilityCalculator(params.capabilities);
 
-    const initializationOptions = this.params.initializationOptions || {};
+    const initializationOptions = this.params.initializationOptions ?? {};
     this.settings = new Settings(
       this.connection,
       initializationOptions,

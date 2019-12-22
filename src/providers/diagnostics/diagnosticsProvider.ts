@@ -82,14 +82,14 @@ export class DiagnosticsProvider {
     }
 
     for (const [uri, diagnostics] of this.currentDiagnostics.elmTest) {
-      const currentDiagnostics = allDiagnostics.get(uri) || [];
+      const currentDiagnostics = allDiagnostics.get(uri) ?? [];
       if (currentDiagnostics.length === 0) {
         allDiagnostics.set(uri, diagnostics);
       }
     }
 
     for (const [uri, diagnostics] of this.currentDiagnostics.elmAnalyse) {
-      const currentDiagnostics = allDiagnostics.get(uri) || [];
+      const currentDiagnostics = allDiagnostics.get(uri) ?? [];
       if (currentDiagnostics.length === 0) {
         allDiagnostics.set(uri, diagnostics);
       }

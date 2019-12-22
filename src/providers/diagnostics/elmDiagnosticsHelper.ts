@@ -11,7 +11,7 @@ export class ElmDiagnosticsHelper {
     return issues.reduce((acc, issue) => {
       const uri = this.getUriFromIssue(issue, elmWorkspaceFolder);
       const diagnostic = this.elmMakeIssueToDiagnostic(issue);
-      const arr = acc.get(uri) || [];
+      const arr = acc.get(uri) ?? [];
       arr.push(diagnostic);
       acc.set(uri, arr);
       return acc;

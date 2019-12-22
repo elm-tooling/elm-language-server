@@ -75,7 +75,7 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
   public updateFile(uri: URI, text?: string): void {
     this.elmAnalyse.then(elmAnalyse => {
       elmAnalyse.ports.fileWatch.send({
-        content: text || null,
+        content: text ?? null,
         event: "update",
         file: path.relative(this.elmWorkspace.fsPath, uri.fsPath),
       });
@@ -88,7 +88,7 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
     // The `CodeActionParams` will only have diagnostics for the region we were in, for the
     // "Fix All" feature we need to know about all of the fixable things in the document
     const fixableDiagnostics = this.fixableDiagnostics(
-      this.diagnostics.get(uri.toString()) || [],
+      this.diagnostics.get(uri.toString()) ?? [],
     );
 
     const fixAllInFile: CodeAction[] =
@@ -311,7 +311,7 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
       const uri = URI.file(
         path.join(this.elmWorkspace.fsPath, message.file),
       ).toString();
-      const arr = acc.get(uri) || [];
+      const arr = acc.get(uri) ?? [];
       arr.push(this.messageToDiagnostic(message));
       acc.set(uri, arr);
       return acc;
@@ -353,7 +353,7 @@ export class ElmAnalyseDiagnostics extends EventEmitter {
     const [lineStart, colStart, lineEnd, colEnd] =
       (message.data &&
         message.data.properties &&
-        message.data.properties.range) ||
+        message.data.properties.range) ??
       rangeDefaults;
 
     const range = {
