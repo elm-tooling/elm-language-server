@@ -43,30 +43,20 @@ export interface IElmAnalyseEvents {
 }
 
 export class ElmAnalyseDiagnostics extends EventEmitter {
-  private connection: IConnection;
-  private elmWorkspace: URI;
   private elmAnalyse: Promise<ElmApp>;
   private diagnostics: Map<string, Diagnostic[]>;
   private filesWithDiagnostics: Set<string> = new Set();
-  private events: TextDocumentEvents;
-  private settings: Settings;
-  private formattingProvider: DocumentFormattingProvider;
 
   constructor(
-    connection: IConnection,
-    elmWorkspace: URI,
-    events: TextDocumentEvents,
-    settings: Settings,
-    formattingProvider: DocumentFormattingProvider,
+    private connection: IConnection,
+    private elmWorkspace: URI,
+    private events: TextDocumentEvents,
+    private settings: Settings,
+    private formattingProvider: DocumentFormattingProvider,
   ) {
     super();
-    this.connection = connection;
-    this.elmWorkspace = elmWorkspace;
     this.onExecuteCommand = this.onExecuteCommand.bind(this);
     this.onCodeAction = this.onCodeAction.bind(this);
-    this.events = events;
-    this.settings = settings;
-    this.formattingProvider = formattingProvider;
     this.diagnostics = new Map();
 
     this.elmAnalyse = this.setupElmAnalyse();

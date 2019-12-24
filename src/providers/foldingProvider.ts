@@ -8,8 +8,6 @@ import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IForest } from "../forest";
 
 export class FoldingRangeProvider {
-  private connection: IConnection;
-  private forest: IForest;
   private readonly REGION_CONSTRUCTS: Set<string> = new Set([
     "case_of_expr",
     "value_declaration",
@@ -24,10 +22,7 @@ export class FoldingRangeProvider {
     "else",
   ]);
 
-  constructor(connection: IConnection, forest: IForest) {
-    this.connection = connection;
-    this.forest = forest;
-
+  constructor(private connection: IConnection, private forest: IForest) {
     this.connection.onFoldingRanges(this.handleFoldingRange);
   }
 
