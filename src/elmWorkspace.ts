@@ -152,7 +152,7 @@ export class ElmWorkspace {
         elmJson["source-directories"].forEach(async (folder: string) => {
           elmFolders.push({
             maintainerAndPackageName: undefined,
-            uri: path.join(this.elmWorkspace.fsPath, folder),
+            uri: path.resolve(this.elmWorkspace.fsPath, folder),
             writeable: true,
           });
         });
