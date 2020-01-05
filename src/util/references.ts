@@ -22,7 +22,7 @@ export class References {
             const annotationNameNode = this.getFunctionAnnotationNameNodeFromDefinition(
               definitionNode.node,
             );
-            if (annotationNameNode && refSourceTree.writable) {
+            if (annotationNameNode && refSourceTree.writeable) {
               references.push({
                 node: annotationNameNode,
                 uri: definitionNode.uri,
@@ -33,7 +33,7 @@ export class References {
               definitionNode.node,
             );
             if (functionNameNode) {
-              if (refSourceTree.writable) {
+              if (refSourceTree.writeable) {
                 references.push({
                   node: functionNameNode,
                   uri: definitionNode.uri,
@@ -53,7 +53,7 @@ export class References {
                       functionNameNode.text,
                     );
 
-              if (localFunctions && refSourceTree.writable) {
+              if (localFunctions && refSourceTree.writeable) {
                 references.push(
                   ...localFunctions.map(node => {
                     return { node, uri: definitionNode.uri };
@@ -76,7 +76,7 @@ export class References {
                     functionNameNode.text,
                   );
 
-                  if (exposedNode && refSourceTree.writable) {
+                  if (exposedNode && refSourceTree.writeable) {
                     references.push({
                       node: exposedNode,
                       uri: definitionNode.uri,
@@ -99,7 +99,7 @@ export class References {
                       if (needsToBeChecked.length > 0) {
                         const treeToCheck = forest.getByUri(uri);
 
-                        if (treeToCheck && treeToCheck.writable) {
+                        if (treeToCheck && treeToCheck.writeable) {
                           const importClauseNode = TreeUtils.findImportClauseByName(
                             treeToCheck.tree,
                             moduleNameNode.text,
@@ -147,7 +147,7 @@ export class References {
             );
 
             if (typeOrTypeAliasNameNode) {
-              if (refSourceTree.writable) {
+              if (refSourceTree.writeable) {
                 references.push({
                   node: typeOrTypeAliasNameNode,
                   uri: definitionNode.uri,
@@ -158,7 +158,7 @@ export class References {
                 refSourceTree.tree,
                 typeOrTypeAliasNameNode.text,
               );
-              if (localFunctions && refSourceTree.writable) {
+              if (localFunctions && refSourceTree.writeable) {
                 references.push(
                   ...localFunctions.map(node => {
                     return { node, uri: definitionNode.uri };
@@ -181,7 +181,7 @@ export class References {
                     typeOrTypeAliasNameNode.text,
                   );
 
-                  if (exposedNode && refSourceTree.writable) {
+                  if (exposedNode && refSourceTree.writeable) {
                     references.push({
                       node: exposedNode,
                       uri: definitionNode.uri,
@@ -206,7 +206,7 @@ export class References {
                       if (needsToBeChecked.length > 0) {
                         const treeToCheck = forest.getByUri(uri);
 
-                        if (treeToCheck && treeToCheck.writable) {
+                        if (treeToCheck && treeToCheck.writeable) {
                           const importClauseNode = TreeUtils.findImportClauseByName(
                             treeToCheck.tree,
                             moduleNameNode.text,
@@ -250,7 +250,7 @@ export class References {
 
           case "Module":
             if (moduleNameNode) {
-              if (refSourceTree.writable) {
+              if (refSourceTree.writeable) {
                 references.push({
                   node: moduleNameNode,
                   uri: definitionNode.uri,
@@ -268,7 +268,7 @@ export class References {
                   if (needsToBeChecked.length > 0) {
                     const treeToCheck = forest.getByUri(uri);
 
-                    if (treeToCheck && treeToCheck.writable) {
+                    if (treeToCheck && treeToCheck.writeable) {
                       needsToBeChecked.forEach(a => {
                         const importNameNode = TreeUtils.findImportNameNode(
                           treeToCheck.tree,
@@ -286,7 +286,7 @@ export class References {
             break;
 
           case "FunctionParameter":
-            if (refSourceTree.writable) {
+            if (refSourceTree.writeable) {
               references.push({
                 node: definitionNode.node,
                 uri: definitionNode.uri,
@@ -319,7 +319,7 @@ export class References {
           case "UnionConstructor":
             if (definitionNode.node.firstChild && moduleNameNode) {
               const nameNode = definitionNode.node.firstChild;
-              if (refSourceTree.writable) {
+              if (refSourceTree.writeable) {
                 references.push({
                   node: nameNode,
                   uri: definitionNode.uri,
@@ -351,7 +351,7 @@ export class References {
                   );
                   if (needsToBeChecked.length > 0) {
                     const treeToCheck = forest.getByUri(uri);
-                    if (treeToCheck && treeToCheck.writable) {
+                    if (treeToCheck && treeToCheck.writeable) {
                       const unionConstructorCallsFromOtherFiles = TreeUtils.findUnionConstructorCalls(
                         treeToCheck.tree,
                         nameNode.text,

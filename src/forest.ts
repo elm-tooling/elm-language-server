@@ -3,9 +3,10 @@ import { Exposing, TreeUtils } from "./util/treeUtils";
 
 export interface ITreeContainer {
   uri: string;
-  writable: boolean;
+  writeable: boolean;
   referenced: boolean;
   moduleName?: string;
+  maintainerAndPackageName?: string;
   exposing?: Exposing;
   tree: Tree;
 }
@@ -19,9 +20,10 @@ export interface IForest {
   getByUri(uri: string): ITreeContainer | undefined;
   setTree(
     uri: string,
-    writable: boolean,
+    writeable: boolean,
     referenced: boolean,
     tree: Tree,
+    packageName?: string,
   ): void;
   removeTree(uri: string): void;
 }
@@ -56,9 +58,10 @@ export class Forest implements IForest {
 
   public setTree(
     uri: string,
-    writable: boolean,
+    writeable: boolean,
     referenced: boolean,
     tree: Tree,
+    maintainerAndPackageName?: string,
   ): void {
     const moduleResult = TreeUtils.getModuleNameAndExposing(tree);
     let moduleName: string | undefined;
@@ -71,11 +74,12 @@ export class Forest implements IForest {
 
     const treeContainer = {
       exposing,
+      maintainerAndPackageName,
       moduleName,
       referenced,
       tree,
       uri,
-      writable,
+      writeable,
     };
 
     if (existingTree === -1) {

@@ -77,7 +77,7 @@ export class ASTProvider {
       }
     }
     if (tree) {
-      this.forest.setTree(document.uri, true, true, tree);
+      this.forest.setTree(document.uri, true, true, tree, undefined);
       this.imports.updateImports(document.uri, tree, this.forest);
     }
   };

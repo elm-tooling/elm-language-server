@@ -33,7 +33,8 @@ const readdir = util.promisify(fs.readdir);
 
 interface IFolder {
   path: string;
-  writable: boolean;
+  maintainerAndPackageName?: string;
+  writeable: boolean;
 }
 
 export class ElmWorkspace {
@@ -142,17 +143,33 @@ export class ElmWorkspace {
       // Find elm files and feed them to tree sitter
       const elmJson = require(pathToElmJson);
       const type = elmJson.type;
-      const elmFolders: Map<string, boolean> = new Map();
+      const elmFolders: Array<{
+        uri: string;
+        writeable: boolean;
+        maintainerAndPackageName?: string;
+      }> = [];
       if (type === "application") {
         elmJson["source-directories"].forEach(async (folder: string) => {
-          elmFolders.set(path.join(this.elmWorkspace.fsPath, folder), true);
+          elmFolders.push({
+            maintainerAndPackageName: undefined,
+            uri: path.join(this.elmWorkspace.fsPath, folder),
+            writeable: true,
+          });
         });
       } else {
-        elmFolders.set(path.join(this.elmWorkspace.fsPath, "src"), true);
+        elmFolders.push({
+          maintainerAndPackageName: undefined,
+          uri: path.join(this.elmWorkspace.fsPath, "src"),
+          writeable: true,
+        });
       }
-      elmFolders.set(path.join(this.elmWorkspace.fsPath, "tests"), true);
+      elmFolders.push({
+        maintainerAndPackageName: undefined,
+        uri: path.join(this.elmWorkspace.fsPath, "tests"),
+        writeable: true,
+      });
       this.connection.console.info(
-        `${elmFolders.size} source-dirs and test folders found`,
+        `${elmFolders.length} source-dirs and test folders found`,
       );
 
       const elmHome = this.findElmHome();
@@ -173,7 +190,11 @@ export class ElmWorkspace {
             const packageName = key.substring(key.indexOf("/") + 1, key.length);
 
             const pathToPackageWithVersion = `${packagesRoot}${maintainer}/${packageName}/${dependencies[key]}/src`;
-            elmFolders.set(pathToPackageWithVersion, false);
+            elmFolders.push({
+              maintainerAndPackageName: `${maintainer}/${packageName}`,
+              uri: pathToPackageWithVersion,
+              writeable: false,
+            });
           }
         }
       } else {
@@ -191,7 +212,7 @@ export class ElmWorkspace {
                 versionPath: `${pathToPackage}${folderName}`,
               };
             });
-            // TODO Actually honor the version constraints here
+
             const matchedFolder = utils.findDepVersion(
               allVersionFolders,
               dependencies[key],
@@ -202,7 +223,11 @@ export class ElmWorkspace {
                   allVersionFolders[allVersionFolders.length - 1].versionPath
                 }/src`;
 
-            elmFolders.set(pathToPackageWithVersion, false);
+            elmFolders.push({
+              maintainerAndPackageName: `${maintainer}/${packageName}`,
+              uri: pathToPackageWithVersion,
+              writeable: false,
+            });
           }
         }
       }
@@ -212,7 +237,7 @@ export class ElmWorkspace {
         `Found ${elmFilePaths.length.toString()} files to add to the project`,
       );
 
-      if (elmFilePaths.every(a => !a.writable)) {
+      if (elmFilePaths.every(a => !a.writeable)) {
         this.connection.window.showErrorMessage(
           "The path or paths you entered in the 'source-directories' field of your 'elm.json' does not contain any elm files.",
         );
@@ -235,7 +260,13 @@ export class ElmWorkspace {
     }
   }
 
-  private findElmFilesInFolders(elmFolders: Map<string, boolean>): IFolder[] {
+  private findElmFilesInFolders(
+    elmFolders: Array<{
+      uri: string;
+      writeable: boolean;
+      maintainerAndPackageName?: string;
+    }>,
+  ): IFolder[] {
     let elmFilePaths: IFolder[] = [];
     for (const element of elmFolders) {
       elmFilePaths = elmFilePaths.concat(this.findElmFilesInFolder(element));
@@ -243,13 +274,21 @@ export class ElmWorkspace {
     return elmFilePaths;
   }
 
-  private findElmFilesInFolder(element: [string, boolean]): IFolder[] {
+  private findElmFilesInFolder(element: {
+    uri: string;
+    writeable: boolean;
+    maintainerAndPackageName?: string;
+  }): IFolder[] {
     // Cleanup the path on windows, as globby does not like backslashes
-    const globUri = element[0].replace(/\\/g, "/");
+    const globUri = element.uri.replace(/\\/g, "/");
 
     return globby
       .sync(`${globUri}/**/*.elm`, { suppressErrors: true })
-      .map(matchingPath => ({ path: matchingPath, writable: element[1] }));
+      .map(matchingPath => ({
+        maintainerAndPackageName: element.maintainerAndPackageName,
+        path: matchingPath,
+        writeable: element.writeable,
+      }));
   }
 
   private packageOrPackagesFolder(elmVersion: string | undefined): string {
@@ -279,9 +318,10 @@ export class ElmWorkspace {
         const tree: Tree | undefined = this.parser.parse(fileContent);
         this.forest.setTree(
           URI.file(filePath.path).toString(),
-          filePath.writable,
+          filePath.writeable,
           true,
           tree,
+          filePath.maintainerAndPackageName,
         );
         resolve();
       } catch (error) {
