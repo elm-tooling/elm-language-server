@@ -7,30 +7,40 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Point, SyntaxNode, Tree } from "web-tree-sitter";
-import { IForest } from "../forest";
-import { IImports } from "../imports";
+import { ElmWorkspace } from "../elmWorkspace";
 import { Position } from "../position";
-import { DocumentEvents } from "../util/documentEvents";
+import { IDocumentEvents } from "../util/documentEvents";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 
 export class ASTProvider {
   constructor(
     private connection: IConnection,
-    private forest: IForest,
-    events: DocumentEvents,
-    private imports: IImports,
+    elmWorkspaces: ElmWorkspace[],
+    documentEvents: IDocumentEvents,
     private parser: Parser,
   ) {
-    events.on("change", this.handleChangeTextDocument);
+    documentEvents.on(
+      "change",
+      new ElmWorkspaceMatcher(
+        elmWorkspaces,
+        (params: DidChangeTextDocumentParams) =>
+          URI.parse(params.textDocument.uri),
+      ).handlerForWorkspace(this.handleChangeTextDocument),
+    );
   }
 
   protected handleChangeTextDocument = async (
     params: DidChangeTextDocumentParams,
+    elmWorkspace: ElmWorkspace,
   ): Promise<void> => {
     this.connection.console.info(
       `Changed text document, going to parse it. ${params.textDocument.uri}`,
     );
+    const forest = elmWorkspace.getForest();
+    const imports = elmWorkspace.getImports();
     const document: VersionedTextDocumentIdentifier = params.textDocument;
-    let tree: Tree | undefined = this.forest.getTree(document.uri);
+
+    let tree: Tree | undefined = forest.getTree(document.uri);
     if (tree === undefined) {
       const fileContent: string = readFileSync(
         URI.parse(document.uri).fsPath,
@@ -77,8 +87,8 @@ export class ASTProvider {
       }
     }
     if (tree) {
-      this.forest.setTree(document.uri, true, true, tree, undefined);
-      this.imports.updateImports(document.uri, tree, this.forest);
+      forest.setTree(document.uri, true, true, tree);
+      imports.updateImports(document.uri, tree, forest);
     }
   };
 

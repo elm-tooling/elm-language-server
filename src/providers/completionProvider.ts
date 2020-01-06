@@ -9,36 +9,40 @@ import {
   Range,
   TextEdit,
 } from "vscode-languageserver";
+import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
+import { ElmWorkspace } from "../elmWorkspace";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
 import { getEmptyTypes } from "../util/elmUtils";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
 import { TreeUtils } from "../util/treeUtils";
 import RANKING_LIST from "./ranking";
 
+type CompletionResult = CompletionItem[] | null | undefined;
+
 export class CompletionProvider {
-  private connection: IConnection;
-  private forest: IForest;
-  private imports: IImports;
   private qidRegex = /[a-zA-Z0-9\.]+/;
   private qidAtStartOfLineRegex = /^[a-zA-Z0-9 \.]*$/;
 
-  constructor(connection: IConnection, forest: IForest, imports: IImports) {
-    this.connection = connection;
-    this.forest = forest;
-    this.imports = imports;
-
-    this.connection.onCompletion(this.handleCompletionRequest);
+  constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {
+    connection.onCompletion(
+      new ElmWorkspaceMatcher(elmWorkspaces, (param: CompletionParams) =>
+        URI.parse(param.textDocument.uri),
+      ).handlerForWorkspace(this.handleCompletionRequest),
+    );
   }
 
   private handleCompletionRequest = (
     params: CompletionParams,
-  ): CompletionItem[] | null | undefined => {
+    elmWorkspace: ElmWorkspace,
+  ): CompletionResult => {
     this.connection.console.info(`A completion was requested`);
     const completions: CompletionItem[] = [];
 
-    const tree: Tree | undefined = this.forest.getTree(params.textDocument.uri);
+    const forest = elmWorkspace.getForest();
+    const tree: Tree | undefined = forest.getTree(params.textDocument.uri);
 
     if (tree) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
@@ -128,7 +132,7 @@ export class CompletionProvider {
       ) {
         return this.getSameFileTopLevelCompletions(tree, replaceRange, true);
       } else if (previousWord && previousWord === "import") {
-        return this.getImportableModules(replaceRange);
+        return this.getImportableModules(forest, replaceRange);
       } else if (
         nodeAtPosition.parent &&
         nodeAtPosition.parent.type === "exposing_list" &&
@@ -137,7 +141,11 @@ export class CompletionProvider {
         nodeAtPosition.parent.firstNamedChild &&
         nodeAtPosition.parent.firstNamedChild.type === "exposing"
       ) {
-        return this.getExposedFromModule(nodeAtPosition.parent, replaceRange);
+        return this.getExposedFromModule(
+          forest,
+          nodeAtPosition.parent,
+          replaceRange,
+        );
       } else if (
         (nodeAtPosition.type === "comma" ||
           nodeAtPosition.type === "right_parenthesis") &&
@@ -147,6 +155,7 @@ export class CompletionProvider {
         nodeAtPosition.parent.parent.type === "exposing_list"
       ) {
         return this.getExposedFromModule(
+          forest,
           nodeAtPosition.parent.parent,
           replaceRange,
         );
@@ -161,6 +170,7 @@ export class CompletionProvider {
 
       completions.push(
         ...this.getCompletionsFromOtherFile(
+          elmWorkspace.getImports(),
           params.textDocument.uri,
           replaceRange,
         ),
@@ -184,13 +194,17 @@ export class CompletionProvider {
     return targetLine.slice(currentCharacter, previousWordEnd);
   }
 
-  private getImportableModules(range: Range): CompletionItem[] {
-    return this.forest.treeIndex
+  private getImportableModules(
+    forest: IForest,
+    range: Range,
+  ): CompletionItem[] {
+    return forest.treeIndex
       .filter(a => a.moduleName)
       .map(a => this.createModuleCompletion(a.moduleName!, range, "b"));
   }
 
   private getExposedFromModule(
+    forest: IForest,
     exposingListNode: SyntaxNode,
     range: Range,
   ): CompletionItem[] | undefined {
@@ -209,7 +223,7 @@ export class CompletionProvider {
     ) {
       const prefix = "c";
       const moduleName = exposingListNode.previousNamedSibling.text;
-      const exposedByModule = this.forest.getExposingByModuleName(moduleName);
+      const exposedByModule = forest.getExposingByModuleName(moduleName);
       if (exposedByModule) {
         return exposedByModule.flatMap(a => {
           const value = HintHelper.createHint(a.syntaxNode);
@@ -247,13 +261,14 @@ export class CompletionProvider {
   }
 
   private getCompletionsFromOtherFile(
+    imports: IImports,
     uri: string,
     range: Range,
   ): CompletionItem[] {
     const completions: CompletionItem[] = [];
 
-    if (this.imports.imports && this.imports.imports[uri]) {
-      const importList = this.imports.imports[uri];
+    if (imports.imports && imports.imports[uri]) {
+      const importList = imports.imports[uri];
       importList.forEach(element => {
         const value = HintHelper.createHint(element.node);
         let prefix = "d";

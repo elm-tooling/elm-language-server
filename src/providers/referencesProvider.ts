@@ -5,26 +5,34 @@ import {
   Range,
   ReferenceParams,
 } from "vscode-languageserver";
-import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IForest } from "../forest";
-import { IImports } from "../imports";
+import { URI } from "vscode-uri";
+import { Tree } from "web-tree-sitter";
+import { ElmWorkspace } from "../elmWorkspace";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
 import { TreeUtils } from "../util/treeUtils";
 
+type ReferenceResult = Location[] | null | undefined;
+
 export class ReferencesProvider {
-  constructor(
-    private connection: IConnection,
-    private forest: IForest,
-    private imports: IImports,
-  ) {
-    this.connection.onReferences(this.handleReferencesRequest);
+  constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {
+    this.connection.onReferences(
+      new ElmWorkspaceMatcher(elmWorkspaces, (param: ReferenceParams) =>
+        URI.parse(param.textDocument.uri),
+      ).handlerForWorkspace(this.handleReferencesRequest),
+    );
   }
 
   protected handleReferencesRequest = async (
     params: ReferenceParams,
-  ): Promise<Location[] | null | undefined> => {
+    elmWorkspace: ElmWorkspace,
+  ): Promise<ReferenceResult> => {
     this.connection.console.info(`References were requested`);
-    const tree: Tree | undefined = this.forest.getTree(params.textDocument.uri);
+
+    const imports = elmWorkspace.getImports();
+    const forest = elmWorkspace.getForest();
+
+    const tree: Tree | undefined = forest.getTree(params.textDocument.uri);
 
     if (tree) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
@@ -36,14 +44,10 @@ export class ReferencesProvider {
         nodeAtPosition,
         params.textDocument.uri,
         tree,
-        this.imports,
+        imports,
       );
 
-      const references = References.find(
-        definitionNode,
-        this.forest,
-        this.imports,
-      );
+      const references = References.find(definitionNode, forest, imports);
 
       if (references) {
         return references.map(a =>

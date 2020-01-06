@@ -1,7 +1,10 @@
 import { Diagnostic, IConnection, TextDocument } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import { ElmWorkspace } from "../../elmWorkspace";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { ElmAnalyseTrigger, Settings } from "../../util/settings";
-import { TextDocumentEvents } from "../../util/textDocumentEvents";
+import { ITextDocumentEvents } from "../../util/textDocumentEvents";
+import { NoWorkspaceContainsError } from "../noWorkspaceContainsError";
 import { ElmAnalyseDiagnostics } from "./elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 
@@ -23,6 +26,7 @@ export interface IElmIssue {
 export class DiagnosticsProvider {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
   private elmAnalyseDiagnostics: ElmAnalyseDiagnostics | null;
+  private elmWorkspaceMatcher: ElmWorkspaceMatcher<TextDocument>;
   private currentDiagnostics: {
     elmMake: Map<string, Diagnostic[]>;
     elmAnalyse: Map<string, Diagnostic[]>;
@@ -31,15 +35,18 @@ export class DiagnosticsProvider {
 
   constructor(
     private connection: IConnection,
-    private elmWorkspaceFolder: URI,
+    elmWorkspaces: ElmWorkspace[],
     private settings: Settings,
-    private events: TextDocumentEvents,
+    private events: ITextDocumentEvents,
     elmAnalyse: ElmAnalyseDiagnostics | null,
     elmMake: ElmMakeDiagnostics,
   ) {
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmMakeDiagnostics = elmMake;
     this.elmAnalyseDiagnostics = elmAnalyse;
+    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(elmWorkspaces, doc =>
+      URI.parse(doc.uri),
+    );
 
     this.currentDiagnostics = {
       elmAnalyse: new Map(),
@@ -112,29 +119,38 @@ export class DiagnosticsProvider {
     );
 
     const uri = URI.parse(document.uri);
-    if (uri.toString().startsWith(this.elmWorkspaceFolder.toString())) {
-      const text = document.getText();
-
-      if (isSaveOrOpen) {
-        this.currentDiagnostics.elmMake = await this.elmMakeDiagnostics.createDiagnostics(
-          uri,
-        );
+    try {
+      this.elmWorkspaceMatcher.getElmWorkspaceFor(document);
+    } catch (error) {
+      if (error instanceof NoWorkspaceContainsError) {
+        this.connection.console.info(error.message);
+        return; // ignore file that doesn't correspond to a workspace
       }
 
-      const elmMakeDiagnosticsForCurrentFile = this.currentDiagnostics.elmMake.get(
-        uri.toString(),
-      );
-
-      if (
-        this.elmAnalyseDiagnostics &&
-        elmAnalyseTrigger !== "never" &&
-        elmMakeDiagnosticsForCurrentFile &&
-        elmMakeDiagnosticsForCurrentFile.length === 0
-      ) {
-        this.elmAnalyseDiagnostics.updateFile(uri, text);
-      }
-
-      this.sendDiagnostics();
+      throw error;
     }
+
+    const text = document.getText();
+
+    if (isSaveOrOpen) {
+      this.currentDiagnostics.elmMake = await this.elmMakeDiagnostics.createDiagnostics(
+        uri,
+      );
+    }
+
+    const elmMakeDiagnosticsForCurrentFile = this.currentDiagnostics.elmMake.get(
+      uri.toString(),
+    );
+
+    if (
+      this.elmAnalyseDiagnostics &&
+      elmAnalyseTrigger !== "never" &&
+      elmMakeDiagnosticsForCurrentFile &&
+      elmMakeDiagnosticsForCurrentFile.length === 0
+    ) {
+      this.elmAnalyseDiagnostics.updateFile(uri, text);
+    }
+
+    this.sendDiagnostics();
   }
 }

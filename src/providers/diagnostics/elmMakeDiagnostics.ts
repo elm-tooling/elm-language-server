@@ -10,8 +10,10 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import { ElmWorkspace } from "../../elmWorkspace";
 import * as utils from "../../util/elmUtils";
 import { execCmd } from "../../util/elmUtils";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
 import { IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
@@ -55,25 +57,32 @@ export interface IStyledString {
 }
 
 export class ElmMakeDiagnostics {
+  private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
+
   constructor(
     private connection: IConnection,
-    private elmWorkspaceFolder: URI,
+    elmWorkspaces: ElmWorkspace[],
     private settings: Settings,
-  ) {}
+  ) {
+    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(
+      elmWorkspaces,
+      uri => uri,
+    );
+  }
 
   public createDiagnostics = async (
     filePath: URI,
   ): Promise<Map<string, Diagnostic[]>> => {
+    const workspaceRootPath = this.elmWorkspaceMatcher
+      .getElmWorkspaceFor(filePath)
+      .getRootPath();
     return await this.checkForErrors(
-      this.elmWorkspaceFolder.fsPath,
+      workspaceRootPath.fsPath,
       filePath.fsPath,
     ).then(issues => {
       return issues.length === 0
         ? new Map([[filePath.toString(), []]])
-        : ElmDiagnosticsHelper.issuesToDiagnosticMap(
-            issues,
-            this.elmWorkspaceFolder,
-          );
+        : ElmDiagnosticsHelper.issuesToDiagnosticMap(issues, workspaceRootPath);
     });
   };
 

@@ -4,17 +4,14 @@ import {
   WorkspaceSymbolParams,
 } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { IForest } from "../forest";
+import { ElmWorkspace } from "../elmWorkspace";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 
 export class WorkspaceSymbolProvider {
   constructor(
     private readonly connection: IConnection,
-    private readonly forest: IForest,
+    private readonly elmWorkspaces: ElmWorkspace[],
   ) {
-    this.connection = connection;
-    this.forest = forest;
-
     this.connection.onWorkspaceSymbol(this.workspaceSymbolRequest);
   }
 
@@ -22,30 +19,39 @@ export class WorkspaceSymbolProvider {
     param: WorkspaceSymbolParams,
   ): Promise<SymbolInformation[] | null | undefined> => {
     this.connection.console.info(`Workspace Symbols were requested`);
-    const symbolInformationList: SymbolInformation[] = [];
+    const symbolInformationMap: Map<string, SymbolInformation[]> = new Map();
 
-    this.forest.treeIndex.forEach(tree => {
-      const traverse: (node: SyntaxNode) => void = (node: SyntaxNode): void => {
-        if (node.text.includes(param.query)) {
-          const symbolInformation = SymbolInformationTranslator.translateNodeToSymbolInformation(
-            tree.uri,
-            node,
-          );
-          if (symbolInformation) {
-            symbolInformationList.push(symbolInformation);
+    this.elmWorkspaces.forEach(elmWorkspace => {
+      elmWorkspace.getForest().treeIndex.forEach(tree => {
+        const traverse: (node: SyntaxNode) => void = (
+          node: SyntaxNode,
+        ): void => {
+          if (node.text.includes(param.query)) {
+            const symbolInformation = SymbolInformationTranslator.translateNodeToSymbolInformation(
+              tree.uri,
+              node,
+            );
+            if (symbolInformation) {
+              const current = symbolInformationMap.get(tree.uri) || [];
+              symbolInformationMap.set(tree.uri, [
+                ...current,
+                symbolInformation,
+              ]);
+            }
           }
-        }
 
-        for (const childNode of node.children) {
-          traverse(childNode);
-        }
-      };
+          for (const childNode of node.children) {
+            traverse(childNode);
+          }
+        };
 
-      if (tree) {
-        traverse(tree.tree.rootNode);
-      }
+        // skip URIs already traversed in a previous Elm workspace
+        if (tree && !symbolInformationMap.get(tree.uri)) {
+          traverse(tree.tree.rootNode);
+        }
+      });
     });
 
-    return symbolInformationList;
+    return Array.from(symbolInformationMap.values()).flat();
   };
 }

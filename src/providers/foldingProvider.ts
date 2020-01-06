@@ -4,8 +4,10 @@ import {
   FoldingRangeRequestParam,
   IConnection,
 } from "vscode-languageserver";
+import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IForest } from "../forest";
+import { ElmWorkspace } from "../elmWorkspace";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 
 export class FoldingRangeProvider {
   private readonly REGION_CONSTRUCTS: Set<string> = new Set([
@@ -22,17 +24,23 @@ export class FoldingRangeProvider {
     "else",
   ]);
 
-  constructor(private connection: IConnection, private forest: IForest) {
-    this.connection.onFoldingRanges(this.handleFoldingRange);
+  constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {
+    connection.onFoldingRanges(
+      new ElmWorkspaceMatcher(
+        elmWorkspaces,
+        (param: FoldingRangeRequestParam) => URI.parse(param.textDocument.uri),
+      ).handlerForWorkspace(this.handleFoldingRange),
+    );
   }
 
   protected handleFoldingRange = async (
     param: FoldingRangeRequestParam,
+    elmWorkspace: ElmWorkspace,
   ): Promise<FoldingRange[]> => {
     this.connection.console.info(`Folding ranges were requested`);
     const folds: FoldingRange[] = [];
-
-    const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
+    const forest = elmWorkspace.getForest();
+    const tree: Tree | undefined = forest.getTree(param.textDocument.uri);
 
     const findLastIdenticalNamedSibling: (node: SyntaxNode) => SyntaxNode = (
       node: SyntaxNode,
@@ -91,6 +99,7 @@ export class FoldingRangeProvider {
       traverse(tree.rootNode);
     }
 
+    this.connection.console.info(`Returned ${folds.length} folding ranges`);
     return folds;
   };
 }
