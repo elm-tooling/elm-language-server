@@ -250,7 +250,9 @@ export class ElmWorkspace {
       await Promise.all(promiseList);
 
       this.forest.treeIndex.forEach(item => {
-        this.connection.console.info(`Adding imports ${item.uri.toString()}`);
+        this.connection.console.info(
+          `Adding imports ${URI.parse(item.uri).fsPath}`,
+        );
         this.imports.updateImports(item.uri, item.tree, this.forest);
       });
 
