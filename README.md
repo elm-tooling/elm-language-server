@@ -105,7 +105,9 @@ Just install the [`elm-tooling/elm-language-client-vscode`](https://github.com/e
 
 ### Vim
 
-There are [general setup instructions for vim](https://github.com/elm-tooling/elm-vim). It's recommended to install [syntax highlighting](https://github.com/andys8/vim-elm-syntax), which also adds the required [detection of elm as `filetype`](https://github.com/andys8/vim-elm-syntax/blob/d614325a037982489574012e4db04d7f8f134c17/ftdetect/elm.vim#L3). A example vim configuration can be found in [elm-vim/vim-config-example](https://github.com/elm-tooling/elm-vim/tree/master/vim-config-example).
+There are [general setup instructions and FAQ for Vim](https://github.com/elm-tooling/elm-vim).
+
+It's recommended to install [syntax highlighting](https://github.com/andys8/vim-elm-syntax), which also adds the required [detection of elm as `filetype`](https://github.com/andys8/vim-elm-syntax/blob/d614325a037982489574012e4db04d7f8f134c17/ftdetect/elm.vim#L3). An example vim configuration can be found in [elm-vim/vim-config-example](https://github.com/elm-tooling/elm-vim/tree/master/vim-config-example).
 
 #### coc.nvim
 
