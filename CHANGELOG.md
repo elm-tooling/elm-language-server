@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.5.0
+
+- Add support for multiple elm.json files in a single project directory tree
+- Fix possible issue with server not recognising files in non-normalized
+  source-directories (containing "..").
+
 ## 1.4.6
 
 - Fix type annotations not showing for local parameters
