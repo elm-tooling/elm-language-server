@@ -145,8 +145,9 @@ export class DiagnosticsProvider {
     if (
       this.elmAnalyseDiagnostics &&
       elmAnalyseTrigger !== "never" &&
-      elmMakeDiagnosticsForCurrentFile &&
-      elmMakeDiagnosticsForCurrentFile.length === 0
+      (!elmMakeDiagnosticsForCurrentFile ||
+        (elmMakeDiagnosticsForCurrentFile &&
+          elmMakeDiagnosticsForCurrentFile.length === 0))
     ) {
       this.elmAnalyseDiagnostics.updateFile(uri, text);
     }
