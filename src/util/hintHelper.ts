@@ -57,8 +57,12 @@ export class HintHelper {
 
   private static createHintFromDefinition(declaration: SyntaxNode | undefined) {
     if (declaration) {
+      let code: string | undefined = undefined;
       let comment: string = "";
       let annotation: string = "";
+      if (declaration.type === "type_declaration") {
+        code = declaration.text;
+      }
       if (declaration.previousNamedSibling) {
         if (declaration.previousNamedSibling.type === "type_annotation") {
           annotation = declaration.previousNamedSibling.text;
@@ -74,7 +78,7 @@ export class HintHelper {
           comment = declaration.previousNamedSibling.text;
         }
       }
-      return this.formatHint(annotation, comment);
+      return this.formatHint(annotation, comment, code);
     }
   }
 
@@ -91,15 +95,22 @@ export class HintHelper {
     }
   }
 
-  private static formatHint(annotation: string, comment: string) {
+  private static formatHint(
+    annotation: string,
+    comment: string,
+    code?: string,
+  ) {
     let value = "";
     if (annotation) {
       value += this.wrapCodeInMarkdown(annotation);
-    }
-    if (comment) {
-      if (value.length > 0) {
+      if (value.length > 0 && (code || comment)) {
         value += "\n\n---\n\n";
       }
+    }
+    if (code) {
+      value += this.wrapCodeInMarkdown(code);
+    }
+    if (comment) {
       value += this.stripComment(comment);
     }
     return value;
