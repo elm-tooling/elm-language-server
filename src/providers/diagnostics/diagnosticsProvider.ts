@@ -2,9 +2,9 @@ import { Diagnostic, IConnection, TextDocument } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { ElmWorkspace } from "../../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
+import { NoWorkspaceContainsError } from "../../util/noWorkspaceContainsError";
 import { ElmAnalyseTrigger, Settings } from "../../util/settings";
 import { ITextDocumentEvents } from "../../util/textDocumentEvents";
-import { NoWorkspaceContainsError } from "../noWorkspaceContainsError";
 import { ElmAnalyseDiagnostics } from "./elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 

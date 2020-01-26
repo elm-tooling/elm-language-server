@@ -1,5 +1,6 @@
 import { URI } from "vscode-uri";
 import { ElmWorkspace } from "../elmWorkspace";
+import { NoWorkspaceContainsError } from "./noWorkspaceContainsError";
 
 /**
  * Identifies the relevant ElmWorkspace for a given ParamType, either directly
@@ -29,9 +30,7 @@ export class ElmWorkspaceMatcher<ParamType> {
       this.elmWorkspaces.find(ws => ws.hasPath(uri));
 
     if (!workspace) {
-      throw new Error(
-        `No Elm workspace contains ${this.getUriFor(param).fsPath}`,
-      );
+      throw new NoWorkspaceContainsError(this.getUriFor(param));
     }
 
     return workspace;
