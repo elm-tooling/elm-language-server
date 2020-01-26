@@ -7,7 +7,7 @@ import {
   TextDocument,
   TextDocumentContentChangeEvent,
 } from "vscode-languageserver";
-import { DocumentEvents } from "./documentEvents";
+import { IDocumentEvents } from "./documentEvents";
 
 type DidChangeCallback = (document: TextDocument) => void;
 type DidCloseCallback = (document: TextDocument) => void;
@@ -35,28 +35,29 @@ export class TextDocumentEvents extends EventEmitter
     return typeof (value as IUpdatableDocument).update === "function";
   }
 
+  // a single store of documents shared by all workspaces
   private documents: { [uri: string]: TextDocument };
 
-  constructor(events: DocumentEvents) {
+  constructor(events: IDocumentEvents) {
     super();
     this.documents = {};
 
-    events.on("open", (event: DidOpenTextDocumentParams) => {
-      const td = event.textDocument;
+    events.on("open", (params: DidOpenTextDocumentParams) => {
+      const td = params.textDocument;
       const document = TextDocument.create(
         td.uri,
         td.languageId,
         td.version,
         td.text,
       );
-      this.documents[event.textDocument.uri] = document;
+      this.documents[params.textDocument.uri] = document;
       const frozen = Object.freeze({ document });
       this.emit("open", frozen.document);
     });
 
-    events.on("change", (event: DidChangeTextDocumentParams) => {
-      const td = event.textDocument;
-      const changes = event.contentChanges;
+    events.on("change", (params: DidChangeTextDocumentParams) => {
+      const td = params.textDocument;
+      const changes = params.contentChanges;
       const last: TextDocumentContentChangeEvent | undefined =
         changes.length > 0 ? changes[changes.length - 1] : undefined;
       if (last) {
@@ -73,17 +74,17 @@ export class TextDocumentEvents extends EventEmitter
         }
       }
     });
-    events.on("save", (event: DidSaveTextDocumentParams) => {
-      const document = this.documents[event.textDocument.uri];
+    events.on("save", (params: DidSaveTextDocumentParams) => {
+      const document = this.documents[params.textDocument.uri];
       if (document) {
         const frozen = Object.freeze({ document });
         this.emit("save", frozen.document);
       }
     });
-    events.on("close", (event: DidCloseTextDocumentParams) => {
-      const document = this.documents[event.textDocument.uri];
+    events.on("close", (params: DidCloseTextDocumentParams) => {
+      const document = this.documents[params.textDocument.uri];
       if (document) {
-        delete this.documents[event.textDocument.uri];
+        delete this.documents[params.textDocument.uri];
         const frozen = Object.freeze({ document });
         this.emit("close", frozen.document);
       }

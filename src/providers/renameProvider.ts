@@ -6,26 +6,33 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver";
+import { URI } from "vscode-uri";
 import { Tree } from "web-tree-sitter";
-import { IForest } from "../forest";
+import { ElmWorkspace } from "../elmWorkspace";
+import { Forest } from "../forest";
 import { IImports } from "../imports";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
 import { TreeUtils } from "../util/treeUtils";
 
 export class RenameProvider {
-  constructor(
-    private connection: IConnection,
-    private forest: IForest,
-    private imports: IImports,
-  ) {
-    this.connection.onRenameRequest(this.handleRenameRequest);
+  constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {
+    this.connection.onRenameRequest(
+      new ElmWorkspaceMatcher(elmWorkspaces, (params: RenameParams) =>
+        URI.parse(params.textDocument.uri),
+      ).handlerForWorkspace(this.handleRenameRequest),
+    );
   }
 
   protected handleRenameRequest = async (
     params: RenameParams,
+    elmWorkspace: ElmWorkspace,
   ): Promise<WorkspaceEdit | null | undefined> => {
     this.connection.console.info(`Renaming was requested`);
-    const tree: Tree | undefined = this.forest.getTree(params.textDocument.uri);
+
+    const imports: IImports = elmWorkspace.getImports();
+    const forest: Forest = elmWorkspace.getForest();
+    const tree: Tree | undefined = forest.getTree(params.textDocument.uri);
 
     if (tree) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
@@ -37,17 +44,13 @@ export class RenameProvider {
         nodeAtPosition,
         params.textDocument.uri,
         tree,
-        this.imports,
+        imports,
       );
 
       if (definitionNode) {
-        const refTree = this.forest.getByUri(definitionNode.uri);
+        const refTree = forest.getByUri(definitionNode.uri);
         if (refTree && refTree.writeable) {
-          const references = References.find(
-            definitionNode,
-            this.forest,
-            this.imports,
-          );
+          const references = References.find(definitionNode, forest, imports);
 
           if (references) {
             const map: { [uri: string]: TextEdit[] } = {};

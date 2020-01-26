@@ -4,29 +4,36 @@ import {
   IConnection,
   SymbolInformation,
 } from "vscode-languageserver";
+import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IForest } from "../forest";
+import { ElmWorkspace } from "../elmWorkspace";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 
+type DocumentSymbolResult =
+  | SymbolInformation[]
+  | DocumentSymbol[]
+  | null
+  | undefined;
+
 export class DocumentSymbolProvider {
-  private connection: IConnection;
-  private forest: IForest;
-
-  constructor(connection: IConnection, forest: IForest) {
-    this.connection = connection;
-    this.forest = forest;
-
-    this.connection.onDocumentSymbol(this.handleDocumentSymbolRequest);
+  constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {
+    connection.onDocumentSymbol(
+      new ElmWorkspaceMatcher(elmWorkspaces, (param: DocumentSymbolParams) =>
+        URI.parse(param.textDocument.uri),
+      ).handlerForWorkspace(this.handleDocumentSymbolRequest),
+    );
   }
 
   private handleDocumentSymbolRequest = async (
     param: DocumentSymbolParams,
-    // tslint:disable-next-line: max-union-size
-  ): Promise<SymbolInformation[] | DocumentSymbol[] | null | undefined> => {
+    elmWorkspace: ElmWorkspace,
+  ): Promise<DocumentSymbolResult> => {
     this.connection.console.info(`Document Symbols were requested`);
     const symbolInformationList: SymbolInformation[] = [];
 
-    const tree: Tree | undefined = this.forest.getTree(param.textDocument.uri);
+    const forest = elmWorkspace.getForest();
+    const tree: Tree | undefined = forest.getTree(param.textDocument.uri);
 
     const traverse: (node: SyntaxNode) => void = (node: SyntaxNode): void => {
       const symbolInformation = SymbolInformationTranslator.translateNodeToSymbolInformation(
