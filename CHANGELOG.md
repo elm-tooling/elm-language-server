@@ -5,6 +5,9 @@
 - Add support for multiple elm.json files in a single project directory tree
 - Fix possible issue with server not recognising files in non-normalized
   source-directories (containing "..").
+- Completions are now ranked better
+- Show code for types in completions/hovers
+- Fix elm analyse warnings not getting cleaned up correctly
 
 ## 1.4.6
 
