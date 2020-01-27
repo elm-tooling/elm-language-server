@@ -106,7 +106,7 @@ export async function getElmVersion(
 }
 
 export function findDepVersion(
-  allVersionFolders: Array<{ version: string; versionPath: string }>,
+  allVersionFolders: { version: string; versionPath: string }[],
   versionRange: string,
 ) {
   const regex = /^(\d+\.\d+\.\d+) (<|<=) v (<|<=) (\d+\.\d+\.\d+)$/gm;

@@ -11,16 +11,16 @@ export type NodeType =
   | "Module"
   | "UnionConstructor";
 
-export type Exposing = Array<{
+export type Exposing = {
   name: string;
   syntaxNode: SyntaxNode;
   type: NodeType;
-  exposedUnionConstructors?: Array<{
+  exposedUnionConstructors?: {
     name: string;
     syntaxNode: SyntaxNode;
     accessibleWithoutPrefix: boolean;
-  }>;
-}>;
+  }[];
+}[];
 
 export class TreeUtils {
   public static getModuleNameNode(tree: Tree): SyntaxNode | undefined {
@@ -98,11 +98,11 @@ export class TreeUtils {
             const typeDeclarations = this.findAllTypeDeclarations(tree);
             if (typeDeclarations) {
               typeDeclarations.forEach(typeDeclaration => {
-                const unionConstructors: Array<{
+                const unionConstructors: {
                   name: string;
                   syntaxNode: SyntaxNode;
                   accessibleWithoutPrefix: boolean;
-                }> = [];
+                }[] = [];
                 TreeUtils.descendantsOfType(
                   typeDeclaration,
                   "union_variant",
@@ -190,11 +190,11 @@ export class TreeUtils {
                   name.text,
                 );
                 if (typeDeclaration) {
-                  const unionConstructors: Array<{
+                  const unionConstructors: {
                     name: string;
                     syntaxNode: SyntaxNode;
                     accessibleWithoutPrefix: boolean;
-                  }> = [];
+                  }[] = [];
                   TreeUtils.descendantsOfType(
                     typeDeclaration,
                     "union_variant",
@@ -1003,8 +1003,8 @@ export class TreeUtils {
 
   public static getAllFieldsFromTypeAlias(
     node: SyntaxNode | undefined,
-  ): Array<{ field: string; type: string }> | undefined {
-    const result: Array<{ field: string; type: string }> = [];
+  ): { field: string; type: string }[] | undefined {
+    const result: { field: string; type: string }[] = [];
     if (node) {
       const fieldTypes = TreeUtils.descendantsOfType(node, "field_type");
       if (fieldTypes.length > 0) {

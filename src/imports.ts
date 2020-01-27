@@ -302,15 +302,15 @@ import Platform.Sub as Sub exposing ( Sub )
   }
 
   private exposedNodesToImports(
-    exposedNodes: Array<{
+    exposedNodes: {
       name: string;
       syntaxNode: Parser.SyntaxNode;
       type: NodeType;
-      exposedUnionConstructors?: Array<{
+      exposedUnionConstructors?: {
         name: string;
         syntaxNode: Parser.SyntaxNode;
-      }>;
-    }>,
+      }[];
+    }[],
     moduleNameNode: SyntaxNode,
     foundModule: ITreeContainer,
   ): IImport[] {

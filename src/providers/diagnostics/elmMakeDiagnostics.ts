@@ -31,7 +31,7 @@ export interface IElmError {
   title: string;
   type: string;
   path: string;
-  message: Array<string | IStyledString>;
+  message: (string | IStyledString)[];
 }
 
 export interface IError {
@@ -46,7 +46,7 @@ export interface IProblem {
     start: { line: number; column: number };
     end: { line: number; column: number };
   };
-  message: Array<string | IStyledString>;
+  message: (string | IStyledString)[];
 }
 
 export interface IStyledString {

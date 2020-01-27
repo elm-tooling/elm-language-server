@@ -9,8 +9,8 @@ export class References {
     definitionNode: IReferenceNode | undefined,
     forest: IForest,
     imports: IImports,
-  ): Array<{ node: SyntaxNode; uri: string }> {
-    const references: Array<{ node: SyntaxNode; uri: string }> = [];
+  ): { node: SyntaxNode; uri: string }[] {
+    const references: { node: SyntaxNode; uri: string }[] = [];
 
     if (definitionNode) {
       const refSourceTree = forest.getByUri(definitionNode.uri);

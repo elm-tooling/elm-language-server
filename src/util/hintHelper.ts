@@ -57,7 +57,7 @@ export class HintHelper {
 
   private static createHintFromDefinition(declaration: SyntaxNode | undefined) {
     if (declaration) {
-      let code: string | undefined = undefined;
+      let code: string | undefined;
       let comment: string = "";
       let annotation: string = "";
       if (declaration.type === "type_declaration") {

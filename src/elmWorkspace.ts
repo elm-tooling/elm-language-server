@@ -21,11 +21,11 @@ interface IFolder {
 }
 
 export class ElmWorkspace {
-  private elmFolders: Array<{
+  private elmFolders: {
     uri: string;
     writeable: boolean;
     maintainerAndPackageName?: string;
-  }> = [];
+  }[] = [];
   private forest: Forest = new Forest();
   private imports: Imports;
 
@@ -182,7 +182,7 @@ export class ElmWorkspace {
         );
       }
 
-      const promiseList: Array<Promise<void>> = [];
+      const promiseList: Promise<void>[] = [];
       for (const filePath of elmFilePaths) {
         promiseList.push(this.readAndAddToForest(filePath));
       }
@@ -202,11 +202,11 @@ export class ElmWorkspace {
   }
 
   private findElmFilesInFolders(
-    elmFolders: Array<{
+    elmFolders: {
       uri: string;
       writeable: boolean;
       maintainerAndPackageName?: string;
-    }>,
+    }[],
   ): IFolder[] {
     let elmFilePaths: IFolder[] = [];
     for (const element of elmFolders) {
