@@ -50,41 +50,42 @@ export class ASTProvider {
     }
 
     for (const changeEvent of params.contentChanges) {
-      if (changeEvent.range && changeEvent.rangeLength) {
-        // range is range of the change. end is exclusive
-        // rangeLength is length of text removed
-        // text is new text
-        const { range, rangeLength, text } = changeEvent;
-        const startIndex: number = range.start.line * range.start.character;
-        const oldEndIndex: number = startIndex + rangeLength - 1;
-        if (tree) {
-          tree.edit({
-            // end index for new version of text
-            newEndIndex: range.end.line * range.end.character - 1,
-            // position in new doc change ended
-            newEndPosition: Position.FROM_VS_POSITION(range.end).toTSPosition(),
+      // TODO why doesn't this work anymore?
+      // if (changeEvent.range && changeEvent.rangeLength) {
+      //   // range is range of the change. end is exclusive
+      //   // rangeLength is length of text removed
+      //   // text is new text
+      //   const { range, rangeLength, text } = changeEvent;
+      //   const startIndex: number = range.start.line * range.start.character;
+      //   const oldEndIndex: number = startIndex + rangeLength - 1;
+      //   if (tree) {
+      //     tree.edit({
+      //       // end index for new version of text
+      //       newEndIndex: range.end.line * range.end.character - 1,
+      //       // position in new doc change ended
+      //       newEndPosition: Position.FROM_VS_POSITION(range.end).toTSPosition(),
 
-            // end index for old version of text
-            oldEndIndex,
-            // position in old doc change ended.
-            oldEndPosition: this.computeEndPosition(
-              startIndex,
-              oldEndIndex,
-              tree,
-            ),
+      //       // end index for old version of text
+      //       oldEndIndex,
+      //       // position in old doc change ended.
+      //       oldEndPosition: this.computeEndPosition(
+      //         startIndex,
+      //         oldEndIndex,
+      //         tree,
+      //       ),
 
-            // index in old doc the change started
-            startIndex,
-            // position in old doc change started
-            startPosition: Position.FROM_VS_POSITION(
-              range.start,
-            ).toTSPosition(),
-          });
-          tree = this.parser.parse(text, tree);
-        }
-      } else {
-        tree = this.parser.parse(changeEvent.text);
-      }
+      //       // index in old doc the change started
+      //       startIndex,
+      //       // position in old doc change started
+      //       startPosition: Position.FROM_VS_POSITION(
+      //         range.start,
+      //       ).toTSPosition(),
+      //     });
+      //     tree = this.parser.parse(text, tree);
+      //   }
+      // } else {
+      tree = this.parser.parse(changeEvent.text);
+      // }
     }
     if (tree) {
       forest.setTree(document.uri, true, true, tree);

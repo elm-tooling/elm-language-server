@@ -28,7 +28,11 @@ const connection: IConnection = createConnection(ProposedFeatures.all);
 let server: ILanguageServer;
 
 connection.onInitialize(
-  async (params: InitializeParams): Promise<InitializeResult> => {
+  async (
+    params: InitializeParams,
+    cancel,
+    progress,
+  ): Promise<InitializeResult> => {
     await Parser.init();
     const absolute = Path.join(__dirname, "tree-sitter-elm.wasm");
     const pathToWasm = Path.relative(process.cwd(), absolute);
@@ -40,7 +44,7 @@ connection.onInitialize(
     parser.setLanguage(language);
 
     const { Server } = await import("./server");
-    server = new Server(connection, params, parser);
+    server = new Server(connection, params, parser, progress);
     await server.init();
 
     return server.capabilities;
