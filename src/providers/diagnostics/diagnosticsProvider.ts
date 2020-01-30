@@ -1,4 +1,9 @@
-import { Diagnostic, IConnection, TextDocument } from "vscode-languageserver";
+import {
+  Diagnostic,
+  IConnection,
+  TextDocument,
+  FileChangeType,
+} from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { ElmWorkspace } from "../../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
@@ -62,6 +67,20 @@ export class DiagnosticsProvider {
       this.events.on("save", d =>
         this.getDiagnostics(d, true, elmAnalyseTrigger),
       );
+
+      this.connection.onDidChangeWatchedFiles(event => {
+        const newDeleteEvents = event.changes
+          .filter(a => a.type === FileChangeType.Deleted)
+          .map(a => a.uri);
+
+        newDeleteEvents.forEach(uri => {
+          this.currentDiagnostics.elmAnalyse.delete(uri);
+          this.currentDiagnostics.elmMake.delete(uri);
+          this.currentDiagnostics.elmTest.delete(uri);
+        });
+        this.sendDiagnostics();
+      });
+
       if (this.elmAnalyseDiagnostics) {
         this.elmAnalyseDiagnostics.on(
           "new-diagnostics",
