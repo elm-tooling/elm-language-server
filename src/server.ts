@@ -29,6 +29,7 @@ import {
 import { DocumentEvents } from "./util/documentEvents";
 import { Settings } from "./util/settings";
 import { TextDocumentEvents } from "./util/textDocumentEvents";
+import { WorkDoneProgress } from "vscode-languageserver/lib/progress";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -45,9 +46,9 @@ export class Server implements ILanguageServer {
     private connection: Connection,
     private params: InitializeParams,
     private parser: Parser,
+    private progress: WorkDoneProgress,
   ) {
     this.calculator = new CapabilityCalculator(params.capabilities);
-
     const initializationOptions = this.params.initializationOptions ?? {};
     this.settings = new Settings(
       this.connection,
@@ -108,7 +109,7 @@ export class Server implements ILanguageServer {
   }
 
   public async init() {
-    this.elmWorkspaces.forEach(async it => await it.init());
+    this.elmWorkspaces.forEach(async it => await it.init(this.progress));
   }
 
   public async registerInitializedProviders() {

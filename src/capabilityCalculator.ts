@@ -18,10 +18,6 @@ export class CapabilityCalculator {
     this.clientCapabilities;
 
     return {
-      // Perform incremental syncs
-      // Incremental sync is disabled for now due to not being able to get the
-      // old text in ASTProvider
-      // textDocumentSync: TextDocumentSyncKind.Incremental,
       codeActionProvider: true,
       codeLensProvider: {
         resolveProvider: true,

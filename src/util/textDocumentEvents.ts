@@ -4,9 +4,11 @@ import {
   DidCloseTextDocumentParams,
   DidOpenTextDocumentParams,
   DidSaveTextDocumentParams,
-  TextDocument,
-  TextDocumentContentChangeEvent,
 } from "vscode-languageserver";
+import {
+  TextDocumentContentChangeEvent,
+  TextDocument,
+} from "vscode-languageserver-textdocument";
 import { IDocumentEvents } from "./documentEvents";
 
 type DidChangeCallback = (document: TextDocument) => void;

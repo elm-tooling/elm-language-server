@@ -3,13 +3,14 @@ import globby from "globby";
 import os from "os";
 import path from "path";
 import util from "util";
-import { IConnection } from "vscode-languageserver";
+import { IConnection, ProgressType } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { Forest } from "./forest";
 import { Imports } from "./imports";
 import * as utils from "./util/elmUtils";
 import { Settings } from "./util/settings";
+import { WorkDoneProgress } from "vscode-languageserver/lib/progress";
 
 const readFile = util.promisify(fs.readFile);
 const readdir = util.promisify(fs.readdir);
@@ -42,8 +43,8 @@ export class ElmWorkspace {
     this.imports = new Imports(parser);
   }
 
-  public async init() {
-    await this.initWorkspace();
+  public async init(progress: WorkDoneProgress) {
+    await this.initWorkspace(progress);
   }
 
   public hasDocument(uri: URI): boolean {
@@ -68,7 +69,9 @@ export class ElmWorkspace {
     return this.rootPath;
   }
 
-  private async initWorkspace() {
+  private async initWorkspace(x: WorkDoneProgress) {
+    let progress = 0;
+    x.begin("Indexing", progress);
     let elmVersion;
     try {
       elmVersion = await utils.getElmVersion(
@@ -183,18 +186,24 @@ export class ElmWorkspace {
       }
 
       const promiseList: Promise<void>[] = [];
+      const progressSteps = (elmFilePaths.length * 2) / 100;
       for (const filePath of elmFilePaths) {
+        progress += progressSteps;
+        x.report(progressSteps);
         promiseList.push(this.readAndAddToForest(filePath));
       }
       await Promise.all(promiseList);
 
       this.forest.treeIndex.forEach(item => {
+        progress += progressSteps;
+        x.report(progressSteps);
         this.connection.console.info(
           `Adding imports ${URI.parse(item.uri).fsPath}`,
         );
         this.imports.updateImports(item.uri, item.tree, this.forest);
       });
 
+      x.done();
       this.connection.console.info("Done parsing all files.");
     } catch (error) {
       this.connection.console.error(error.stack);
