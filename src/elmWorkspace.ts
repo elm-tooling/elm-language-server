@@ -185,17 +185,17 @@ export class ElmWorkspace {
       }
 
       const promiseList: Promise<void>[] = [];
-      const progressSteps = (elmFilePaths.length * 2) / 100;
+      const progressSteps = 100 / (elmFilePaths.length * 2);
       for (const filePath of elmFilePaths) {
         progress += progressSteps;
-        x.report(progressSteps);
+        x.report(progress);
         promiseList.push(this.readAndAddToForest(filePath));
       }
       await Promise.all(promiseList);
 
       this.forest.treeIndex.forEach(item => {
         progress += progressSteps;
-        x.report(progressSteps);
+        x.report(progress);
         this.connection.console.info(
           `Adding imports ${URI.parse(item.uri).fsPath}`,
         );
