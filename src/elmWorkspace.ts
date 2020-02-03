@@ -71,7 +71,6 @@ export class ElmWorkspace {
 
   private async initWorkspace(x: WorkDoneProgress) {
     let progress = 0;
-    x.begin("Indexing", progress);
     let elmVersion;
     try {
       elmVersion = await utils.getElmVersion(
@@ -203,7 +202,6 @@ export class ElmWorkspace {
         this.imports.updateImports(item.uri, item.tree, this.forest);
       });
 
-      x.done();
       this.connection.console.info("Done parsing all files.");
     } catch (error) {
       this.connection.console.error(error.stack);

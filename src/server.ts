@@ -109,7 +109,9 @@ export class Server implements ILanguageServer {
   }
 
   public async init() {
+    this.progress.begin("Indexing Elm", 0);
     await Promise.all(this.elmWorkspaces.map(ws => ws.init(this.progress)));
+    this.progress.done();
   }
 
   public async registerInitializedProviders() {
