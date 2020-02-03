@@ -1,13 +1,13 @@
 import { Position as VSPosition } from "vscode-languageserver";
 import { Point as TSPosition } from "web-tree-sitter";
 
-export class Position {
-  public static FROM_VS_POSITION(position: VSPosition): Position {
-    return new Position(position.line, position.character);
+export class PositionUtil {
+  public static FROM_VS_POSITION(position: VSPosition): PositionUtil {
+    return new PositionUtil(position.line, position.character);
   }
 
-  public static FROM_TS_POSITION(position: TSPosition): Position {
-    return new Position(position.row, position.column);
+  public static FROM_TS_POSITION(position: TSPosition): PositionUtil {
+    return new PositionUtil(position.row, position.column);
   }
 
   private row: number;

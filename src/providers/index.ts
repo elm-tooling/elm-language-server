@@ -8,6 +8,7 @@ export * from "./diagnostics/elmAnalyseDiagnostics";
 export * from "./diagnostics/elmMakeDiagnostics";
 export * from "./documentFormatingProvider";
 export * from "./documentSymbolProvider";
+export * from "./selectionRangeProvider";
 export * from "./foldingProvider";
 export * from "./hoverProvider";
 export * from "./referencesProvider";
