@@ -10,7 +10,6 @@ import { Forest } from "./forest";
 import { Imports } from "./imports";
 import * as utils from "./util/elmUtils";
 import { Settings } from "./util/settings";
-import { WorkDoneProgress } from "vscode-languageserver/lib/progress";
 
 const readFile = util.promisify(fs.readFile);
 const readdir = util.promisify(fs.readdir);
@@ -43,8 +42,8 @@ export class ElmWorkspace {
     this.imports = new Imports(parser);
   }
 
-  public async init(progress: WorkDoneProgress) {
-    await this.initWorkspace(progress);
+  public async init(progressCallback: (percent: number) => void) {
+    await this.initWorkspace(progressCallback);
   }
 
   public hasDocument(uri: URI): boolean {
@@ -69,9 +68,8 @@ export class ElmWorkspace {
     return this.rootPath;
   }
 
-  private async initWorkspace(x: WorkDoneProgress) {
+  private async initWorkspace(progressCallback: (percent: number) => void) {
     let progress = 0;
-    x.begin("Indexing", progress);
     let elmVersion;
     try {
       elmVersion = await utils.getElmVersion(
@@ -84,9 +82,9 @@ export class ElmWorkspace {
         `Could not figure out elm version, this will impact how good the server works. \n ${e.stack}`,
       );
     }
+    const pathToElmJson = path.join(this.rootPath.fsPath, "elm.json");
+    this.connection.console.info(`Reading elm.json from ${pathToElmJson}`);
     try {
-      const pathToElmJson = path.join(this.rootPath.fsPath, "elm.json");
-      this.connection.console.info(`Reading elm.json from ${pathToElmJson}`);
       // Find elm files and feed them to tree sitter
       const elmJson = require(pathToElmJson);
       const type = elmJson.type;
@@ -186,27 +184,33 @@ export class ElmWorkspace {
       }
 
       const promiseList: Promise<void>[] = [];
-      const progressSteps = (elmFilePaths.length * 2) / 100;
+      const PARSE_STAGES = 3;
+      const progressDelta = 100 / (elmFilePaths.length * PARSE_STAGES);
       for (const filePath of elmFilePaths) {
-        progress += progressSteps;
-        x.report(progressSteps);
-        promiseList.push(this.readAndAddToForest(filePath));
+        progressCallback((progress += progressDelta));
+        promiseList.push(
+          this.readAndAddToForest(filePath, () => {
+            progressCallback((progress += progressDelta));
+          }),
+        );
       }
       await Promise.all(promiseList);
 
       this.forest.treeIndex.forEach(item => {
-        progress += progressSteps;
-        x.report(progressSteps);
         this.connection.console.info(
           `Adding imports ${URI.parse(item.uri).fsPath}`,
         );
         this.imports.updateImports(item.uri, item.tree, this.forest);
+        progressCallback((progress += progressDelta));
       });
 
-      x.done();
-      this.connection.console.info("Done parsing all files.");
+      this.connection.console.info(
+        `Done parsing all files for ${pathToElmJson}`,
+      );
     } catch (error) {
-      this.connection.console.error(error.stack);
+      this.connection.console.error(
+        `Error parsing files for ${pathToElmJson}:\n${error.stack}`,
+      );
     }
   }
 
@@ -257,7 +261,10 @@ export class ElmWorkspace {
       : `${os.homedir()}/.elm`;
   }
 
-  private async readAndAddToForest(filePath: IFolder): Promise<void> {
+  private async readAndAddToForest(
+    filePath: IFolder,
+    callback: () => void,
+  ): Promise<void> {
     return new Promise(async (resolve, reject) => {
       try {
         this.connection.console.info(`Adding ${filePath.path.toString()}`);
@@ -273,6 +280,7 @@ export class ElmWorkspace {
           tree,
           filePath.maintainerAndPackageName,
         );
+        callback();
         resolve();
       } catch (error) {
         this.connection.console.error(error.stack);

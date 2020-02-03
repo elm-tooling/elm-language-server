@@ -109,7 +109,24 @@ export class Server implements ILanguageServer {
   }
 
   public async init() {
-    this.elmWorkspaces.forEach(async it => await it.init(this.progress));
+    this.progress.begin("Indexing Elm", 0);
+    await Promise.all(
+      this.elmWorkspaces
+        .map(ws => ({ ws, indexedPercent: 0 }))
+        .map((indexingWs, _, all) =>
+          indexingWs.ws.init((percent: number) => {
+            // update progress for this workspace
+            indexingWs.indexedPercent = percent;
+
+            // report average progress across all workspaces
+            const avgIndexed =
+              all.reduce((sum, { indexedPercent }) => sum + indexedPercent, 0) /
+              all.length;
+            this.progress.report(avgIndexed, `${Math.round(avgIndexed)}%`);
+          }),
+        ),
+    );
+    this.progress.done();
   }
 
   public async registerInitializedProviders() {
