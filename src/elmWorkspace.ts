@@ -184,21 +184,24 @@ export class ElmWorkspace {
       }
 
       const promiseList: Promise<void>[] = [];
-      const progressSteps = 100 / (elmFilePaths.length * 2);
+      const PARSE_STAGES = 3;
+      const progressDelta = 100 / (elmFilePaths.length * PARSE_STAGES);
       for (const filePath of elmFilePaths) {
-        progress += progressSteps;
-        progressCallback(progress);
-        promiseList.push(this.readAndAddToForest(filePath));
+        progressCallback((progress += progressDelta));
+        promiseList.push(
+          this.readAndAddToForest(filePath, () => {
+            progressCallback((progress += progressDelta));
+          }),
+        );
       }
       await Promise.all(promiseList);
 
       this.forest.treeIndex.forEach(item => {
-        progress += progressSteps;
-        progressCallback(progress);
         this.connection.console.info(
           `Adding imports ${URI.parse(item.uri).fsPath}`,
         );
         this.imports.updateImports(item.uri, item.tree, this.forest);
+        progressCallback((progress += progressDelta));
       });
 
       this.connection.console.info(
@@ -258,7 +261,10 @@ export class ElmWorkspace {
       : `${os.homedir()}/.elm`;
   }
 
-  private async readAndAddToForest(filePath: IFolder): Promise<void> {
+  private async readAndAddToForest(
+    filePath: IFolder,
+    callback: () => void,
+  ): Promise<void> {
     return new Promise(async (resolve, reject) => {
       try {
         this.connection.console.info(`Adding ${filePath.path.toString()}`);
@@ -274,6 +280,7 @@ export class ElmWorkspace {
           tree,
           filePath.maintainerAndPackageName,
         );
+        callback();
         resolve();
       } catch (error) {
         this.connection.console.error(error.stack);
