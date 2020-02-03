@@ -10,7 +10,6 @@ import { Forest } from "./forest";
 import { Imports } from "./imports";
 import * as utils from "./util/elmUtils";
 import { Settings } from "./util/settings";
-import { WorkDoneProgress } from "vscode-languageserver/lib/progress";
 
 const readFile = util.promisify(fs.readFile);
 const readdir = util.promisify(fs.readdir);
@@ -43,8 +42,8 @@ export class ElmWorkspace {
     this.imports = new Imports(parser);
   }
 
-  public async init(progress: WorkDoneProgress) {
-    await this.initWorkspace(progress);
+  public async init(progressCallback: (percent: number) => void) {
+    await this.initWorkspace(progressCallback);
   }
 
   public hasDocument(uri: URI): boolean {
@@ -69,7 +68,7 @@ export class ElmWorkspace {
     return this.rootPath;
   }
 
-  private async initWorkspace(x: WorkDoneProgress) {
+  private async initWorkspace(progressCallback: (percent: number) => void) {
     let progress = 0;
     let elmVersion;
     try {
@@ -188,14 +187,14 @@ export class ElmWorkspace {
       const progressSteps = 100 / (elmFilePaths.length * 2);
       for (const filePath of elmFilePaths) {
         progress += progressSteps;
-        x.report(progress);
+        progressCallback(progress);
         promiseList.push(this.readAndAddToForest(filePath));
       }
       await Promise.all(promiseList);
 
       this.forest.treeIndex.forEach(item => {
         progress += progressSteps;
-        x.report(progress);
+        progressCallback(progress);
         this.connection.console.info(
           `Adding imports ${URI.parse(item.uri).fsPath}`,
         );
