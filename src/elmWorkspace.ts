@@ -83,9 +83,9 @@ export class ElmWorkspace {
         `Could not figure out elm version, this will impact how good the server works. \n ${e.stack}`,
       );
     }
+    const pathToElmJson = path.join(this.rootPath.fsPath, "elm.json");
+    this.connection.console.info(`Reading elm.json from ${pathToElmJson}`);
     try {
-      const pathToElmJson = path.join(this.rootPath.fsPath, "elm.json");
-      this.connection.console.info(`Reading elm.json from ${pathToElmJson}`);
       // Find elm files and feed them to tree sitter
       const elmJson = require(pathToElmJson);
       const type = elmJson.type;
@@ -202,9 +202,13 @@ export class ElmWorkspace {
         this.imports.updateImports(item.uri, item.tree, this.forest);
       });
 
-      this.connection.console.info("Done parsing all files.");
+      this.connection.console.info(
+        `Done parsing all files for ${pathToElmJson}`,
+      );
     } catch (error) {
-      this.connection.console.error(error.stack);
+      this.connection.console.error(
+        `Error parsing files for ${pathToElmJson}:\n${error.stack}`,
+      );
     }
   }
 
