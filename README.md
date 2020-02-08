@@ -56,19 +56,20 @@ Or use local versions from your `node_modules` directory, if you want to do that
 
 Supports Elm 0.19
 
-| Feature          | Description                                                                                                                                         |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Diagnostics      | Provided via `elm`, `elm-test` and `elm-analyse`                                                                                                    |
-| Formatting       | Provided via `elm-format` and postprocessed to only return a diff of changes. This way it should not be as intrusive as running `elm-format` normal |
-| codeLenses       | Currently only shows if a type alias, custom type or function is exposed from that module                                                           |
-| completions      | Show completions for the current file and snippets                                                                                                  |
-| definitions      | Enables you to jump to the definition of a type alias, module, custom type or function                                                              |
-| documentSymbols  | Identifies all symbols in a document.                                                                                                               |
-| folding          | Let's you fold the code on certain Elm constructs                                                                                                   |
-| hover            | Shows type annotations and documentation for a type alias, module, custom type or function                                                          |
-| references       | Lists all references to a type alias, module, custom type or function                                                                               |
-| rename           | Enables you to rename a type alias, module, custom type or function                                                                                 |
-| workspaceSymbols | Identifies all symbols in the current workspace                                                                                                     |
+| Feature          | Description                                                                                                                                          |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| diagnostics      | Provided via `elm`, `elm-test` and `elm-analyse`                                                                                                     |
+| formatting       | Provided via `elm-format` and post-processed to only return a diff of changes. This way it should not be as intrusive as running `elm-format` normal |
+| codeLenses       | Currently only shows if a type alias, custom type or function is exposed from that module                                                            |
+| completions      | Show completions for the current file and snippets                                                                                                   |
+| definitions      | Enables you to jump to the definition of a type alias, module, custom type or function                                                               |
+| documentSymbols  | Identifies all symbols in a document.                                                                                                                |
+| folding          | Let's you fold the code on certain Elm constructs                                                                                                    |
+| hover            | Shows type annotations and documentation for a type alias, module, custom type or function                                                           |
+| references       | Lists all references to a type alias, module, custom type or function                                                                                |
+| rename           | Enables you to rename a type alias, module, custom type or function                                                                                  |
+| workspaceSymbols | Identifies all symbols in the current workspace                                                                                                      |
+| selectionRange   | Enables navigation by selectionRange (extend selection for e.g.)                                                                                     |
 
 ## Server Settings
 
