@@ -27,7 +27,7 @@ export class SelectionRangeProvider {
   ): Promise<SelectionRange[] | null> => {
     this.connection.console.info(`Selection Ranges were requested`);
 
-    let ret = null;
+    const ret: SelectionRange[] = [];
 
     const forest = elmWorkspace.getForest();
     const tree: Tree | undefined = forest.getTree(params.textDocument.uri);
@@ -48,14 +48,14 @@ export class SelectionRangeProvider {
           ).toVSPosition(),
         };
 
-        ret = {
+        ret.push({
           range: newRange,
           parent: this.getParentNode(nodeAtPosition, newRange),
-        };
+        });
       });
     }
 
-    return ret;
+    return ret ? ret : null;
   };
 
   private getParentNode(
