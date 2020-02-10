@@ -71,7 +71,9 @@ export class CodeLensProvider {
       nameNode: string;
       isFunction: boolean;
     } = codelens.data;
-    this.connection.console.info(`A code lens resolve was requested`);
+    this.connection.console.info(
+      `A code lens resolve was requested for ${data.uri}`,
+    );
     const imports = elmWorkspace.getImports();
     const forest = elmWorkspace.getForest();
     const tree = forest.getTree(data.uri);
