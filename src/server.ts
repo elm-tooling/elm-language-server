@@ -25,6 +25,7 @@ import {
   ReferencesProvider,
   RenameProvider,
   WorkspaceSymbolProvider,
+  SelectionRangeProvider,
 } from "./providers";
 import { DocumentEvents } from "./util/documentEvents";
 import { Settings } from "./util/settings";
@@ -189,6 +190,7 @@ export class Server implements ILanguageServer {
     new DocumentSymbolProvider(this.connection, this.elmWorkspaces);
     new WorkspaceSymbolProvider(this.connection, this.elmWorkspaces);
     new CodeLensProvider(this.connection, this.elmWorkspaces);
+    new SelectionRangeProvider(this.connection, this.elmWorkspaces);
     new RenameProvider(this.connection, this.elmWorkspaces);
   }
 
