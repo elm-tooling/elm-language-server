@@ -11,6 +11,8 @@ export type NodeType =
   | "Module"
   | "UnionConstructor";
 
+const functionNameRegex: RegExp = new RegExp("[a-zA-Z0-9_]+");
+
 export type Exposing = {
   name: string;
   syntaxNode: SyntaxNode;
@@ -1043,7 +1045,7 @@ export class TreeUtils {
       .split("\n")
       [position.line].substring(previousCharColumn, position.character);
 
-    if (charBeforeCursor === " " || charBeforeCursor === "") {
+    if (!functionNameRegex.test(charBeforeCursor)) {
       return node.namedDescendantForPosition({
         column: position.character,
         row: position.line,
