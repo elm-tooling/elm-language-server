@@ -2,6 +2,7 @@ import { CleanWebpackPlugin } from "clean-webpack-plugin";
 import CopyPlugin from "copy-webpack-plugin";
 import ForkTsCheckerWebpackPlugin from "fork-ts-checker-webpack-plugin";
 import path from "path";
+import { DefinePlugin } from "webpack";
 
 module.exports = {
   devtool: "source-map",
@@ -28,6 +29,7 @@ module.exports = {
     path: path.resolve(__dirname, "out"),
   },
   plugins: [
+    new DefinePlugin({ ELM_ANALYSE_VERSION: JSON.stringify("X.Y.Z") }),
     new ForkTsCheckerWebpackPlugin(),
     new CleanWebpackPlugin({
       cleanStaleWebpackAssets: false,
