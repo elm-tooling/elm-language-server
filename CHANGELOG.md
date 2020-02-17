@@ -1,5 +1,14 @@
 # Change Log
 
+## 1.6.0
+
+- Add selection range handling
+- Add progress indicator for startup
+- Improved package ratings
+- Remove deleted files from diagnostics
+- Fix errors that could happen on startup
+- Fix interactions not working after ( or similar characters
+
 ## 1.5.0
 
 - Add support for multiple elm.json files in a single project directory tree
