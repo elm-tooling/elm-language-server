@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.6.1
+
+- Fix problem with formatting
+
 ## 1.6.0
 
 - Add selection range handling
