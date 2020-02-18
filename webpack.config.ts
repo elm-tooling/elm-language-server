@@ -9,6 +9,10 @@ module.exports = {
   entry: "./src/index.ts",
   externals: {
     vscode: "commonjs vscode",
+    "elm-analyse/dist/app/file-loading-ports.js":
+      "elm-analyse/dist/app/file-loading-ports.js",
+    "elm-analyse/dist/app/backend-elm.js":
+      "elm-analyse/dist/app/backend-elm.js",
   },
   module: {
     rules: [
