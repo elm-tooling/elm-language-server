@@ -14,6 +14,7 @@ import {
   IConnection,
   TextDocument,
   TextEdit,
+  DiagnosticTag,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { ElmWorkspace } from "../../elmWorkspace";
@@ -390,6 +391,9 @@ export class ElmAnalyseDiagnostics {
       range,
       severity: DiagnosticSeverity.Warning,
       source: ELM_ANALYSE,
+      tags: message.data.description.startsWith("Unused ")
+        ? [DiagnosticTag.Unnecessary]
+        : undefined,
     };
   }
 }
