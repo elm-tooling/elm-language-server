@@ -5,6 +5,7 @@ import {
   InitializeParams,
   InitializeResult,
 } from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import Parser from "web-tree-sitter";
 import { CapabilityCalculator } from "./capabilityCalculator";
@@ -135,11 +136,14 @@ export class Server implements ILanguageServer {
     this.settings.initFinished();
 
     const documentEvents = new DocumentEvents(this.connection);
-    const textDocumentEvents = new TextDocumentEvents(documentEvents);
+    const textDocumentEvents = new TextDocumentEvents(
+      TextDocument,
+      documentEvents,
+    );
 
     const settings = await this.settings.getClientSettings();
 
-    const documentFormatingProvider = new DocumentFormattingProvider(
+    const documentFormattingProvider = new DocumentFormattingProvider(
       this.connection,
       this.elmWorkspaces,
       textDocumentEvents,
@@ -153,7 +157,7 @@ export class Server implements ILanguageServer {
             this.elmWorkspaces,
             textDocumentEvents,
             this.settings,
-            documentFormatingProvider,
+            documentFormattingProvider,
           )
         : null;
 

@@ -4,89 +4,72 @@ import {
   DidCloseTextDocumentParams,
   DidOpenTextDocumentParams,
   DidSaveTextDocumentParams,
-  TextDocument,
-  TextDocumentContentChangeEvent,
+  TextDocumentsConfiguration,
 } from "vscode-languageserver";
 import { IDocumentEvents } from "./documentEvents";
 
-type DidChangeCallback = (document: TextDocument) => void;
-type DidCloseCallback = (document: TextDocument) => void;
-type DidOpenCallback = (document: TextDocument) => void;
-type DidSaveCallback = (document: TextDocument) => void;
-
-export interface ITextDocumentEvents {
-  on(event: "change", listener: DidChangeCallback): this;
-  on(event: "close", listener: DidCloseCallback): this;
-  on(event: "open", listener: DidOpenCallback): this;
-  on(event: "save", listener: DidSaveCallback): this;
-}
-
-interface IUpdatableDocument extends TextDocument {
-  update(event: TextDocumentContentChangeEvent, version: number): void;
-}
-
 // This is loosely based on https://github.com/Microsoft/vscode-languageserver-node/blob/73180893ca/server/src/main.ts#L124
 // With some simplifications and the ability to support multiple listeners
-export class TextDocumentEvents extends EventEmitter
-  implements ITextDocumentEvents {
-  public static isUpdatableDocument(
-    value: TextDocument,
-  ): value is IUpdatableDocument {
-    return typeof (value as IUpdatableDocument).update === "function";
-  }
-
+export class TextDocumentEvents<T> extends EventEmitter {
   // a single store of documents shared by all workspaces
-  private documents: { [uri: string]: TextDocument };
+  private _documents: { [uri: string]: T };
+  private _configuration: TextDocumentsConfiguration<T>;
 
-  constructor(events: IDocumentEvents) {
+  constructor(
+    configuration: TextDocumentsConfiguration<T>,
+    events: IDocumentEvents,
+  ) {
     super();
-    this.documents = {};
+    this._documents = Object.create(null);
+    this._configuration = configuration;
 
     events.on("open", (params: DidOpenTextDocumentParams) => {
       const td = params.textDocument;
-      const document = TextDocument.create(
+      const document = this._configuration.create(
         td.uri,
         td.languageId,
         td.version,
         td.text,
       );
-      this.documents[params.textDocument.uri] = document;
-      const frozen = Object.freeze({ document });
-      this.emit("open", frozen.document);
+      this._documents[params.textDocument.uri] = document;
+      this.emit("open", Object.freeze({ document }));
     });
 
     events.on("change", (params: DidChangeTextDocumentParams) => {
       const td = params.textDocument;
       const changes = params.contentChanges;
-      const last: TextDocumentContentChangeEvent | undefined =
-        changes.length > 0 ? changes[changes.length - 1] : undefined;
-      if (last) {
-        const document = this.documents[td.uri];
-        if (document && TextDocumentEvents.isUpdatableDocument(document)) {
-          if (td.version === null || td.version === void 0) {
-            throw new Error(
-              `Received document change event for ${td.uri} without valid version identifier`,
-            );
-          }
-          document.update(last, td.version);
-          const frozen = Object.freeze({ document });
-          this.emit("change", frozen.document);
-        }
+      if (changes.length === 0) {
+        return;
       }
+
+      let document = this._documents[td.uri];
+
+      const { version } = td;
+      if (version === null || version === void 0) {
+        throw new Error(
+          `Received document change event for ${td.uri} without valid version identifier`,
+        );
+      }
+
+      document = this._configuration.update(document, changes, version);
+
+      this._documents[td.uri] = document;
+
+      this.emit("change", Object.freeze({ document }));
     });
+
     events.on("save", (params: DidSaveTextDocumentParams) => {
-      const document = this.documents[params.textDocument.uri];
+      const document = this._documents[params.textDocument.uri];
       if (document) {
-        const frozen = Object.freeze({ document });
-        this.emit("save", frozen.document);
+        this.emit("save", Object.freeze({ document }));
       }
     });
+
     events.on("close", (params: DidCloseTextDocumentParams) => {
-      const document = this.documents[params.textDocument.uri];
+      const document = this._documents[params.textDocument.uri];
       if (document) {
-        delete this.documents[params.textDocument.uri];
-        const frozen = Object.freeze({ document });
-        this.emit("close", frozen.document);
+        delete this._documents[params.textDocument.uri];
+        this.emit("close", Object.freeze({ document }));
       }
     });
   }
@@ -98,7 +81,7 @@ export class TextDocumentEvents extends EventEmitter
    * @param uri The text document's URI to retrieve.
    * @return the text document or `undefined`.
    */
-  public get(uri: string): TextDocument | undefined {
-    return this.documents[uri];
+  public get(uri: string): T | undefined {
+    return this._documents[uri];
   }
 }

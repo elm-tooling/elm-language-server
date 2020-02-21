@@ -12,10 +12,10 @@ import {
   DiagnosticSeverity,
   ExecuteCommandParams,
   IConnection,
-  TextDocument,
   TextEdit,
   DiagnosticTag,
 } from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import { ElmWorkspace } from "../../elmWorkspace";
 import * as Diff from "../../util/diff";
@@ -55,7 +55,7 @@ export class ElmAnalyseDiagnostics {
   constructor(
     private connection: IConnection,
     elmWorkspaces: ElmWorkspace[],
-    private events: TextDocumentEvents,
+    private events: TextDocumentEvents<TextDocument>,
     private settings: Settings,
     private formattingProvider: DocumentFormattingProvider,
   ) {
