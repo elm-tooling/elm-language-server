@@ -123,7 +123,7 @@ export class DiagnosticsProvider {
   }
 
   private async getDiagnostics(
-    document: TextDocument,
+    { document }: { document: TextDocument },
     isSaveOrOpen: boolean,
     elmAnalyseTrigger: ElmAnalyseTrigger,
   ): Promise<void> {
