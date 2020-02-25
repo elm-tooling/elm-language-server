@@ -157,7 +157,7 @@ export class ElmMakeDiagnostics {
       diagnostics: [diagnostic],
       edit: { changes: map },
       kind: CodeActionKind.QuickFix,
-      title: replaceWith,
+      title: `Change to \`${replaceWith}\``,
     };
   }
 
