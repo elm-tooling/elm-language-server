@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.6.2
+
+- Fade unused symbols
+- Improved some codeAction texts
+
 ## 1.6.1
 
 - Fix problem with formatting
