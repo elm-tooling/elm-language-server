@@ -409,10 +409,14 @@ export class TreeUtils {
   }
 
   public static findFunction(
-    tree: SyntaxNode,
+    syntaxNode: SyntaxNode,
     functionName: string,
+    onlySearchTopLevel: boolean = true,
   ): SyntaxNode | undefined {
-    const functions = tree.descendantsOfType("value_declaration");
+    const functions = onlySearchTopLevel
+      ? syntaxNode.children.filter(a => a.type === "value_declaration")
+      : syntaxNode.descendantsOfType("value_declaration");
+
     if (functions) {
       return functions.find(elmFunction => {
         const declaration = TreeUtils.findFirstNamedChildOfType(
@@ -563,13 +567,6 @@ export class TreeUtils {
     );
   }
 
-  public static findLowercaseQidNode(
-    tree: SyntaxNode,
-    nodeAtPosition: SyntaxNode,
-  ): SyntaxNode | undefined {
-    return this.findFunction(tree, nodeAtPosition.text);
-  }
-
   public static findUppercaseQidNode(
     tree: Tree,
     nodeAtPosition: SyntaxNode,
@@ -637,11 +634,12 @@ export class TreeUtils {
         nodeAtPosition.parent.parent &&
         nodeAtPosition.parent.parent.parent &&
         nodeAtPosition.parent.parent.parent.type === "let"
-          ? TreeUtils.findLowercaseQidNode(
+          ? this.findFunction(
               nodeAtPosition.parent.parent.parent,
-              nodeAtPosition,
+              nodeAtPosition.text,
+              false,
             )
-          : TreeUtils.findLowercaseQidNode(tree.rootNode, nodeAtPosition);
+          : this.findFunction(tree.rootNode, nodeAtPosition.text);
 
       if (definitionNode) {
         return {
@@ -659,9 +657,9 @@ export class TreeUtils {
       (nodeAtPosition.parent &&
         nodeAtPosition.parent.type === "type_annotation")
     ) {
-      const definitionNode = TreeUtils.findLowercaseQidNode(
+      const definitionNode = TreeUtils.findFunction(
         tree.rootNode,
-        nodeAtPosition,
+        nodeAtPosition.text,
       );
 
       if (definitionNode) {
@@ -834,9 +832,9 @@ export class TreeUtils {
         };
       }
 
-      const definitionNode = TreeUtils.findLowercaseQidNode(
+      const definitionNode = TreeUtils.findFunction(
         tree.rootNode,
-        nodeAtPosition.parent,
+        nodeAtPosition.parent.text,
       );
 
       if (!definitionNode) {
