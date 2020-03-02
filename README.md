@@ -1,6 +1,6 @@
 # elm-language-server
 
-[![Build Status](https://travis-ci.org/elm-tooling/elm-language-server.svg?branch=master)](https://travis-ci.org/elm-tooling/elm-language-server)
+[![Build Status](https://github.com/elm-tooling/elm-language-server/workflows/Node%20CI/badge.svg)](https://github.com/elm-tooling/elm-language-server/actions)
 
 This is the language server implementation for the Elm programming language.
 
