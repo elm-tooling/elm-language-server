@@ -72,7 +72,8 @@ export class HoverProvider {
   ): Hover | undefined {
     if (definitionNode) {
       const value =
-        definitionNode.nodeType === "FunctionParameter"
+        definitionNode.nodeType === "FunctionParameter" ||
+        definitionNode.nodeType === "CasePattern"
           ? HintHelper.createHintFromFunctionParameter(definitionNode.node)
           : HintHelper.createHint(definitionNode.node);
 

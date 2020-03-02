@@ -9,6 +9,7 @@ export type NodeType =
   | "Type"
   | "Operator"
   | "Module"
+  | "CasePattern"
   | "UnionConstructor";
 
 const functionNameRegex: RegExp = new RegExp("[a-zA-Z0-9_]+");
@@ -408,6 +409,29 @@ export class TreeUtils {
     }
   }
 
+  public static findLetFunctionNodeDefinition(
+    syntaxNode: SyntaxNode,
+    functionName: string,
+  ): SyntaxNode | undefined {
+    if (syntaxNode.previousNamedSibling?.type === "let") {
+      const foundFunction = this.findFunction(
+        syntaxNode.previousNamedSibling,
+        functionName,
+        false,
+      );
+
+      if (foundFunction) {
+        return foundFunction;
+      }
+    }
+    if (syntaxNode.parent) {
+      return this.findLetFunctionNodeDefinition(
+        syntaxNode.parent,
+        functionName,
+      );
+    }
+  }
+
   public static findFunction(
     syntaxNode: SyntaxNode,
     functionName: string,
@@ -679,8 +703,10 @@ export class TreeUtils {
         (nodeAtPosition.previousNamedSibling.type === "type" ||
           nodeAtPosition.previousNamedSibling.type === "alias"))
     ) {
-      const upperCaseQid = nodeAtPosition;
-      const definitionNode = TreeUtils.findUppercaseQidNode(tree, upperCaseQid);
+      const definitionNode = TreeUtils.findUppercaseQidNode(
+        tree,
+        nodeAtPosition,
+      );
 
       if (definitionNode) {
         return {
@@ -819,6 +845,19 @@ export class TreeUtils {
         nodeAtPosition.parent.type === "lower_pattern" ||
         nodeAtPosition.parent.type === "record_base_identifier")
     ) {
+      const caseOfParameter = this.findCaseOfParameterDefinition(
+        nodeAtPosition,
+        nodeAtPosition.text,
+      );
+
+      if (caseOfParameter) {
+        return {
+          node: caseOfParameter,
+          nodeType: "CasePattern",
+          uri,
+        };
+      }
+
       const functionParameter = this.findFunctionParameterDefinition(
         nodeAtPosition,
         nodeAtPosition.text,
@@ -831,13 +870,25 @@ export class TreeUtils {
           uri,
         };
       }
+      const letDefinitionNode = this.findLetFunctionNodeDefinition(
+        nodeAtPosition,
+        nodeAtPosition.text,
+      );
 
-      const definitionNode = TreeUtils.findFunction(
+      if (letDefinitionNode) {
+        return {
+          node: letDefinitionNode,
+          nodeType: "Function",
+          uri,
+        };
+      }
+
+      const topLevelDefinitionNode = TreeUtils.findFunction(
         tree.rootNode,
         nodeAtPosition.parent.text,
       );
 
-      if (!definitionNode) {
+      if (!topLevelDefinitionNode) {
         const definitionFromOtherFile = this.findImportFromImportList(
           uri,
           nodeAtPosition.parent.text,
@@ -854,9 +905,9 @@ export class TreeUtils {
         }
       }
 
-      if (definitionNode) {
+      if (topLevelDefinitionNode) {
         return {
-          node: definitionNode,
+          node: topLevelDefinitionNode,
           nodeType: "Function",
           uri,
         };
@@ -913,6 +964,39 @@ export class TreeUtils {
         return this.findFunctionParameterDefinition(
           node.parent,
           functionParameterName,
+        );
+      }
+    }
+  }
+
+  public static findCaseOfParameterDefinition(
+    node: SyntaxNode,
+    caseParameterName: string,
+  ): SyntaxNode | undefined {
+    if (node.parent) {
+      if (
+        node.parent.type === "case_of_branch" &&
+        node.parent.firstChild &&
+        node.parent.firstChild.firstChild &&
+        node.parent.firstChild.type === "pattern"
+      ) {
+        if (node.parent.firstChild) {
+          const match = node.parent.firstChild.firstChild.children.find(
+            a => a.type === "lower_pattern" && a.text === caseParameterName,
+          );
+          if (match) {
+            return match;
+          } else {
+            return this.findCaseOfParameterDefinition(
+              node.parent,
+              caseParameterName,
+            );
+          }
+        }
+      } else {
+        return this.findCaseOfParameterDefinition(
+          node.parent,
+          caseParameterName,
         );
       }
     }

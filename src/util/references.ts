@@ -316,6 +316,38 @@ export class References {
             }
             break;
 
+          case "CasePattern":
+            if (refSourceTree.writeable) {
+              references.push({
+                node: definitionNode.node,
+                uri: definitionNode.uri,
+              });
+
+              if (
+                definitionNode.node.parent &&
+                definitionNode.node.parent.parent &&
+                definitionNode.node.parent.parent.parent &&
+                definitionNode.node.parent.parent.parent.lastNamedChild
+              ) {
+                const caseBody =
+                  definitionNode.node.parent.parent.parent.lastNamedChild;
+                if (caseBody) {
+                  const parameters = this.findParameterUsage(
+                    caseBody,
+                    definitionNode.node.text,
+                  );
+                  if (parameters) {
+                    references.push(
+                      ...parameters.map(node => {
+                        return { node, uri: definitionNode.uri };
+                      }),
+                    );
+                  }
+                }
+              }
+            }
+            break;
+
           case "UnionConstructor":
             if (definitionNode.node.firstChild && moduleNameNode) {
               const nameNode = definitionNode.node.firstChild;
