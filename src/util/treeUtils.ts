@@ -988,31 +988,27 @@ export class TreeUtils {
     node: SyntaxNode,
     functionParameterName: string,
   ): SyntaxNode | undefined {
-    if (node.parent) {
-      if (
-        node.parent.type === "function_call_expr" &&
-        node.parent.firstChild &&
-        node.parent.firstChild.type === "anonymous_function_expr"
-      ) {
-        if (node.parent.firstChild) {
-          const match = node.parent.firstChild.children.find(
-            a => a.type === "pattern" && a.text === functionParameterName,
-          );
-          if (match) {
-            return match;
-          } else {
-            return this.findAnonymousFunctionParameterDefinition(
-              node.parent,
-              functionParameterName,
-            );
-          }
-        }
-      } else {
-        return this.findAnonymousFunctionParameterDefinition(
-          node.parent,
-          functionParameterName,
+    if (node && node.type === "parenthesized_expr") {
+      const anonymousFunctionExprNodes = this.descendantsOfType(
+        node,
+        "anonymous_function_expr",
+      );
+      const match = anonymousFunctionExprNodes
+        .flatMap(a => a.children)
+        .find(
+          child =>
+            child.type === "pattern" && child.text === functionParameterName,
         );
+
+      if (match) {
+        return match;
       }
+    }
+    if (node.parent) {
+      return this.findAnonymousFunctionParameterDefinition(
+        node.parent,
+        functionParameterName,
+      );
     }
   }
 
