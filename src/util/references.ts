@@ -292,13 +292,17 @@ export class References {
                 uri: definitionNode.uri,
               });
 
+              const valueDeclaration = TreeUtils.findParentOfType(
+                "function_declaration_left",
+                definitionNode.node,
+              );
               if (
-                definitionNode.node.parent &&
-                definitionNode.node.parent.nextNamedSibling &&
-                definitionNode.node.parent.nextNamedSibling.nextNamedSibling
+                valueDeclaration &&
+                valueDeclaration.nextNamedSibling &&
+                valueDeclaration.nextNamedSibling.nextNamedSibling
               ) {
                 const functionBody =
-                  definitionNode.node.parent.nextNamedSibling.nextNamedSibling;
+                  valueDeclaration.nextNamedSibling.nextNamedSibling;
                 if (functionBody) {
                   const parameters = this.findParameterUsage(
                     functionBody,

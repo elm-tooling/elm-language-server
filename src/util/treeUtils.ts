@@ -963,9 +963,10 @@ export class TreeUtils {
         node.parent.firstChild.type === "function_declaration_left"
       ) {
         if (node.parent.firstChild) {
-          const match = node.parent.firstChild.children.find(
-            a => a.type === "lower_pattern" && a.text === functionParameterName,
-          );
+          const match = this.descendantsOfType(
+            node.parent.firstChild,
+            "lower_pattern",
+          ).find(a => a.text === functionParameterName);
           if (match) {
             return match;
           } else {
@@ -1211,6 +1212,18 @@ export class TreeUtils {
       column: 0,
       row: followingLine,
     });
+  }
+
+  public static findParentOfType(
+    typeToLookFor: string,
+    node: SyntaxNode,
+  ): SyntaxNode | undefined {
+    if (node.type === typeToLookFor) {
+      return node;
+    }
+    if (node.parent) {
+      return this.findParentOfType(typeToLookFor, node.parent);
+    }
   }
 
   // tslint:disable-next-line: no-identical-functions
