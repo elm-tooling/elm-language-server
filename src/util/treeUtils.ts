@@ -10,6 +10,7 @@ export type NodeType =
   | "Operator"
   | "Module"
   | "CasePattern"
+  | "AnonymousFunctionParameter"
   | "UnionConstructor";
 
 const functionNameRegex: RegExp = new RegExp("[a-zA-Z0-9_]+");
@@ -858,6 +859,19 @@ export class TreeUtils {
         };
       }
 
+      const anonymousFunctionDefinition = this.findAnonymousFunctionParameterDefinition(
+        nodeAtPosition,
+        nodeAtPosition.text,
+      );
+
+      if (anonymousFunctionDefinition) {
+        return {
+          node: anonymousFunctionDefinition,
+          nodeType: "AnonymousFunctionParameter",
+          uri,
+        };
+      }
+
       const functionParameter = this.findFunctionParameterDefinition(
         nodeAtPosition,
         nodeAtPosition.text,
@@ -870,6 +884,7 @@ export class TreeUtils {
           uri,
         };
       }
+
       const letDefinitionNode = this.findLetFunctionNodeDefinition(
         nodeAtPosition,
         nodeAtPosition.text,
@@ -962,6 +977,38 @@ export class TreeUtils {
         }
       } else {
         return this.findFunctionParameterDefinition(
+          node.parent,
+          functionParameterName,
+        );
+      }
+    }
+  }
+
+  public static findAnonymousFunctionParameterDefinition(
+    node: SyntaxNode,
+    functionParameterName: string,
+  ): SyntaxNode | undefined {
+    if (node.parent) {
+      if (
+        node.parent.type === "function_call_expr" &&
+        node.parent.firstChild &&
+        node.parent.firstChild.type === "anonymous_function_expr"
+      ) {
+        if (node.parent.firstChild) {
+          const match = node.parent.firstChild.children.find(
+            a => a.type === "pattern" && a.text === functionParameterName,
+          );
+          if (match) {
+            return match;
+          } else {
+            return this.findAnonymousFunctionParameterDefinition(
+              node.parent,
+              functionParameterName,
+            );
+          }
+        }
+      } else {
+        return this.findAnonymousFunctionParameterDefinition(
           node.parent,
           functionParameterName,
         );

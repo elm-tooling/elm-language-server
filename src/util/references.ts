@@ -348,6 +348,35 @@ export class References {
             }
             break;
 
+          case "AnonymousFunctionParameter":
+            if (refSourceTree.writeable) {
+              references.push({
+                node: definitionNode.node,
+                uri: definitionNode.uri,
+              });
+
+              if (
+                definitionNode.node.parent &&
+                definitionNode.node.parent.parent
+              ) {
+                const anonymousFunction = definitionNode.node.parent.parent; // TODO this is due to tree sitter matching wrong
+                if (anonymousFunction) {
+                  const parameters = this.findParameterUsage(
+                    anonymousFunction,
+                    definitionNode.node.text,
+                  );
+                  if (parameters) {
+                    references.push(
+                      ...parameters.map(node => {
+                        return { node, uri: definitionNode.uri };
+                      }),
+                    );
+                  }
+                }
+              }
+            }
+            break;
+
           case "UnionConstructor":
             if (definitionNode.node.firstChild && moduleNameNode) {
               const nameNode = definitionNode.node.firstChild;
