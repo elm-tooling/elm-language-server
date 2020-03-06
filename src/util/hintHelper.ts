@@ -63,6 +63,9 @@ export class HintHelper {
       if (declaration.type === "type_declaration") {
         code = declaration.text;
       }
+      if (declaration.type === "union_variant") {
+        declaration = declaration.parent ? declaration.parent : declaration;
+      }
       if (declaration.previousNamedSibling) {
         if (declaration.previousNamedSibling.type === "type_annotation") {
           annotation = declaration.previousNamedSibling.text;
