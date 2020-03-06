@@ -425,6 +425,13 @@ export class TreeUtils {
         return foundFunction;
       }
     }
+    if (syntaxNode.parent && syntaxNode.parent.type === "let") {
+      const foundFunction = this.findFunction(syntaxNode, functionName, false);
+
+      if (foundFunction) {
+        return foundFunction;
+      }
+    }
     if (syntaxNode.parent) {
       return this.findLetFunctionNodeDefinition(
         syntaxNode.parent,
@@ -442,8 +449,9 @@ export class TreeUtils {
       ? syntaxNode.children.filter(a => a.type === "value_declaration")
       : syntaxNode.descendantsOfType("value_declaration");
 
+    let ret;
     if (functions) {
-      return functions.find(elmFunction => {
+      ret = functions.find(elmFunction => {
         const declaration = TreeUtils.findFirstNamedChildOfType(
           "function_declaration_left",
           elmFunction,
@@ -451,8 +459,27 @@ export class TreeUtils {
         if (declaration && declaration.firstNamedChild) {
           return functionName === declaration.firstNamedChild.text;
         }
-        return false;
       });
+
+      if (!ret) {
+        functions.forEach(elmFunction => {
+          const declaration = TreeUtils.findFirstNamedChildOfType(
+            "pattern",
+            elmFunction,
+          );
+          if (
+            declaration &&
+            declaration.children[0] &&
+            declaration.children[0].children
+          ) {
+            ret = declaration.children[0].children
+              .find(a => functionName === a.text)
+              ?.child(0);
+            return;
+          }
+        });
+      }
+      return ret;
     }
   }
 
@@ -552,6 +579,9 @@ export class TreeUtils {
   }
 
   public static getFunctionNameNodeFromDefinition(node: SyntaxNode) {
+    if (node.type === "lower_case_identifier") {
+      return node;
+    }
     const declaration = TreeUtils.findFirstNamedChildOfType(
       "function_declaration_left",
       node,
