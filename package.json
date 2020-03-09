@@ -1,7 +1,7 @@
 {
   "name": "@elm-tooling/elm-language-server",
   "description": "Implementation of an elm language server in node.",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "author": "Kolja Lampe",
   "license": "MIT",
   "files": [
@@ -40,7 +40,7 @@
     "tslint-config-prettier": "^1.18.0",
     "tslint-plugin-prettier": "^2.1.0",
     "tslint-sonarts": "^1.9.0",
-    "typescript": "3.8.2"
+    "typescript": "3.8.3"
   },
   "scripts": {
     "copy-wasm": "copyfiles ./tree-sitter-elm.wasm out",
