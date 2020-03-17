@@ -751,6 +751,16 @@ export class CompletionProvider {
         ],
         "Case of expression with 2 alternatives",
       ),
+      this.createSnippet(
+        "if",
+        [
+          " if ${1:expression} then",
+          "    ${2}",
+          " else",
+          "    ${3}",
+        ],
+        "If-Else statement",
+      ),
       this.createSnippet("comment", ["{-", "${0}", "-}"], "Multi-line comment"),
       this.createSnippet(
         "record",
