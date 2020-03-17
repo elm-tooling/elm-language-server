@@ -159,6 +159,10 @@ export class CompletionProvider {
           nodeAtPosition.parent.parent,
           replaceRange,
         );
+      } else if (
+        nodeAtPosition.parent?.parent?.type == "record_expr"
+      ) {
+        return this.getRecordCompetions(nodeAtPosition, tree, replaceRange, elmWorkspace.getImports(), params.textDocument.uri);
       }
 
       completions.push(
@@ -238,14 +242,14 @@ export class CompletionProvider {
             case "Type":
               return a.exposedUnionConstructors
                 ? [
-                    this.createTypeCompletion(
-                      value,
-                      `${a.name}(..)`,
-                      range,
-                      prefix,
-                    ),
-                    this.createTypeCompletion(value, a.name, range, prefix),
-                  ]
+                  this.createTypeCompletion(
+                    value,
+                    `${a.name}(..)`,
+                    range,
+                    prefix,
+                  ),
+                  this.createTypeCompletion(value, a.name, range, prefix),
+                ]
                 : this.createTypeCompletion(value, a.name, range, prefix);
             default:
               return this.createFunctionCompletion(
@@ -438,6 +442,50 @@ export class CompletionProvider {
     return completions;
   }
 
+  private getRecordCompetions(
+    node: SyntaxNode,
+    tree: Tree,
+    range: Range,
+    imports: IImports,
+    uri: string,
+  ): CompletionItem[] {
+    const result: CompletionItem[] = [];
+    const typeDeclarationNode = TreeUtils.getTypeAliasOfRecord(
+      node,
+      tree,
+      imports,
+      uri
+    );
+
+    if (typeDeclarationNode) {
+      const fields = TreeUtils.getAllFieldsFromTypeAlias(
+        typeDeclarationNode,
+      );
+
+      const typeName = TreeUtils.findFirstNamedChildOfType(
+        "upper_case_identifier",
+        typeDeclarationNode
+      )?.text || "";
+
+      fields?.forEach(element => {
+        const hint = HintHelper.createHintForTypeAliasReference(
+          element.type,
+          element.field,
+          typeName,
+        );
+        result.push(
+          this.createFunctionParameterCompletion(
+            hint,
+            element.field,
+            range,
+          ),
+        );
+      });
+    }
+
+    return result;
+  }
+
   private createFunctionCompletion(
     markdownDocumentation: string | undefined,
     label: string,
@@ -549,9 +597,9 @@ export class CompletionProvider {
     return {
       documentation: markdownDocumentation
         ? {
-            kind: MarkupKind.Markdown,
-            value: markdownDocumentation ?? "",
-          }
+          kind: MarkupKind.Markdown,
+          value: markdownDocumentation ?? "",
+        }
         : undefined,
       kind,
       label,
@@ -569,9 +617,9 @@ export class CompletionProvider {
     return {
       documentation: markdownDocumentation
         ? {
-            kind: MarkupKind.Markdown,
-            value: markdownDocumentation ?? "",
-          }
+          kind: MarkupKind.Markdown,
+          value: markdownDocumentation ?? "",
+        }
         : undefined,
       kind,
       label,
@@ -597,10 +645,10 @@ export class CompletionProvider {
               nodeToProcess.type === "value_declaration" &&
               nodeToProcess.firstNamedChild !== null &&
               nodeToProcess.firstNamedChild.type ===
-                "function_declaration_left" &&
+              "function_declaration_left" &&
               nodeToProcess.firstNamedChild.firstNamedChild !== null &&
               nodeToProcess.firstNamedChild.firstNamedChild.type ===
-                "lower_case_identifier"
+              "lower_case_identifier"
             ) {
               const value = HintHelper.createHintFromDefinitionInLet(
                 nodeToProcess,
@@ -704,9 +752,9 @@ export class CompletionProvider {
     return {
       documentation: markdownDocumentation
         ? {
-            kind: MarkupKind.Markdown,
-            value: markdownDocumentation ?? "",
-          }
+          kind: MarkupKind.Markdown,
+          value: markdownDocumentation ?? "",
+        }
         : undefined,
       insertText: Array.isArray(snippetText)
         ? snippetText.join("\n")
