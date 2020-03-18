@@ -177,6 +177,7 @@ export class CompletionProvider {
       );
 
       completions.push(...this.createSnippets());
+      completions.push(...this.getKeywords());
 
       return completions;
     }
@@ -1198,6 +1199,32 @@ export class CompletionProvider {
         "Test block in Elm-test",
       ),
       this.createSnippet("todo", "-- TODO: ${0}", "TODO comment"),
+    ];
+  }
+
+  private createKeywordCompletion(
+    label: string
+  ): CompletionItem {
+    return {
+      label,
+      kind: CompletionItemKind.Keyword,
+      sortText: `a_${label}`
+    }
+  }
+
+  private getKeywords(): CompletionItem[] {
+    return [
+      this.createKeywordCompletion("if"),
+      this.createKeywordCompletion("then"),
+      this.createKeywordCompletion("else"),
+      this.createKeywordCompletion("let"),
+      this.createKeywordCompletion("in"),
+      this.createKeywordCompletion("case"),
+      this.createKeywordCompletion("of"),
+      this.createKeywordCompletion("type"),
+      this.createKeywordCompletion("alias"),
+      this.createKeywordCompletion("import"),
+      this.createKeywordCompletion("exposing")
     ];
   }
 }
