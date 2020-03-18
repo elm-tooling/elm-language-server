@@ -1177,6 +1177,58 @@ export class TreeUtils {
     }
   }
 
+  public static getTypeOrTypeAliasOfFunctionRecordParameter(
+    node: SyntaxNode | undefined,
+    tree: Tree,
+    imports: IImports,
+    uri: string
+  ): SyntaxNode | undefined {
+    if (node?.parent?.type == "function_call_expr" && node.parent.firstNamedChild) {
+      const parameterIndex = node.parent.namedChildren.map(c => c.text).indexOf(node.text) - 1;
+
+      const functionName = TreeUtils.descendantsOfType(
+        node.parent.firstNamedChild,
+        "lower_case_identifier"
+      );
+
+      const functionDefinition = TreeUtils.findDefinitionNodeByReferencingNode(
+        functionName[functionName.length - 1],
+        uri,
+        tree,
+        imports,
+      );
+
+      if (functionDefinition?.node.previousNamedSibling?.lastNamedChild) {
+        const typeAnnotationNodes = TreeUtils.findAllNamedChildrenOfType(
+          ["type_ref", "record_type"],
+          functionDefinition.node.previousNamedSibling.lastNamedChild
+        );
+
+        if (typeAnnotationNodes) {
+          const typeNode = typeAnnotationNodes[parameterIndex];
+
+          if (typeNode?.type === "type_ref") {
+            const typeNodes = TreeUtils.descendantsOfType(
+              typeNode,
+              "upper_case_identifier"
+            );
+
+            if (typeNodes.length > 0) {
+              return TreeUtils.findDefinitionNodeByReferencingNode(
+                typeNodes[0],
+                uri,
+                tree,
+                imports,
+              )?.node;
+            }
+          } else {
+            return typeNode || undefined;
+          }
+        }
+      }
+    }
+  }
+
   public static getTypeAliasOfRecordField(
     node: SyntaxNode | undefined,
     tree: Tree,
@@ -1253,7 +1305,7 @@ export class TreeUtils {
 
       // Handle records of function returns
       if (!type && node.parent.parent.parent) {
-        type = this.getReturnTypeOrTypeAliasOfFunctionDefinition(node.parent.parent.parent)?.parent ?? undefined;
+        type = TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(node.parent.parent.parent)?.parent ?? undefined;
       }
 
       if (type && type.firstNamedChild) {

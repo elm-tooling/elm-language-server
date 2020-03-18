@@ -466,6 +466,14 @@ export class CompletionProvider {
       );
     }
 
+    if (!typeDeclarationNode && node.parent?.parent) {
+      typeDeclarationNode = TreeUtils.getTypeOrTypeAliasOfFunctionRecordParameter(
+        node.parent.parent,
+        tree,
+        imports,
+        uri);
+    }
+
     if (typeDeclarationNode) {
       const fields = TreeUtils.getAllFieldsFromTypeAlias(
         typeDeclarationNode,
