@@ -1006,8 +1006,6 @@ export class TreeUtils {
 
           const fieldName = nodeAtPosition.text;
 
-          const nodes = variableType?.node.namedChildren.map(n => n.text + " - " + n.type);
-
           if (variableType) {
             const fieldNode = TreeUtils.descendantsOfType(
               variableType.node,
