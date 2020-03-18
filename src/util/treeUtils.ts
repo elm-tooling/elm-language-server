@@ -11,7 +11,8 @@ export type NodeType =
   | "Module"
   | "CasePattern"
   | "AnonymousFunctionParameter"
-  | "UnionConstructor";
+  | "UnionConstructor"
+  | "FieldType";
 
 const functionNameRegex: RegExp = new RegExp("[a-zA-Z0-9_]+");
 
@@ -978,6 +979,52 @@ export class TreeUtils {
       }
       if (definitionNode) {
         return { node: definitionNode, uri, nodeType: "Operator" };
+      }
+    } else if (
+      nodeAtPosition.parent?.parent?.type == "field_access_expr"
+    ) {
+      const variableNodes = this.descendantsOfType(
+        nodeAtPosition.parent.parent,
+        "lower_case_identifier"
+      );
+      if (variableNodes.length > 0) {
+        const variableRef = TreeUtils.findDefinitionNodeByReferencingNode(
+          variableNodes[0],
+          uri,
+          tree,
+          imports
+        );
+
+        const variableDef = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(variableRef?.node);
+        if (variableDef?.firstNamedChild?.firstNamedChild) {
+          const variableType = TreeUtils.findDefinitionNodeByReferencingNode(
+            variableDef.firstNamedChild.firstNamedChild,
+            uri,
+            tree,
+            imports
+          );
+
+          const fieldName = nodeAtPosition.text;
+
+          const nodes = variableType?.node.namedChildren.map(n => n.text + " - " + n.type);
+
+          if (variableType) {
+            const fieldNode = TreeUtils.descendantsOfType(
+              variableType.node,
+              "field_type"
+            ).find(f => {
+              return f.firstNamedChild?.text === fieldName;
+            });
+
+            if (fieldNode) {
+              return {
+                node: fieldNode,
+                nodeType: "FieldType",
+                uri: variableType.uri
+              };
+            }
+          }
+        }
       }
     }
   }
