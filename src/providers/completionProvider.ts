@@ -450,12 +450,21 @@ export class CompletionProvider {
     uri: string,
   ): CompletionItem[] {
     const result: CompletionItem[] = [];
-    const typeDeclarationNode = TreeUtils.getTypeAliasOfRecord(
+    let typeDeclarationNode = TreeUtils.getTypeAliasOfRecord(
       node,
       tree,
       imports,
       uri
     );
+
+    if (!typeDeclarationNode && node.parent?.parent) {
+      typeDeclarationNode = TreeUtils.getTypeAliasOfRecordField(
+        node.parent.parent,
+        tree,
+        imports,
+        uri
+      );
+    }
 
     if (typeDeclarationNode) {
       const fields = TreeUtils.getAllFieldsFromTypeAlias(

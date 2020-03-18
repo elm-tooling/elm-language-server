@@ -1177,6 +1177,32 @@ export class TreeUtils {
     }
   }
 
+  public static getTypeAliasOfRecordField(
+    node: SyntaxNode | undefined,
+    tree: Tree,
+    imports: IImports,
+    uri: string
+  ): SyntaxNode | undefined {
+    const fieldName = node?.parent?.firstNamedChild?.text;
+
+    const children = node?.parent?.parent?.namedChildren.map(n => n.text + " " + n.type);
+    const recordType = TreeUtils.getTypeAliasOfRecord(
+      node,
+      tree,
+      imports,
+      uri
+    );
+
+    const fields = TreeUtils.getAllFieldsFromTypeAlias(
+      recordType,
+    );
+
+    const fieldType = fields?.find(field => field.field === fieldName)?.type ?? "";
+
+    const type = TreeUtils.findTypeAliasDeclaration(tree, fieldType);
+    return type;
+  }
+
   public static getTypeAliasOfRecord(
     node: SyntaxNode | undefined,
     tree: Tree,
