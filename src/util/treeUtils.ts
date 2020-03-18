@@ -687,13 +687,13 @@ export class TreeUtils {
     ) {
       const definitionNode =
         nodeAtPosition.parent.parent &&
-        nodeAtPosition.parent.parent.parent &&
-        nodeAtPosition.parent.parent.parent.type === "let"
+          nodeAtPosition.parent.parent.parent &&
+          nodeAtPosition.parent.parent.parent.type === "let"
           ? this.findFunction(
-              nodeAtPosition.parent.parent.parent,
-              nodeAtPosition.text,
-              false,
-            )
+            nodeAtPosition.parent.parent.parent,
+            nodeAtPosition.text,
+            false,
+          )
           : this.findFunction(tree.rootNode, nodeAtPosition.text);
 
       if (definitionNode) {
@@ -1159,6 +1159,193 @@ export class TreeUtils {
     }
   }
 
+  public static getReturnTypeOrTypeAliasOfFunctionDefinition(
+    node: SyntaxNode | undefined,
+  ): SyntaxNode | undefined {
+    if (
+      node &&
+      node.previousNamedSibling?.type === "type_annotation"
+    ) {
+      const typeAnnotationNodes = TreeUtils.descendantsOfType(
+        node.previousNamedSibling,
+        "type_ref"
+      );
+      if (typeAnnotationNodes) {
+        const type = typeAnnotationNodes[typeAnnotationNodes.length - 1];
+        return type.firstNamedChild?.firstNamedChild ?? type;
+      }
+    }
+  }
+
+  public static getTypeOrTypeAliasOfFunctionRecordParameter(
+    node: SyntaxNode | undefined,
+    tree: Tree,
+    imports: IImports,
+    uri: string
+  ): SyntaxNode | undefined {
+    if (node?.parent?.type == "function_call_expr" && node.parent.firstNamedChild) {
+      const parameterIndex = node.parent.namedChildren.map(c => c.text).indexOf(node.text) - 1;
+
+      const functionName = TreeUtils.descendantsOfType(
+        node.parent.firstNamedChild,
+        "lower_case_identifier"
+      );
+
+      const functionDefinition = TreeUtils.findDefinitionNodeByReferencingNode(
+        functionName[functionName.length - 1],
+        uri,
+        tree,
+        imports,
+      );
+
+      if (functionDefinition?.node.previousNamedSibling?.lastNamedChild) {
+        const typeAnnotationNodes = TreeUtils.findAllNamedChildrenOfType(
+          ["type_ref", "record_type"],
+          functionDefinition.node.previousNamedSibling.lastNamedChild
+        );
+
+        if (typeAnnotationNodes) {
+          const typeNode = typeAnnotationNodes[parameterIndex];
+
+          if (typeNode?.type === "type_ref") {
+            const typeNodes = TreeUtils.descendantsOfType(
+              typeNode,
+              "upper_case_identifier"
+            );
+
+            if (typeNodes.length > 0) {
+              return TreeUtils.findDefinitionNodeByReferencingNode(
+                typeNodes[0],
+                uri,
+                tree,
+                imports,
+              )?.node;
+            }
+          } else {
+            return typeNode || undefined;
+          }
+        }
+      }
+    }
+  }
+
+  public static getTypeAliasOfRecordField(
+    node: SyntaxNode | undefined,
+    tree: Tree,
+    imports: IImports,
+    uri: string
+  ): SyntaxNode | undefined {
+    const fieldName = node?.parent?.firstNamedChild?.text;
+
+    let recordType = TreeUtils.getTypeAliasOfRecord(
+      node,
+      tree,
+      imports,
+      uri
+    );
+
+    while (!recordType && node?.parent?.parent) {
+      node = node.parent.parent;
+      recordType = TreeUtils.getTypeAliasOfRecordField(
+        node,
+        tree,
+        imports,
+        uri
+      );
+    }
+
+    if (recordType) {
+      const fieldTypes = TreeUtils.descendantsOfType(recordType, "field_type");
+      const fieldNode = fieldTypes.find(a => {
+        return TreeUtils.findFirstNamedChildOfType(
+          "lower_case_identifier",
+          a,
+        )?.text === fieldName;
+      });
+
+      if (fieldNode) {
+        const typeExpression = TreeUtils.findFirstNamedChildOfType(
+          "type_expression",
+          fieldNode,
+        );
+
+        if (typeExpression) {
+          const typeNode = TreeUtils.descendantsOfType(
+            typeExpression,
+            "upper_case_identifier"
+          );
+
+          if (typeNode.length > 0) {
+            return TreeUtils.findDefinitionNodeByReferencingNode(
+              typeNode[0],
+              uri,
+              tree,
+              imports,
+            )?.node;
+          }
+        }
+      }
+    }
+  }
+
+  public static getTypeAliasOfRecord(
+    node: SyntaxNode | undefined,
+    tree: Tree,
+    imports: IImports,
+    uri: string,
+  ): SyntaxNode | undefined {
+    if (node?.parent?.parent) {
+      let type = TreeUtils.findFirstNamedChildOfType(
+        "record_base_identifier",
+        node.parent.parent,
+      ) ?? TreeUtils.findFirstNamedChildOfType(
+        "record_base_identifier",
+        node.parent,
+      );
+
+      // Handle records of function returns
+      if (!type && node.parent.parent.parent) {
+        type = TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(node.parent.parent.parent)?.parent ?? undefined;
+      }
+
+      if (type && type.firstNamedChild) {
+        const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
+          type.firstNamedChild,
+          uri,
+          tree,
+          imports,
+        );
+
+        if (definitionNode) {
+          let aliasNode;
+          if (definitionNode.nodeType == "FunctionParameter") {
+            aliasNode = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(definitionNode.node);
+          } else if (definitionNode.nodeType == "Function") {
+            aliasNode = TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(definitionNode.node);
+          } else if (definitionNode.nodeType == "TypeAlias") {
+            aliasNode = definitionNode.node;
+          }
+
+          if (aliasNode) {
+            const childNode = TreeUtils.descendantsOfType(
+              aliasNode,
+              "upper_case_identifier"
+            );
+
+            if (childNode.length > 0) {
+              return TreeUtils.findDefinitionNodeByReferencingNode(
+                childNode[0],
+                uri,
+                tree,
+                imports,
+              )?.node;
+            }
+          }
+        }
+      }
+    }
+  }
+
   public static getAllFieldsFromTypeAlias(
     node: SyntaxNode | undefined,
   ): { field: string; type: string }[] | undefined {
@@ -1199,7 +1386,7 @@ export class TreeUtils {
       position.character === 0 ? 0 : position.character - 1;
     const charBeforeCursor = node.text
       .split("\n")
-      [position.line].substring(previousCharColumn, position.character);
+    [position.line].substring(previousCharColumn, position.character);
 
     if (!functionNameRegex.test(charBeforeCursor)) {
       return node.namedDescendantForPosition({
