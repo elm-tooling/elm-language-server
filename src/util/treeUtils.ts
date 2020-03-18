@@ -1166,9 +1166,9 @@ export class TreeUtils {
       node &&
       node.previousNamedSibling?.type === "type_annotation"
     ) {
-      const typeAnnotationNodes = TreeUtils.findAllNamedChildrenOfType(
-        ["type_ref", "type_expression"],
-        node.previousNamedSibling
+      const typeAnnotationNodes = TreeUtils.descendantsOfType(
+        node.previousNamedSibling,
+        "type_ref"
       );
       if (typeAnnotationNodes) {
         const type = typeAnnotationNodes[typeAnnotationNodes.length - 1];
@@ -1243,13 +1243,18 @@ export class TreeUtils {
     uri: string,
   ): SyntaxNode | undefined {
     if (node?.parent?.parent) {
-      const type = TreeUtils.findFirstNamedChildOfType(
+      let type = TreeUtils.findFirstNamedChildOfType(
         "record_base_identifier",
         node.parent.parent,
       ) ?? TreeUtils.findFirstNamedChildOfType(
         "record_base_identifier",
         node.parent,
       );
+
+      // Handle records of function returns
+      if (!type && node.parent.parent.parent) {
+        type = this.getReturnTypeOrTypeAliasOfFunctionDefinition(node.parent.parent.parent)?.parent ?? undefined;
+      }
 
       if (type && type.firstNamedChild) {
         const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
@@ -1265,6 +1270,8 @@ export class TreeUtils {
             aliasNode = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(definitionNode.node);
           } else if (definitionNode.nodeType == "Function") {
             aliasNode = TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(definitionNode.node);
+          } else if (definitionNode.nodeType == "TypeAlias") {
+            aliasNode = definitionNode.node;
           }
 
           if (aliasNode) {
