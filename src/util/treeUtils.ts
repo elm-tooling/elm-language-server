@@ -1185,22 +1185,55 @@ export class TreeUtils {
   ): SyntaxNode | undefined {
     const fieldName = node?.parent?.firstNamedChild?.text;
 
-    const children = node?.parent?.parent?.namedChildren.map(n => n.text + " " + n.type);
-    const recordType = TreeUtils.getTypeAliasOfRecord(
+    let recordType = TreeUtils.getTypeAliasOfRecord(
       node,
       tree,
       imports,
       uri
     );
 
-    const fields = TreeUtils.getAllFieldsFromTypeAlias(
-      recordType,
-    );
+    while (!recordType && node?.parent?.parent) {
+      node = node.parent.parent;
+      recordType = TreeUtils.getTypeAliasOfRecordField(
+        node,
+        tree,
+        imports,
+        uri
+      );
+    }
 
-    const fieldType = fields?.find(field => field.field === fieldName)?.type ?? "";
+    if (recordType) {
+      const fieldTypes = TreeUtils.descendantsOfType(recordType, "field_type");
+      const fieldNode = fieldTypes.find(a => {
+        return TreeUtils.findFirstNamedChildOfType(
+          "lower_case_identifier",
+          a,
+        )?.text === fieldName;
+      });
 
-    const type = TreeUtils.findTypeAliasDeclaration(tree, fieldType);
-    return type;
+      if (fieldNode) {
+        const typeExpression = TreeUtils.findFirstNamedChildOfType(
+          "type_expression",
+          fieldNode,
+        );
+
+        if (typeExpression) {
+          const typeNode = TreeUtils.descendantsOfType(
+            typeExpression,
+            "upper_case_identifier"
+          );
+
+          if (typeNode.length > 0) {
+            return TreeUtils.findDefinitionNodeByReferencingNode(
+              typeNode[0],
+              uri,
+              tree,
+              imports,
+            )?.node;
+          }
+        }
+      }
+    }
   }
 
   public static getTypeAliasOfRecord(
