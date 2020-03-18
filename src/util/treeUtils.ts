@@ -1172,7 +1172,7 @@ export class TreeUtils {
       );
       if (typeAnnotationNodes) {
         const type = typeAnnotationNodes[typeAnnotationNodes.length - 1];
-        return type.firstNamedChild?.firstNamedChild || type;
+        return type.firstNamedChild?.firstNamedChild ?? type;
       }
     }
   }
@@ -1187,7 +1187,7 @@ export class TreeUtils {
       const type = TreeUtils.findFirstNamedChildOfType(
         "record_base_identifier",
         node.parent.parent,
-      ) || TreeUtils.findFirstNamedChildOfType(
+      ) ?? TreeUtils.findFirstNamedChildOfType(
         "record_base_identifier",
         node.parent,
       );

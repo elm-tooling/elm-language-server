@@ -162,7 +162,7 @@ export class CompletionProvider {
       } else if (
         nodeAtPosition.parent?.parent?.type == "record_expr"
       ) {
-        return this.getRecordCompetions(nodeAtPosition, tree, replaceRange, elmWorkspace.getImports(), params.textDocument.uri);
+        return this.getRecordCompletions(nodeAtPosition, tree, replaceRange, elmWorkspace.getImports(), params.textDocument.uri);
       }
 
       completions.push(
@@ -442,7 +442,7 @@ export class CompletionProvider {
     return completions;
   }
 
-  private getRecordCompetions(
+  private getRecordCompletions(
     node: SyntaxNode,
     tree: Tree,
     range: Range,
@@ -465,7 +465,7 @@ export class CompletionProvider {
       const typeName = TreeUtils.findFirstNamedChildOfType(
         "upper_case_identifier",
         typeDeclarationNode
-      )?.text || "";
+      )?.text ?? "";
 
       fields?.forEach(element => {
         const hint = HintHelper.createHintForTypeAliasReference(
@@ -474,7 +474,7 @@ export class CompletionProvider {
           typeName,
         );
         result.push(
-          this.createFunctionParameterCompletion(
+          this.createFieldOrParameterCompletion(
             hint,
             element.field,
             range,
@@ -501,7 +501,7 @@ export class CompletionProvider {
     );
   }
 
-  private createFunctionParameterCompletion(
+  private createFieldOrParameterCompletion(
     markdownDocumentation: string | undefined,
     label: string,
     range: Range,
@@ -697,7 +697,7 @@ export class CompletionProvider {
               child,
             );
             result.push(
-              this.createFunctionParameterCompletion(
+              this.createFieldOrParameterCompletion(
                 markdownDocumentation,
                 child.text,
                 range,
@@ -724,7 +724,7 @@ export class CompletionProvider {
                       child.text,
                     );
                     result.push(
-                      this.createFunctionParameterCompletion(
+                      this.createFieldOrParameterCompletion(
                         hint,
                         `${child.text}.${element.field}`,
                         range,
