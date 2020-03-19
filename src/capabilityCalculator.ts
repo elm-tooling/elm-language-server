@@ -38,7 +38,9 @@ export class CapabilityCalculator {
       foldingRangeProvider: true,
       hoverProvider: true,
       referencesProvider: true,
-      renameProvider: true,
+      renameProvider: {
+        prepareProvider: true
+      },
       selectionRangeProvider: true,
       textDocumentSync: TextDocumentSyncKind.Full,
       workspaceSymbolProvider: true,
