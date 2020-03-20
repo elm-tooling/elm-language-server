@@ -6,6 +6,11 @@ export interface IClientSettings {
   elmTestPath: string;
   elmAnalyseTrigger: ElmAnalyseTrigger;
   trace: { server: string };
+  extendedCapabilities?: IExtendedCapabilites;
+}
+
+export interface IExtendedCapabilites {
+  moveFunctionRefactoringSupport: boolean;
 }
 
 export type ElmAnalyseTrigger = "change" | "save" | "never";
@@ -44,6 +49,10 @@ export class Settings {
       );
     }
     return this.clientSettings;
+  }
+
+  public get extendedCapabilities(): IExtendedCapabilites | undefined {
+    return this.clientSettings.extendedCapabilities;
   }
 
   private updateSettings(config: any): void {
