@@ -153,12 +153,12 @@ export class Server implements ILanguageServer {
     const elmAnalyse =
       settings.elmAnalyseTrigger !== "never"
         ? new ElmAnalyseDiagnostics(
-          this.connection,
-          this.elmWorkspaces,
-          textDocumentEvents,
-          this.settings,
-          documentFormattingProvider,
-        )
+            this.connection,
+            this.elmWorkspaces,
+            textDocumentEvents,
+            this.settings,
+            documentFormattingProvider,
+          )
         : null;
 
     const elmMake = new ElmMakeDiagnostics(
@@ -177,7 +177,13 @@ export class Server implements ILanguageServer {
       elmMake,
     );
 
-    new CodeActionProvider(this.connection, this.elmWorkspaces, this.settings, elmAnalyse, elmMake);
+    new CodeActionProvider(
+      this.connection,
+      this.elmWorkspaces,
+      this.settings,
+      elmAnalyse,
+      elmMake,
+    );
 
     // tslint:disable:no-unused-expression
     new ASTProvider(
