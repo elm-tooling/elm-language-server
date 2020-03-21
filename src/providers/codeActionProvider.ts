@@ -4,9 +4,10 @@ import {
   CodeActionParams,
   ExecuteCommandParams,
   IConnection,
+  Command,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode } from "web-tree-sitter";
+import { SyntaxNode, Tree } from "web-tree-sitter";
 import { ElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Settings } from "../util/settings";
@@ -14,6 +15,7 @@ import { TreeUtils } from "../util/treeUtils";
 import { ElmAnalyseDiagnostics } from "./diagnostics/elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
+import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 
 export class CodeActionProvider {
   constructor(
@@ -36,6 +38,9 @@ export class CodeActionProvider {
       // tslint:disable-next-line: no-unused-expression
       new MoveRefactoringHandler(this.connection, this.elmWorkspaces);
     }
+
+    new MoveRefactoringHandler(this.connection, this.elmWorkspaces);
+    new ExposeUnexposeHandler(this.connection, this.elmWorkspaces);
   }
 
   private onCodeAction(
@@ -73,18 +78,18 @@ export class CodeActionProvider {
         params.range.start,
       );
 
-      if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
-        codeActions.push(
-          ...this.getMoveFunctionCodeActions(params, nodeAtPosition),
-        );
-      }
+      codeActions.push(
+        ...this.getFunctionCodeActions(params, tree, nodeAtPosition),
+        ...this.getTypeAliasCodeActions(params, tree, nodeAtPosition),
+      );
     }
 
     return codeActions;
   }
 
-  private getMoveFunctionCodeActions(
+  private getFunctionCodeActions(
     params: CodeActionParams,
+    tree: Tree,
     nodeAtPosition: SyntaxNode,
   ): CodeAction[] {
     const codeActions: CodeAction[] = [];
@@ -93,21 +98,89 @@ export class CodeActionProvider {
       nodeAtPosition.parent?.type === "type_annotation" ||
       nodeAtPosition.parent?.type === "function_declaration_left"
     ) {
-      codeActions.push({
-        title: "Move Function",
-        command: {
-          title: "Refactor",
-          command: "elm.refactor",
-          arguments: [
-            "moveFunction",
-            params,
-            nodeAtPosition.parent?.type === "type_annotation"
-              ? nodeAtPosition.text
-              : nodeAtPosition.parent.text,
-          ],
-        },
-        kind: CodeActionKind.RefactorRewrite,
-      });
+      const functionName =
+        nodeAtPosition.parent?.type === "type_annotation"
+          ? nodeAtPosition.text
+          : nodeAtPosition.parent.text;
+
+      if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
+        codeActions.push({
+          title: "Move Function",
+          command: {
+            title: "Refactor",
+            command: "elm.refactor",
+            arguments: ["moveFunction", params, functionName],
+          },
+          kind: CodeActionKind.RefactorRewrite,
+        });
+      }
+
+      if (this.settings.extendedCapabilities?.exposeUnexposeSupport) {
+        if (TreeUtils.isExposedFunction(tree, functionName)) {
+          codeActions.push({
+            title: "Unexpose Function",
+            command: Command.create("Unexpose", "elm.unexpose", {
+              uri: params.textDocument.uri,
+              name: functionName,
+            }),
+            kind: CodeActionKind.Refactor,
+          });
+        } else {
+          codeActions.push({
+            title: "Expose Function",
+            command: Command.create("Expose", "elm.expose", {
+              uri: params.textDocument.uri,
+              name: functionName,
+            }),
+            kind: CodeActionKind.Refactor,
+          });
+        }
+      }
+    }
+
+    return codeActions;
+  }
+
+  private getTypeAliasCodeActions(
+    params: CodeActionParams,
+    tree: Tree,
+    nodeAtPosition: SyntaxNode,
+  ) {
+    const codeActions: CodeAction[] = [];
+
+    if (
+      nodeAtPosition.type === "upper_case_identifier" &&
+      (nodeAtPosition.parent?.type === "type_alias_declaration" ||
+        nodeAtPosition.parent?.type === "type_declaration")
+    ) {
+      const typeName = nodeAtPosition.text;
+
+      const alias =
+        nodeAtPosition.parent?.type === "type_alias_declaration"
+          ? " Alias"
+          : "";
+
+      if (this.settings.extendedCapabilities?.exposeUnexposeSupport) {
+        if (TreeUtils.isExposedTypeOrTypeAlias(tree, typeName)) {
+          codeActions.push({
+            title: `Unexpose Type${alias}`,
+            command: Command.create("Unexpose", "elm.unexpose", {
+              uri: params.textDocument.uri,
+              name: typeName,
+            }),
+            kind: CodeActionKind.Refactor,
+          });
+        } else {
+          codeActions.push({
+            title: `Expose Type${alias}`,
+            command: Command.create("Expose", "elm.expose", {
+              uri: params.textDocument.uri,
+              name: typeName,
+            }),
+            kind: CodeActionKind.Refactor,
+          });
+        }
+      }
     }
 
     return codeActions;

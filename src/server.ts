@@ -199,7 +199,7 @@ export class Server implements ILanguageServer {
     new ReferencesProvider(this.connection, this.elmWorkspaces);
     new DocumentSymbolProvider(this.connection, this.elmWorkspaces);
     new WorkspaceSymbolProvider(this.connection, this.elmWorkspaces);
-    new CodeLensProvider(this.connection, this.elmWorkspaces);
+    new CodeLensProvider(this.connection, this.elmWorkspaces, this.settings);
     new SelectionRangeProvider(this.connection, this.elmWorkspaces);
     new RenameProvider(this.connection, this.elmWorkspaces);
   }
