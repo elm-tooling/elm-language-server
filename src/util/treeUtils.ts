@@ -39,6 +39,16 @@ export class TreeUtils {
     }
   }
 
+  public static getModuleExposingListNodes(tree: Tree): SyntaxNode[] {
+    const moduleNode = TreeUtils.findModuleDeclaration(tree);
+
+    if (moduleNode) {
+      return TreeUtils.descendantsOfType(moduleNode, "exposed_value");
+    }
+
+    return [];
+  }
+
   public static getModuleNameAndExposing(
     tree: Tree,
   ): { moduleName: string; exposing: Exposing } | undefined {

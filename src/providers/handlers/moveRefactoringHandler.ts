@@ -11,6 +11,7 @@ import { URI } from "vscode-uri";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../../util/treeUtils";
 import { References } from "../../util/references";
+import { RefactorEditUtils } from "../../util/refactorEditUtils";
 
 export class MoveRefactoringHandler {
   constructor(
@@ -67,7 +68,7 @@ export class MoveRefactoringHandler {
     const forest = elmWorkspace.getForest();
     const imports = elmWorkspace.getImports();
     const tree = forest.getTree(params.sourceUri);
-    const destinationTree = forest.getTree(params.destination);
+    const destinationTree = forest.getTree(params.destination.uri);
 
     if (tree && destinationTree) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
@@ -80,7 +81,10 @@ export class MoveRefactoringHandler {
         nodeAtPosition.parent?.parent?.type === "value_declaration";
 
       const typeNode = isDeclarationNode
-        ? nodeAtPosition.parent?.parent?.previousNamedSibling
+        ? nodeAtPosition.parent?.parent?.previousNamedSibling?.type ===
+          "type_annotation"
+          ? nodeAtPosition.parent?.parent?.previousNamedSibling
+          : undefined
         : isTypeNode
         ? nodeAtPosition.parent
         : undefined;
@@ -95,16 +99,29 @@ export class MoveRefactoringHandler {
         ? nodeAtPosition.text
         : nodeAtPosition.parent?.text;
 
-      if (typeNode && declarationNode) {
-        const startPosition = typeNode.startPosition;
+      const moduleName = TreeUtils.getModuleNameNode(tree)?.text;
+
+      const destinationModuleName = TreeUtils.getModuleNameNode(destinationTree)
+        ?.text;
+
+      if (
+        declarationNode &&
+        functionName &&
+        moduleName &&
+        destinationModuleName
+      ) {
+        const startPosition =
+          typeNode?.startPosition ?? declarationNode.startPosition;
         const endPosition = declarationNode.endPosition;
 
-        const functionText = `\n\n${typeNode.text}\n${declarationNode.text}`;
+        const functionText = `\n\n${typeNode ? `${typeNode.text}\n` : ""}${
+          declarationNode.text
+        }`;
 
         const changes: { [uri: string]: TextEdit[] } = {};
 
         changes[params.sourceUri] = [];
-        changes[params.destination] = [];
+        changes[params.destination.uri] = [];
 
         // Remove from source
         changes[params.sourceUri].push(
@@ -117,7 +134,7 @@ export class MoveRefactoringHandler {
         );
 
         // Add to destination
-        changes[params.destination].push(
+        changes[params.destination.uri].push(
           TextEdit.insert(
             Position.create(destinationTree.rootNode.endPosition.row + 1, 0),
             functionText,
@@ -125,10 +142,6 @@ export class MoveRefactoringHandler {
         );
 
         // Update references
-        const destinationModuleName = TreeUtils.getModuleNameNode(
-          destinationTree,
-        )?.text;
-
         const references = References.find(
           {
             node: declarationNode,
@@ -139,18 +152,26 @@ export class MoveRefactoringHandler {
           imports,
         );
 
+        const sourceHasReference = !!references.find(
+          ref =>
+            ref.uri === params.sourceUri &&
+            ref.node.parent?.text !== typeNode?.text &&
+            ref.node.parent?.parent?.text !== declarationNode?.text &&
+            ref.node.type !== "exposed_value",
+        );
+
         const referenceUris = new Set(references.map(ref => ref.uri));
 
-        // TODO: Unexpose function in the source file if is
-        // TODO: Remove old imports to the old source file from all reference uris
-
-        referenceUris.delete(params.destination);
-
-        if (referenceUris.size > 0) {
-          // TODO: Expose function in destination file if there are external references
+        // Unexpose function in the source file if it is
+        const unexposeEdit = RefactorEditUtils.unexposedValueInModule(
+          tree,
+          functionName,
+        );
+        if (unexposeEdit) {
+          changes[params.sourceUri].push(unexposeEdit);
         }
 
-        // Add the new imports for each file with a reference
+        // Remove old imports to the old source file from all reference uris
         referenceUris.forEach(refUri => {
           if (!changes[refUri]) {
             changes[refUri] = [];
@@ -158,16 +179,51 @@ export class MoveRefactoringHandler {
 
           const refTree = forest.getTree(refUri);
 
-          if (refTree) {
-            const lastImportNode = TreeUtils.getLastImportNode(refTree);
+          if (refTree && params.destination?.name) {
+            const removeImportEdit = RefactorEditUtils.removeValueFromImport(
+              refTree,
+              moduleName,
+              functionName,
+            );
 
-            if (lastImportNode) {
-              changes[refUri].push(
-                TextEdit.insert(
-                  Position.create(lastImportNode.endPosition.row + 1, 0),
-                  `import ${destinationModuleName} exposing (${functionName})`,
-                ),
-              );
+            if (removeImportEdit) {
+              changes[refUri].push(removeImportEdit);
+            }
+          }
+        });
+
+        // We don't want the destination file in the remaining edits
+        referenceUris.delete(params.destination.uri);
+
+        // Expose function in destination file if there are external references
+        if (referenceUris.size > 0) {
+          const exposeEdit = RefactorEditUtils.exposeValueInModule(
+            destinationTree,
+            functionName,
+          );
+
+          if (exposeEdit) {
+            changes[params.destination.uri].push(exposeEdit);
+          }
+        }
+
+        // Add the new imports for each file with a reference
+        referenceUris.forEach(refUri => {
+          if (refUri === params.sourceUri && !sourceHasReference) {
+            return;
+          }
+
+          const refTree = forest.getTree(refUri);
+
+          if (refTree) {
+            const importEdit = RefactorEditUtils.addImport(
+              refTree,
+              destinationModuleName,
+              functionName,
+            );
+
+            if (importEdit) {
+              changes[refUri].push(importEdit);
             }
           }
         });
