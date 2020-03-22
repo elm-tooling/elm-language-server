@@ -95,6 +95,13 @@ export class MoveRefactoringHandler {
         ? nodeAtPosition.parent?.nextNamedSibling
         : undefined;
 
+      const commentNode =
+        typeNode?.previousNamedSibling?.type === "block_comment"
+          ? typeNode.previousNamedSibling
+          : declarationNode?.previousNamedSibling?.type === "block_comment"
+          ? declarationNode.previousNamedSibling
+          : undefined;
+
       const functionName = isTypeNode
         ? nodeAtPosition.text
         : nodeAtPosition.parent?.text;
@@ -111,12 +118,14 @@ export class MoveRefactoringHandler {
         destinationModuleName
       ) {
         const startPosition =
-          typeNode?.startPosition ?? declarationNode.startPosition;
+          commentNode?.startPosition ??
+          typeNode?.startPosition ??
+          declarationNode.startPosition;
         const endPosition = declarationNode.endPosition;
 
-        const functionText = `\n\n${typeNode ? `${typeNode.text}\n` : ""}${
-          declarationNode.text
-        }`;
+        const functionText = `\n\n${
+          commentNode ? `${commentNode.text}\n` : ""
+        }${typeNode ? `${typeNode.text}\n` : ""}${declarationNode.text}`;
 
         const changes: { [uri: string]: TextEdit[] } = {};
 
