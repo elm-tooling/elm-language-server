@@ -159,7 +159,12 @@ export class MoveRefactoringHandler {
           },
           forest,
           imports,
-        );
+        ).map(ref => {
+          return {
+            ...ref,
+            fullyQualified: TreeUtils.isReferenceFullyQualified(ref.node),
+          };
+        });
 
         const sourceHasReference = !!references.find(
           ref =>
@@ -201,11 +206,12 @@ export class MoveRefactoringHandler {
           }
         });
 
-        // We don't want the destination file in the remaining edits
-        referenceUris.delete(params.destination.uri);
-
         // Expose function in destination file if there are external references
-        if (referenceUris.size > 0) {
+        if (
+          references.filter(
+            ref => ref.uri !== params.destination?.uri && !ref.fullyQualified,
+          ).length > 0
+        ) {
           const exposeEdit = RefactorEditUtils.exposeValueInModule(
             destinationTree,
             functionName,
@@ -216,11 +222,41 @@ export class MoveRefactoringHandler {
           }
         }
 
+        // Change the module name of every reference that is fully qualified
+        references.forEach(ref => {
+          if (ref.fullyQualified) {
+            if (ref.uri !== params.destination?.uri) {
+              const edit = RefactorEditUtils.changeQualifiedReferenceModule(
+                ref.node,
+                destinationModuleName,
+              );
+
+              if (edit) {
+                changes[ref.uri].push(edit);
+              }
+            } else {
+              // Remove the qualified references altogether on the destination file
+              const edit = RefactorEditUtils.removeQualifiedReference(ref.node);
+
+              if (edit) {
+                changes[ref.uri].push(edit);
+              }
+            }
+          }
+        });
+
+        // We don't want the destination file in the remaining edits
+        referenceUris.delete(params.destination.uri);
+
         // Add the new imports for each file with a reference
         referenceUris.forEach(refUri => {
           if (refUri === params.sourceUri && !sourceHasReference) {
             return;
           }
+
+          const needToExpose = references
+            .filter(ref => ref.uri === refUri)
+            .some(ref => !ref.fullyQualified);
 
           const refTree = forest.getTree(refUri);
 
@@ -228,7 +264,7 @@ export class MoveRefactoringHandler {
             const importEdit = RefactorEditUtils.addImport(
               refTree,
               destinationModuleName,
-              functionName,
+              needToExpose ? functionName : "",
             );
 
             if (importEdit) {

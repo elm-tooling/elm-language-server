@@ -1465,6 +1465,14 @@ export class TreeUtils {
     }
   }
 
+  public static isReferenceFullyQualified(node: SyntaxNode): boolean {
+    return (
+      node.previousNamedSibling?.type === "dot" &&
+      node.previousNamedSibling?.previousNamedSibling?.type ===
+        "upper_case_identifier"
+    );
+  }
+
   // tslint:disable-next-line: no-identical-functions
   private static findAllImportNameNodes(tree: Tree): SyntaxNode[] | undefined {
     const result = tree.rootNode.children.filter(

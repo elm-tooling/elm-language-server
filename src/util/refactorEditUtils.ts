@@ -68,15 +68,71 @@ export class RefactorEditUtils {
   public static addImport(
     tree: Tree,
     moduleName: string,
-    valueName: string,
+    valueName?: string,
   ): TextEdit | undefined {
     const lastImportNode = TreeUtils.getLastImportNode(tree);
 
     if (lastImportNode) {
       return TextEdit.insert(
         Position.create(lastImportNode.endPosition.row + 1, 0),
-        `import ${moduleName} exposing (${valueName})`,
+        valueName
+          ? `import ${moduleName} exposing (${valueName})`
+          : `import ${moduleName}`,
       );
+    }
+  }
+
+  public static changeQualifiedReferenceModule(
+    node: SyntaxNode,
+    moduleName: string,
+  ): TextEdit | undefined {
+    if (node.parent && node.parent.type === "value_qid") {
+      const moduleNode = TreeUtils.findFirstNamedChildOfType(
+        "upper_case_identifier",
+        node.parent,
+      );
+
+      if (moduleNode) {
+        return TextEdit.replace(
+          Range.create(
+            Position.create(
+              moduleNode.startPosition.row,
+              moduleNode.startPosition.column,
+            ),
+            Position.create(
+              moduleNode.endPosition.row,
+              moduleNode.endPosition.column,
+            ),
+          ),
+          moduleName,
+        );
+      }
+    }
+  }
+
+  public static removeQualifiedReference(
+    node: SyntaxNode,
+  ): TextEdit | undefined {
+    if (node.parent && node.parent.type === "value_qid") {
+      const moduleNode = TreeUtils.findFirstNamedChildOfType(
+        "upper_case_identifier",
+        node.parent,
+      );
+
+      if (moduleNode) {
+        return TextEdit.del(
+          Range.create(
+            Position.create(
+              moduleNode.startPosition.row,
+              moduleNode.startPosition.column,
+            ),
+            Position.create(
+              moduleNode.endPosition.row,
+              moduleNode.endPosition.column + 1,
+            ),
+          ),
+        );
+      }
     }
   }
 
