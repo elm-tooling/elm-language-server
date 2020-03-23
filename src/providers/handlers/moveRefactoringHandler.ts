@@ -264,7 +264,7 @@ export class MoveRefactoringHandler {
             const importEdit = RefactorEditUtils.addImport(
               refTree,
               destinationModuleName,
-              needToExpose ? functionName : "",
+              needToExpose ? functionName : undefined,
             );
 
             if (importEdit) {
