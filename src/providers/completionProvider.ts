@@ -159,10 +159,14 @@ export class CompletionProvider {
           nodeAtPosition.parent.parent,
           replaceRange,
         );
-      } else if (
-        nodeAtPosition.parent?.parent?.type == "record_expr"
-      ) {
-        return this.getRecordCompletions(nodeAtPosition, tree, replaceRange, elmWorkspace.getImports(), params.textDocument.uri);
+      } else if (nodeAtPosition.parent?.parent?.type === "record_expr") {
+        return this.getRecordCompletions(
+          nodeAtPosition,
+          tree,
+          replaceRange,
+          elmWorkspace.getImports(),
+          params.textDocument.uri,
+        );
       }
 
       completions.push(
@@ -243,14 +247,14 @@ export class CompletionProvider {
             case "Type":
               return a.exposedUnionConstructors
                 ? [
-                  this.createTypeCompletion(
-                    value,
-                    `${a.name}(..)`,
-                    range,
-                    prefix,
-                  ),
-                  this.createTypeCompletion(value, a.name, range, prefix),
-                ]
+                    this.createTypeCompletion(
+                      value,
+                      `${a.name}(..)`,
+                      range,
+                      prefix,
+                    ),
+                    this.createTypeCompletion(value, a.name, range, prefix),
+                  ]
                 : this.createTypeCompletion(value, a.name, range, prefix);
             default:
               return this.createFunctionCompletion(
@@ -455,7 +459,7 @@ export class CompletionProvider {
       node,
       tree,
       imports,
-      uri
+      uri,
     );
 
     if (!typeDeclarationNode && node.parent?.parent) {
@@ -463,7 +467,7 @@ export class CompletionProvider {
         node.parent.parent,
         tree,
         imports,
-        uri
+        uri,
       );
     }
 
@@ -472,18 +476,18 @@ export class CompletionProvider {
         node.parent.parent,
         tree,
         imports,
-        uri);
+        uri,
+      );
     }
 
     if (typeDeclarationNode) {
-      const fields = TreeUtils.getAllFieldsFromTypeAlias(
-        typeDeclarationNode,
-      );
+      const fields = TreeUtils.getAllFieldsFromTypeAlias(typeDeclarationNode);
 
-      const typeName = TreeUtils.findFirstNamedChildOfType(
-        "upper_case_identifier",
-        typeDeclarationNode
-      )?.text ?? "";
+      const typeName =
+        TreeUtils.findFirstNamedChildOfType(
+          "upper_case_identifier",
+          typeDeclarationNode,
+        )?.text ?? "";
 
       fields?.forEach(element => {
         const hint = HintHelper.createHintForTypeAliasReference(
@@ -492,11 +496,7 @@ export class CompletionProvider {
           typeName,
         );
         result.push(
-          this.createFieldOrParameterCompletion(
-            hint,
-            element.field,
-            range,
-          ),
+          this.createFieldOrParameterCompletion(hint, element.field, range),
         );
       });
     }
@@ -615,9 +615,9 @@ export class CompletionProvider {
     return {
       documentation: markdownDocumentation
         ? {
-          kind: MarkupKind.Markdown,
-          value: markdownDocumentation ?? "",
-        }
+            kind: MarkupKind.Markdown,
+            value: markdownDocumentation ?? "",
+          }
         : undefined,
       kind,
       label,
@@ -635,9 +635,9 @@ export class CompletionProvider {
     return {
       documentation: markdownDocumentation
         ? {
-          kind: MarkupKind.Markdown,
-          value: markdownDocumentation ?? "",
-        }
+            kind: MarkupKind.Markdown,
+            value: markdownDocumentation ?? "",
+          }
         : undefined,
       kind,
       label,
@@ -663,10 +663,10 @@ export class CompletionProvider {
               nodeToProcess.type === "value_declaration" &&
               nodeToProcess.firstNamedChild !== null &&
               nodeToProcess.firstNamedChild.type ===
-              "function_declaration_left" &&
+                "function_declaration_left" &&
               nodeToProcess.firstNamedChild.firstNamedChild !== null &&
               nodeToProcess.firstNamedChild.firstNamedChild.type ===
-              "lower_case_identifier"
+                "lower_case_identifier"
             ) {
               const value = HintHelper.createHintFromDefinitionInLet(
                 nodeToProcess,
@@ -770,9 +770,9 @@ export class CompletionProvider {
     return {
       documentation: markdownDocumentation
         ? {
-          kind: MarkupKind.Markdown,
-          value: markdownDocumentation ?? "",
-        }
+            kind: MarkupKind.Markdown,
+            value: markdownDocumentation ?? "",
+          }
         : undefined,
       insertText: Array.isArray(snippetText)
         ? snippetText.join("\n")
@@ -819,12 +819,7 @@ export class CompletionProvider {
       ),
       this.createSnippet(
         "if",
-        [
-          " if ${1:expression} then",
-          "    ${2}",
-          " else",
-          "    ${3}",
-        ],
+        [" if ${1:expression} then", "    ${2}", " else", "    ${3}"],
         "If-Else statement",
       ),
       this.createSnippet("comment", ["{-", "${0}", "-}"], "Multi-line comment"),
@@ -1267,14 +1262,12 @@ export class CompletionProvider {
     ];
   }
 
-  private createKeywordCompletion(
-    label: string
-  ): CompletionItem {
+  private createKeywordCompletion(label: string): CompletionItem {
     return {
       label,
       kind: CompletionItemKind.Keyword,
-      sortText: `a_${label}`
-    }
+      sortText: `a_${label}`,
+    };
   }
 
   private getKeywords(): CompletionItem[] {
@@ -1289,7 +1282,7 @@ export class CompletionProvider {
       this.createKeywordCompletion("type"),
       this.createKeywordCompletion("alias"),
       this.createKeywordCompletion("import"),
-      this.createKeywordCompletion("exposing")
+      this.createKeywordCompletion("exposing"),
     ];
   }
 }

@@ -1,19 +1,19 @@
 import {
   CodeAction,
+  CodeActionKind,
   CodeActionParams,
   ExecuteCommandParams,
   IConnection,
-  CodeActionKind,
 } from "vscode-languageserver";
+import { URI } from "vscode-uri";
+import { SyntaxNode } from "web-tree-sitter";
+import { ElmWorkspace } from "../elmWorkspace";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
+import { Settings } from "../util/settings";
+import { TreeUtils } from "../util/treeUtils";
 import { ElmAnalyseDiagnostics } from "./diagnostics/elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
-import { MoveRefactoringHandler } from './handlers/moveRefactoringHandler';
-import { ElmWorkspace } from '../elmWorkspace';
-import { URI } from 'vscode-uri';
-import { ElmWorkspaceMatcher } from '../util/elmWorkspaceMatcher';
-import { TreeUtils } from '../util/treeUtils';
-import { Settings, IClientSettings } from '../util/settings';
-import { SyntaxNode } from 'web-tree-sitter';
+import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 
 export class CodeActionProvider {
   constructor(
@@ -28,23 +28,29 @@ export class CodeActionProvider {
     this.connection.onCodeAction(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: CodeActionParams) =>
         URI.parse(param.textDocument.uri),
-      ).handlerForWorkspace(this.onCodeAction));
+      ).handlerForWorkspace(this.onCodeAction),
+    );
     this.connection.onExecuteCommand(this.onExecuteCommand);
 
     if (settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
+      // tslint:disable-next-line: no-unused-expression
       new MoveRefactoringHandler(this.connection, this.elmWorkspaces);
     }
   }
 
   private onCodeAction(
     params: CodeActionParams,
-    elmWorkspace: ElmWorkspace
+    elmWorkspace: ElmWorkspace,
   ): CodeAction[] {
     this.connection.console.info("A code action was requested");
     const analyse =
       (this.elmAnalyse && this.elmAnalyse.onCodeAction(params)) ?? [];
     const make = this.elmMake.onCodeAction(params);
-    return [...analyse, ...make, ...this.getRefactorCodeActions(params, elmWorkspace)];
+    return [
+      ...analyse,
+      ...make,
+      ...this.getRefactorCodeActions(params, elmWorkspace),
+    ];
   }
 
   private async onExecuteCommand(params: ExecuteCommandParams) {
@@ -54,7 +60,7 @@ export class CodeActionProvider {
 
   private getRefactorCodeActions(
     params: CodeActionParams,
-    elmWorkspace: ElmWorkspace
+    elmWorkspace: ElmWorkspace,
   ): CodeAction[] {
     const codeActions: CodeAction[] = [];
 
@@ -68,7 +74,9 @@ export class CodeActionProvider {
       );
 
       if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
-        codeActions.push(...this.getMoveFunctionCodeActions(params, nodeAtPosition));
+        codeActions.push(
+          ...this.getMoveFunctionCodeActions(params, nodeAtPosition),
+        );
       }
     }
 
@@ -77,7 +85,7 @@ export class CodeActionProvider {
 
   private getMoveFunctionCodeActions(
     params: CodeActionParams,
-    nodeAtPosition: SyntaxNode
+    nodeAtPosition: SyntaxNode,
   ): CodeAction[] {
     const codeActions: CodeAction[] = [];
 
@@ -93,10 +101,12 @@ export class CodeActionProvider {
           arguments: [
             "moveFunction",
             params,
-            nodeAtPosition.parent?.type === "type_annotation" ? nodeAtPosition.text : nodeAtPosition.parent.text
-          ]
+            nodeAtPosition.parent?.type === "type_annotation"
+              ? nodeAtPosition.text
+              : nodeAtPosition.parent.text,
+          ],
         },
-        kind: CodeActionKind.RefactorRewrite
+        kind: CodeActionKind.RefactorRewrite,
       });
     }
 

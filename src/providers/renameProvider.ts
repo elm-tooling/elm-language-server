@@ -1,14 +1,14 @@
 import {
   IConnection,
   Position,
+  PrepareRenameParams,
   Range,
   RenameParams,
   TextEdit,
   WorkspaceEdit,
-  PrepareRenameParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { Tree, SyntaxNode } from "web-tree-sitter";
+import { SyntaxNode, Tree } from "web-tree-sitter";
 import { ElmWorkspace } from "../elmWorkspace";
 import { Forest } from "../forest";
 import { IImports } from "../imports";
@@ -40,7 +40,7 @@ export class RenameProvider {
     const affectedNodes = this.getRenameAffectedNodes(
       elmWorkspace,
       params.textDocument.uri,
-      params.position
+      params.position,
     );
 
     const map: { [uri: string]: TextEdit[] } = {};
@@ -56,10 +56,7 @@ export class RenameProvider {
               a.node.startPosition.row,
               a.node.startPosition.column,
             ),
-            Position.create(
-              a.node.endPosition.row,
-              a.node.endPosition.column,
-            ),
+            Position.create(a.node.endPosition.row, a.node.endPosition.column),
           ),
           params.newName,
         ),
@@ -82,37 +79,33 @@ export class RenameProvider {
     const affectedNodes = this.getRenameAffectedNodes(
       elmWorkspace,
       params.textDocument.uri,
-      params.position
+      params.position,
     );
 
     if (affectedNodes?.references.length) {
       const node = affectedNodes.originalNode;
       return Range.create(
-        Position.create(
-          node.startPosition.row,
-          node.startPosition.column,
-        ),
-        Position.create(
-          node.endPosition.row,
-          node.endPosition.column,
-        )
+        Position.create(node.startPosition.row, node.startPosition.column),
+        Position.create(node.endPosition.row, node.endPosition.column),
       );
     }
 
     return null;
-  }
+  };
 
   private getRenameAffectedNodes(
     elmWorkspace: ElmWorkspace,
     uri: string,
-    position: Position
-  ): {
-    originalNode: SyntaxNode,
-    references: {
-      node: SyntaxNode;
-      uri: string;
-    }[]
-  } | undefined {
+    position: Position,
+  ):
+    | {
+        originalNode: SyntaxNode;
+        references: {
+          node: SyntaxNode;
+          uri: string;
+        }[];
+      }
+    | undefined {
     const imports: IImports = elmWorkspace.getImports();
     const forest: Forest = elmWorkspace.getForest();
     const tree: Tree | undefined = forest.getTree(uri);
@@ -135,8 +128,8 @@ export class RenameProvider {
         if (refTree && refTree.writeable) {
           return {
             originalNode: nodeAtPosition,
-            references: References.find(definitionNode, forest, imports)
-          }
+            references: References.find(definitionNode, forest, imports),
+          };
         }
       }
     }

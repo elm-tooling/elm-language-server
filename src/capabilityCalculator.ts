@@ -39,7 +39,7 @@ export class CapabilityCalculator {
       hoverProvider: true,
       referencesProvider: true,
       renameProvider: {
-        prepareProvider: true
+        prepareProvider: true,
       },
       selectionRangeProvider: true,
       textDocumentSync: TextDocumentSyncKind.Full,

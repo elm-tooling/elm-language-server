@@ -60,17 +60,23 @@ export class HintHelper {
       let code: string | undefined;
       let comment: string = "";
       let annotation: string = "";
-      if (declaration.type === "type_declaration" || declaration.type === "type_alias_declaration") {
+      if (
+        declaration.type === "type_declaration" ||
+        declaration.type === "type_alias_declaration"
+      ) {
         code = declaration.text;
       }
       if (declaration.type === "union_variant") {
-        if (declaration.parent?.previousNamedSibling?.type !== "block_comment") {
+        if (
+          declaration.parent?.previousNamedSibling?.type !== "block_comment"
+        ) {
           code = declaration.text;
 
           if (declaration.parent) {
             const typeName = TreeUtils.findFirstNamedChildOfType(
               "upper_case_identifier",
-              declaration.parent)?.text;
+              declaration.parent,
+            )?.text;
             comment = `A variant on the union type \`${typeName}\`` || "";
           }
         } else {
@@ -83,7 +89,7 @@ export class HintHelper {
           if (
             declaration.previousNamedSibling.previousNamedSibling &&
             declaration.previousNamedSibling.previousNamedSibling.type ===
-            "block_comment"
+              "block_comment"
           ) {
             comment =
               declaration.previousNamedSibling.previousNamedSibling.text;

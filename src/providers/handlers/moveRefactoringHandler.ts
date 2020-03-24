@@ -1,17 +1,17 @@
-import { IConnection, TextEdit, Range, Position } from "vscode-languageserver";
+import { IConnection, Position, Range, TextEdit } from "vscode-languageserver";
+import { URI } from "vscode-uri";
+import { ElmWorkspace } from "../../elmWorkspace";
 import {
   GetMoveDestinationRequest,
+  MoveDestination,
   MoveDestinationsResponse,
   MoveParams,
   MoveRequest,
-  MoveDestination,
 } from "../../protocol";
-import { ElmWorkspace } from "../../elmWorkspace";
-import { URI } from "vscode-uri";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { TreeUtils } from "../../util/treeUtils";
-import { References } from "../../util/references";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
+import { References } from "../../util/references";
+import { TreeUtils } from "../../util/treeUtils";
 
 export class MoveRefactoringHandler {
   constructor(
@@ -121,9 +121,10 @@ export class MoveRefactoringHandler {
           declarationNode.startPosition;
         const endPosition = declarationNode.endPosition;
 
-        const functionText = `\n\n${
-          commentNode ? `${commentNode.text}\n` : ""
-        }${typeNode ? `${typeNode.text}\n` : ""}${declarationNode.text}`;
+        const comment = commentNode ? `${commentNode.text}\n` : "";
+        const type = typeNode ? `${typeNode.text}\n` : "";
+
+        const functionText = `\n\n${comment}${type}${declarationNode.text}`;
 
         const changes: { [uri: string]: TextEdit[] } = {};
 
