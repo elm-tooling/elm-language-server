@@ -100,10 +100,7 @@ export class CodeActionProvider {
       nodeAtPosition.parent?.type === "type_annotation" ||
       nodeAtPosition.parent?.type === "function_declaration_left"
     ) {
-      const functionName =
-        nodeAtPosition.parent?.type === "type_annotation"
-          ? nodeAtPosition.text
-          : nodeAtPosition.parent.text;
+      const functionName = nodeAtPosition.text;
 
       if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
         codeActions.push({
