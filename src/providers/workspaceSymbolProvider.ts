@@ -21,8 +21,8 @@ export class WorkspaceSymbolProvider {
     this.connection.console.info(`Workspace Symbols were requested`);
     const symbolInformationMap: Map<string, SymbolInformation[]> = new Map();
 
-    this.elmWorkspaces.forEach(elmWorkspace => {
-      elmWorkspace.getForest().treeIndex.forEach(tree => {
+    this.elmWorkspaces.forEach((elmWorkspace) => {
+      elmWorkspace.getForest().treeIndex.forEach((tree) => {
         const traverse: (node: SyntaxNode) => void = (
           node: SyntaxNode,
         ): void => {

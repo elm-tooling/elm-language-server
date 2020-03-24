@@ -16,7 +16,7 @@ export function getTextRangeChanges(
   // Loop over every part, keeping track of:
   // 1. The current line no. and column in the `after` string
   // 2. Character ranges for all "added" parts in the `after` string
-  parts.forEach(part => {
+  parts.forEach((part) => {
     const startLineNumber = lineNumber;
     const startColumn = column;
     if (part[0] === 0 || part[0] === -1) {

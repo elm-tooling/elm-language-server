@@ -32,28 +32,32 @@ export class Forest implements IForest {
   public treeIndex: ITreeContainer[] = [];
 
   public getTree(uri: string): Tree | undefined {
-    const result = this.treeIndex.find(tree => tree.uri === uri);
+    const result = this.treeIndex.find((tree) => tree.uri === uri);
 
     return result && result.tree;
   }
 
   public getExposingByModuleName(moduleName: string): IExposing[] | undefined {
-    const result = this.treeIndex.find(tree => tree.moduleName === moduleName);
+    const result = this.treeIndex.find(
+      (tree) => tree.moduleName === moduleName,
+    );
     return result && result.exposing;
   }
 
   public getTreeByModuleName(moduleName: string): Tree | undefined {
-    const result = this.treeIndex.find(tree => tree.moduleName === moduleName);
+    const result = this.treeIndex.find(
+      (tree) => tree.moduleName === moduleName,
+    );
 
     return result && result.tree;
   }
 
   public getByModuleName(moduleName: string): ITreeContainer | undefined {
-    return this.treeIndex.find(tree => tree.moduleName === moduleName);
+    return this.treeIndex.find((tree) => tree.moduleName === moduleName);
   }
 
   public getByUri(uri: string): ITreeContainer | undefined {
-    return this.treeIndex.find(tree => tree.uri === uri);
+    return this.treeIndex.find((tree) => tree.uri === uri);
   }
 
   public setTree(
@@ -70,7 +74,7 @@ export class Forest implements IForest {
       ({ moduleName, exposing } = moduleResult);
     }
 
-    const existingTree = this.treeIndex.findIndex(a => a.uri === uri);
+    const existingTree = this.treeIndex.findIndex((a) => a.uri === uri);
 
     const treeContainer = {
       exposing,
@@ -91,6 +95,6 @@ export class Forest implements IForest {
 
   public removeTree(uri: string): void {
     // Not sure this is the best way to do this...
-    this.treeIndex = this.treeIndex.filter(tree => tree.uri !== uri);
+    this.treeIndex = this.treeIndex.filter((tree) => tree.uri !== uri);
   }
 }

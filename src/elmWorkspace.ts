@@ -3,7 +3,7 @@ import globby from "globby";
 import os from "os";
 import path from "path";
 import util from "util";
-import { IConnection, ProgressType } from "vscode-languageserver";
+import { IConnection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { Forest } from "./forest";
@@ -52,8 +52,8 @@ export class ElmWorkspace {
 
   public hasPath(uri: URI): boolean {
     return this.elmFolders
-      .map(f => f.uri)
-      .some(elmFolder => uri.fsPath.startsWith(elmFolder));
+      .map((f) => f.uri)
+      .some((elmFolder) => uri.fsPath.startsWith(elmFolder));
   }
 
   public getForest(): Forest {
@@ -146,7 +146,7 @@ export class ElmWorkspace {
             const pathToPackage = `${packagesRoot}${maintainer}/${packageName}/`;
             const readDir = await readdir(pathToPackage, "utf8");
 
-            const allVersionFolders = readDir.map(folderName => {
+            const allVersionFolders = readDir.map((folderName) => {
               return {
                 version: folderName,
                 versionPath: `${pathToPackage}${folderName}`,
@@ -177,7 +177,7 @@ export class ElmWorkspace {
         `Found ${elmFilePaths.length.toString()} files to add to the project`,
       );
 
-      if (elmFilePaths.every(a => !a.writeable)) {
+      if (elmFilePaths.every((a) => !a.writeable)) {
         this.connection.window.showErrorMessage(
           "The path or paths you entered in the 'source-directories' field of your 'elm.json' does not contain any elm files.",
         );
@@ -196,7 +196,7 @@ export class ElmWorkspace {
       }
       await Promise.all(promiseList);
 
-      this.forest.treeIndex.forEach(item => {
+      this.forest.treeIndex.forEach((item) => {
         this.connection.console.info(
           `Adding imports ${URI.parse(item.uri).fsPath}`,
         );
@@ -238,7 +238,7 @@ export class ElmWorkspace {
 
     return globby
       .sync(`${globUri}/**/*.elm`, { suppressErrors: true })
-      .map(matchingPath => ({
+      .map((matchingPath) => ({
         maintainerAndPackageName: element.maintainerAndPackageName,
         path: matchingPath,
         writeable: element.writeable,

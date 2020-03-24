@@ -1,4 +1,4 @@
-import { Diagnostic, IConnection, FileChangeType } from "vscode-languageserver";
+import { Diagnostic, FileChangeType, IConnection } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import { ElmWorkspace } from "../../elmWorkspace";
@@ -45,7 +45,7 @@ export class DiagnosticsProvider {
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmMakeDiagnostics = elmMake;
     this.elmAnalyseDiagnostics = elmAnalyse;
-    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(elmWorkspaces, doc =>
+    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(elmWorkspaces, (doc) =>
       URI.parse(doc.uri),
     );
 
@@ -57,19 +57,19 @@ export class DiagnosticsProvider {
 
     // register onChange listener if settings are not on-save only
     this.settings.getClientSettings().then(({ elmAnalyseTrigger }) => {
-      this.events.on("open", d =>
+      this.events.on("open", (d) =>
         this.getDiagnostics(d, true, elmAnalyseTrigger),
       );
-      this.events.on("save", d =>
+      this.events.on("save", (d) =>
         this.getDiagnostics(d, true, elmAnalyseTrigger),
       );
 
-      this.connection.onDidChangeWatchedFiles(event => {
+      this.connection.onDidChangeWatchedFiles((event) => {
         const newDeleteEvents = event.changes
-          .filter(a => a.type === FileChangeType.Deleted)
-          .map(a => a.uri);
+          .filter((a) => a.type === FileChangeType.Deleted)
+          .map((a) => a.uri);
 
-        newDeleteEvents.forEach(uri => {
+        newDeleteEvents.forEach((uri) => {
           this.currentDiagnostics.elmAnalyse.delete(uri);
           this.currentDiagnostics.elmMake.delete(uri);
           this.currentDiagnostics.elmTest.delete(uri);
@@ -84,7 +84,7 @@ export class DiagnosticsProvider {
         );
       }
       if (elmAnalyseTrigger === "change") {
-        this.events.on("change", d =>
+        this.events.on("change", (d) =>
           this.getDiagnostics(d, false, elmAnalyseTrigger),
         );
       }

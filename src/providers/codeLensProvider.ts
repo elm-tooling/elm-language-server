@@ -104,7 +104,7 @@ export class CodeLensProvider {
 
           let refLocations: Location[] = [];
           if (references) {
-            refLocations = references.map(a =>
+            refLocations = references.map((a) =>
               Location.create(
                 a.uri,
                 Range.create(
@@ -179,7 +179,7 @@ export class CodeLensProvider {
 
   private getExposingCodeLenses(tree: Tree, uri: string): CodeLens[] {
     const codeLens: CodeLens[] = [];
-    tree.rootNode.children.forEach(node => {
+    tree.rootNode.children.forEach((node) => {
       if (node.type === "value_declaration") {
         const functionName = TreeUtils.getFunctionNameNodeFromDefinition(node);
 
@@ -223,7 +223,7 @@ export class CodeLensProvider {
 
   private getReferencesCodeLenses(tree: Tree, uri: string) {
     const codeLens: CodeLens[] = [];
-    tree.rootNode.children.forEach(node => {
+    tree.rootNode.children.forEach((node) => {
       if (
         node.type === "type_declaration" ||
         node.type === "type_alias_declaration"
@@ -240,7 +240,7 @@ export class CodeLensProvider {
     });
 
     TreeUtils.descendantsOfType(tree.rootNode, "value_declaration").forEach(
-      node => {
+      (node) => {
         const functionName = TreeUtils.getFunctionNameNodeFromDefinition(node);
 
         if (functionName) {

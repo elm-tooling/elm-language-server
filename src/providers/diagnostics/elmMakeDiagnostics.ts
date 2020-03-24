@@ -1,5 +1,4 @@
 import { randomBytes } from "crypto";
-import execa = require("execa");
 import * as path from "path";
 import {
   CodeAction,
@@ -17,6 +16,7 @@ import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
 import { IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
+import execa = require("execa");
 
 const ELM_MAKE = "Elm";
 const RANDOM_ID = randomBytes(16).toString("hex");
@@ -66,7 +66,7 @@ export class ElmMakeDiagnostics {
   ) {
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(
       elmWorkspaces,
-      uri => uri,
+      (uri) => uri,
     );
   }
 
@@ -79,7 +79,7 @@ export class ElmMakeDiagnostics {
     return await this.checkForErrors(
       workspaceRootPath.fsPath,
       filePath.fsPath,
-    ).then(issues => {
+    ).then((issues) => {
       return issues.length === 0
         ? new Map([[filePath.toString(), []]])
         : ElmDiagnosticsHelper.issuesToDiagnosticMap(issues, workspaceRootPath);
@@ -100,7 +100,7 @@ export class ElmMakeDiagnostics {
     uri: string,
   ): CodeAction[] {
     const result: CodeAction[] = [];
-    diagnostics.forEach(diagnostic => {
+    diagnostics.forEach((diagnostic) => {
       if (
         diagnostic.message.startsWith("NAMING ERROR") ||
         diagnostic.message.startsWith("BAD IMPORT") ||
@@ -162,7 +162,7 @@ export class ElmMakeDiagnostics {
   }
 
   private filterElmMakeDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
-    return diagnostics.filter(diagnostic => diagnostic.source === ELM_MAKE);
+    return diagnostics.filter((diagnostic) => diagnostic.source === ELM_MAKE);
   }
 
   private async checkForErrors(

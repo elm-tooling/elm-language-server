@@ -119,14 +119,14 @@ export function findDepVersion(
     const upperRange = m[4];
 
     const filteredVersionList = allVersionFolders
-      .filter(a => filterSemver(a.version, lowerRange, lowerOperator))
-      .filter(a => filterSemver(upperRange, a.version, upperOperator));
+      .filter((a) => filterSemver(a.version, lowerRange, lowerOperator))
+      .filter((a) => filterSemver(upperRange, a.version, upperOperator));
 
     const latestVersionInRange = filteredVersionList
-      .map(a => a.version)
+      .map((a) => a.version)
       .sort(cmp)
       .reverse()[0];
-    return allVersionFolders.find(a => a.version === latestVersionInRange);
+    return allVersionFolders.find((a) => a.version === latestVersionInRange);
   } else {
     // Regex did not work, probably not a version range
     return allVersionFolders.find(

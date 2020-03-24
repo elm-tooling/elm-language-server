@@ -10,10 +10,10 @@ import {
   CodeActionParams,
   Diagnostic,
   DiagnosticSeverity,
+  DiagnosticTag,
   ExecuteCommandParams,
   IConnection,
   TextEdit,
-  DiagnosticTag,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
@@ -64,11 +64,11 @@ export class ElmAnalyseDiagnostics {
     this.diagnostics = new Map();
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(
       elmWorkspaces,
-      uri => uri,
+      (uri) => uri,
     );
 
     this.elmAnalysers = new Map(
-      elmWorkspaces.map(ws => [ws, this.setupElmAnalyse(ws)]),
+      elmWorkspaces.map((ws) => [ws, this.setupElmAnalyse(ws)]),
     );
   }
 
@@ -84,7 +84,7 @@ export class ElmAnalyseDiagnostics {
       throw new Error(`No elm-analyse instance loaded for workspace ${uri}.`);
     }
 
-    analyser.then(elmAnalyser => {
+    analyser.then((elmAnalyser) => {
       elmAnalyser.ports.fileWatch.send({
         content: text ?? null,
         event: "update",
@@ -120,7 +120,7 @@ export class ElmAnalyseDiagnostics {
 
     const contextDiagnostics: CodeAction[] = this.fixableDiagnostics(
       params.context.diagnostics,
-    ).map(diagnostic => {
+    ).map((diagnostic) => {
       const title = diagnostic.message.split("\n")[0];
       return {
         command: {
@@ -175,7 +175,7 @@ export class ElmAnalyseDiagnostics {
 
   private fixableDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
     return diagnostics.filter(
-      diagnostic =>
+      (diagnostic) =>
         diagnostic.source === ELM_ANALYSE && this.isFixable(diagnostic),
     );
   }
@@ -238,7 +238,7 @@ export class ElmAnalyseDiagnostics {
               fixedFile.content,
             )
             .then(
-              async elmFormatEdits =>
+              async (elmFormatEdits) =>
                 await this.createEdits(
                   oldText.getText(),
                   fixedFile.content,
@@ -305,7 +305,7 @@ export class ElmAnalyseDiagnostics {
     // read <dir>//elm.json instead of <div>/elm.json
     fileLoadingPorts.setup(elmAnalyse, {}, fsPath.replace(/[\\/]?$/, ""));
 
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       // Wait for elm-analyse to send back the first report
       const cb = (firstReport: any) => {
         elmAnalyse.ports.sendReportValue.unsubscribe(cb);
@@ -340,7 +340,7 @@ export class ElmAnalyseDiagnostics {
     const filesInReport = new Set(this.diagnostics.keys());
     const filesThatAreNowFixed = new Set(
       [...this.filesWithDiagnostics].filter(
-        uriPath => !filesInReport.has(uriPath),
+        (uriPath) => !filesInReport.has(uriPath),
       ),
     );
 
@@ -348,12 +348,12 @@ export class ElmAnalyseDiagnostics {
 
     // When you fix the last error in a file it no longer shows up in the report, but
     // we still need to clear the error marker for it
-    filesThatAreNowFixed.forEach(file => this.diagnostics.set(file, []));
+    filesThatAreNowFixed.forEach((file) => this.diagnostics.set(file, []));
     this.eventEmitter.emit("new-diagnostics", this.diagnostics);
   };
 
   private isFixable(diagnostic: Diagnostic): boolean {
-    return fixableErrors.some(e => diagnostic.message.indexOf(e) > -1);
+    return fixableErrors.some((e) => diagnostic.message.indexOf(e) > -1);
   }
 
   private messageToDiagnostic(message: Message): Diagnostic {
