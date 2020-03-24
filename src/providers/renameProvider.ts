@@ -4,6 +4,7 @@ import {
   PrepareRenameParams,
   Range,
   RenameParams,
+  ResponseError,
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver";
@@ -130,6 +131,12 @@ export class RenameProvider {
             originalNode: nodeAtPosition,
             references: References.find(definitionNode, forest, imports),
           };
+        }
+        if (refTree && !refTree.writeable) {
+          throw new ResponseError(
+            1,
+            "Can not rename, due to source being outside of you project.",
+          );
         }
       }
     }
