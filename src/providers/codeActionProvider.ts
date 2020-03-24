@@ -5,6 +5,7 @@ import {
   ExecuteCommandParams,
   IConnection,
   Command,
+  WorkspaceEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
@@ -16,6 +17,7 @@ import { ElmAnalyseDiagnostics } from "./diagnostics/elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
+import { RefactorEditUtils } from "../util/refactorEditUtils";
 
 export class CodeActionProvider {
   constructor(
@@ -115,23 +117,38 @@ export class CodeActionProvider {
         });
       }
 
-      if (this.settings.extendedCapabilities?.exposeUnexposeSupport) {
-        if (TreeUtils.isExposedFunction(tree, functionName)) {
+      if (TreeUtils.isExposedFunction(tree, functionName)) {
+        const edit = RefactorEditUtils.unexposedValueInModule(
+          tree,
+          functionName,
+        );
+
+        if (edit) {
           codeActions.push({
             title: "Unexpose Function",
             command: Command.create("Unexpose", "elm.unexpose", {
               uri: params.textDocument.uri,
               name: functionName,
             }),
+            edit: {
+              changes: {
+                [params.textDocument.uri]: [edit],
+              },
+            },
             kind: CodeActionKind.Refactor,
           });
-        } else {
+        }
+      } else {
+        const edit = RefactorEditUtils.exposeValueInModule(tree, functionName);
+
+        if (edit) {
           codeActions.push({
             title: "Expose Function",
-            command: Command.create("Expose", "elm.expose", {
-              uri: params.textDocument.uri,
-              name: functionName,
-            }),
+            edit: {
+              changes: {
+                [params.textDocument.uri]: [edit],
+              },
+            },
             kind: CodeActionKind.Refactor,
           });
         }
@@ -160,23 +177,31 @@ export class CodeActionProvider {
           ? " Alias"
           : "";
 
-      if (this.settings.extendedCapabilities?.exposeUnexposeSupport) {
-        if (TreeUtils.isExposedTypeOrTypeAlias(tree, typeName)) {
+      if (TreeUtils.isExposedTypeOrTypeAlias(tree, typeName)) {
+        const edit = RefactorEditUtils.unexposedValueInModule(tree, typeName);
+
+        if (edit) {
           codeActions.push({
             title: `Unexpose Type${alias}`,
-            command: Command.create("Unexpose", "elm.unexpose", {
-              uri: params.textDocument.uri,
-              name: typeName,
-            }),
+            edit: {
+              changes: {
+                [params.textDocument.uri]: [edit],
+              },
+            },
             kind: CodeActionKind.Refactor,
           });
-        } else {
+        }
+      } else {
+        const edit = RefactorEditUtils.exposeValueInModule(tree, typeName);
+
+        if (edit) {
           codeActions.push({
             title: `Expose Type${alias}`,
-            command: Command.create("Expose", "elm.expose", {
-              uri: params.textDocument.uri,
-              name: typeName,
-            }),
+            edit: {
+              changes: {
+                [params.textDocument.uri]: [edit],
+              },
+            },
             kind: CodeActionKind.Refactor,
           });
         }
