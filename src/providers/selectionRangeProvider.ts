@@ -1,16 +1,16 @@
 import {
+  IConnection,
+  Position,
+  Range,
   SelectionRange,
   SelectionRangeParams,
-  IConnection,
-  Range,
-  Position,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { ElmWorkspace } from "../elmWorkspace";
+import { PositionUtil } from "../positionUtil";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
-import { PositionUtil } from "../positionUtil";
 
 export class SelectionRangeProvider {
   constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {

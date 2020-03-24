@@ -51,7 +51,7 @@ export class HoverProvider {
         return this.createMarkdownHoverFromDefinition(definitionNode);
       } else {
         const specialMatch = getEmptyTypes().find(
-          a => a.name === nodeAtPosition.text,
+          (a) => a.name === nodeAtPosition.text,
         );
         if (specialMatch) {
           return {

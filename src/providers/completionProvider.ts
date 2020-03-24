@@ -208,8 +208,8 @@ export class CompletionProvider {
     range: Range,
   ): CompletionItem[] {
     return forest.treeIndex
-      .filter(a => a.moduleName)
-      .map(a => this.createModuleCompletion(a.moduleName!, range, "b"));
+      .filter((a) => a.moduleName)
+      .map((a) => this.createModuleCompletion(a.moduleName!, range, "b"));
   }
 
   private getExposedFromModule(
@@ -234,7 +234,7 @@ export class CompletionProvider {
       const moduleName = exposingListNode.previousNamedSibling.text;
       const exposedByModule = forest.getExposingByModuleName(moduleName);
       if (exposedByModule) {
-        return exposedByModule.flatMap(a => {
+        return exposedByModule.flatMap((a) => {
           const value = HintHelper.createHint(a.syntaxNode);
           switch (a.type) {
             case "TypeAlias":
@@ -278,7 +278,7 @@ export class CompletionProvider {
 
     if (imports.imports && imports.imports[uri]) {
       const importList = imports.imports[uri];
-      importList.forEach(element => {
+      importList.forEach((element) => {
         const value = HintHelper.createHint(element.node);
         let prefix = "d";
         if (element.maintainerAndPackageName) {
@@ -342,7 +342,7 @@ export class CompletionProvider {
     }
 
     completions.push(
-      ...getEmptyTypes().map(a =>
+      ...getEmptyTypes().map((a) =>
         this.createCompletion(a.markdown, a.symbolKind, a.name, range, "d0000"),
       ),
     );
@@ -363,7 +363,7 @@ export class CompletionProvider {
     // Add functions
     if (topLevelFunctions) {
       const declarations = topLevelFunctions.filter(
-        a =>
+        (a) =>
           a.firstNamedChild !== null &&
           a.firstNamedChild.type === "function_declaration_left" &&
           a.firstNamedChild.firstNamedChild !== null &&
@@ -489,7 +489,7 @@ export class CompletionProvider {
           typeDeclarationNode,
         )?.text ?? "";
 
-      fields?.forEach(element => {
+      fields?.forEach((element) => {
         const hint = HintHelper.createHintForTypeAliasReference(
           element.type,
           element.field,
@@ -657,7 +657,7 @@ export class CompletionProvider {
       if (node.parent.type === "let_in_expr") {
         const letNode = TreeUtils.findFirstNamedChildOfType("let", node.parent);
         if (letNode) {
-          letNode.children.forEach(nodeToProcess => {
+          letNode.children.forEach((nodeToProcess) => {
             if (
               nodeToProcess &&
               nodeToProcess.type === "value_declaration" &&
@@ -696,7 +696,7 @@ export class CompletionProvider {
           node.parent.firstNamedChild.firstNamedChild,
         );
         if (caseBranchVariableNodes) {
-          caseBranchVariableNodes.forEach(a => {
+          caseBranchVariableNodes.forEach((a) => {
             const value = HintHelper.createHintFromDefinitionInCaseBranch();
             result.push(
               this.createFunctionCompletion(value, a.text, range, prefix),
@@ -709,7 +709,7 @@ export class CompletionProvider {
         node.parent.firstChild &&
         node.parent.firstChild.type === "function_declaration_left"
       ) {
-        node.parent.firstChild.children.forEach(child => {
+        node.parent.firstChild.children.forEach((child) => {
           if (child.type === "lower_pattern") {
             const markdownDocumentation = HintHelper.createHintFromFunctionParameter(
               child,
@@ -735,7 +735,7 @@ export class CompletionProvider {
                   typeDeclarationNode,
                 );
                 if (fields) {
-                  fields.forEach(element => {
+                  fields.forEach((element) => {
                     const hint = HintHelper.createHintForTypeAliasReference(
                       element.type,
                       element.field,

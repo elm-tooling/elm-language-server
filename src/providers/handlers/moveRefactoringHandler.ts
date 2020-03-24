@@ -40,8 +40,8 @@ export class MoveRefactoringHandler {
     const forest = elmWorkspace.getForest();
 
     const destinations: MoveDestination[] = forest.treeIndex
-      .filter(tree => tree.writeable && tree.uri !== params.sourceUri)
-      .map(tree => {
+      .filter((tree) => tree.writeable && tree.uri !== params.sourceUri)
+      .map((tree) => {
         let uri = URI.parse(tree.uri).fsPath;
         const rootPath = elmWorkspace.getRootPath().fsPath;
 
@@ -158,7 +158,7 @@ export class MoveRefactoringHandler {
           },
           forest,
           imports,
-        ).map(ref => {
+        ).map((ref) => {
           return {
             ...ref,
             fullyQualified: TreeUtils.isReferenceFullyQualified(ref.node),
@@ -166,14 +166,14 @@ export class MoveRefactoringHandler {
         });
 
         const sourceHasReference = !!references.find(
-          ref =>
+          (ref) =>
             ref.uri === params.sourceUri &&
             ref.node.parent?.text !== typeNode?.text &&
             ref.node.parent?.parent?.text !== declarationNode?.text &&
             ref.node.type !== "exposed_value",
         );
 
-        const referenceUris = new Set(references.map(ref => ref.uri));
+        const referenceUris = new Set(references.map((ref) => ref.uri));
 
         // Unexpose function in the source file if it is
         const unexposeEdit = RefactorEditUtils.unexposedValueInModule(
@@ -185,7 +185,7 @@ export class MoveRefactoringHandler {
         }
 
         // Remove old imports to the old source file from all reference uris
-        referenceUris.forEach(refUri => {
+        referenceUris.forEach((refUri) => {
           if (!changes[refUri]) {
             changes[refUri] = [];
           }
@@ -208,7 +208,7 @@ export class MoveRefactoringHandler {
         // Expose function in destination file if there are external references
         if (
           references.filter(
-            ref => ref.uri !== params.destination?.uri && !ref.fullyQualified,
+            (ref) => ref.uri !== params.destination?.uri && !ref.fullyQualified,
           ).length > 0
         ) {
           const exposeEdit = RefactorEditUtils.exposeValueInModule(
@@ -222,7 +222,7 @@ export class MoveRefactoringHandler {
         }
 
         // Change the module name of every reference that is fully qualified
-        references.forEach(ref => {
+        references.forEach((ref) => {
           if (ref.fullyQualified) {
             if (ref.uri !== params.destination?.uri) {
               const edit = RefactorEditUtils.changeQualifiedReferenceModule(
@@ -248,14 +248,14 @@ export class MoveRefactoringHandler {
         referenceUris.delete(params.destination.uri);
 
         // Add the new imports for each file with a reference
-        referenceUris.forEach(refUri => {
+        referenceUris.forEach((refUri) => {
           if (refUri === params.sourceUri && !sourceHasReference) {
             return;
           }
 
           const needToExpose = references
-            .filter(ref => ref.uri === refUri)
-            .some(ref => !ref.fullyQualified);
+            .filter((ref) => ref.uri === refUri)
+            .some((ref) => !ref.fullyQualified);
 
           const refTree = forest.getTree(refUri);
 

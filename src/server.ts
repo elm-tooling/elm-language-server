@@ -6,6 +6,7 @@ import {
   InitializeResult,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { WorkDoneProgress } from "vscode-languageserver/lib/progress";
 import { URI } from "vscode-uri";
 import Parser from "web-tree-sitter";
 import { CapabilityCalculator } from "./capabilityCalculator";
@@ -25,13 +26,12 @@ import {
   HoverProvider,
   ReferencesProvider,
   RenameProvider,
-  WorkspaceSymbolProvider,
   SelectionRangeProvider,
+  WorkspaceSymbolProvider,
 } from "./providers";
 import { DocumentEvents } from "./util/documentEvents";
 import { Settings } from "./util/settings";
 import { TextDocumentEvents } from "./util/textDocumentEvents";
-import { WorkDoneProgress } from "vscode-languageserver/lib/progress";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -73,7 +73,7 @@ export class Server implements ILanguageServer {
         connection.console.info(
           `Found ${elmJsons.length} elm.json files for workspace ${globUri}`,
         );
-        const listOfElmJsonFolders = elmJsons.map(a =>
+        const listOfElmJsonFolders = elmJsons.map((a) =>
           this.getElmJsonFolder(a),
         );
         const topLevelElmJsons: Map<string, URI> = this.findTopLevelFolders(
@@ -83,7 +83,7 @@ export class Server implements ILanguageServer {
           `Found ${topLevelElmJsons.size} unique elmWorkspaces for workspace ${globUri}`,
         );
 
-        topLevelElmJsons.forEach(elmWorkspace => {
+        topLevelElmJsons.forEach((elmWorkspace) => {
           this.elmWorkspaces.push(
             new ElmWorkspace(
               elmWorkspace,
@@ -114,7 +114,7 @@ export class Server implements ILanguageServer {
     this.progress.begin("Indexing Elm", 0);
     await Promise.all(
       this.elmWorkspaces
-        .map(ws => ({ ws, indexedPercent: 0 }))
+        .map((ws) => ({ ws, indexedPercent: 0 }))
         .map((indexingWs, _, all) =>
           indexingWs.ws.init((percent: number) => {
             // update progress for this workspace
@@ -210,12 +210,12 @@ export class Server implements ILanguageServer {
 
   private findTopLevelFolders(listOfElmJsonFolders: URI[]) {
     const result: Map<string, URI> = new Map();
-    listOfElmJsonFolders.forEach(element => {
+    listOfElmJsonFolders.forEach((element) => {
       result.set(element.toString(), element);
     });
 
-    listOfElmJsonFolders.forEach(a => {
-      listOfElmJsonFolders.forEach(b => {
+    listOfElmJsonFolders.forEach((a) => {
+      listOfElmJsonFolders.forEach((b) => {
         if (
           b.toString() !== a.toString() &&
           b.toString().startsWith(a.toString())

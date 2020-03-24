@@ -23,9 +23,9 @@ export class DocumentEvents extends EventEmitter implements IDocumentEvents {
   constructor(connection: Connection) {
     super();
 
-    connection.onDidChangeTextDocument(e => this.emit("change", e));
-    connection.onDidCloseTextDocument(e => this.emit("close", e));
-    connection.onDidOpenTextDocument(e => this.emit("open", e));
-    connection.onDidSaveTextDocument(e => this.emit("save", e));
+    connection.onDidChangeTextDocument((e) => this.emit("change", e));
+    connection.onDidCloseTextDocument((e) => this.emit("close", e));
+    connection.onDidOpenTextDocument((e) => this.emit("open", e));
+    connection.onDidSaveTextDocument((e) => this.emit("save", e));
   }
 }

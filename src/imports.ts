@@ -31,7 +31,7 @@ export class Imports implements IImports {
         [],
     );
     if (importNodes) {
-      importNodes.forEach(importNode => {
+      importNodes.forEach((importNode) => {
         const moduleNameNode = TreeUtils.findFirstNamedChildOfType(
           "upper_case_qid",
           importNode,
@@ -92,9 +92,9 @@ export class Imports implements IImports {
                     );
                     if (exposedOperators.length > 0) {
                       const exposedNodes = exposedFromRemoteModule.filter(
-                        element => {
+                        (element) => {
                           return exposedOperators.find(
-                            a => a.text === element.name,
+                            (a) => a.text === element.name,
                           );
                         },
                       );
@@ -113,9 +113,9 @@ export class Imports implements IImports {
                     );
                     if (exposedValues) {
                       const exposedNodes = exposedFromRemoteModule.filter(
-                        element => {
+                        (element) => {
                           return exposedValues.find(
-                            a => a.text === element.name,
+                            (a) => a.text === element.name,
                           );
                         },
                       );
@@ -134,8 +134,8 @@ export class Imports implements IImports {
                     );
                     if (exposedType) {
                       const exposedNodes = exposedFromRemoteModule.filter(
-                        element => {
-                          return exposedType.find(a => {
+                        (element) => {
+                          return exposedType.find((a) => {
                             const typeName = TreeUtils.findFirstNamedChildOfType(
                               "upper_case_identifier",
                               a,
@@ -182,7 +182,7 @@ export class Imports implements IImports {
     const importedAs = this.findImportAsClause(importNode);
     const importPrefix = importedAs ? importedAs : moduleNameNode.text;
 
-    exposed.forEach(element => {
+    exposed.forEach((element) => {
       switch (element.type) {
         case "Function":
         case "TypeAlias":
@@ -206,7 +206,7 @@ export class Imports implements IImports {
           });
           if (element.exposedUnionConstructors) {
             result.push(
-              ...element.exposedUnionConstructors.map(a => {
+              ...element.exposedUnionConstructors.map((a) => {
                 return {
                   alias: `${importPrefix}.${a.name}`,
                   fromModuleName: moduleNameNode.text,
@@ -220,8 +220,8 @@ export class Imports implements IImports {
 
             result.push(
               ...element.exposedUnionConstructors
-                .filter(a => a.accessibleWithoutPrefix)
-                .map(a => {
+                .filter((a) => a.accessibleWithoutPrefix)
+                .map((a) => {
                   return {
                     alias: `${a.name}`,
                     fromModuleName: moduleNameNode.text,
@@ -287,7 +287,7 @@ import Platform.Sub as Sub exposing ( Sub )
   ): IImport[] {
     const result: IImport[] = [];
 
-    exposed.forEach(element => {
+    exposed.forEach((element) => {
       result.push({
         alias: element.name,
         fromModuleName: moduleName,
@@ -314,7 +314,7 @@ import Platform.Sub as Sub exposing ( Sub )
     moduleNameNode: SyntaxNode,
     foundModule: ITreeContainer,
   ): IImport[] {
-    return exposedNodes.map(a => {
+    return exposedNodes.map((a) => {
       return {
         alias: a.name,
         fromModuleName: moduleNameNode.text,

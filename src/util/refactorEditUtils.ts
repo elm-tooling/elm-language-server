@@ -1,5 +1,5 @@
-import { Tree, SyntaxNode } from "web-tree-sitter";
-import { TextEdit, Position, Range } from "vscode-languageserver";
+import { Position, Range, TextEdit } from "vscode-languageserver";
+import { SyntaxNode, Tree } from "web-tree-sitter";
 import { TreeUtils } from "./treeUtils";
 
 export class RefactorEditUtils {
@@ -140,7 +140,7 @@ export class RefactorEditUtils {
     exposedNodes: SyntaxNode[],
     valueName: string,
   ): TextEdit | undefined {
-    const exposedNode = exposedNodes.find(node => node.text === valueName);
+    const exposedNode = exposedNodes.find((node) => node.text === valueName);
 
     if (exposedNode) {
       let startPosition = exposedNode.startPosition;

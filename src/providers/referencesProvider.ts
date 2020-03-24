@@ -50,7 +50,7 @@ export class ReferencesProvider {
       const references = References.find(definitionNode, forest, imports);
 
       if (references) {
-        return references.map(a =>
+        return references.map((a) =>
           Location.create(
             a.uri,
             Range.create(

@@ -55,7 +55,7 @@ export class References {
 
               if (localFunctions && refSourceTree.writeable) {
                 references.push(
-                  ...localFunctions.map(node => {
+                  ...localFunctions.map((node) => {
                     return { node, uri: definitionNode.uri };
                   }),
                 );
@@ -89,7 +89,7 @@ export class References {
                     if (imports.imports.hasOwnProperty(uri)) {
                       const element = imports.imports[uri];
                       const needsToBeChecked = element.filter(
-                        a =>
+                        (a) =>
                           uri !== definitionNode.uri &&
                           a.fromModuleName === moduleNameNode.text &&
                           a.type === "Function" &&
@@ -118,14 +118,14 @@ export class References {
                             }
                           }
 
-                          needsToBeChecked.forEach(a => {
+                          needsToBeChecked.forEach((a) => {
                             const functions = this.findFunctionCalls(
                               treeToCheck.tree.rootNode,
                               a.alias,
                             );
                             if (functions) {
                               references.push(
-                                ...functions.map(node => {
+                                ...functions.map((node) => {
                                   return { node, uri };
                                 }),
                               );
@@ -160,7 +160,7 @@ export class References {
               );
               if (localFunctions && refSourceTree.writeable) {
                 references.push(
-                  ...localFunctions.map(node => {
+                  ...localFunctions.map((node) => {
                     return { node, uri: definitionNode.uri };
                   }),
                 );
@@ -194,7 +194,7 @@ export class References {
                     if (imports.imports.hasOwnProperty(uri)) {
                       const element = imports.imports[uri];
                       const needsToBeChecked = element.filter(
-                        a =>
+                        (a) =>
                           uri !== definitionNode.uri &&
                           a.fromModuleName === moduleNameNode.text &&
                           (a.type === "Type" || a.type === "TypeAlias") &&
@@ -225,14 +225,14 @@ export class References {
                             }
                           }
 
-                          needsToBeChecked.forEach(a => {
+                          needsToBeChecked.forEach((a) => {
                             const typeOrTypeAliasCalls = TreeUtils.findTypeOrTypeAliasCalls(
                               treeToCheck.tree,
                               a.alias,
                             );
                             if (typeOrTypeAliasCalls) {
                               references.push(
-                                ...typeOrTypeAliasCalls.map(node => {
+                                ...typeOrTypeAliasCalls.map((node) => {
                                   return { node, uri };
                                 }),
                               );
@@ -261,7 +261,7 @@ export class References {
                 if (imports.imports.hasOwnProperty(uri)) {
                   const element = imports.imports[uri];
                   const needsToBeChecked = element.filter(
-                    a =>
+                    (a) =>
                       uri !== definitionNode.uri &&
                       a.fromModuleName === moduleNameNode.text,
                   );
@@ -269,7 +269,7 @@ export class References {
                     const treeToCheck = forest.getByUri(uri);
 
                     if (treeToCheck && treeToCheck.writeable) {
-                      needsToBeChecked.forEach(a => {
+                      needsToBeChecked.forEach((a) => {
                         const importNameNode = TreeUtils.findImportNameNode(
                           treeToCheck.tree,
                           a.alias,
@@ -310,7 +310,7 @@ export class References {
                   );
                   if (parameters) {
                     references.push(
-                      ...parameters.map(node => {
+                      ...parameters.map((node) => {
                         return { node, uri: definitionNode.uri };
                       }),
                     );
@@ -342,7 +342,7 @@ export class References {
                   );
                   if (parameters) {
                     references.push(
-                      ...parameters.map(node => {
+                      ...parameters.map((node) => {
                         return { node, uri: definitionNode.uri };
                       }),
                     );
@@ -371,7 +371,7 @@ export class References {
                   );
                   if (parameters) {
                     references.push(
-                      ...parameters.map(node => {
+                      ...parameters.map((node) => {
                         return { node, uri: definitionNode.uri };
                       }),
                     );
@@ -396,7 +396,7 @@ export class References {
 
                 if (unionConstructorCalls) {
                   references.push(
-                    ...unionConstructorCalls.map(a => {
+                    ...unionConstructorCalls.map((a) => {
                       return { node: a, uri: definitionNode.uri };
                     }),
                   );
@@ -407,7 +407,7 @@ export class References {
                 if (imports.imports.hasOwnProperty(uri)) {
                   const element = imports.imports[uri];
                   const needsToBeChecked = element.filter(
-                    a =>
+                    (a) =>
                       uri !== definitionNode.uri &&
                       a.fromModuleName === moduleNameNode.text &&
                       a.type === "UnionConstructor" &&
@@ -423,7 +423,7 @@ export class References {
                       );
                       if (unionConstructorCallsFromOtherFiles) {
                         references.push(
-                          ...unionConstructorCallsFromOtherFiles.map(node => {
+                          ...unionConstructorCallsFromOtherFiles.map((node) => {
                             return { node, uri };
                           }),
                         );
@@ -449,8 +449,8 @@ export class References {
   ): SyntaxNode[] | undefined {
     const functions = this.findAllFunctionCallsAndParameters(node);
     const result = functions
-      .filter(a => a.text === functionName)
-      .map(a => a.lastChild!);
+      .filter((a) => a.text === functionName)
+      .map((a) => a.lastChild!);
     return result.length === 0 ? undefined : result;
   }
 
@@ -460,8 +460,8 @@ export class References {
     let functions = TreeUtils.descendantsOfType(node, "value_expr");
     if (functions.length > 0) {
       functions = functions
-        .filter(a => a.firstChild && a.firstChild.type === "value_qid")
-        .map(a => a.firstChild!);
+        .filter((a) => a.firstChild && a.firstChild.type === "value_qid")
+        .map((a) => a.firstChild!);
     }
 
     return functions;
@@ -475,7 +475,7 @@ export class References {
       ...this.findAllFunctionCallsAndParameters(node),
       ...this.findAllRecordBaseIdentifiers(node),
     ];
-    const result = parameters.filter(a => a.text === functionName);
+    const result = parameters.filter((a) => a.text === functionName);
     return result.length === 0 ? undefined : result;
   }
 

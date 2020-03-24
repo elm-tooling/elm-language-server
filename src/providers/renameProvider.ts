@@ -44,7 +44,7 @@ export class RenameProvider {
     );
 
     const map: { [uri: string]: TextEdit[] } = {};
-    affectedNodes?.references.forEach(a => {
+    affectedNodes?.references.forEach((a) => {
       if (!map[a.uri]) {
         map[a.uri] = [];
       }

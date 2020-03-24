@@ -75,7 +75,7 @@ export class TreeUtils {
               "value_declaration",
             );
             if (functions) {
-              functions.forEach(elmFunction => {
+              functions.forEach((elmFunction) => {
                 const declaration = TreeUtils.findFirstNamedChildOfType(
                   "function_declaration_left",
                   elmFunction,
@@ -94,7 +94,7 @@ export class TreeUtils {
 
             const typeAliases = this.findAllTypeAliasDeclarations(tree);
             if (typeAliases) {
-              typeAliases.forEach(typeAlias => {
+              typeAliases.forEach((typeAlias) => {
                 const name = TreeUtils.findFirstNamedChildOfType(
                   "upper_case_identifier",
                   typeAlias,
@@ -112,7 +112,7 @@ export class TreeUtils {
 
             const typeDeclarations = this.findAllTypeDeclarations(tree);
             if (typeDeclarations) {
-              typeDeclarations.forEach(typeDeclaration => {
+              typeDeclarations.forEach((typeDeclaration) => {
                 const unionConstructors: {
                   name: string;
                   syntaxNode: SyntaxNode;
@@ -121,7 +121,7 @@ export class TreeUtils {
                 TreeUtils.descendantsOfType(
                   typeDeclaration,
                   "union_variant",
-                ).forEach(variant => {
+                ).forEach((variant) => {
                   const name = TreeUtils.findFirstNamedChildOfType(
                     "upper_case_identifier",
                     variant,
@@ -178,7 +178,7 @@ export class TreeUtils {
           exposed.push(
             ...this.findExposedTopLevelFunctions(
               tree,
-              exposedValues.map(a => a.text),
+              exposedValues.map((a) => a.text),
             ),
           );
 
@@ -208,7 +208,7 @@ export class TreeUtils {
                   TreeUtils.descendantsOfType(
                     typeDeclaration,
                     "union_variant",
-                  ).forEach(variant => {
+                  ).forEach((variant) => {
                     const unionConstructorName = TreeUtils.findFirstNamedChildOfType(
                       "upper_case_identifier",
                       variant,
@@ -269,7 +269,7 @@ export class TreeUtils {
     type: string,
     node: SyntaxNode,
   ): SyntaxNode | undefined {
-    return node.children.find(child => child.type === type);
+    return node.children.find((child) => child.type === type);
   }
 
   public static findAllNamedChildrenOfType(
@@ -277,8 +277,8 @@ export class TreeUtils {
     node: SyntaxNode,
   ): SyntaxNode[] | undefined {
     const result = Array.isArray(type)
-      ? node.children.filter(child => type.includes(child.type))
-      : node.children.filter(child => child.type === type);
+      ? node.children.filter((child) => type.includes(child.type))
+      : node.children.filter((child) => child.type === type);
 
     return result.length === 0 ? undefined : result;
   }
@@ -302,7 +302,7 @@ export class TreeUtils {
         }
       }
       const descendants = TreeUtils.descendantsOfType(node, "exposed_value");
-      return descendants.find(desc => desc.text === functionName);
+      return descendants.find((desc) => desc.text === functionName);
     }
   }
 
@@ -323,7 +323,7 @@ export class TreeUtils {
         }
       }
       const descendants = TreeUtils.descendantsOfType(module, "exposed_value");
-      return descendants.some(desc => desc.text === functionName);
+      return descendants.some((desc) => desc.text === functionName);
     }
     return false;
   }
@@ -347,7 +347,7 @@ export class TreeUtils {
         }
       }
       const descendants = TreeUtils.descendantsOfType(node, "exposed_type");
-      const match = descendants.find(desc => desc.text.startsWith(typeName));
+      const match = descendants.find((desc) => desc.text.startsWith(typeName));
       if (match && match.firstNamedChild) {
         return match.firstNamedChild;
       }
@@ -372,7 +372,7 @@ export class TreeUtils {
         }
       }
       const descendants = TreeUtils.descendantsOfType(module, "exposed_type");
-      return descendants.some(desc => desc.text.startsWith(typeName));
+      return descendants.some((desc) => desc.text.startsWith(typeName));
     }
     return false;
   }
@@ -387,7 +387,7 @@ export class TreeUtils {
     );
     if (unionVariants.length > 0) {
       return unionVariants.find(
-        a =>
+        (a) =>
           a.firstChild !== null &&
           a.firstChild.type === "upper_case_identifier" &&
           a.firstChild.text === unionConstructorName,
@@ -405,7 +405,7 @@ export class TreeUtils {
     );
     if (upperCaseQid.length > 0) {
       const result = upperCaseQid.filter(
-        a =>
+        (a) =>
           a.firstChild !== null &&
           a.firstChild.type === "upper_case_identifier" &&
           a.firstChild.text === unionConstructorName &&
@@ -452,12 +452,12 @@ export class TreeUtils {
     onlySearchTopLevel: boolean = true,
   ): SyntaxNode | undefined {
     const functions = onlySearchTopLevel
-      ? syntaxNode.children.filter(a => a.type === "value_declaration")
+      ? syntaxNode.children.filter((a) => a.type === "value_declaration")
       : syntaxNode.descendantsOfType("value_declaration");
 
     let ret;
     if (functions) {
-      ret = functions.find(elmFunction => {
+      ret = functions.find((elmFunction) => {
         const declaration = TreeUtils.findFirstNamedChildOfType(
           "function_declaration_left",
           elmFunction,
@@ -468,7 +468,7 @@ export class TreeUtils {
       });
 
       if (!ret) {
-        functions.forEach(elmFunction => {
+        functions.forEach((elmFunction) => {
           const declaration = TreeUtils.findFirstNamedChildOfType(
             "pattern",
             elmFunction,
@@ -479,7 +479,7 @@ export class TreeUtils {
             declaration.children[0].children
           ) {
             ret = declaration.children[0].children
-              .find(a => functionName === a.text)
+              .find((a) => functionName === a.text)
               ?.child(0);
             return;
           }
@@ -487,42 +487,6 @@ export class TreeUtils {
       }
       return ret;
     }
-  }
-
-  private static findExposedTopLevelFunctions(
-    tree: Tree,
-    functionNamesToFind: string[],
-  ): IExposing[] {
-    return tree.rootNode.children
-      .filter(
-        node =>
-          node.type === "value_declaration" &&
-          node.namedChildren.some(
-            (a: SyntaxNode) => a.type === "function_declaration_left",
-          ),
-      )
-      .map(node =>
-        node.namedChildren.find(
-          child =>
-            child.type === "function_declaration_left" &&
-            child.firstNamedChild?.text,
-        ),
-      )
-      .filter(this.notUndefined)
-      .map((node: SyntaxNode) => {
-        return { node, text: node.text };
-      })
-      .filter(node => functionNamesToFind.includes(node.text))
-      .map(
-        (functionNode): IExposing => {
-          return {
-            exposedUnionConstructors: undefined,
-            name: functionNode.text,
-            syntaxNode: functionNode.node,
-            type: "Function",
-          };
-        },
-      );
   }
 
   public static notUndefined<T>(x: T | undefined): x is T {
@@ -538,7 +502,7 @@ export class TreeUtils {
       tree.rootNode,
     );
     if (infixDeclarations) {
-      const operatorNode = infixDeclarations.find(a => {
+      const operatorNode = infixDeclarations.find((a) => {
         const operator = TreeUtils.findFirstNamedChildOfType(
           "operator_identifier",
           a,
@@ -568,7 +532,7 @@ export class TreeUtils {
     const types = this.findAllTypeDeclarations(tree);
     if (types) {
       return types.find(
-        a =>
+        (a) =>
           a.children.length > 1 &&
           a.children[1].type === "upper_case_identifier" &&
           a.children[1].text === typeName,
@@ -587,7 +551,7 @@ export class TreeUtils {
     const typeAliases = this.findAllTypeAliasDeclarations(tree);
     if (typeAliases) {
       return typeAliases.find(
-        a =>
+        (a) =>
           a.children.length > 2 &&
           a.children[2].type === "upper_case_identifier" &&
           a.children[2].text === typeAliasName,
@@ -599,7 +563,7 @@ export class TreeUtils {
     tree: Tree,
   ): SyntaxNode[] | undefined {
     const result = tree.rootNode.children.filter(
-      a => a.type === "value_declaration",
+      (a) => a.type === "value_declaration",
     );
     return result.length === 0 ? undefined : result;
   }
@@ -610,7 +574,7 @@ export class TreeUtils {
     const result: SyntaxNode[] = [];
     const typeRefs = TreeUtils.descendantsOfType(tree.rootNode, "type_ref");
     if (typeRefs.length > 0) {
-      typeRefs.forEach(a => {
+      typeRefs.forEach((a) => {
         if (
           a.firstChild &&
           a.firstChild.type === "upper_case_qid" &&
@@ -647,7 +611,7 @@ export class TreeUtils {
   ): SyntaxNode[] | undefined {
     const typeOrTypeAliasNodes = this.findAllTypeOrTypeAliasCalls(tree);
     if (typeOrTypeAliasNodes) {
-      const result: SyntaxNode[] = typeOrTypeAliasNodes.filter(a => {
+      const result: SyntaxNode[] = typeOrTypeAliasNodes.filter((a) => {
         return a.text === typeOrTypeAliasName;
       });
 
@@ -1055,7 +1019,7 @@ export class TreeUtils {
             const fieldNode = TreeUtils.descendantsOfType(
               variableType.node,
               "field_type",
-            ).find(f => {
+            ).find((f) => {
               return f.firstNamedChild?.text === fieldName;
             });
 
@@ -1086,7 +1050,7 @@ export class TreeUtils {
           const match = this.descendantsOfType(
             node.parent.firstChild,
             "lower_pattern",
-          ).find(a => a.text === functionParameterName);
+          ).find((a) => a.text === functionParameterName);
           if (match) {
             return match;
           } else {
@@ -1115,9 +1079,9 @@ export class TreeUtils {
         "anonymous_function_expr",
       );
       const match = anonymousFunctionExprNodes
-        .flatMap(a => a.children)
+        .flatMap((a) => a.children)
         .find(
-          child =>
+          (child) =>
             child.type === "pattern" && child.text === functionParameterName,
         );
 
@@ -1146,7 +1110,7 @@ export class TreeUtils {
       ) {
         if (node.parent.firstChild) {
           const match = node.parent.firstChild.firstChild.children.find(
-            a => a.type === "lower_pattern" && a.text === caseParameterName,
+            (a) => a.type === "lower_pattern" && a.text === caseParameterName,
           );
           if (match) {
             return match;
@@ -1176,7 +1140,7 @@ export class TreeUtils {
       const allFileImports = imports.imports[uri];
       if (allFileImports) {
         const foundNode = allFileImports.find(
-          a => a.alias === nodeName && a.type === type,
+          (a) => a.alias === nodeName && a.type === type,
         );
         if (foundNode) {
           return foundNode;
@@ -1192,7 +1156,7 @@ export class TreeUtils {
     const allImports = this.findAllImportNameNodes(tree);
     if (allImports) {
       return allImports.find(
-        a =>
+        (a) =>
           a.children.length > 1 &&
           a.children[1].type === "upper_case_qid" &&
           a.children[1].text === moduleName,
@@ -1207,7 +1171,7 @@ export class TreeUtils {
     const allImports = this.findAllImportNameNodes(tree);
     if (allImports) {
       const match = allImports.find(
-        a =>
+        (a) =>
           a.children.length > 1 &&
           a.children[1].type === "upper_case_qid" &&
           a.children[1].text === moduleName,
@@ -1235,7 +1199,7 @@ export class TreeUtils {
       );
       if (functionParameterNodes) {
         const matchIndex = functionParameterNodes.findIndex(
-          a => a.text === node.text,
+          (a) => a.text === node.text,
         );
 
         const typeAnnotationNodes = TreeUtils.findAllNamedChildrenOfType(
@@ -1275,7 +1239,7 @@ export class TreeUtils {
       node.parent.firstNamedChild
     ) {
       const parameterIndex =
-        node.parent.namedChildren.map(c => c.text).indexOf(node.text) - 1;
+        node.parent.namedChildren.map((c) => c.text).indexOf(node.text) - 1;
 
       const functionName = TreeUtils.descendantsOfType(
         node.parent.firstNamedChild,
@@ -1342,7 +1306,7 @@ export class TreeUtils {
 
     if (recordType) {
       const fieldTypes = TreeUtils.descendantsOfType(recordType, "field_type");
-      const fieldNode = fieldTypes.find(a => {
+      const fieldNode = fieldTypes.find((a) => {
         return (
           TreeUtils.findFirstNamedChildOfType("lower_case_identifier", a)
             ?.text === fieldName
@@ -1448,7 +1412,7 @@ export class TreeUtils {
     if (node) {
       const fieldTypes = TreeUtils.descendantsOfType(node, "field_type");
       if (fieldTypes.length > 0) {
-        fieldTypes.forEach(a => {
+        fieldTypes.forEach((a) => {
           const fieldName = TreeUtils.findFirstNamedChildOfType(
             "lower_case_identifier",
             a,
@@ -1553,10 +1517,46 @@ export class TreeUtils {
     );
   }
 
+  private static findExposedTopLevelFunctions(
+    tree: Tree,
+    functionNamesToFind: string[],
+  ): IExposing[] {
+    return tree.rootNode.children
+      .filter(
+        (node) =>
+          node.type === "value_declaration" &&
+          node.namedChildren.some(
+            (a: SyntaxNode) => a.type === "function_declaration_left",
+          ),
+      )
+      .map((node) =>
+        node.namedChildren.find(
+          (child) =>
+            child.type === "function_declaration_left" &&
+            child.firstNamedChild?.text,
+        ),
+      )
+      .filter(this.notUndefined)
+      .map((node: SyntaxNode) => {
+        return { node, text: node.text };
+      })
+      .filter((node) => functionNamesToFind.includes(node.text))
+      .map(
+        (functionNode): IExposing => {
+          return {
+            exposedUnionConstructors: undefined,
+            name: functionNode.text,
+            syntaxNode: functionNode.node,
+            type: "Function",
+          };
+        },
+      );
+  }
+
   // tslint:disable-next-line: no-identical-functions
   private static findAllImportNameNodes(tree: Tree): SyntaxNode[] | undefined {
     const result = tree.rootNode.children.filter(
-      a => a.type === "import_clause",
+      (a) => a.type === "import_clause",
     );
 
     return result.length === 0 ? undefined : result;
