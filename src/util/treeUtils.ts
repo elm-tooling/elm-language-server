@@ -16,7 +16,7 @@ export type NodeType =
 
 const functionNameRegex: RegExp = new RegExp("[a-zA-Z0-9_]+");
 
-export type Exposing = {
+export interface IExposing {
   name: string;
   syntaxNode: SyntaxNode;
   type: NodeType;
@@ -25,7 +25,7 @@ export type Exposing = {
     syntaxNode: SyntaxNode;
     accessibleWithoutPrefix: boolean;
   }[];
-}[];
+}
 
 export class TreeUtils {
   public static getModuleNameNode(tree: Tree): SyntaxNode | undefined {
@@ -52,7 +52,7 @@ export class TreeUtils {
 
   public static getModuleNameAndExposing(
     tree: Tree,
-  ): { moduleName: string; exposing: Exposing } | undefined {
+  ): { moduleName: string; exposing: IExposing[] } | undefined {
     const moduleDeclaration:
       | SyntaxNode
       | undefined = this.findModuleDeclaration(tree);
@@ -67,7 +67,7 @@ export class TreeUtils {
         moduleDeclaration,
       );
       if (exposingList) {
-        const exposed: Exposing = [];
+        const exposed: IExposing[] = [];
         if (TreeUtils.findFirstNamedChildOfType("double_dot", exposingList)) {
           if (moduleName) {
             const functions = TreeUtils.descendantsOfType(
@@ -175,17 +175,12 @@ export class TreeUtils {
             "exposed_value",
           );
 
-          for (const value of exposedValues) {
-            const functionNode = this.findFunction(tree.rootNode, value.text);
-            if (functionNode) {
-              exposed.push({
-                exposedUnionConstructors: undefined,
-                name: value.text,
-                syntaxNode: functionNode,
-                type: "Function",
-              });
-            }
-          }
+          exposed.push(
+            ...this.findExposedTopLevelFunctions(
+              tree,
+              exposedValues.map(a => a.text),
+            ),
+          );
 
           const exposedTypes = TreeUtils.descendantsOfType(
             exposingList,
@@ -492,6 +487,46 @@ export class TreeUtils {
       }
       return ret;
     }
+  }
+
+  private static findExposedTopLevelFunctions(
+    tree: Tree,
+    functionNamesToFind: string[],
+  ): IExposing[] {
+    return tree.rootNode.children
+      .filter(
+        node =>
+          node.type === "value_declaration" &&
+          node.namedChildren.some(
+            (a: SyntaxNode) => a.type === "function_declaration_left",
+          ),
+      )
+      .map(node =>
+        node.namedChildren.find(
+          child =>
+            child.type === "function_declaration_left" &&
+            child.firstNamedChild?.text,
+        ),
+      )
+      .filter(this.notUndefined)
+      .map((node: SyntaxNode) => {
+        return { node, text: node.text };
+      })
+      .filter(node => functionNamesToFind.includes(node.text))
+      .map(
+        (functionNode): IExposing => {
+          return {
+            exposedUnionConstructors: undefined,
+            name: functionNode.text,
+            syntaxNode: functionNode.node,
+            type: "Function",
+          };
+        },
+      );
+  }
+
+  public static notUndefined<T>(x: T | undefined): x is T {
+    return x !== undefined;
   }
 
   public static findOperator(
@@ -990,28 +1025,28 @@ export class TreeUtils {
       if (definitionNode) {
         return { node: definitionNode, uri, nodeType: "Operator" };
       }
-    } else if (
-      nodeAtPosition.parent?.parent?.type == "field_access_expr"
-    ) {
+    } else if (nodeAtPosition.parent?.parent?.type == "field_access_expr") {
       const variableNodes = this.descendantsOfType(
         nodeAtPosition.parent.parent,
-        "lower_case_identifier"
+        "lower_case_identifier",
       );
       if (variableNodes.length > 0) {
         const variableRef = TreeUtils.findDefinitionNodeByReferencingNode(
           variableNodes[0],
           uri,
           tree,
-          imports
+          imports,
         );
 
-        const variableDef = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(variableRef?.node);
+        const variableDef = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
+          variableRef?.node,
+        );
         if (variableDef?.firstNamedChild?.firstNamedChild) {
           const variableType = TreeUtils.findDefinitionNodeByReferencingNode(
             variableDef.firstNamedChild.firstNamedChild,
             uri,
             tree,
-            imports
+            imports,
           );
 
           const fieldName = nodeAtPosition.text;
@@ -1019,7 +1054,7 @@ export class TreeUtils {
           if (variableType) {
             const fieldNode = TreeUtils.descendantsOfType(
               variableType.node,
-              "field_type"
+              "field_type",
             ).find(f => {
               return f.firstNamedChild?.text === fieldName;
             });
@@ -1028,7 +1063,7 @@ export class TreeUtils {
               return {
                 node: fieldNode,
                 nodeType: "FieldType",
-                uri: variableType.uri
+                uri: variableType.uri,
               };
             }
           }

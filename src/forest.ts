@@ -1,5 +1,5 @@
 import { Tree } from "web-tree-sitter";
-import { Exposing, TreeUtils } from "./util/treeUtils";
+import { IExposing, TreeUtils } from "./util/treeUtils";
 
 export interface ITreeContainer {
   uri: string;
@@ -7,14 +7,14 @@ export interface ITreeContainer {
   referenced: boolean;
   moduleName?: string;
   maintainerAndPackageName?: string;
-  exposing?: Exposing;
+  exposing?: IExposing[];
   tree: Tree;
 }
 
 export interface IForest {
   treeIndex: ITreeContainer[];
   getTree(uri: string): Tree | undefined;
-  getExposingByModuleName(moduleName: string): Exposing | undefined;
+  getExposingByModuleName(moduleName: string): IExposing[] | undefined;
   getTreeByModuleName(moduleName: string): Tree | undefined;
   getByModuleName(moduleName: string): ITreeContainer | undefined;
   getByUri(uri: string): ITreeContainer | undefined;
@@ -37,7 +37,7 @@ export class Forest implements IForest {
     return result && result.tree;
   }
 
-  public getExposingByModuleName(moduleName: string): Exposing | undefined {
+  public getExposingByModuleName(moduleName: string): IExposing[] | undefined {
     const result = this.treeIndex.find(tree => tree.moduleName === moduleName);
     return result && result.exposing;
   }
@@ -65,7 +65,7 @@ export class Forest implements IForest {
   ): void {
     const moduleResult = TreeUtils.getModuleNameAndExposing(tree);
     let moduleName: string | undefined;
-    let exposing: Exposing | undefined;
+    let exposing: IExposing[] | undefined;
     if (moduleResult) {
       ({ moduleName, exposing } = moduleResult);
     }

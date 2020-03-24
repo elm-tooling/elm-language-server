@@ -1,6 +1,6 @@
 import Parser, { SyntaxNode, Tree } from "web-tree-sitter";
 import { IForest, ITreeContainer } from "./forest";
-import { Exposing, NodeType, TreeUtils } from "./util/treeUtils";
+import { IExposing, NodeType, TreeUtils } from "./util/treeUtils";
 
 export interface IImport {
   alias: string;
@@ -173,7 +173,7 @@ export class Imports implements IImports {
   private getPrefixedCompletions(
     moduleNameNode: SyntaxNode,
     importNode: SyntaxNode,
-    exposed: Exposing,
+    exposed: IExposing[],
     uri: string,
     maintainerAndPackageName?: string,
   ): IImport[] {
@@ -280,7 +280,7 @@ import Platform.Sub as Sub exposing ( Sub )
   }
 
   private getAllExposedCompletions(
-    exposed: Exposing,
+    exposed: IExposing[],
     moduleName: string,
     uri: string,
     maintainerAndPackageName?: string,
