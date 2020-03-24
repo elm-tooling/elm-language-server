@@ -177,7 +177,13 @@ export class Server implements ILanguageServer {
       elmMake,
     );
 
-    new CodeActionProvider(this.connection, elmAnalyse, elmMake);
+    new CodeActionProvider(
+      this.connection,
+      this.elmWorkspaces,
+      this.settings,
+      elmAnalyse,
+      elmMake,
+    );
 
     // tslint:disable:no-unused-expression
     new ASTProvider(
