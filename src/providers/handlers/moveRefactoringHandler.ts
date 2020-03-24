@@ -102,9 +102,7 @@ export class MoveRefactoringHandler {
           ? declarationNode.previousNamedSibling
           : undefined;
 
-      const functionName = isTypeNode
-        ? nodeAtPosition.text
-        : nodeAtPosition.parent?.text;
+      const functionName = nodeAtPosition.text;
 
       const moduleName = TreeUtils.getModuleNameNode(tree)?.text;
 

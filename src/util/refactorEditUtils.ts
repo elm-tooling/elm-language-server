@@ -84,7 +84,7 @@ export class RefactorEditUtils {
 
   public static changeQualifiedReferenceModule(
     node: SyntaxNode,
-    moduleName: string,
+    newModuleName: string,
   ): TextEdit | undefined {
     if (node.parent && node.parent.type === "value_qid") {
       const moduleNode = TreeUtils.findFirstNamedChildOfType(
@@ -104,7 +104,7 @@ export class RefactorEditUtils {
               moduleNode.endPosition.column,
             ),
           ),
-          moduleName,
+          newModuleName,
         );
       }
     }
