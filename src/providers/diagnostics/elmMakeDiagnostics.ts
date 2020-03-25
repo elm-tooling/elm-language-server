@@ -62,7 +62,7 @@ export class ElmMakeDiagnostics {
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
   private neededImports: Map<
     string,
-    { moduleName: string; valueName: string; diagnostic: Diagnostic }[]
+    { moduleName: string; valueName?: string; diagnostic: Diagnostic }[]
   > = new Map();
 
   constructor(
@@ -105,7 +105,7 @@ export class ElmMakeDiagnostics {
 
       diagnostics.forEach((diagnostic) => {
         if (diagnostic.message.startsWith("NAMING ERROR")) {
-          const text = sourceTree?.tree.rootNode.namedDescendantForPosition(
+          const valueNode = sourceTree?.tree.rootNode.namedDescendantForPosition(
             {
               column: diagnostic.range.start.character,
               row: diagnostic.range.start.line,
@@ -114,20 +114,36 @@ export class ElmMakeDiagnostics {
               column: diagnostic.range.end.character,
               row: diagnostic.range.end.line,
             },
-          ).text;
+          );
 
           // Find imports
-          exposedValues
-            .filter((exposed) => exposed.value === text)
-            .forEach((exposed, i) => {
-              if (i === 0) {
-                this.neededImports.get(uri)?.push({
-                  moduleName: exposed.module,
-                  valueName: exposed.value,
-                  diagnostic,
-                });
-              }
-            });
+          if (valueNode) {
+            exposedValues
+              .filter(
+                (exposed) =>
+                  exposed.value === valueNode.text ||
+                  (valueNode.type === "upper_case_qid" &&
+                    exposed.value ===
+                      valueNode.namedChildren[
+                        valueNode.namedChildren.length - 1
+                      ].text &&
+                    exposed.module === valueNode.namedChildren[0].text),
+              )
+              .forEach((exposed, i) => {
+                if (i === 0) {
+                  this.neededImports.get(uri)?.push({
+                    moduleName: exposed.module,
+                    valueName:
+                      valueNode.type !== "upper_case_qid"
+                        ? exposed.valueToImport
+                          ? exposed.valueToImport
+                          : exposed.value
+                        : undefined,
+                    diagnostic,
+                  });
+                }
+              });
+          }
         }
       });
     });
@@ -159,7 +175,7 @@ export class ElmMakeDiagnostics {
 
     diagnostics.forEach((diagnostic) => {
       if (diagnostic.message.startsWith("NAMING ERROR")) {
-        const text = sourceTree?.tree.rootNode.namedDescendantForPosition(
+        const valueNode = sourceTree?.tree.rootNode.namedDescendantForPosition(
           {
             column: diagnostic.range.start.character,
             row: diagnostic.range.start.line,
@@ -168,21 +184,35 @@ export class ElmMakeDiagnostics {
             column: diagnostic.range.end.character,
             row: diagnostic.range.end.line,
           },
-        ).text;
+        );
 
         // Add import quick fixes
-        exposedValues
-          .filter((exposed) => exposed.value === text)
-          .forEach((exposed) => {
-            result.push(
-              this.createImportQuickFix(
-                uri,
-                exposed.module,
-                exposed.value,
-                diagnostic,
-              ),
-            );
-          });
+        if (valueNode) {
+          exposedValues
+            .filter(
+              (exposed) =>
+                exposed.value === valueNode.text ||
+                (valueNode.type === "upper_case_qid" &&
+                  exposed.value ===
+                    valueNode.namedChildren[valueNode.namedChildren.length - 1]
+                      .text &&
+                  exposed.module === valueNode.namedChildren[0].text),
+            )
+            .forEach((exposed) => {
+              result.push(
+                this.createImportQuickFix(
+                  uri,
+                  diagnostic,
+                  exposed.module,
+                  valueNode.type !== "upper_case_qid"
+                    ? exposed.valueToImport
+                      ? exposed.valueToImport
+                      : exposed.value
+                    : undefined,
+                ),
+              );
+            });
+        }
 
         // Add import all quick fix
         const filteredImports =
@@ -275,9 +305,9 @@ export class ElmMakeDiagnostics {
 
   private createImportQuickFix(
     uri: string,
-    moduleName: string,
-    nameToImport: string,
     diagnostic: Diagnostic,
+    moduleName: string,
+    nameToImport?: string,
   ): CodeAction {
     const changes: {
       [uri: string]: TextEdit[];
@@ -303,7 +333,9 @@ export class ElmMakeDiagnostics {
       diagnostics: [diagnostic],
       edit: { changes },
       kind: CodeActionKind.QuickFix,
-      title: `Import '${nameToImport}' from module "${moduleName}"`,
+      title: nameToImport
+        ? `Import '${nameToImport}' from module "${moduleName}"`
+        : `Import module "${moduleName}"`,
       isPreferred: true,
     };
   }

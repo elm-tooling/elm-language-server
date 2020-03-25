@@ -140,7 +140,7 @@ export class RefactorEditUtils {
     tree: Tree,
     importData: {
       moduleName: string;
-      valueName: string;
+      valueName?: string;
     }[],
   ): TextEdit | undefined {
     const lastImportNode = TreeUtils.getLastImportNode(tree);
@@ -154,7 +154,11 @@ export class RefactorEditUtils {
               d.valueName === data.valueName,
           ) === i,
       )
-      .map((data) => `import ${data.moduleName} exposing (${data.valueName})`)
+      .map((data) =>
+        data.valueName
+          ? `import ${data.moduleName} exposing (${data.valueName})`
+          : `import ${data.moduleName}`,
+      )
       .join("\n");
 
     if (lastImportNode) {
