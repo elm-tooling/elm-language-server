@@ -41,7 +41,6 @@ export class CodeActionProvider {
       new MoveRefactoringHandler(this.connection, this.elmWorkspaces);
     }
 
-    new MoveRefactoringHandler(this.connection, this.elmWorkspaces);
     new ExposeUnexposeHandler(this.connection, this.elmWorkspaces);
   }
 
