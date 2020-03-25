@@ -146,7 +146,15 @@ export class RefactorEditUtils {
     const lastImportNode = TreeUtils.getLastImportNode(tree);
 
     const imports = importData
-      .map(data => `import ${data.moduleName} exposing (${data.valueName})`)
+      .filter(
+        (data, i, array) =>
+          array.findIndex(
+            (d) =>
+              d.moduleName === data.moduleName &&
+              d.valueName === data.valueName,
+          ) === i,
+      )
+      .map((data) => `import ${data.moduleName} exposing (${data.valueName})`)
       .join("\n");
 
     if (lastImportNode) {

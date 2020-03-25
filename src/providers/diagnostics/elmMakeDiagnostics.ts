@@ -105,7 +105,7 @@ export class ElmMakeDiagnostics {
 
       diagnostics.forEach((diagnostic) => {
         if (diagnostic.message.startsWith("NAMING ERROR")) {
-          const text = sourceTree?.tree.rootNode.descendantForPosition(
+          const text = sourceTree?.tree.rootNode.namedDescendantForPosition(
             {
               column: diagnostic.range.start.character,
               row: diagnostic.range.start.line,
@@ -159,7 +159,7 @@ export class ElmMakeDiagnostics {
 
     diagnostics.forEach((diagnostic) => {
       if (diagnostic.message.startsWith("NAMING ERROR")) {
-        const text = sourceTree?.tree.rootNode.descendantForPosition(
+        const text = sourceTree?.tree.rootNode.namedDescendantForPosition(
           {
             column: diagnostic.range.start.character,
             row: diagnostic.range.start.line,
@@ -185,7 +185,19 @@ export class ElmMakeDiagnostics {
           });
 
         // Add import all quick fix
-        if (this.neededImports.get(uri)?.length ?? 0 > 1) {
+        const filteredImports =
+          this.neededImports
+            .get(uri)
+            ?.filter(
+              (data, i, array) =>
+                array.findIndex(
+                  (d) =>
+                    data.moduleName === d.moduleName &&
+                    data.valueName === d.valueName,
+                ) === i,
+            ) ?? [];
+
+        if (filteredImports.length > 1) {
           // Sort so that the first diagnostic is this one
           this.neededImports
             .get(uri)
