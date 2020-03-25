@@ -188,6 +188,8 @@ export class ElmMakeDiagnostics {
           },
         );
 
+        let hasImportFix = false;
+
         // Add import quick fixes
         if (valueNode) {
           exposedValues
@@ -202,6 +204,7 @@ export class ElmMakeDiagnostics {
                   exposed.module === valueNode.namedChildren[0].text),
             )
             .forEach((exposed) => {
+              hasImportFix = true;
               result.push(
                 this.createImportQuickFix(
                   uri,
@@ -231,7 +234,7 @@ export class ElmMakeDiagnostics {
                 ) === i,
             ) ?? [];
 
-        if (filteredImports.length > 1) {
+        if (hasImportFix && filteredImports.length > 1) {
           // Sort so that the first diagnostic is this one
           this.neededImports
             .get(uri)

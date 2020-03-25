@@ -70,16 +70,16 @@ export class RefactorEditUtils {
     moduleName: string,
     valueName?: string,
   ): TextEdit | undefined {
-    const lastImportNode = TreeUtils.getLastImportNode(tree);
+    const lastImportNode =
+      TreeUtils.getLastImportNode(tree) ??
+      TreeUtils.getModuleNameNode(tree)?.parent;
 
-    if (lastImportNode) {
-      return TextEdit.insert(
-        Position.create(lastImportNode.endPosition.row + 1, 0),
-        valueName
-          ? `import ${moduleName} exposing (${valueName})`
-          : `import ${moduleName}`,
-      );
-    }
+    return TextEdit.insert(
+      Position.create(lastImportNode?.endPosition.row ?? 0 + 1, 0),
+      valueName
+        ? `import ${moduleName} exposing (${valueName})`
+        : `import ${moduleName}`,
+    );
   }
 
   public static changeQualifiedReferenceModule(
@@ -143,7 +143,9 @@ export class RefactorEditUtils {
       valueName?: string;
     }[],
   ): TextEdit | undefined {
-    const lastImportNode = TreeUtils.getLastImportNode(tree);
+    const lastImportNode =
+      TreeUtils.getLastImportNode(tree) ??
+      TreeUtils.getModuleNameNode(tree)?.parent;
 
     const imports = importData
       .filter(
@@ -161,12 +163,10 @@ export class RefactorEditUtils {
       )
       .join("\n");
 
-    if (lastImportNode) {
-      return TextEdit.insert(
-        Position.create(lastImportNode.endPosition.row + 1, 0),
-        imports,
-      );
-    }
+    return TextEdit.insert(
+      Position.create(lastImportNode?.endPosition.row ?? 0 + 1, 0),
+      imports,
+    );
   }
 
   private static removeValueFromExposingList(
