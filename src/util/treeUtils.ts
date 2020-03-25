@@ -1538,15 +1538,15 @@ export class TreeUtils {
       )
       .filter(this.notUndefined)
       .map((node: SyntaxNode) => {
-        return { node, text: node.text };
+        return { node, text: node.firstNamedChild?.text };
       })
-      .filter((node) => functionNamesToFind.includes(node.text))
+      .filter((node) => functionNamesToFind.includes(node.text!))
       .map(
         (functionNode): IExposing => {
           return {
             exposedUnionConstructors: undefined,
-            name: functionNode.text,
-            syntaxNode: functionNode.node,
+            name: functionNode.text!,
+            syntaxNode: functionNode.node.parent!,
             type: "Function",
           };
         },
