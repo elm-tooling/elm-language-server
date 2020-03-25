@@ -21,6 +21,7 @@ import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { ImportUtils } from "../../util/importUtils";
 
 const ELM_MAKE = "Elm";
+const NAMING_ERROR = "NAMING ERROR";
 const RANDOM_ID = randomBytes(16).toString("hex");
 export const CODE_ACTION_ELM_MAKE = `elmLS.elmMakeFixer-${RANDOM_ID}`;
 
@@ -99,12 +100,12 @@ export class ElmMakeDiagnostics {
     const exposedValues = ImportUtils.getPossibleImports(forest);
 
     // Get all possible imports from the diagnostics for import all
-    diagnostics.forEach((diagnostics, uri) => {
+    diagnostics.forEach((innerDiagnostics, uri) => {
       const sourceTree = forest.getByUri(uri);
       this.neededImports.set(uri, []);
 
-      diagnostics.forEach((diagnostic) => {
-        if (diagnostic.message.startsWith("NAMING ERROR")) {
+      innerDiagnostics.forEach((diagnostic) => {
+        if (diagnostic.message.startsWith(NAMING_ERROR)) {
           const valueNode = sourceTree?.tree.rootNode.namedDescendantForPosition(
             {
               column: diagnostic.range.start.character,
@@ -176,7 +177,7 @@ export class ElmMakeDiagnostics {
     const sourceTree = forest.getByUri(uri);
 
     diagnostics.forEach((diagnostic) => {
-      if (diagnostic.message.startsWith("NAMING ERROR")) {
+      if (diagnostic.message.startsWith(NAMING_ERROR)) {
         const valueNode = sourceTree?.tree.rootNode.namedDescendantForPosition(
           {
             column: diagnostic.range.start.character,
@@ -251,7 +252,7 @@ export class ElmMakeDiagnostics {
       }
 
       if (
-        diagnostic.message.startsWith("NAMING ERROR") ||
+        diagnostic.message.startsWith(NAMING_ERROR) ||
         diagnostic.message.startsWith("BAD IMPORT") ||
         diagnostic.message.startsWith("UNKNOWN LICENSE") ||
         diagnostic.message.startsWith("UNKNOWN PACKAGE") ||
