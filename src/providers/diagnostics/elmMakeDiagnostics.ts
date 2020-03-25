@@ -122,7 +122,8 @@ export class ElmMakeDiagnostics {
               .filter(
                 (exposed) =>
                   exposed.value === valueNode.text ||
-                  (valueNode.type === "upper_case_qid" &&
+                  ((valueNode.type === "upper_case_qid" ||
+                    valueNode.type === "value_qid") &&
                     exposed.value ===
                       valueNode.namedChildren[
                         valueNode.namedChildren.length - 1
@@ -134,7 +135,8 @@ export class ElmMakeDiagnostics {
                   this.neededImports.get(uri)?.push({
                     moduleName: exposed.module,
                     valueName:
-                      valueNode.type !== "upper_case_qid"
+                      valueNode.type !== "upper_case_qid" &&
+                      valueNode.type !== "value_qid"
                         ? exposed.valueToImport
                           ? exposed.valueToImport
                           : exposed.value
@@ -192,7 +194,8 @@ export class ElmMakeDiagnostics {
             .filter(
               (exposed) =>
                 exposed.value === valueNode.text ||
-                (valueNode.type === "upper_case_qid" &&
+                ((valueNode.type === "upper_case_qid" ||
+                  valueNode.type === "value_qid") &&
                   exposed.value ===
                     valueNode.namedChildren[valueNode.namedChildren.length - 1]
                       .text &&
@@ -204,7 +207,8 @@ export class ElmMakeDiagnostics {
                   uri,
                   diagnostic,
                   exposed.module,
-                  valueNode.type !== "upper_case_qid"
+                  valueNode.type !== "upper_case_qid" &&
+                    valueNode.type !== "value_qid"
                     ? exposed.valueToImport
                       ? exposed.valueToImport
                       : exposed.value
