@@ -136,6 +136,27 @@ export class RefactorEditUtils {
     }
   }
 
+  public static addImports(
+    tree: Tree,
+    importData: {
+      moduleName: string;
+      valueName: string;
+    }[],
+  ): TextEdit | undefined {
+    const lastImportNode = TreeUtils.getLastImportNode(tree);
+
+    const imports = importData
+      .map(data => `import ${data.moduleName} exposing (${data.valueName})`)
+      .join("\n");
+
+    if (lastImportNode) {
+      return TextEdit.insert(
+        Position.create(lastImportNode.endPosition.row + 1, 0),
+        imports,
+      );
+    }
+  }
+
   private static removeValueFromExposingList(
     exposedNodes: SyntaxNode[],
     valueName: string,

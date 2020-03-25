@@ -17,6 +17,8 @@ import { Settings } from "../../util/settings";
 import { IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
+import { RefactorEditUtils } from "../../util/refactorEditUtils";
+import { ImportUtils } from "../../util/importUtils";
 
 const ELM_MAKE = "Elm";
 const RANDOM_ID = randomBytes(16).toString("hex");
@@ -58,6 +60,10 @@ export interface IStyledString {
 
 export class ElmMakeDiagnostics {
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
+  private neededImports: Map<
+    string,
+    { moduleName: string; valueName: string; diagnostic: Diagnostic }[]
+  > = new Map();
 
   constructor(
     private connection: IConnection,
@@ -76,7 +82,7 @@ export class ElmMakeDiagnostics {
     const workspaceRootPath = this.elmWorkspaceMatcher
       .getElmWorkspaceFor(filePath)
       .getRootPath();
-    return await this.checkForErrors(
+    const diagnostics = await this.checkForErrors(
       workspaceRootPath.fsPath,
       filePath.fsPath,
     ).then((issues) => {
@@ -84,6 +90,49 @@ export class ElmMakeDiagnostics {
         ? new Map([[filePath.toString(), []]])
         : ElmDiagnosticsHelper.issuesToDiagnosticMap(issues, workspaceRootPath);
     });
+
+    // Handle import all
+    const forest = this.elmWorkspaceMatcher
+      .getElmWorkspaceFor(filePath)
+      .getForest();
+
+    const exposedValues = ImportUtils.getPossibleImports(forest);
+
+    // Get all possible imports from the diagnostics for import all
+    diagnostics.forEach((diagnostics, uri) => {
+      const sourceTree = forest.getByUri(uri);
+      this.neededImports.set(uri, []);
+
+      diagnostics.forEach((diagnostic) => {
+        if (diagnostic.message.startsWith("NAMING ERROR")) {
+          const text = sourceTree?.tree.rootNode.descendantForPosition(
+            {
+              column: diagnostic.range.start.character,
+              row: diagnostic.range.start.line,
+            },
+            {
+              column: diagnostic.range.end.character,
+              row: diagnostic.range.end.line,
+            },
+          ).text;
+
+          // Find imports
+          exposedValues
+            .filter((exposed) => exposed.value === text)
+            .forEach((exposed, i) => {
+              if (i === 0) {
+                this.neededImports.get(uri)?.push({
+                  moduleName: exposed.module,
+                  valueName: exposed.value,
+                  diagnostic,
+                });
+              }
+            });
+        }
+      });
+    });
+
+    return diagnostics;
   };
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
@@ -100,7 +149,58 @@ export class ElmMakeDiagnostics {
     uri: string,
   ): CodeAction[] {
     const result: CodeAction[] = [];
+
+    const forest = this.elmWorkspaceMatcher
+      .getElmWorkspaceFor(URI.parse(uri))
+      .getForest();
+
+    const exposedValues = ImportUtils.getPossibleImports(forest);
+    const sourceTree = forest.getByUri(uri);
+
     diagnostics.forEach((diagnostic) => {
+      if (diagnostic.message.startsWith("NAMING ERROR")) {
+        const text = sourceTree?.tree.rootNode.descendantForPosition(
+          {
+            column: diagnostic.range.start.character,
+            row: diagnostic.range.start.line,
+          },
+          {
+            column: diagnostic.range.end.character,
+            row: diagnostic.range.end.line,
+          },
+        ).text;
+
+        // Add import quick fixes
+        exposedValues
+          .filter((exposed) => exposed.value === text)
+          .forEach((exposed) => {
+            result.push(
+              this.createImportQuickFix(
+                uri,
+                exposed.module,
+                exposed.value,
+                diagnostic,
+              ),
+            );
+          });
+
+        // Add import all quick fix
+        if (this.neededImports.get(uri)?.length ?? 0 > 1) {
+          // Sort so that the first diagnostic is this one
+          this.neededImports
+            .get(uri)
+            ?.sort((a, b) =>
+              a.diagnostic.message === diagnostic.message
+                ? -1
+                : b.diagnostic.message === diagnostic.message
+                ? 1
+                : 0,
+            );
+
+          result.push(this.createImportAllQuickFix(uri));
+        }
+      }
+
       if (
         diagnostic.message.startsWith("NAMING ERROR") ||
         diagnostic.message.startsWith("BAD IMPORT") ||
@@ -158,6 +258,72 @@ export class ElmMakeDiagnostics {
       edit: { changes: map },
       kind: CodeActionKind.QuickFix,
       title: `Change to \`${replaceWith}\``,
+    };
+  }
+
+  private createImportQuickFix(
+    uri: string,
+    moduleName: string,
+    nameToImport: string,
+    diagnostic: Diagnostic,
+  ): CodeAction {
+    const changes: {
+      [uri: string]: TextEdit[];
+    } = {};
+    if (!changes[uri]) {
+      changes[uri] = [];
+    }
+
+    const tree = this.elmWorkspaceMatcher
+      .getElmWorkspaceFor(URI.parse(uri))
+      .getForest()
+      .getTree(uri);
+
+    if (tree) {
+      const edit = RefactorEditUtils.addImport(tree, moduleName, nameToImport);
+
+      if (edit) {
+        changes[uri].push(edit);
+      }
+    }
+
+    return {
+      diagnostics: [diagnostic],
+      edit: { changes },
+      kind: CodeActionKind.QuickFix,
+      title: `Import '${nameToImport}' from module "${moduleName}"`,
+      isPreferred: true,
+    };
+  }
+
+  private createImportAllQuickFix(uri: string): CodeAction {
+    const changes: {
+      [uri: string]: TextEdit[];
+    } = {};
+    if (!changes[uri]) {
+      changes[uri] = [];
+    }
+
+    const tree = this.elmWorkspaceMatcher
+      .getElmWorkspaceFor(URI.parse(uri))
+      .getForest()
+      .getTree(uri);
+
+    const imports = this.neededImports.get(uri);
+
+    if (tree && imports) {
+      const edit = RefactorEditUtils.addImports(tree, imports);
+
+      if (edit) {
+        changes[uri].push(edit);
+      }
+    }
+
+    return {
+      diagnostics: imports?.map((data) => data.diagnostic),
+      edit: { changes },
+      kind: CodeActionKind.QuickFix,
+      title: `Add all missing imports`,
     };
   }
 
