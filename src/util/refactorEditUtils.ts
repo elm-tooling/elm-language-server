@@ -75,10 +75,15 @@ export class RefactorEditUtils {
       TreeUtils.getModuleNameNode(tree)?.parent;
 
     return TextEdit.insert(
-      Position.create(lastImportNode?.endPosition.row ?? 0 + 1, 0),
+      Position.create(
+        lastImportNode?.endPosition.row
+          ? lastImportNode?.endPosition.row + 1
+          : 1,
+        0,
+      ),
       valueName
-        ? `import ${moduleName} exposing (${valueName})`
-        : `import ${moduleName}`,
+        ? `import ${moduleName} exposing (${valueName})\n`
+        : `import ${moduleName}\n`,
     );
   }
 
@@ -161,10 +166,16 @@ export class RefactorEditUtils {
           ? `import ${data.moduleName} exposing (${data.valueName})`
           : `import ${data.moduleName}`,
       )
-      .join("\n");
+      .join("\n")
+      .concat("\n");
 
     return TextEdit.insert(
-      Position.create(lastImportNode?.endPosition.row ?? 0 + 1, 0),
+      Position.create(
+        lastImportNode?.endPosition.row
+          ? lastImportNode?.endPosition.row + 1
+          : 1,
+        0,
+      ),
       imports,
     );
   }
