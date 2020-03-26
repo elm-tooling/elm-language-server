@@ -122,10 +122,6 @@ export class CodeActionProvider {
         if (edit) {
           codeActions.push({
             title: "Unexpose Function",
-            command: Command.create("Unexpose", "elm.unexpose", {
-              uri: params.textDocument.uri,
-              name: functionName,
-            }),
             edit: {
               changes: {
                 [params.textDocument.uri]: [edit],
