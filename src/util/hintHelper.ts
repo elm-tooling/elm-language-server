@@ -31,7 +31,9 @@ export class HintHelper {
   ): string {
     return this.formatHint(
       annotation,
-      `Refers to the \`${fieldName}\` field on \`${parentName}\``,
+      parentName
+        ? `Refers to the \`${fieldName}\` field on \`${parentName}\``
+        : `Refers to the \`${fieldName}\` field`,
     );
   }
 
