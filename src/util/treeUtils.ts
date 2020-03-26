@@ -44,7 +44,10 @@ export class TreeUtils {
     const moduleNode = TreeUtils.findModuleDeclaration(tree);
 
     if (moduleNode) {
-      return TreeUtils.descendantsOfType(moduleNode, "exposed_value");
+      return [
+        ...TreeUtils.descendantsOfType(moduleNode, "exposed_value"),
+        ...TreeUtils.descendantsOfType(moduleNode, "exposed_type"),
+      ];
     }
 
     return [];

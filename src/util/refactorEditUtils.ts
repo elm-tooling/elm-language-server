@@ -173,7 +173,9 @@ export class RefactorEditUtils {
     exposedNodes: SyntaxNode[],
     valueName: string,
   ): TextEdit | undefined {
-    const exposedNode = exposedNodes.find((node) => node.text === valueName);
+    const exposedNode = exposedNodes.find(
+      (node) => node.text === valueName || node.text === `${valueName}(..)`,
+    );
 
     if (exposedNode) {
       let startPosition = exposedNode.startPosition;

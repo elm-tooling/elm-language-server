@@ -13,6 +13,7 @@ import { ElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
 import { TreeUtils } from "../util/treeUtils";
+import { Settings } from "../util/settings";
 
 type CodeLensType = "exposed" | "referenceCounter";
 type CodeLensResult = CodeLens[] | null | undefined;
@@ -21,6 +22,7 @@ export class CodeLensProvider {
   constructor(
     private readonly connection: IConnection,
     elmWorkspaces: ElmWorkspace[],
+    private settings: Settings,
   ) {
     this.connection.onCodeLens(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: CodeLensParams) =>
@@ -83,7 +85,18 @@ export class CodeLensProvider {
           const exposed = data.isFunction
             ? TreeUtils.isExposedFunction(tree, data.nameNode)
             : TreeUtils.isExposedTypeOrTypeAlias(tree, data.nameNode);
-          codelens.command = exposed
+          codelens.command = this.settings.extendedCapabilities
+            ?.exposeUnexposeSupport
+            ? exposed
+              ? Command.create("exposed", "elm.unexpose", {
+                  uri: data.uri,
+                  name: data.nameNode,
+                })
+              : Command.create("local", "elm.expose", {
+                  uri: data.uri,
+                  name: data.nameNode,
+                })
+            : exposed
             ? Command.create("exposed", "")
             : Command.create("local", "");
 

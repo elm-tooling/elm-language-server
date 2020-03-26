@@ -26,3 +26,22 @@ export interface MoveDestination {
   path: string;
   uri: string;
 }
+
+export const ExposeRequest = new RequestType<
+  ExposeUnexposeParams,
+  void,
+  void,
+  void
+>("elm/expose");
+
+export interface ExposeUnexposeParams {
+  uri: string;
+  name: string;
+}
+
+export const UnexposeRequest = new RequestType<
+  ExposeUnexposeParams,
+  void,
+  void,
+  void
+>("elm/unexpose");

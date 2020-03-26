@@ -11,6 +11,7 @@ export interface IClientSettings {
 
 export interface IExtendedCapabilites {
   moveFunctionRefactoringSupport: boolean;
+  exposeUnexposeSupport: boolean;
 }
 
 export type ElmAnalyseTrigger = "change" | "save" | "never";
