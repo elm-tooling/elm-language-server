@@ -41,6 +41,7 @@ export class CodeActionProvider {
       new MoveRefactoringHandler(this.connection, this.elmWorkspaces);
     }
 
+    // tslint:disable-next-line: no-unused-expression
     new ExposeUnexposeHandler(this.connection, this.elmWorkspaces);
   }
 
