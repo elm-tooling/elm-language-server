@@ -7,10 +7,7 @@ import { ExposeUnexposeParams } from "../../protocol";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 
 export class ExposeUnexposeHandler {
-  constructor(
-    private connection: IConnection,
-    private elmWorkspaces: ElmWorkspace[],
-  ) {
+  constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {
     this.connection.onRequest(
       ExposeRequest,
       new ElmWorkspaceMatcher(elmWorkspaces, (params: ExposeUnexposeParams) =>

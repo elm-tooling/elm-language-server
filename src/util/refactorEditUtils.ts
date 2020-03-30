@@ -8,7 +8,13 @@ export class RefactorEditUtils {
     valueName: string,
   ): TextEdit | undefined {
     const exposedNodes = TreeUtils.getModuleExposingListNodes(tree);
-    return this.removeValueFromExposingList(exposedNodes, valueName);
+
+    if (exposedNodes.length <= 1) {
+      // We can't remove the last exposed one and removing the whole module annotation would just lead to elm-format readding it
+      return undefined;
+    } else {
+      return this.removeValueFromExposingList(exposedNodes, valueName);
+    }
   }
 
   public static exposeValueInModule(
