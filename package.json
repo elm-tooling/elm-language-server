@@ -1,7 +1,7 @@
 {
   "name": "@elm-tooling/elm-language-server",
   "description": "Implementation of an elm language server in node.",
-  "version": "1.6.3",
+  "version": "1.7.0",
   "author": "Kolja Lampe",
   "license": "MIT",
   "files": [
@@ -28,9 +28,9 @@
   },
   "devDependencies": {
     "@types/jest": "^25.1.4",
-    "@types/node": "13.9.3",
+    "@types/node": "13.9.8",
     "copyfiles": "^2.2.0",
-    "jest": "^25.1.0",
+    "jest": "^25.2.4",
     "prettier": "^2.0.2",
     "pretty-quick": "^2.0.1",
     "tree-sitter-cli": "^0.16.5",
@@ -38,7 +38,7 @@
     "ts-jest": "^25.2.1",
     "tslint": "^6.1.0",
     "tslint-config-prettier": "^1.18.0",
-    "tslint-plugin-prettier": "^2.2.0",
+    "tslint-plugin-prettier": "^2.3.0",
     "tslint-sonarts": "^1.9.0",
     "typescript": "3.8.3"
   },

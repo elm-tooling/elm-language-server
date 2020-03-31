@@ -1,5 +1,18 @@
 # Change Log
 
+## 1.7.0
+
+- Add diagnostic on unknown symbols and offer importing via codeAction (needs the file to be save and the compiler to run)
+- Support exposing/unexposing functions and types via codeLense or codeAction
+- Add support for move function refactoring
+- Fix init taking long when using files with thousands of functions
+- Add new snippet for if-else conditions
+- Better completions for record update syntax
+- Added completions for basic keywords like if, then, else, let etc.
+- Improved hovers for types aliases
+- Added jump to definition for fields of records
+- Better handling of invalid renames
+
 ## 1.6.3
 
 - Improved goto definition, find references and rename for anonymous functions, let definitions, destructured functions in let definitions, destructured parameters and case branches
