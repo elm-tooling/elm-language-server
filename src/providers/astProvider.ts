@@ -53,6 +53,23 @@ export class ASTProvider {
     }
     if (tree) {
       forest.setTree(document.uri, true, true, tree);
+
+      // Figure out if we have files importing our changed file - update them
+      const urisToRefresh = [];
+      for (const uri in imports.imports) {
+        if (imports.imports.hasOwnProperty(uri)) {
+          const fileImports = imports.imports[uri];
+
+          if (fileImports.some((a) => a.fromUri === document.uri)) {
+            urisToRefresh.push(uri);
+          }
+        }
+      }
+      urisToRefresh.forEach((a) => {
+        imports.updateImports(a, forest.getTree(a)!, forest);
+      });
+
+      // Refresh imports of the calling file
       imports.updateImports(document.uri, tree, forest);
     }
   };
