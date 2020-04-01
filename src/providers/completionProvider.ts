@@ -144,22 +144,13 @@ export class CompletionProvider {
           replaceRange,
         );
       } else if (
-        nodeAtPosition.parent?.parent?.type === "exposing_list" &&
-        nodeAtPosition.parent?.parent?.parent?.type === "import_clause" &&
-        nodeAtPosition.parent?.parent.firstNamedChild?.type === "exposing"
-      ) {
-        return this.getExposedFromModule(
-          forest,
-          nodeAtPosition.parent.parent,
-          replaceRange,
-        );
-      } else if (
-        (nodeAtPosition.type === "comma" ||
+        (nodeAtPosition.parent?.parent?.type === "exposing_list" &&
+          nodeAtPosition.parent?.parent?.parent?.type === "import_clause" &&
+          nodeAtPosition.parent?.parent.firstNamedChild?.type === "exposing") ||
+        ((nodeAtPosition.type === "comma" ||
           nodeAtPosition.type === "right_parenthesis") &&
-        nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "ERROR" &&
-        nodeAtPosition.parent.parent &&
-        nodeAtPosition.parent.parent.type === "exposing_list"
+          nodeAtPosition.parent?.type === "ERROR" &&
+          nodeAtPosition.parent?.parent?.type === "exposing_list")
       ) {
         return this.getExposedFromModule(
           forest,
