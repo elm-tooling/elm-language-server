@@ -1222,6 +1222,33 @@ export class TreeUtils {
     }
   }
 
+  public static isValueImported(tree: Tree, valueName: string): boolean {
+    const allImports = this.findAllImportNameNodes(tree);
+
+    if (allImports) {
+      allImports.find((importClause) => {
+        const exposingList = TreeUtils.findFirstNamedChildOfType(
+          "exposing_list",
+          importClause,
+        );
+
+        const exposedValues = TreeUtils.descendantsOfType(
+          importClause,
+          "exposed_value",
+        );
+
+        if (exposedValues.find((val) => val.text === valueName)) {
+          return true;
+        }
+
+        if (exposingList?.text === "(..)") {
+        }
+      });
+    }
+
+    return false;
+  }
+
   public static findImportNameNode(
     tree: Tree,
     moduleName: string,

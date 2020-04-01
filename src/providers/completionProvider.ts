@@ -19,6 +19,8 @@ import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
 import { TreeUtils } from "../util/treeUtils";
 import RANKING_LIST from "./ranking";
+import { ImportUtils } from "../util/importUtils";
+import { RefactorEditUtils } from "../util/refactorEditUtils";
 
 export type CompletionResult = CompletionItem[] | null | undefined;
 
@@ -220,6 +222,14 @@ export class CompletionProvider {
 
       completions.push(...this.createSnippets());
       completions.push(...this.getKeywords());
+      completions.push(
+        ...this.getPossibleImports(
+          replaceRange,
+          forest,
+          tree,
+          params.textDocument.uri,
+        ),
+      );
 
       return completions;
     }
@@ -542,6 +552,8 @@ export class CompletionProvider {
     label: string,
     range: Range,
     sortPrefix: string,
+    detail?: string,
+    addImportTextEdit?: TextEdit,
   ): CompletionItem {
     return this.createCompletion(
       markdownDocumentation,
@@ -549,6 +561,8 @@ export class CompletionProvider {
       label,
       range,
       sortPrefix,
+      detail,
+      addImportTextEdit ? [addImportTextEdit] : undefined,
     );
   }
 
@@ -585,6 +599,8 @@ export class CompletionProvider {
     label: string,
     range: Range,
     sortPrefix: string,
+    detail?: string,
+    addImportTextEdit?: TextEdit,
   ): CompletionItem {
     return this.createCompletion(
       markdownDocumentation,
@@ -592,6 +608,8 @@ export class CompletionProvider {
       label,
       range,
       sortPrefix,
+      detail,
+      addImportTextEdit ? [addImportTextEdit] : undefined,
     );
   }
 
@@ -644,6 +662,8 @@ export class CompletionProvider {
     label: string,
     range: Range,
     sortPrefix: string,
+    detail?: string,
+    additionalTextEdits?: TextEdit[],
   ): CompletionItem {
     return {
       documentation: markdownDocumentation
@@ -656,6 +676,8 @@ export class CompletionProvider {
       label,
       sortText: `${sortPrefix}_${label}`,
       textEdit: TextEdit.replace(range, label),
+      detail,
+      additionalTextEdits,
     };
   }
 
@@ -790,6 +812,60 @@ export class CompletionProvider {
       }
       result.push(...this.findDefinitionsForScope(node.parent, tree, range));
     }
+
+    return result;
+  }
+
+  private getPossibleImports(
+    range: Range,
+    forest: IForest,
+    tree: Tree,
+    uri: string,
+  ): CompletionItem[] {
+    const result: CompletionItem[] = [];
+    ImportUtils.getPossibleImports(forest, uri)
+      .filter(
+        (imp) =>
+          imp.value !== "view" &&
+          imp.value !== "init" &&
+          imp.value !== "update" &&
+          imp.value !== "subscriptions" &&
+          imp.value !== "Model" &&
+          imp.value !== "Msg",
+      )
+      .forEach((possibleImport) => {
+        const documentation = HintHelper.createHint(possibleImport.node);
+        const detail = `Auto import from module '${possibleImport.module}'`;
+        const importTextEdit = RefactorEditUtils.addImport(
+          tree,
+          possibleImport.module,
+          possibleImport.valueToImport ?? possibleImport.value,
+        );
+
+        if (possibleImport.type === "Function") {
+          result.push(
+            this.createFunctionCompletion(
+              documentation,
+              possibleImport.value,
+              range,
+              "d",
+              detail,
+              importTextEdit,
+            ),
+          );
+        } else if (possibleImport.type === "TypeAlias") {
+          result.push(
+            this.createTypeAliasCompletion(
+              documentation,
+              possibleImport.value,
+              range,
+              "d",
+              detail,
+              importTextEdit,
+            ),
+          );
+        }
+      });
 
     return result;
   }

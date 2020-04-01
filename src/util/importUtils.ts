@@ -1,6 +1,7 @@
 import { IForest } from "../forest";
 import RANKING_LIST from "../providers/ranking";
-import { TreeUtils } from "./treeUtils";
+import { TreeUtils, NodeType } from "./treeUtils";
+import { SyntaxNode, Tree } from "web-tree-sitter";
 
 export class ImportUtils {
   public static getPossibleImports(
@@ -9,6 +10,8 @@ export class ImportUtils {
   ): {
     module: string;
     value: string;
+    type: NodeType;
+    node: SyntaxNode;
     valueToImport?: string;
     package?: string;
   }[] {
@@ -17,42 +20,61 @@ export class ImportUtils {
     const exposedValues: {
       module: string;
       value: string;
+      type: NodeType;
+      node: SyntaxNode;
       valueToImport?: string;
       package?: string;
     }[] = [];
 
     // Find all exposed values that could be imported
     if (forest) {
-      forest.treeIndex.forEach((tree) => {
-        tree.exposing?.forEach((exposed) => {
-          const module = tree.moduleName;
-          if (module) {
-            exposedValues.push({
-              module,
-              value: exposed.name,
-              package: tree.maintainerAndPackageName,
-            });
+      forest.treeIndex
+        .filter(
+          (tree) =>
+            tree.moduleName !== "Basics" &&
+            tree.moduleName !== "Debug" &&
+            tree.moduleName !== "Tuple",
+        )
+        .forEach((tree) => {
+          tree.exposing
+            ?.filter(
+              (exposed) =>
+                tree.uri !== uri ||
+                !TreeUtils.isValueImported(tree.tree, exposed.name),
+            )
+            .forEach((exposed) => {
+              const module = tree.moduleName;
+              if (module) {
+                exposedValues.push({
+                  module,
+                  value: exposed.name,
+                  package: tree.maintainerAndPackageName,
+                  type: exposed.type,
+                  node: exposed.syntaxNode,
+                });
 
-            exposed.exposedUnionConstructors?.forEach((exp) => {
-              if (exp.syntaxNode.parent) {
-                const value = TreeUtils.findFirstNamedChildOfType(
-                  "upper_case_identifier",
-                  exp.syntaxNode.parent,
-                )?.text;
+                exposed.exposedUnionConstructors?.forEach((exp) => {
+                  if (exp.syntaxNode.parent) {
+                    const value = TreeUtils.findFirstNamedChildOfType(
+                      "upper_case_identifier",
+                      exp.syntaxNode.parent,
+                    )?.text;
 
-                if (value) {
-                  exposedValues.push({
-                    module,
-                    value: exp.name,
-                    valueToImport: `${value}(..)`,
-                    package: tree.maintainerAndPackageName,
-                  });
-                }
+                    if (value) {
+                      exposedValues.push({
+                        module,
+                        value: exp.name,
+                        valueToImport: `${value}(..)`,
+                        package: tree.maintainerAndPackageName,
+                        type: "UnionConstructor",
+                        node: exp.syntaxNode,
+                      });
+                    }
+                  }
+                });
               }
             });
-          }
         });
-      });
     }
 
     const ranking = RANKING_LIST as {
