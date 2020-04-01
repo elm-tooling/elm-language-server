@@ -134,16 +134,23 @@ export class CompletionProvider {
       } else if (previousWord && previousWord === "import") {
         return this.getImportableModules(forest, replaceRange);
       } else if (
-        nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "exposing_list" &&
-        nodeAtPosition.parent.parent &&
-        nodeAtPosition.parent.parent.type === "import_clause" &&
-        nodeAtPosition.parent.firstNamedChild &&
-        nodeAtPosition.parent.firstNamedChild.type === "exposing"
+        nodeAtPosition.parent?.type === "exposing_list" &&
+        nodeAtPosition.parent.parent?.type === "import_clause" &&
+        nodeAtPosition.parent.firstNamedChild?.type === "exposing"
       ) {
         return this.getExposedFromModule(
           forest,
           nodeAtPosition.parent,
+          replaceRange,
+        );
+      } else if (
+        nodeAtPosition.parent?.parent?.type === "exposing_list" &&
+        nodeAtPosition.parent?.parent?.parent?.type === "import_clause" &&
+        nodeAtPosition.parent?.parent.firstNamedChild?.type === "exposing"
+      ) {
+        return this.getExposedFromModule(
+          forest,
+          nodeAtPosition.parent.parent,
           replaceRange,
         );
       } else if (
