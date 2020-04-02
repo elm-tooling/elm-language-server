@@ -53,7 +53,7 @@ export class ImportUtils {
     }
 
     const ranking = RANKING_LIST as {
-      [index: string]: string;
+      [index: string]: string | undefined;
     };
 
     exposedValues.sort((a, b) => {
@@ -62,7 +62,18 @@ export class ImportUtils {
       } else if (a.package && !b.package) {
         return 1;
       } else if (a.package && b.package) {
-        return ranking[a.package].localeCompare(ranking[b.package]);
+        const aRanking = ranking[a.package];
+        const bRanking = ranking[b.package];
+
+        if (aRanking && bRanking) {
+          return aRanking.localeCompare(bRanking);
+        } else if (aRanking) {
+          return 1;
+        } else if (bRanking) {
+          return -1;
+        } else {
+          return 0;
+        }
       } else {
         return 0;
       }
