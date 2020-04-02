@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.7.1
+
+- Fix exposing list params not getting completed for imports
+- Fix possible imports for packages not in ranking list
+- Prevent imports from getting out of date
+
 ## 1.7.0
 
 - Add diagnostic on unknown symbols and offer importing via codeAction (needs the file to be save and the compiler to run)
