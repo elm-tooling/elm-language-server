@@ -166,6 +166,29 @@ export class CompletionProvider {
           params.textDocument.uri,
           forest,
         );
+      } else if (
+        (nodeAtPosition.type === "field_access_segment" ||
+          nodeAtPosition.parent?.type === "field_access_segment") &&
+        nodeAtPosition.parent
+      ) {
+        const dotIndex = (
+          TreeUtils.findFirstNamedChildOfType("dot", nodeAtPosition) ??
+          TreeUtils.findFirstNamedChildOfType("dot", nodeAtPosition.parent)
+        )?.startPosition.column;
+
+        if (dotIndex) {
+          return this.getRecordCompletions(
+            nodeAtPosition,
+            tree,
+            Range.create(
+              Position.create(params.position.line, dotIndex + 1),
+              params.position,
+            ),
+            elmWorkspace.getImports(),
+            params.textDocument.uri,
+            forest,
+          );
+        }
       }
 
       completions.push(
