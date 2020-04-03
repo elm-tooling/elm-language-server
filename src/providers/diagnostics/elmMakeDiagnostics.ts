@@ -202,7 +202,11 @@ export class ElmMakeDiagnostics {
                   exposed.value ===
                     valueNode.namedChildren[valueNode.namedChildren.length - 1]
                       .text &&
-                  exposed.module === valueNode.namedChildren[0].text),
+                  exposed.module ===
+                    valueNode.namedChildren
+                      .slice(0, valueNode.namedChildren.length - 2) // Dots are also namedNodes
+                      .map((a) => a.text)
+                      .join("")),
             )
             .forEach((exposed) => {
               hasImportFix = true;
