@@ -164,6 +164,7 @@ export class CompletionProvider {
           replaceRange,
           elmWorkspace.getImports(),
           params.textDocument.uri,
+          forest,
         );
       }
 
@@ -451,6 +452,7 @@ export class CompletionProvider {
     range: Range,
     imports: IImports,
     uri: string,
+    forest: IForest,
   ): CompletionItem[] {
     const result: CompletionItem[] = [];
     let typeDeclarationNode = TreeUtils.getTypeAliasOfRecord(
@@ -458,7 +460,8 @@ export class CompletionProvider {
       tree,
       imports,
       uri,
-    );
+      forest,
+    )?.node;
 
     if (!typeDeclarationNode && node.parent?.parent) {
       typeDeclarationNode = TreeUtils.getTypeAliasOfRecordField(
@@ -466,7 +469,8 @@ export class CompletionProvider {
         tree,
         imports,
         uri,
-      );
+        forest,
+      )?.node;
     }
 
     if (!typeDeclarationNode && node.parent?.parent) {

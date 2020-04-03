@@ -1,6 +1,7 @@
 import { Position } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IImport, IImports } from "../imports";
+import { IForest } from "../forest";
 
 export type NodeType =
   | "Function"
@@ -658,6 +659,7 @@ export class TreeUtils {
     uri: string,
     tree: Tree,
     imports: IImports,
+    forest?: IForest,
   ): { node: SyntaxNode; uri: string; nodeType: NodeType } | undefined {
     if (
       nodeAtPosition.parent &&
@@ -1005,12 +1007,15 @@ export class TreeUtils {
           imports,
         );
 
-        const variableDef = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
-          variableRef?.node,
-        );
-        if (variableDef?.firstNamedChild?.firstNamedChild) {
+        const variableDef =
+          TreeUtils.getTypeOrTypeAliasOfFunctionParameter(variableRef?.node) ??
+          TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
+            variableRef?.node,
+          );
+
+        if (variableDef) {
           const variableType = TreeUtils.findDefinitionNodeByReferencingNode(
-            variableDef.firstNamedChild.firstNamedChild,
+            variableDef.firstNamedChild?.firstNamedChild ?? variableDef,
             uri,
             tree,
             imports,
@@ -1034,6 +1039,36 @@ export class TreeUtils {
               };
             }
           }
+        }
+      }
+    } else if (
+      nodeAtPosition.parent?.parent?.type === "record_expr" &&
+      forest
+    ) {
+      const typeDef = TreeUtils.getTypeAliasOfRecord(
+        nodeAtPosition,
+        tree,
+        imports,
+        uri,
+        forest,
+      );
+
+      const fieldName = nodeAtPosition.text;
+
+      if (typeDef) {
+        const fieldNode = TreeUtils.descendantsOfType(
+          typeDef.node,
+          "field_type",
+        ).find((f) => {
+          return f.firstNamedChild?.text === fieldName;
+        });
+
+        if (fieldNode) {
+          return {
+            node: fieldNode,
+            nodeType: "FieldType",
+            uri: typeDef.uri,
+          };
         }
       }
     }
@@ -1292,10 +1327,17 @@ export class TreeUtils {
     tree: Tree,
     imports: IImports,
     uri: string,
-  ): SyntaxNode | undefined {
+    forest: IForest,
+  ): { node: SyntaxNode; uri: string } | undefined {
     const fieldName = node?.parent?.firstNamedChild?.text;
 
-    let recordType = TreeUtils.getTypeAliasOfRecord(node, tree, imports, uri);
+    let recordType = TreeUtils.getTypeAliasOfRecord(
+      node,
+      tree,
+      imports,
+      uri,
+      forest,
+    );
 
     while (!recordType && node?.parent?.parent) {
       node = node.parent.parent;
@@ -1304,11 +1346,15 @@ export class TreeUtils {
         tree,
         imports,
         uri,
+        forest,
       );
     }
 
     if (recordType) {
-      const fieldTypes = TreeUtils.descendantsOfType(recordType, "field_type");
+      const fieldTypes = TreeUtils.descendantsOfType(
+        recordType.node,
+        "field_type",
+      );
       const fieldNode = fieldTypes.find((a) => {
         return (
           TreeUtils.findFirstNamedChildOfType("lower_case_identifier", a)
@@ -1329,12 +1375,16 @@ export class TreeUtils {
           );
 
           if (typeNode.length > 0) {
-            return TreeUtils.findDefinitionNodeByReferencingNode(
+            const typeAliasNode = TreeUtils.findDefinitionNodeByReferencingNode(
               typeNode[0],
-              uri,
+              recordType.uri,
               tree,
               imports,
-            )?.node;
+            );
+
+            if (typeAliasNode) {
+              return { node: typeAliasNode.node, uri: typeAliasNode.uri };
+            }
           }
         }
       }
@@ -1346,7 +1396,8 @@ export class TreeUtils {
     tree: Tree,
     imports: IImports,
     uri: string,
-  ): SyntaxNode | undefined {
+    forest: IForest,
+  ): { node: SyntaxNode; uri: string } | undefined {
     if (node?.parent?.parent) {
       let type =
         TreeUtils.findFirstNamedChildOfType(
@@ -1375,6 +1426,8 @@ export class TreeUtils {
         );
 
         if (definitionNode) {
+          const definitionTree = forest.getTree(definitionNode.uri);
+
           let aliasNode;
           if (definitionNode.nodeType === "FunctionParameter") {
             aliasNode = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
@@ -1386,21 +1439,26 @@ export class TreeUtils {
             );
           } else if (definitionNode.nodeType === "TypeAlias") {
             aliasNode = definitionNode.node;
+            return { node: definitionNode.node, uri: definitionNode.uri };
           }
 
-          if (aliasNode) {
+          if (aliasNode && definitionTree) {
             const childNode = TreeUtils.descendantsOfType(
               aliasNode,
               "upper_case_identifier",
             );
 
             if (childNode.length > 0) {
-              return TreeUtils.findDefinitionNodeByReferencingNode(
+              const typeNode = TreeUtils.findDefinitionNodeByReferencingNode(
                 childNode[0],
-                uri,
-                tree,
+                definitionNode.uri,
+                definitionTree,
                 imports,
-              )?.node;
+              );
+
+              if (typeNode) {
+                return { node: typeNode.node, uri: typeNode.uri };
+              }
             }
           }
         }
