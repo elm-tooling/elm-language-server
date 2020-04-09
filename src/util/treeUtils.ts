@@ -891,9 +891,14 @@ export class TreeUtils {
         nodeAtPosition.parent.type === "lower_pattern" ||
         nodeAtPosition.parent.type === "record_base_identifier")
     ) {
+      let nodeAtPositionText = nodeAtPosition.text;
+      if (nodeAtPosition.parent.type === "value_qid") {
+        nodeAtPositionText = nodeAtPosition.parent.text;
+      }
+
       const caseOfParameter = this.findCaseOfParameterDefinition(
         nodeAtPosition,
-        nodeAtPosition.text,
+        nodeAtPositionText,
       );
 
       if (caseOfParameter) {
@@ -906,7 +911,7 @@ export class TreeUtils {
 
       const anonymousFunctionDefinition = this.findAnonymousFunctionParameterDefinition(
         nodeAtPosition,
-        nodeAtPosition.text,
+        nodeAtPositionText,
       );
 
       if (anonymousFunctionDefinition) {
@@ -919,7 +924,7 @@ export class TreeUtils {
 
       const functionParameter = this.findFunctionParameterDefinition(
         nodeAtPosition,
-        nodeAtPosition.text,
+        nodeAtPositionText,
       );
 
       if (functionParameter) {
@@ -932,7 +937,7 @@ export class TreeUtils {
 
       const letDefinitionNode = this.findLetFunctionNodeDefinition(
         nodeAtPosition,
-        nodeAtPosition.text,
+        nodeAtPositionText,
       );
 
       if (letDefinitionNode) {
