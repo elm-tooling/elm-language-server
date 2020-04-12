@@ -226,7 +226,6 @@ The language client is included in [lsp-mode](https://github.com/emacs-lsp/lsp-m
 
 ### Sublime
 
-1. First install the language server via npm `npm i -g @elm-tooling/elm-language-server`
 1. Install [Elm Syntax Highlighting](https://packagecontrol.io/packages/Elm%20Syntax%20Highlighting), [LSP](https://packagecontrol.io/packages/LSP) and [LSP-elm](https://packagecontrol.io/packages/LSP-elm) from Package Control.
 1. Restart Sublime.
 
