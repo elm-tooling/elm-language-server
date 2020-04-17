@@ -1005,18 +1005,28 @@ export class TreeUtils {
         "lower_case_identifier",
       );
       if (variableNodes.length > 0) {
+        const indexOfNode = variableNodes.findIndex(
+          (varNode) => varNode.text === nodeAtPosition.text,
+        );
+
         const variableRef = TreeUtils.findDefinitionNodeByReferencingNode(
-          variableNodes[0],
+          variableNodes[indexOfNode > 0 ? indexOfNode - 1 : 0],
           uri,
           tree,
           imports,
         );
 
-        const variableDef =
+        let variableDef: SyntaxNode | null | undefined =
           TreeUtils.getTypeOrTypeAliasOfFunctionParameter(variableRef?.node) ??
           TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
             variableRef?.node,
           );
+
+        if (!variableDef && variableRef?.node)
+          variableDef = TreeUtils.findFirstNamedChildOfType(
+            "type_expression",
+            variableRef.node,
+          )?.firstNamedChild;
 
         if (variableDef) {
           const variableType = TreeUtils.findDefinitionNodeByReferencingNode(
@@ -1404,7 +1414,7 @@ export class TreeUtils {
     forest: IForest,
   ): { node: SyntaxNode; uri: string } | undefined {
     if (node?.parent?.parent) {
-      let type =
+      let type: SyntaxNode | undefined | null =
         TreeUtils.findFirstNamedChildOfType(
           "record_base_identifier",
           node.parent.parent,
@@ -1414,6 +1424,25 @@ export class TreeUtils {
           node.parent,
         );
 
+      if (!type) {
+        const valueNodes =
+          TreeUtils.findAllNamedChildrenOfType(
+            ["value_expr", "field_access_segment"],
+            node.parent,
+          ) ??
+          TreeUtils.findAllNamedChildrenOfType(
+            ["value_expr", "field_access_segment"],
+            node.parent.parent,
+          );
+
+        // We don't want the current access segment
+        valueNodes?.pop();
+
+        if (valueNodes?.length) {
+          type = valueNodes[valueNodes.length - 1].lastNamedChild;
+        }
+      }
+
       // Handle records of function returns
       if (!type && node.parent.parent.parent) {
         type =
@@ -1422,9 +1451,9 @@ export class TreeUtils {
           )?.parent ?? undefined;
       }
 
-      if (type && type.firstNamedChild) {
+      if (type) {
         const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
-          type.firstNamedChild,
+          type.firstNamedChild ? type.firstNamedChild : type,
           uri,
           tree,
           imports,
@@ -1440,6 +1469,11 @@ export class TreeUtils {
             );
           } else if (definitionNode.nodeType === "Function") {
             aliasNode = TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
+              definitionNode.node,
+            );
+          } else if (definitionNode.nodeType === "FieldType") {
+            aliasNode = TreeUtils.findFirstNamedChildOfType(
+              "type_expression",
               definitionNode.node,
             );
           } else if (definitionNode.nodeType === "TypeAlias") {
