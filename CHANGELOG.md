@@ -1,5 +1,14 @@
 # Change Log
 
+## 1.7.2
+- Add record access completions for types and nested types
+- Fix elm.json being ignored when paths are similar to another
+- Fix record field jump to definitions 
+- Fix record field completions in some cases
+- Fix auto import not suggesting modules with multiple prefixes
+- Fix error where qualified names were not taken into account for definition resolving
+- Updated package rankings
+
 ## 1.7.1
 
 - Fix exposing list params not getting completed for imports
