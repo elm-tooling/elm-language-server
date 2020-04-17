@@ -383,6 +383,7 @@ const RANKING_LIST = {
   "allo-media/canopy": "0365",
   "tomjkidd/elm-multiway-tree-zipper": "0366",
   "folkertdev/elm-kmeans": "0367",
+  // tslint:disable-next-line: no-hardcoded-credentials
   "SiriusStarr/elm-password-strength": "0368",
   "Janiczek/transform": "0369",
   "doanythingfordethklok/snackbar": "0370",

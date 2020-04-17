@@ -1443,7 +1443,6 @@ export class TreeUtils {
               definitionNode.node,
             );
           } else if (definitionNode.nodeType === "TypeAlias") {
-            aliasNode = definitionNode.node;
             return { node: definitionNode.node, uri: definitionNode.uri };
           }
 
