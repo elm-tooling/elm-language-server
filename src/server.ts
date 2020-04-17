@@ -210,17 +210,16 @@ export class Server implements ILanguageServer {
 
   private findTopLevelFolders(listOfElmJsonFolders: URI[]) {
     const result: Map<string, URI> = new Map();
-    listOfElmJsonFolders.forEach((element) => {
-      result.set(element.toString(), element);
+    listOfElmJsonFolders.forEach((uri) => {
+      result.set(uri.fsPath, uri);
     });
 
-    listOfElmJsonFolders.forEach((a) => {
-      listOfElmJsonFolders.forEach((b) => {
-        if (
-          b.toString() !== a.toString() &&
-          b.toString().startsWith(a.toString())
-        ) {
-          result.delete(b.toString());
+    listOfElmJsonFolders.forEach((parentUri) => {
+      listOfElmJsonFolders.forEach((childUri) => {
+        const parentPath = parentUri.fsPath + path.sep;
+        const childPath = childUri.fsPath + path.sep;
+        if (parentPath !== childPath && childPath.startsWith(parentPath)) {
+          result.delete(childUri.fsPath);
         }
       });
     });
