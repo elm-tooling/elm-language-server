@@ -256,37 +256,33 @@ export class CompletionProvider {
       const moduleName = exposingListNode.previousNamedSibling.text;
       const exposedByModule = forest.getExposingByModuleName(moduleName);
       if (exposedByModule) {
-        return exposedByModule.flatMap((a) => {
-          const value = HintHelper.createHint(a.syntaxNode);
-          switch (a.type) {
-            case "TypeAlias":
-              return this.createTypeAliasCompletion(
-                value,
-                a.name,
-                range,
-                prefix,
-              );
-            case "Type":
-              return a.exposedUnionConstructors
-                ? [
-                    this.createTypeCompletion(
-                      value,
-                      `${a.name}(..)`,
-                      range,
-                      prefix,
-                    ),
-                    this.createTypeCompletion(value, a.name, range, prefix),
-                  ]
-                : this.createTypeCompletion(value, a.name, range, prefix);
-            default:
-              return this.createFunctionCompletion(
-                value,
-                a.name,
-                range,
-                prefix,
-              );
-          }
-        });
+        return exposedByModule
+          .map((a) => {
+            const value = HintHelper.createHint(a.syntaxNode);
+            switch (a.type) {
+              case "TypeAlias":
+                return [
+                  this.createTypeAliasCompletion(value, a.name, range, prefix),
+                ];
+              case "Type":
+                return a.exposedUnionConstructors
+                  ? [
+                      this.createTypeCompletion(
+                        value,
+                        `${a.name}(..)`,
+                        range,
+                        prefix,
+                      ),
+                      this.createTypeCompletion(value, a.name, range, prefix),
+                    ]
+                  : [this.createTypeCompletion(value, a.name, range, prefix)];
+              default:
+                return [
+                  this.createFunctionCompletion(value, a.name, range, prefix),
+                ];
+            }
+          })
+          .reduce((a, b) => a.concat(b), []);
       }
     }
   }

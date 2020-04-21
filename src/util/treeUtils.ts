@@ -1132,7 +1132,8 @@ export class TreeUtils {
         "anonymous_function_expr",
       );
       const match = anonymousFunctionExprNodes
-        .flatMap((a) => a.children)
+        .map((a) => a.children)
+        .reduce((a, b) => a.concat(b), [])
         .find(
           (child) =>
             child.type === "pattern" && child.text === functionParameterName,
