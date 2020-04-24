@@ -226,7 +226,7 @@ The language client is included in [lsp-mode](https://github.com/emacs-lsp/lsp-m
 
 #### Emacs Doom
 
-1. Enable these layers in your configuration file `.doom.d/init.el` (`SPACE f P`):
+- Enable these layers in your configuration file `.doom.d/init.el` (`SPACE f P`):
 
 ```elisp
 lsp
@@ -234,7 +234,7 @@ lsp
  +lsp)
 ```
 
-1. Config [lsp-ui](https://github.com/emacs-lsp/lsp-ui) features (peek, doc, sideline, etc) at `.doom.d/config.el`:
+- Config [lsp-ui](https://github.com/emacs-lsp/lsp-ui) features (peek, doc, sideline, etc) at `.doom.d/config.el`:
 
 ```elisp
 (after! lsp
@@ -245,7 +245,8 @@ lsp
   (setq lsp-ui-doc-max-height 30)
   (setq lsp-ui-sideline-show-hover t)
   )
-1. Run `~/.emacs.d/bin/doom sync`
+
+- Run `~/.emacs.d/bin/doom sync`
 ```
 
 | Feature         | How to use it                                                  |
