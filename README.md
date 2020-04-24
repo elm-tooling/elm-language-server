@@ -224,6 +224,42 @@ elmAnalyseTrigger = "change"
 
 The language client is included in [lsp-mode](https://github.com/emacs-lsp/lsp-mode), specifically [here](https://github.com/emacs-lsp/lsp-mode/blob/master/lsp-elm.el). See specifically [this section](https://github.com/emacs-lsp/lsp-mode#use-package) for a minimal use-package configuration for lsp-mode.
 
+#### Emacs Doom
+
+1. Enable these layers in your configuration file `.doom.d/init.el` (`SPACE f P`):
+
+```elisp
+lsp
+(elm
+ +lsp)
+```
+
+1. Config [lsp-ui](https://github.com/emacs-lsp/lsp-ui) features (peek, doc, sideline, etc) at `.doom.d/config.el`:
+
+```elisp
+(after! lsp
+  (setq lsp-enable-symbol-highlighting nil)
+  )
+(after! lsp-ui
+  (setq lsp-ui-doc-max-width 100)
+  (setq lsp-ui-doc-max-height 30)
+  (setq lsp-ui-sideline-show-hover t)
+  )
+1. Run `~/.emacs.d/bin/doom sync`
+```
+
+| Feature         | How to use it                                                  |
+| --------------- | -------------------------------------------------------------- |
+| Diagnostics     | On by default                                                  |
+| Formatting      | On save                                                        |
+| CodeLenses      | `lsp-lens-mode` or `lsp-show-lens`                             |
+| Completions     | On by default                                                  |
+| Definitions     | `lsp-ui-sideline-mode`, `lsp-ui-doc-mode` or `lsp-ui-show-doc` |
+| DocumentSymbols | `lsp-ui-imenu`                                                 |
+| Folding         | zo and zc                                                      |
+| References      | `lsp-ui-peek-find-references`, `lsp-find-references`           |
+| Rename          | `lsp-rename`                                                   |
+
 ### Sublime
 
 1. Install [Elm Syntax Highlighting](https://packagecontrol.io/packages/Elm%20Syntax%20Highlighting), [LSP](https://packagecontrol.io/packages/LSP) and [LSP-elm](https://packagecontrol.io/packages/LSP-elm) from Package Control.
