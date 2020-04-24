@@ -32,10 +32,10 @@ export class RenameProvider {
     );
   }
 
-  protected handleRenameRequest = async (
+  protected handleRenameRequest = (
     params: RenameParams,
     elmWorkspace: IElmWorkspace,
-  ): Promise<WorkspaceEdit | null | undefined> => {
+  ): WorkspaceEdit | null | undefined => {
     this.connection.console.info(`Renaming was requested`);
 
     const affectedNodes = this.getRenameAffectedNodes(
@@ -71,10 +71,10 @@ export class RenameProvider {
     }
   };
 
-  protected handlePrepareRenameRequest = async (
+  protected handlePrepareRenameRequest = (
     params: PrepareRenameParams,
     elmWorkspace: IElmWorkspace,
-  ): Promise<Range | null> => {
+  ): Range | null => {
     this.connection.console.info(`Prepare rename was requested`);
 
     const affectedNodes = this.getRenameAffectedNodes(

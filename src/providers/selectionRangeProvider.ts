@@ -21,10 +21,10 @@ export class SelectionRangeProvider {
     );
   }
 
-  private handleSelectionRangeRequest = async (
+  private handleSelectionRangeRequest = (
     params: SelectionRangeParams,
     elmWorkspace: IElmWorkspace,
-  ): Promise<SelectionRange[] | null> => {
+  ): SelectionRange[] | null => {
     this.connection.console.info(`Selection Ranges were requested`);
 
     const ret: SelectionRange[] = [];

@@ -1,30 +1,30 @@
-import { IConnection, ExecuteCommandParams } from "vscode-languageserver";
+import { IConnection } from "vscode-languageserver";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { URI } from "vscode-uri";
 import { ExposeRequest, UnexposeRequest } from "../../protocol";
-import { ExposeUnexposeParams } from "../../protocol";
+import { IExposeUnexposeParams } from "../../protocol";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 
 export class ExposeUnexposeHandler {
   constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
     this.connection.onRequest(
       ExposeRequest,
-      new ElmWorkspaceMatcher(elmWorkspaces, (params: ExposeUnexposeParams) =>
+      new ElmWorkspaceMatcher(elmWorkspaces, (params: IExposeUnexposeParams) =>
         URI.parse(params.uri),
       ).handlerForWorkspace(this.handleExposeRequest.bind(this)),
     );
 
     this.connection.onRequest(
       UnexposeRequest,
-      new ElmWorkspaceMatcher(elmWorkspaces, (params: ExposeUnexposeParams) =>
+      new ElmWorkspaceMatcher(elmWorkspaces, (params: IExposeUnexposeParams) =>
         URI.parse(params.uri),
       ).handlerForWorkspace(this.handleUnexposeRequest.bind(this)),
     );
   }
 
   private handleExposeRequest(
-    params: ExposeUnexposeParams,
+    params: IExposeUnexposeParams,
     elmWorkspace: IElmWorkspace,
   ) {
     const forest = elmWorkspace.getForest();
@@ -44,7 +44,7 @@ export class ExposeUnexposeHandler {
   }
 
   private handleUnexposeRequest(
-    params: ExposeUnexposeParams,
+    params: IExposeUnexposeParams,
     elmWorkspace: IElmWorkspace,
   ) {
     const forest = elmWorkspace.getForest();

@@ -23,8 +23,8 @@ import RANKING_LIST from "./ranking";
 export type CompletionResult = CompletionItem[] | null | undefined;
 
 export class CompletionProvider {
-  private qidRegex = /[a-zA-Z0-9\.]+/;
-  private qidAtStartOfLineRegex = /^[a-zA-Z0-9 \.]*$/;
+  private qidRegex = /[a-zA-Z0-9.]+/;
+  private qidAtStartOfLineRegex = /^[a-zA-Z0-9 .]*$/;
 
   constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
     connection.onCompletion(

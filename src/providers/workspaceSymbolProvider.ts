@@ -15,9 +15,9 @@ export class WorkspaceSymbolProvider {
     this.connection.onWorkspaceSymbol(this.workspaceSymbolRequest);
   }
 
-  private workspaceSymbolRequest = async (
+  private workspaceSymbolRequest = (
     param: WorkspaceSymbolParams,
-  ): Promise<SymbolInformation[] | null | undefined> => {
+  ): SymbolInformation[] | null | undefined => {
     this.connection.console.info(`Workspace Symbols were requested`);
     const symbolInformationMap: Map<string, SymbolInformation[]> = new Map();
 

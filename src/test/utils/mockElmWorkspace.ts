@@ -19,14 +19,17 @@ export class MockElmWorkspace implements IElmWorkspace {
     this.imports.updateImports(mockUri, tree, this.forest);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   init(progressCallback: (percent: number) => void): void {
     return;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   hasDocument(uri: URI): boolean {
     return false;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   hasPath(uri: URI): boolean {
     return false;
   }

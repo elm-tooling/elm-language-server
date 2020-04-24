@@ -4,8 +4,6 @@ import {
   CodeActionParams,
   ExecuteCommandParams,
   IConnection,
-  Command,
-  WorkspaceEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";

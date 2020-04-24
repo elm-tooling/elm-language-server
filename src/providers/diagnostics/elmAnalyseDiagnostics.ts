@@ -353,7 +353,7 @@ export class ElmAnalyseDiagnostics {
   };
 
   private isFixable(diagnostic: Diagnostic): boolean {
-    return fixableErrors.some((e) => diagnostic.message.indexOf(e) > -1);
+    return fixableErrors.some((e) => diagnostic.message.includes(e));
   }
 
   private messageToDiagnostic(message: Message): Diagnostic {

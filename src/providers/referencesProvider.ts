@@ -23,10 +23,10 @@ export class ReferencesProvider {
     );
   }
 
-  protected handleReferencesRequest = async (
+  protected handleReferencesRequest = (
     params: ReferenceParams,
     elmWorkspace: IElmWorkspace,
-  ): Promise<ReferenceResult> => {
+  ): ReferenceResult => {
     this.connection.console.info(`References were requested`);
 
     const imports = elmWorkspace.getImports();

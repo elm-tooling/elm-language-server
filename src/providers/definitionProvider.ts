@@ -30,11 +30,11 @@ export class DefinitionProvider {
     );
   }
 
-  protected handleDefinitionRequest = async (
+  protected handleDefinitionRequest = (
     param: TextDocumentPositionParams,
     elmWorkspace: IElmWorkspace,
     // tslint:disable-next-line: max-union-size
-  ): Promise<DefinitionResult> => {
+  ): DefinitionResult => {
     this.connection.console.info(`A definition was requested`);
     const forest = elmWorkspace.getForest();
     const tree: Tree | undefined = forest.getTree(param.textDocument.uri);
