@@ -226,15 +226,14 @@ The language client is included in [lsp-mode](https://github.com/emacs-lsp/lsp-m
 
 #### Emacs Doom
 
-- Enable these layers in your configuration file `.doom.d/init.el` (`SPACE f P`):
+- Uncomment or add these lines in your configuration file `.doom.d/init.el` (`SPACE f P`):
 
 ```elisp
 lsp
-(elm
- +lsp)
+(elm +lsp)
 ```
 
-- Config [lsp-ui](https://github.com/emacs-lsp/lsp-ui) features (peek, doc, sideline, etc) at `.doom.d/config.el`:
+- Optional configuration for [lsp-mode](https://github.com/emacs-lsp/lsp-mode) and [lsp-ui-mode](https://github.com/emacs-lsp/lsp-ui). Add this to your `.doom.d/config.el`:
 
 ```elisp
 (after! lsp
@@ -243,7 +242,6 @@ lsp
 (after! lsp-ui
   (setq lsp-ui-doc-max-width 100)
   (setq lsp-ui-doc-max-height 30)
-  (setq lsp-ui-sideline-show-hover t)
   )
 
 - Run `~/.emacs.d/bin/doom sync`
@@ -257,7 +255,7 @@ lsp
 | Completions     | On by default                                                  |
 | Definitions     | `lsp-ui-sideline-mode`, `lsp-ui-doc-mode` or `lsp-ui-show-doc` |
 | DocumentSymbols | `lsp-ui-imenu`                                                 |
-| Folding         | zo and zc                                                      |
+| Folding         | `zo` and `zc`                                                  |
 | References      | `lsp-ui-peek-find-references`, `lsp-find-references`           |
 | Rename          | `lsp-rename`                                                   |
 
