@@ -226,7 +226,7 @@ The language client is included in [lsp-mode](https://github.com/emacs-lsp/lsp-m
 
 #### Emacs Doom
 
-- Uncomment or add these lines in your configuration file `.doom.d/init.el` (`SPACE f P`):
+- Uncomment `lsp` and `elm` in your configuration file `.doom.d/init.el` and add the `+lsp` feature flag to the elm layer:
 
 ```elisp
 lsp
@@ -247,17 +247,19 @@ lsp
 - Run `~/.emacs.d/bin/doom sync`
 ```
 
-| Feature         | How to use it                                                  |
-| --------------- | -------------------------------------------------------------- |
-| Diagnostics     | On by default                                                  |
-| Formatting      | On save                                                        |
-| CodeLenses      | `lsp-lens-mode` or `lsp-show-lens`                             |
-| Completions     | On by default                                                  |
-| Definitions     | `lsp-ui-sideline-mode`, `lsp-ui-doc-mode` or `lsp-ui-show-doc` |
-| DocumentSymbols | `lsp-ui-imenu`                                                 |
-| Folding         | `zo` and `zc`                                                  |
-| References      | `lsp-ui-peek-find-references`, `lsp-find-references`           |
-| Rename          | `lsp-rename`                                                   |
+| Feature         | How to use it                                                |
+| --------------- | ------------------------------------------------------------ |
+| Diagnostics     | On by default                                                |
+| Formatting      | On save                                                      |
+| CodeLenses      | `lsp-lens-mode`, `lsp-show-lens`                             |
+| Completions     | On by default                                                |
+| Definitions     | `lsp-find-definition`, `lsp-ui-peek-find-definitions`        |
+| DocumentSymbols | `lsp-ui-imenu`                                               |
+| Folding         | `+fold/open`, `+fold/close`                                  |
+| Hover           | `lsp-ui-sideline-mode`, `lsp-ui-doc-mode`, `lsp-ui-show-doc` |
+| References      | `lsp-ui-peek-find-references`, `lsp-find-references`         |
+| Rename          | `lsp-rename`                                                 |
+| SelectionRange  | `lsp-extend-selection`                                       |
 
 ### Sublime
 
