@@ -2,6 +2,7 @@ import { Position } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IImport, IImports } from "../imports";
 import { IForest } from "../forest";
+import { Utils } from "./utils";
 
 export type NodeType =
   | "Function"
@@ -491,10 +492,6 @@ export class TreeUtils {
       }
       return ret;
     }
-  }
-
-  public static notUndefined<T>(x: T | undefined): x is T {
-    return x !== undefined;
   }
 
   public static findOperator(
@@ -1407,6 +1404,65 @@ export class TreeUtils {
     }
   }
 
+  public static getTypeAliasOfCase(
+    type: SyntaxNode | undefined,
+    tree: Tree,
+    imports: IImports,
+    uri: string,
+    forest: IForest,
+  ): { node: SyntaxNode; uri: string } | undefined {
+    if (type) {
+      const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
+        type,
+        uri,
+        tree,
+        imports,
+      );
+
+      if (definitionNode) {
+        const definitionTree = forest.getTree(definitionNode.uri);
+
+        let aliasNode;
+        if (definitionNode.nodeType === "FunctionParameter") {
+          aliasNode = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
+            definitionNode.node,
+          );
+        } else if (definitionNode.nodeType === "Function") {
+          aliasNode = TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
+            definitionNode.node,
+          );
+        } else if (definitionNode.nodeType === "FieldType") {
+          aliasNode = TreeUtils.findFirstNamedChildOfType(
+            "type_expression",
+            definitionNode.node,
+          );
+        } else if (definitionNode.nodeType === "TypeAlias") {
+          return { node: definitionNode.node, uri: definitionNode.uri };
+        }
+
+        if (aliasNode && definitionTree) {
+          const childNode = TreeUtils.descendantsOfType(
+            aliasNode,
+            "upper_case_identifier",
+          );
+
+          if (childNode.length > 0) {
+            const typeNode = TreeUtils.findDefinitionNodeByReferencingNode(
+              childNode[0],
+              definitionNode.uri,
+              definitionTree,
+              imports,
+            );
+
+            if (typeNode) {
+              return { node: typeNode.node, uri: typeNode.uri };
+            }
+          }
+        }
+      }
+    }
+  }
+
   public static getTypeAliasOfRecord(
     node: SyntaxNode | undefined,
     tree: Tree,
@@ -1636,7 +1692,7 @@ export class TreeUtils {
             child.firstNamedChild?.text,
         ),
       )
-      .filter(this.notUndefined)
+      .filter(Utils.notUndefined)
       .map((node: SyntaxNode) => {
         return { node, text: node.firstNamedChild?.text };
       })

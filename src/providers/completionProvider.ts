@@ -839,16 +839,8 @@ export class CompletionProvider {
       ),
       this.createSnippet(
         "case of",
-        [
-          "case ${1:expression} of",
-          "    ${2:option1} ->",
-          "        ${3}",
-          "",
-          "    ${4:option2} ->",
-          "        ${5}",
-          "$0",
-        ],
-        "Case of expression with 2 alternatives",
+        ["case ${1:expression} of$0"],
+        "Case of expression ready to extend (you need to save first)",
       ),
       this.createSnippet(
         "if",
@@ -1311,7 +1303,6 @@ export class CompletionProvider {
       this.createKeywordCompletion("let"),
       this.createKeywordCompletion("in"),
       this.createKeywordCompletion("case"),
-      this.createKeywordCompletion("of"),
       this.createKeywordCompletion("type"),
       this.createKeywordCompletion("alias"),
       this.createKeywordCompletion("import"),
