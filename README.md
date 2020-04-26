@@ -54,7 +54,7 @@ Or use local versions from your `node_modules` directory, if you want to do that
 
 ## Features
 
-Supports Elm 0.19
+Supports Elm 0.19 and up
 
 | Feature          | Description                                                                                                                                          |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
