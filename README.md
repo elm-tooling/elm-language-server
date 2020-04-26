@@ -243,9 +243,9 @@ lsp
   (setq lsp-ui-doc-max-width 100)
   (setq lsp-ui-doc-max-height 30)
   )
+```
 
 - Run `~/.emacs.d/bin/doom sync`
-```
 
 | Feature         | How to use it                                                |
 | --------------- | ------------------------------------------------------------ |
