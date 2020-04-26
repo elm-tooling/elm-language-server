@@ -224,6 +224,43 @@ elmAnalyseTrigger = "change"
 
 The language client is included in [lsp-mode](https://github.com/emacs-lsp/lsp-mode), specifically [here](https://github.com/emacs-lsp/lsp-mode/blob/master/lsp-elm.el). See specifically [this section](https://github.com/emacs-lsp/lsp-mode#use-package) for a minimal use-package configuration for lsp-mode.
 
+#### Emacs Doom
+
+- Uncomment `lsp` and `elm` in your configuration file `.doom.d/init.el` and add the `+lsp` feature flag to the elm layer:
+
+```elisp
+lsp
+(elm +lsp)
+```
+
+- Optional configuration for [lsp-mode](https://github.com/emacs-lsp/lsp-mode) and [lsp-ui-mode](https://github.com/emacs-lsp/lsp-ui). Add this to your `.doom.d/config.el`:
+
+```elisp
+(after! lsp
+  (setq lsp-enable-symbol-highlighting nil)
+  )
+(after! lsp-ui
+  (setq lsp-ui-doc-max-width 100)
+  (setq lsp-ui-doc-max-height 30)
+  )
+
+- Run `~/.emacs.d/bin/doom sync`
+```
+
+| Feature         | How to use it                                                |
+| --------------- | ------------------------------------------------------------ |
+| Diagnostics     | On by default                                                |
+| Formatting      | On save                                                      |
+| CodeLenses      | `lsp-lens-mode`, `lsp-show-lens`                             |
+| Completions     | On by default                                                |
+| Definitions     | `lsp-find-definition`, `lsp-ui-peek-find-definitions`        |
+| DocumentSymbols | `lsp-ui-imenu`                                               |
+| Folding         | `+fold/open`, `+fold/close`                                  |
+| Hover           | `lsp-ui-sideline-mode`, `lsp-ui-doc-mode`, `lsp-ui-show-doc` |
+| References      | `lsp-ui-peek-find-references`, `lsp-find-references`         |
+| Rename          | `lsp-rename`                                                 |
+| SelectionRange  | `lsp-extend-selection`                                       |
+
 ### Sublime
 
 1. Install [Elm Syntax Highlighting](https://packagecontrol.io/packages/Elm%20Syntax%20Highlighting), [LSP](https://packagecontrol.io/packages/LSP) and [LSP-elm](https://packagecontrol.io/packages/LSP-elm) from Package Control.
