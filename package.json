@@ -29,6 +29,7 @@
     "@types/jest": "^25.2.1",
     "@types/node": "13.11.1",
     "copyfiles": "^2.2.0",
+    "doctoc": "^1.4.0",
     "jest": "^25.3.0",
     "prettier": "^2.0.4",
     "pretty-quick": "^2.0.1",
@@ -49,7 +50,8 @@
     "format:fix": "pretty-quick --staged",
     "tslint-check": "tslint-config-prettier-check ./tslint.json",
     "build-tree-sitter": "tree-sitter build-wasm ./node_modules/tree-sitter-elm",
-    "test": "jest"
+    "test": "jest",
+    "generate-toc": "doctoc README.md"
   },
   "bin": {
     "elm-language-server": "./out/index.js"

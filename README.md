@@ -4,6 +4,33 @@
 
 This is the language server implementation for the Elm programming language.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+
+- [Installation](#installation)
+  - [Alternative: Compile and install from source](#alternative-compile-and-install-from-source)
+  - [Alternative: Install with Nix](#alternative-install-with-nix)
+- [Requirements](#requirements)
+- [Features](#features)
+- [Server Settings](#server-settings)
+  - [Elm-Analyse Configuration](#elm-analyse-configuration)
+- [Editor Support](#editor-support)
+  - [VSCode](#vscode)
+  - [Vim](#vim)
+    - [coc.nvim](#cocnvim)
+    - [ALE](#ale)
+    - [LanguageClient](#languageclient)
+  - [Kakoune](#kakoune)
+    - [kak-lsp](#kak-lsp)
+  - [Emacs](#emacs)
+    - [Emacs Doom](#emacs-doom)
+  - [Sublime](#sublime)
+- [Awesome libraries this is based on](#awesome-libraries-this-is-based-on)
+- [Contributing](#contributing)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Installation
 
 Note for VSCode users: The [plugin](https://github.com/elm-tooling/elm-language-client-vscode) contains the language-server. No installation necessary.
