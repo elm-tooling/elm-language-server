@@ -1015,7 +1015,7 @@ export class CompletionProvider {
       this.createSnippet(
         "Browser.sandbox",
         [
-          "module Main exposing (Model, Msg, update, view, subscriptions, init)",
+          "module Main exposing (Model, Msg, update, view, init)",
           "",
           "import Html exposing (..)",
           "import Browser",
