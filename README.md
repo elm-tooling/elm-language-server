@@ -269,6 +269,7 @@ lsp
 (after! lsp-ui
   (setq lsp-ui-doc-max-width 100)
   (setq lsp-ui-doc-max-height 30)
+  (setq company-lsp-cache-candidates nil)
   )
 ```
 
