@@ -168,17 +168,29 @@ export class CompletionProvider {
         );
       } else if (
         (nodeAtPosition.type === "field_access_segment" ||
-          nodeAtPosition.parent?.type === "field_access_segment") &&
+          nodeAtPosition.parent?.type === "field_access_segment" ||
+          TreeUtils.descendantsOfType(nodeAtPosition, "field_access_segment")
+            .length > 0) &&
         nodeAtPosition.parent
       ) {
-        const dotIndex = (
-          TreeUtils.findFirstNamedChildOfType("dot", nodeAtPosition) ??
-          TreeUtils.findFirstNamedChildOfType("dot", nodeAtPosition.parent)
+        const accessSegmentNode =
+          nodeAtPosition.type === "field_access_segment"
+            ? nodeAtPosition
+            : nodeAtPosition.parent?.type === "field_access_segment"
+            ? nodeAtPosition.parent
+            : TreeUtils.descendantsOfType(
+                nodeAtPosition,
+                "field_access_segment",
+              )[0];
+
+        const dotIndex = TreeUtils.findFirstNamedChildOfType(
+          "dot",
+          accessSegmentNode,
         )?.startPosition.column;
 
         if (dotIndex) {
           return this.getRecordCompletions(
-            nodeAtPosition,
+            accessSegmentNode,
             tree,
             Range.create(
               Position.create(params.position.line, dotIndex + 1),
