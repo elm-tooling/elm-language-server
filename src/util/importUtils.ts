@@ -5,12 +5,15 @@ import { TreeUtils } from "./treeUtils";
 export class ImportUtils {
   public static getPossibleImports(
     forest: IForest,
+    uri: string,
   ): {
     module: string;
     value: string;
     valueToImport?: string;
     package?: string;
   }[] {
+    const currentModule = forest.getByUri(uri)?.moduleName;
+
     const exposedValues: {
       module: string;
       value: string;
@@ -75,10 +78,36 @@ export class ImportUtils {
           return 0;
         }
       } else {
-        return 0;
+        if (!currentModule) {
+          return 0;
+        }
+
+        // Sort packages that are in closest to the current module first
+        const aScore = this.comparisonScore(currentModule, a.module);
+        const bScore = this.comparisonScore(currentModule, b.module);
+
+        if (aScore > bScore) {
+          return -1;
+        } else if (bScore > aScore) {
+          return 1;
+        } else {
+          return 0;
+        }
       }
     });
 
     return exposedValues;
+  }
+
+  private static comparisonScore(source: string, target: string): number {
+    let score = 0;
+    while (
+      score < Math.min(source.length, target.length) &&
+      source.charAt(score) === target.charAt(score)
+    ) {
+      score++;
+    }
+
+    return score;
   }
 }

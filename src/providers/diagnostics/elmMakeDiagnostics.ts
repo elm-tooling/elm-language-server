@@ -97,7 +97,10 @@ export class ElmMakeDiagnostics {
       .getElmWorkspaceFor(filePath)
       .getForest();
 
-    const exposedValues = ImportUtils.getPossibleImports(forest);
+    const exposedValues = ImportUtils.getPossibleImports(
+      forest,
+      filePath.fsPath,
+    );
 
     // Get all possible imports from the diagnostics for import all
     diagnostics.forEach((innerDiagnostics, uri) => {
@@ -173,7 +176,7 @@ export class ElmMakeDiagnostics {
       .getElmWorkspaceFor(URI.parse(uri))
       .getForest();
 
-    const exposedValues = ImportUtils.getPossibleImports(forest);
+    const exposedValues = ImportUtils.getPossibleImports(forest, uri);
     const sourceTree = forest.getByUri(uri);
 
     diagnostics.forEach((diagnostic) => {
