@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "elm-analyse": "github:elm-tooling/elm-analyse#7f4000cce5ef024fe5e82c7ee1725feef95a9daf",
-    "execa": "^4.0.0",
+    "execa": "^4.0.1",
     "fast-diff": "^1.2.0",
     "globby": "^11.0.0",
     "pjson": "1.0.9",
@@ -26,21 +26,21 @@
     "web-tree-sitter": "^0.16.2"
   },
   "devDependencies": {
-    "@types/jest": "^25.2.1",
-    "@types/node": "13.11.1",
+    "@types/jest": "^25.2.2",
+    "@types/node": "14.0.1",
     "copyfiles": "^2.2.0",
     "doctoc": "^1.4.0",
-    "jest": "^25.3.0",
-    "prettier": "^2.0.4",
+    "jest": "^26.0.1",
+    "prettier": "^2.0.5",
     "pretty-quick": "^2.0.1",
-    "tree-sitter-cli": "^0.16.5",
-    "tree-sitter-elm": "^2.7.7",
-    "ts-jest": "^25.4.0",
-    "tslint": "^6.1.1",
+    "tree-sitter-cli": "^0.16.7",
+    "tree-sitter-elm": "^2.7.8",
+    "ts-jest": "^26.0.0",
+    "tslint": "^6.1.2",
     "tslint-config-prettier": "^1.18.0",
     "tslint-plugin-prettier": "^2.3.0",
     "tslint-sonarts": "^1.9.0",
-    "typescript": "3.8.3"
+    "typescript": "3.9.2"
   },
   "scripts": {
     "copy-wasm": "copyfiles ./tree-sitter-elm.wasm out",
