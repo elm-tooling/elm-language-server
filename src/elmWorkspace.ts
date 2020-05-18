@@ -20,7 +20,16 @@ interface IFolder {
   writeable: boolean;
 }
 
-export class ElmWorkspace {
+export interface IElmWorkspace {
+  init(progressCallback: (percent: number) => void): void;
+  hasDocument(uri: URI): boolean;
+  hasPath(uri: URI): boolean;
+  getForest(): Forest;
+  getImports(): Imports;
+  getRootPath(): URI;
+}
+
+export class ElmWorkspace implements IElmWorkspace {
   private elmFolders: {
     uri: string;
     writeable: boolean;
