@@ -1,8 +1,10 @@
 import { CompletionProvider, CompletionResult } from "../providers";
-import { CompletionParams } from "vscode-languageserver";
+import { CompletionParams, CompletionContext } from "vscode-languageserver";
 import { IElmWorkspace } from "../elmWorkspace";
 import { SourceTreeParser } from "./utils/sourceTreeParser";
 import { mockUri } from "./utils/mockElmWorkspace";
+import { Position } from "vscode-languageserver-textdocument";
+import { assert } from "console";
 
 class MockCompletionProvider extends CompletionProvider {
   public handleCompletion(
@@ -13,36 +15,68 @@ class MockCompletionProvider extends CompletionProvider {
   }
 }
 
+function getCaretPositionFromSource(
+  source: string[],
+): { position?: Position; newSource: string[] } {
+  let result: {
+    newSource: string[];
+    position?: Position;
+  } = { newSource: source };
+
+  source.forEach((s, line) => {
+    const character = s.search("{-caret-}");
+    result.newSource[line] = s.replace("{-caret-}", "");
+
+    if (character >= 0) {
+      result.position = { line, character };
+    }
+  });
+
+  return result;
+}
+
 describe("CompletionProvider", () => {
   const completionProvider = new MockCompletionProvider();
   const treeParser = new SourceTreeParser();
 
   async function testCompletions(
     source: string[],
-    line: number,
-    character: number,
     expectedCompletions: string[],
     testDotCompletion?: boolean,
   ) {
     await treeParser.init();
 
-    const sources = ["module Test exposing (..)", "", ...source];
+    const { newSource, position } = getCaretPositionFromSource(source);
 
-    const completions = completionProvider.handleCompletion(
-      {
-        textDocument: { uri: mockUri },
-        position: { line: line + 2, character },
-        context: {
-          triggerKind: 1,
+    if (!position) {
+      fail();
+    }
+
+    // Add the module header and account for it in the cursor position
+    const sources = ["module Test exposing (..)", "", ...newSource];
+    position.line += 2;
+
+    function testCompletionsWithContext(context: CompletionContext) {
+      const completions = completionProvider.handleCompletion(
+        {
+          textDocument: { uri: mockUri },
+          position: position!,
+          context,
         },
-      },
-      treeParser.getWorkspace(sources),
-    );
+        treeParser.getWorkspace(sources),
+      );
 
-    expect(completions?.length).toBe(expectedCompletions.length);
-    completions?.forEach((completion, i) => {
-      expect(completion.label).toBe(expectedCompletions[i]);
-    });
+      expect(completions?.length).toBe(expectedCompletions.length);
+      completions?.forEach((completion, i) => {
+        expect(completion.label).toBe(expectedCompletions[i]);
+      });
+    }
+
+    testCompletionsWithContext({ triggerKind: 1 });
+
+    if (testDotCompletion) {
+      testCompletionsWithContext({ triggerKind: 2, triggerCharacter: "." });
+    }
   }
 
   it("Updating a record should have completions", async () => {
@@ -54,10 +88,10 @@ describe("CompletionProvider", () => {
       ``,
       `view : Model -> Model`,
       `view model =`,
-      `  { model | p }`,
+      `  { model | p{-caret-} }`,
     ];
 
-    await testCompletions(source, 7, 13, ["prop1", "prop2"]);
+    await testCompletions(source, ["prop1", "prop2"]);
   });
 
   it("Updating a nested record should have completions", async () => {
@@ -74,10 +108,10 @@ describe("CompletionProvider", () => {
       ``,
       `view : Model -> Model`,
       `view model =`,
-      `  { model | prop1 = { i } }`,
+      `  { model | prop1 = { i{-caret-} } }`,
     ];
 
-    await testCompletions(source, 12, 23, ["item1", "item2"]);
+    await testCompletions(source, ["item1", "item2"]);
   });
 
   it("Record access should have completions inside a let", async () => {
@@ -92,7 +126,7 @@ describe("CompletionProvider", () => {
       `  let`,
       `    var : String`,
       `    var = `,
-      `      model.`,
+      `      model.{-caret-}`,
       `        |> String.toFloat`,
       `        |> String.fromFloat`,
       ``,
@@ -100,6 +134,6 @@ describe("CompletionProvider", () => {
       `    model`,
     ];
 
-    await testCompletions(source, 10, 12, ["prop1", "prop2"]);
+    await testCompletions(source, ["prop1", "prop2"], true);
   });
 });

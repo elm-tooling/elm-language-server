@@ -1,5 +1,5 @@
 import { URI } from "vscode-uri";
-import { ElmWorkspace } from "../elmWorkspace";
+import { ElmWorkspace, IElmWorkspace } from "../elmWorkspace";
 import { NoWorkspaceContainsError } from "./noWorkspaceContainsError";
 
 /**
@@ -9,19 +9,19 @@ import { NoWorkspaceContainsError } from "./noWorkspaceContainsError";
  */
 export class ElmWorkspaceMatcher<ParamType> {
   constructor(
-    protected readonly elmWorkspaces: ElmWorkspace[],
+    protected readonly elmWorkspaces: IElmWorkspace[],
     protected readonly getUriFor: (param: ParamType) => URI,
   ) {}
 
   public handlerForWorkspace<ResultType>(
-    handler: (param: ParamType, elmWorkspace: ElmWorkspace) => ResultType,
+    handler: (param: ParamType, elmWorkspace: IElmWorkspace) => ResultType,
   ): (param: ParamType) => ResultType {
     return (param: ParamType) => {
       return handler(param, this.getElmWorkspaceFor(param));
     };
   }
 
-  public getElmWorkspaceFor(param: ParamType): ElmWorkspace {
+  public getElmWorkspaceFor(param: ParamType): IElmWorkspace {
     const uri = this.getUriFor(param);
     const workspace =
       // first look for a workspace where the file has been parsed to a tree

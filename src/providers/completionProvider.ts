@@ -28,7 +28,7 @@ export class CompletionProvider {
 
   constructor(
     private connection?: IConnection,
-    elmWorkspaces?: ElmWorkspace[],
+    elmWorkspaces?: IElmWorkspace[],
   ) {
     if (elmWorkspaces) {
       connection?.onCompletion(
