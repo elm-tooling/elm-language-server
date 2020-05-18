@@ -9,7 +9,7 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { ElmWorkspace } from "../../elmWorkspace";
+import { IElmWorkspace } from "../../elmWorkspace";
 import * as utils from "../../util/elmUtils";
 import { execCmd } from "../../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
@@ -68,7 +68,7 @@ export class ElmMakeDiagnostics {
 
   constructor(
     private connection: IConnection,
-    elmWorkspaces: ElmWorkspace[],
+    elmWorkspaces: IElmWorkspace[],
     private settings: Settings,
   ) {
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(

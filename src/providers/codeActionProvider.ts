@@ -9,7 +9,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Settings } from "../util/settings";
 import { TreeUtils } from "../util/treeUtils";
@@ -22,7 +22,7 @@ import { RefactorEditUtils } from "../util/refactorEditUtils";
 export class CodeActionProvider {
   constructor(
     private connection: IConnection,
-    private elmWorkspaces: ElmWorkspace[],
+    private elmWorkspaces: IElmWorkspace[],
     private settings: Settings,
     private elmAnalyse: ElmAnalyseDiagnostics | null,
     private elmMake: ElmMakeDiagnostics,
@@ -47,7 +47,7 @@ export class CodeActionProvider {
 
   private onCodeAction(
     params: CodeActionParams,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): CodeAction[] {
     this.connection.console.info("A code action was requested");
     const analyse =
@@ -67,7 +67,7 @@ export class CodeActionProvider {
 
   private getRefactorCodeActions(
     params: CodeActionParams,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): CodeAction[] {
     const codeActions: CodeAction[] = [];
 

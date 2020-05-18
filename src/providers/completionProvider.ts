@@ -11,7 +11,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ElmWorkspace, IElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
 import { getEmptyTypes } from "../util/elmUtils";

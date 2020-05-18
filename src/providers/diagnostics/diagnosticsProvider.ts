@@ -1,7 +1,7 @@
 import { Diagnostic, FileChangeType, IConnection } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { ElmWorkspace } from "../../elmWorkspace";
+import { IElmWorkspace } from "../../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { NoWorkspaceContainsError } from "../../util/noWorkspaceContainsError";
 import { ElmAnalyseTrigger, Settings } from "../../util/settings";
@@ -36,7 +36,7 @@ export class DiagnosticsProvider {
 
   constructor(
     private connection: IConnection,
-    elmWorkspaces: ElmWorkspace[],
+    elmWorkspaces: IElmWorkspace[],
     private settings: Settings,
     private events: TextDocumentEvents<TextDocument>,
     elmAnalyse: ElmAnalyseDiagnostics | null,

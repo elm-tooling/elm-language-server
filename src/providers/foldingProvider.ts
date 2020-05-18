@@ -6,7 +6,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 
 export class FoldingRangeProvider {
@@ -24,7 +24,7 @@ export class FoldingRangeProvider {
     "else",
   ]);
 
-  constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {
+  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
     connection.onFoldingRanges(
       new ElmWorkspaceMatcher(
         elmWorkspaces,
@@ -35,7 +35,7 @@ export class FoldingRangeProvider {
 
   protected handleFoldingRange = async (
     param: FoldingRangeRequestParam,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): Promise<FoldingRange[]> => {
     this.connection.console.info(`Folding ranges were requested`);
     const folds: FoldingRange[] = [];

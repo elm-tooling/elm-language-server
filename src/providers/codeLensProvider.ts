@@ -9,7 +9,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
 import { TreeUtils } from "../util/treeUtils";
@@ -21,7 +21,7 @@ type CodeLensResult = CodeLens[] | null | undefined;
 export class CodeLensProvider {
   constructor(
     private readonly connection: IConnection,
-    elmWorkspaces: ElmWorkspace[],
+    elmWorkspaces: IElmWorkspace[],
     private settings: Settings,
   ) {
     this.connection.onCodeLens(
@@ -38,7 +38,7 @@ export class CodeLensProvider {
 
   protected handleCodeLensRequest = async (
     param: CodeLensParams,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): Promise<CodeLensResult> => {
     this.connection.console.info(
       `A code lens was requested for ${param.textDocument.uri}`,
@@ -63,7 +63,7 @@ export class CodeLensProvider {
 
   protected handleCodeLensResolveRequest = async (
     param: CodeLens,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): Promise<CodeLens> => {
     const codelens = param;
     const data: {

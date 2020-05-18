@@ -10,7 +10,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { Forest } from "../forest";
 import { IImports } from "../imports";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
@@ -18,7 +18,7 @@ import { References } from "../util/references";
 import { TreeUtils } from "../util/treeUtils";
 
 export class RenameProvider {
-  constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {
+  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
     this.connection.onPrepareRename(
       new ElmWorkspaceMatcher(elmWorkspaces, (params: PrepareRenameParams) =>
         URI.parse(params.textDocument.uri),
@@ -34,7 +34,7 @@ export class RenameProvider {
 
   protected handleRenameRequest = async (
     params: RenameParams,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): Promise<WorkspaceEdit | null | undefined> => {
     this.connection.console.info(`Renaming was requested`);
 
@@ -73,7 +73,7 @@ export class RenameProvider {
 
   protected handlePrepareRenameRequest = async (
     params: PrepareRenameParams,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): Promise<Range | null> => {
     this.connection.console.info(`Prepare rename was requested`);
 
@@ -95,7 +95,7 @@ export class RenameProvider {
   };
 
   private getRenameAffectedNodes(
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
     uri: string,
     position: Position,
   ):

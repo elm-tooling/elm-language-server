@@ -8,7 +8,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
 
@@ -20,7 +20,7 @@ type DefinitionResult =
   | undefined;
 
 export class DefinitionProvider {
-  constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {
+  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
     this.connection.onDefinition(
       new ElmWorkspaceMatcher(
         elmWorkspaces,
@@ -32,7 +32,7 @@ export class DefinitionProvider {
 
   protected handleDefinitionRequest = async (
     param: TextDocumentPositionParams,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
     // tslint:disable-next-line: max-union-size
   ): Promise<DefinitionResult> => {
     this.connection.console.info(`A definition was requested`);

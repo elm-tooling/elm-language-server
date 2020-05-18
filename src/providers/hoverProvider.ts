@@ -6,7 +6,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { getEmptyTypes } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
@@ -15,7 +15,7 @@ import { NodeType, TreeUtils } from "../util/treeUtils";
 type HoverResult = Hover | null | undefined;
 
 export class HoverProvider {
-  constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {
+  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
     this.connection.onHover(
       new ElmWorkspaceMatcher(
         elmWorkspaces,
@@ -27,7 +27,7 @@ export class HoverProvider {
 
   protected handleHoverRequest = (
     params: TextDocumentPositionParams,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): HoverResult => {
     this.connection.console.info(`A hover was requested`);
 

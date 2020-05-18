@@ -7,13 +7,13 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { PositionUtil } from "../positionUtil";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
 
 export class SelectionRangeProvider {
-  constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {
+  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
     connection.onSelectionRanges(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: SelectionRangeParams) =>
         URI.parse(param.textDocument.uri),
@@ -23,7 +23,7 @@ export class SelectionRangeProvider {
 
   private handleSelectionRangeRequest = async (
     params: SelectionRangeParams,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): Promise<SelectionRange[] | null> => {
     this.connection.console.info(`Selection Ranges were requested`);
 
