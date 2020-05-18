@@ -26,24 +26,19 @@ export class CompletionProvider {
   private qidRegex = /[a-zA-Z0-9\.]+/;
   private qidAtStartOfLineRegex = /^[a-zA-Z0-9 \.]*$/;
 
-  constructor(
-    private connection?: IConnection,
-    elmWorkspaces?: IElmWorkspace[],
-  ) {
-    if (elmWorkspaces) {
-      connection?.onCompletion(
-        new ElmWorkspaceMatcher(elmWorkspaces, (param: CompletionParams) =>
-          URI.parse(param.textDocument.uri),
-        ).handlerForWorkspace(this.handleCompletionRequest),
-      );
-    }
+  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
+    connection.onCompletion(
+      new ElmWorkspaceMatcher(elmWorkspaces, (param: CompletionParams) =>
+        URI.parse(param.textDocument.uri),
+      ).handlerForWorkspace(this.handleCompletionRequest),
+    );
   }
 
   protected handleCompletionRequest = (
     params: CompletionParams,
     elmWorkspace: IElmWorkspace,
   ): CompletionResult => {
-    this.connection?.console.info(`A completion was requested`);
+    this.connection.console.info(`A completion was requested`);
     const completions: CompletionItem[] = [];
 
     const forest = elmWorkspace.getForest();

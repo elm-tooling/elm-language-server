@@ -1,10 +1,14 @@
 import { CompletionProvider, CompletionResult } from "../providers";
-import { CompletionParams, CompletionContext } from "vscode-languageserver";
+import {
+  CompletionParams,
+  CompletionContext,
+  IConnection,
+} from "vscode-languageserver";
 import { IElmWorkspace } from "../elmWorkspace";
 import { SourceTreeParser } from "./utils/sourceTreeParser";
 import { mockUri } from "./utils/mockElmWorkspace";
 import { Position } from "vscode-languageserver-textdocument";
-import { assert } from "console";
+import { mockDeep } from "jest-mock-extended";
 
 class MockCompletionProvider extends CompletionProvider {
   public handleCompletion(
@@ -18,7 +22,7 @@ class MockCompletionProvider extends CompletionProvider {
 function getCaretPositionFromSource(
   source: string[],
 ): { position?: Position; newSource: string[] } {
-  let result: {
+  const result: {
     newSource: string[];
     position?: Position;
   } = { newSource: source };
@@ -36,7 +40,9 @@ function getCaretPositionFromSource(
 }
 
 describe("CompletionProvider", () => {
-  const completionProvider = new MockCompletionProvider();
+  const connectionMock = mockDeep<IConnection>();
+
+  const completionProvider = new MockCompletionProvider(connectionMock, []);
   const treeParser = new SourceTreeParser();
 
   async function testCompletions(
