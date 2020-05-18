@@ -1,7 +1,8 @@
 import { CompletionProvider, CompletionResult } from "../providers";
 import { CompletionParams } from "vscode-languageserver";
 import { IElmWorkspace } from "../elmWorkspace";
-import { SourceTreeParser, mockUri } from "./testUtils";
+import { SourceTreeParser } from "./utils/sourceTreeParser";
+import { mockUri } from "./utils/mockElmWorkspace";
 
 class MockCompletionProvider extends CompletionProvider {
   public handleCompletion(
