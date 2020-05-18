@@ -22,6 +22,7 @@ describe("CompletionProvider", () => {
     line: number,
     character: number,
     expectedCompletions: string[],
+    testDotCompletion?: boolean,
   ) {
     await treeParser.init();
 
@@ -44,7 +45,7 @@ describe("CompletionProvider", () => {
     });
   }
 
-  it("Record completions should work", async () => {
+  it("Updating a record should have completions", async () => {
     const source = [
       `type alias Model = `,
       `  { prop1: String`,
@@ -57,5 +58,48 @@ describe("CompletionProvider", () => {
     ];
 
     await testCompletions(source, 7, 13, ["prop1", "prop2"]);
+  });
+
+  it("Updating a nested record should have completions", async () => {
+    const source = [
+      `type alias Model = `,
+      `  { prop1: Data`,
+      `  , prop2: Int`,
+      `  }`,
+      ``,
+      `type alias Data = `,
+      `  { item1: String`,
+      `  , item2: Int`,
+      `  }`,
+      ``,
+      `view : Model -> Model`,
+      `view model =`,
+      `  { model | prop1 = { i } }`,
+    ];
+
+    await testCompletions(source, 12, 23, ["item1", "item2"]);
+  });
+
+  it("Record access should have completions inside a let", async () => {
+    const source = [
+      `type alias Model = `,
+      `  { prop1: String`,
+      `  , prop2: Int`,
+      `  }`,
+      ``,
+      `view : Model -> Model`,
+      `view model =`,
+      `  let`,
+      `    var : String`,
+      `    var = `,
+      `      model.`,
+      `        |> String.toFloat`,
+      `        |> String.fromFloat`,
+      ``,
+      `  in`,
+      `    model`,
+    ];
+
+    await testCompletions(source, 10, 12, ["prop1", "prop2"]);
   });
 });
