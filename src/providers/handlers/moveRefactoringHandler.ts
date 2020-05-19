@@ -1,6 +1,6 @@
 import { IConnection, Position, Range, TextEdit } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { ElmWorkspace } from "../../elmWorkspace";
+import { IElmWorkspace } from "../../elmWorkspace";
 import {
   GetMoveDestinationRequest,
   MoveDestination,
@@ -16,7 +16,7 @@ import { TreeUtils } from "../../util/treeUtils";
 export class MoveRefactoringHandler {
   constructor(
     private connection: IConnection,
-    private elmWorkspaces: ElmWorkspace[],
+    private elmWorkspaces: IElmWorkspace[],
   ) {
     this.connection.onRequest(
       GetMoveDestinationRequest,
@@ -35,7 +35,7 @@ export class MoveRefactoringHandler {
 
   private handleGetMoveDestinationsRequest(
     params: MoveParams,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): MoveDestinationsResponse {
     const forest = elmWorkspace.getForest();
 
@@ -60,7 +60,7 @@ export class MoveRefactoringHandler {
     };
   }
 
-  private handleMoveRequest(params: MoveParams, elmWorkspace: ElmWorkspace) {
+  private handleMoveRequest(params: MoveParams, elmWorkspace: IElmWorkspace) {
     if (!params.destination) {
       return;
     }

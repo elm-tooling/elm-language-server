@@ -7,14 +7,14 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Point, SyntaxNode, Tree } from "web-tree-sitter";
-import { ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { IDocumentEvents } from "../util/documentEvents";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 
 export class ASTProvider {
   constructor(
     private connection: IConnection,
-    elmWorkspaces: ElmWorkspace[],
+    elmWorkspaces: IElmWorkspace[],
     documentEvents: IDocumentEvents,
     private parser: Parser,
   ) {
@@ -30,7 +30,7 @@ export class ASTProvider {
 
   protected handleChangeTextDocument = async (
     params: DidChangeTextDocumentParams,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): Promise<void> => {
     this.connection.console.info(
       `Changed text document, going to parse it. ${params.textDocument.uri}`,

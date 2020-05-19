@@ -5,7 +5,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import * as Diff from "../util/diff";
 import { execCmd } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
@@ -17,7 +17,7 @@ type DocumentFormattingResult = Promise<TextEdit[] | undefined>;
 export class DocumentFormattingProvider {
   constructor(
     private connection: IConnection,
-    elmWorkspaces: ElmWorkspace[],
+    elmWorkspaces: IElmWorkspace[],
     private events: TextDocumentEvents<TextDocument>,
     private settings: Settings,
   ) {
@@ -57,7 +57,7 @@ export class DocumentFormattingProvider {
 
   protected handleFormattingRequest = async (
     params: DocumentFormattingParams,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): DocumentFormattingResult => {
     this.connection.console.info(`Formatting was requested`);
     try {

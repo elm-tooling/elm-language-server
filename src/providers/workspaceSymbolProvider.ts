@@ -4,13 +4,13 @@ import {
   WorkspaceSymbolParams,
 } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 
 export class WorkspaceSymbolProvider {
   constructor(
     private readonly connection: IConnection,
-    private readonly elmWorkspaces: ElmWorkspace[],
+    private readonly elmWorkspaces: IElmWorkspace[],
   ) {
     this.connection.onWorkspaceSymbol(this.workspaceSymbolRequest);
   }

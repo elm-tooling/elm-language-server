@@ -17,7 +17,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { ElmWorkspace } from "../../elmWorkspace";
+import { IElmWorkspace } from "../../elmWorkspace";
 import * as Diff from "../../util/diff";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
@@ -46,7 +46,7 @@ export interface IElmAnalyseEvents {
 }
 
 export class ElmAnalyseDiagnostics {
-  private elmAnalysers: Map<ElmWorkspace, Promise<ElmApp>>;
+  private elmAnalysers: Map<IElmWorkspace, Promise<ElmApp>>;
   private diagnostics: Map<string, Diagnostic[]>;
   private filesWithDiagnostics: Set<string> = new Set();
   private eventEmitter: EventEmitter = new EventEmitter();
@@ -54,7 +54,7 @@ export class ElmAnalyseDiagnostics {
 
   constructor(
     private connection: IConnection,
-    elmWorkspaces: ElmWorkspace[],
+    elmWorkspaces: IElmWorkspace[],
     private events: TextDocumentEvents<TextDocument>,
     private settings: Settings,
     private formattingProvider: DocumentFormattingProvider,
@@ -197,7 +197,7 @@ export class ElmAnalyseDiagnostics {
   }
 
   private async getFixEdits(
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
     uri: URI,
     code?: number,
   ): Promise<TextEdit[]> {
@@ -286,7 +286,7 @@ export class ElmAnalyseDiagnostics {
     }
   }
 
-  private async setupElmAnalyse(elmWorkspace: ElmWorkspace): Promise<ElmApp> {
+  private async setupElmAnalyse(elmWorkspace: IElmWorkspace): Promise<ElmApp> {
     const fsPath = elmWorkspace.getRootPath().fsPath;
     const elmJson = await readFile(path.join(fsPath, "elm.json"), {
       encoding: "utf-8",
@@ -318,7 +318,7 @@ export class ElmAnalyseDiagnostics {
     });
   }
 
-  private onNewReportForWorkspace = (elmWorkspace: ElmWorkspace) => (
+  private onNewReportForWorkspace = (elmWorkspace: IElmWorkspace) => (
     report: Report,
   ) => {
     this.connection.console.info(

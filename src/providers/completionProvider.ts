@@ -11,7 +11,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
 import { getEmptyTypes } from "../util/elmUtils";
@@ -20,13 +20,13 @@ import { HintHelper } from "../util/hintHelper";
 import { TreeUtils } from "../util/treeUtils";
 import RANKING_LIST from "./ranking";
 
-type CompletionResult = CompletionItem[] | null | undefined;
+export type CompletionResult = CompletionItem[] | null | undefined;
 
 export class CompletionProvider {
   private qidRegex = /[a-zA-Z0-9\.]+/;
   private qidAtStartOfLineRegex = /^[a-zA-Z0-9 \.]*$/;
 
-  constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {
+  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
     connection.onCompletion(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: CompletionParams) =>
         URI.parse(param.textDocument.uri),
@@ -34,9 +34,9 @@ export class CompletionProvider {
     );
   }
 
-  private handleCompletionRequest = (
+  protected handleCompletionRequest = (
     params: CompletionParams,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): CompletionResult => {
     this.connection.console.info(`A completion was requested`);
     const completions: CompletionItem[] = [];

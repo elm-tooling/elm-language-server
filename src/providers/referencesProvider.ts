@@ -7,7 +7,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { Tree } from "web-tree-sitter";
-import { ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
 import { TreeUtils } from "../util/treeUtils";
@@ -15,7 +15,7 @@ import { TreeUtils } from "../util/treeUtils";
 type ReferenceResult = Location[] | null | undefined;
 
 export class ReferencesProvider {
-  constructor(private connection: IConnection, elmWorkspaces: ElmWorkspace[]) {
+  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
     this.connection.onReferences(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: ReferenceParams) =>
         URI.parse(param.textDocument.uri),
@@ -25,7 +25,7 @@ export class ReferencesProvider {
 
   protected handleReferencesRequest = async (
     params: ReferenceParams,
-    elmWorkspace: ElmWorkspace,
+    elmWorkspace: IElmWorkspace,
   ): Promise<ReferenceResult> => {
     this.connection.console.info(`References were requested`);
 
