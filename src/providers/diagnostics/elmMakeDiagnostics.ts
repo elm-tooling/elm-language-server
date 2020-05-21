@@ -19,6 +19,11 @@ import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { ImportUtils } from "../../util/importUtils";
+import { TreeUtils } from "../../util/treeUtils";
+import { Utils } from "../../util/utils";
+import { ITreeContainer } from "../../forest";
+import { Forest } from "../../forest";
+import { IImports } from "../../imports";
 
 const ELM_MAKE = "Elm";
 const NAMING_ERROR = "NAMING ERROR";
@@ -177,6 +182,11 @@ export class ElmMakeDiagnostics {
       .getForest();
 
     const exposedValues = ImportUtils.getPossibleImports(forest, uri);
+
+    const imports = this.elmWorkspaceMatcher
+      .getElmWorkspaceFor(URI.parse(uri))
+      .getImports();
+
     const sourceTree = forest.getByUri(uri);
 
     diagnostics.forEach((diagnostic) => {
@@ -279,7 +289,14 @@ export class ElmMakeDiagnostics {
           matches
             .filter((_, groupIndex) => groupIndex === 1)
             .forEach((match, _) => {
-              result.push(this.createQuickFix(uri, match, diagnostic));
+              result.push(
+                this.createQuickFix(
+                  uri,
+                  match,
+                  diagnostic,
+                  `Change to \`${match}\``,
+                ),
+              );
             });
         }
       } else if (
@@ -291,17 +308,174 @@ export class ElmMakeDiagnostics {
 
         const matches = regex.exec(diagnostic.message);
         if (matches !== null) {
-          result.push(this.createQuickFix(uri, matches[1], diagnostic));
+          result.push(
+            this.createQuickFix(
+              uri,
+              matches[1],
+              diagnostic,
+              `Change to \`${matches[1]}\``,
+            ),
+          );
         }
+      } else if (diagnostic.message.startsWith("UNFINISHED CASE")) {
+        // Offer the case completion only if we're at the `of`
+        const regex = /^\d+\|\s*.* of\s+\s+#\^#/gm;
+
+        const matches = regex.exec(diagnostic.message);
+        if (matches !== null) {
+          result.push(
+            ...this.addCaseQuickfixes(
+              sourceTree,
+              diagnostic,
+              imports,
+              uri,
+              forest,
+            ),
+          );
+        }
+      } else if (
+        diagnostic.message.startsWith("MISSING PATTERNS - This `case`")
+      ) {
+        result.push(
+          ...this.addCaseQuickfixes(
+            sourceTree,
+            diagnostic,
+            imports,
+            uri,
+            forest,
+          ),
+        );
       }
     });
     return result;
+  }
+
+  private addCaseQuickfixes(
+    sourceTree: ITreeContainer | undefined,
+    diagnostic: Diagnostic,
+    imports: IImports,
+    uri: string,
+    forest: Forest,
+  ): CodeAction[] {
+    const result = [];
+    const valueNode = sourceTree?.tree.rootNode.namedDescendantForPosition(
+      {
+        column: diagnostic.range.start.character,
+        row: diagnostic.range.start.line,
+      },
+      {
+        column: diagnostic.range.end.character,
+        row: diagnostic.range.end.line,
+      },
+    );
+
+    if (valueNode) {
+      if (
+        valueNode.firstNamedChild?.type === "case" &&
+        valueNode.namedChildren.length > 1 &&
+        valueNode.namedChildren[1].type === "value_expr"
+      ) {
+        const indent = "    ".repeat(
+          (valueNode.firstNamedChild?.startPosition.column % 4) + 1,
+        );
+
+        const typeDeclarationNode = TreeUtils.getTypeAliasOfCase(
+          valueNode.namedChildren[1].firstNamedChild!.firstNamedChild!,
+          sourceTree!.tree,
+          imports,
+          uri,
+          forest,
+        );
+
+        if (typeDeclarationNode) {
+          const fields = TreeUtils.findAllNamedChildrenOfType(
+            "union_variant",
+            typeDeclarationNode.node,
+          );
+
+          const alreadyAvailableBranches = TreeUtils.findAllNamedChildrenOfType(
+            "case_of_branch",
+            valueNode,
+          )
+            ?.map(
+              (a) => a.firstNamedChild?.firstNamedChild?.firstNamedChild?.text,
+            )
+            .filter(Utils.notUndefined);
+
+          let edit = "";
+          fields?.forEach((unionVariant) => {
+            if (
+              !alreadyAvailableBranches?.includes(
+                unionVariant.firstNamedChild!.text,
+              )
+            ) {
+              const parameters = TreeUtils.findAllNamedChildrenOfType(
+                "type_ref",
+                unionVariant,
+              );
+
+              const caseBranch = `${[
+                unionVariant.firstNamedChild!.text,
+                parameters
+                  ?.map((a) =>
+                    a.firstNamedChild?.lastNamedChild?.text.toLowerCase(),
+                  )
+                  .join(" "),
+              ].join(" ")}`;
+
+              edit += `\n${indent}    ${caseBranch} ->\n${indent}        \n`;
+            }
+          });
+
+          result.push(
+            this.createCaseQuickFix(
+              uri,
+              edit,
+              diagnostic,
+              `Add missing case branches`,
+            ),
+          );
+        }
+      }
+
+      result.push(
+        this.createCaseQuickFix(
+          uri,
+          "\n\n        _ ->\n    ",
+          diagnostic,
+          `Add \`_\` branch`,
+        ),
+      );
+    }
+    return result;
+  }
+
+  private createCaseQuickFix(
+    uri: string,
+    replaceWith: string,
+    diagnostic: Diagnostic,
+    title: string,
+  ): CodeAction {
+    const map: {
+      [uri: string]: TextEdit[];
+    } = {};
+    if (!map[uri]) {
+      map[uri] = [];
+    }
+    map[uri].push(TextEdit.insert(diagnostic.range.end, replaceWith));
+    return {
+      diagnostics: [diagnostic],
+      edit: { changes: map },
+      kind: CodeActionKind.QuickFix,
+      title,
+    };
   }
 
   private createQuickFix(
     uri: string,
     replaceWith: string,
     diagnostic: Diagnostic,
+    title: string,
   ): CodeAction {
     const map: {
       [uri: string]: TextEdit[];
@@ -314,7 +488,7 @@ export class ElmMakeDiagnostics {
       diagnostics: [diagnostic],
       edit: { changes: map },
       kind: CodeActionKind.QuickFix,
-      title: `Change to \`${replaceWith}\``,
+      title,
     };
   }
 
