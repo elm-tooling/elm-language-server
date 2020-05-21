@@ -1,5 +1,5 @@
 import { URI } from "vscode-uri";
-import { ElmWorkspace, IElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { NoWorkspaceContainsError } from "./noWorkspaceContainsError";
 
 /**

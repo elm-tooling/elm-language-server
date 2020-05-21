@@ -33,10 +33,10 @@ export class FoldingRangeProvider {
     );
   }
 
-  protected handleFoldingRange = async (
+  protected handleFoldingRange = (
     param: FoldingRangeRequestParam,
     elmWorkspace: IElmWorkspace,
-  ): Promise<FoldingRange[]> => {
+  ): FoldingRange[] => {
     this.connection.console.info(`Folding ranges were requested`);
     const folds: FoldingRange[] = [];
     const forest = elmWorkspace.getForest();
@@ -45,6 +45,7 @@ export class FoldingRangeProvider {
     const findLastIdenticalNamedSibling: (node: SyntaxNode) => SyntaxNode = (
       node: SyntaxNode,
     ): SyntaxNode => {
+      // eslint-disable-next-line no-constant-condition
       while (true) {
         if (
           node.nextNamedSibling &&

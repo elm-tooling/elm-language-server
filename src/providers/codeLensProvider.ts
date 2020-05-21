@@ -36,10 +36,10 @@ export class CodeLensProvider {
     );
   }
 
-  protected handleCodeLensRequest = async (
+  protected handleCodeLensRequest = (
     param: CodeLensParams,
     elmWorkspace: IElmWorkspace,
-  ): Promise<CodeLensResult> => {
+  ): CodeLensResult => {
     this.connection.console.info(
       `A code lens was requested for ${param.textDocument.uri}`,
     );
@@ -61,10 +61,10 @@ export class CodeLensProvider {
     }
   };
 
-  protected handleCodeLensResolveRequest = async (
+  protected handleCodeLensResolveRequest = (
     param: CodeLens,
     elmWorkspace: IElmWorkspace,
-  ): Promise<CodeLens> => {
+  ): CodeLens => {
     const codelens = param;
     const data: {
       codeLensType: CodeLensType;

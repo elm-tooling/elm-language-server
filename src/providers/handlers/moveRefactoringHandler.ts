@@ -3,9 +3,9 @@ import { URI } from "vscode-uri";
 import { IElmWorkspace } from "../../elmWorkspace";
 import {
   GetMoveDestinationRequest,
-  MoveDestination,
-  MoveDestinationsResponse,
-  MoveParams,
+  IMoveDestination,
+  IMoveDestinationsResponse,
+  IMoveParams,
   MoveRequest,
 } from "../../protocol";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
@@ -20,26 +20,26 @@ export class MoveRefactoringHandler {
   ) {
     this.connection.onRequest(
       GetMoveDestinationRequest,
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: MoveParams) =>
+      new ElmWorkspaceMatcher(elmWorkspaces, (param: IMoveParams) =>
         URI.parse(param.sourceUri),
       ).handlerForWorkspace(this.handleGetMoveDestinationsRequest.bind(this)),
     );
 
     this.connection.onRequest(
       MoveRequest,
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: MoveParams) =>
+      new ElmWorkspaceMatcher(elmWorkspaces, (param: IMoveParams) =>
         URI.parse(param.sourceUri),
       ).handlerForWorkspace(this.handleMoveRequest.bind(this)),
     );
   }
 
   private handleGetMoveDestinationsRequest(
-    params: MoveParams,
+    params: IMoveParams,
     elmWorkspace: IElmWorkspace,
-  ): MoveDestinationsResponse {
+  ): IMoveDestinationsResponse {
     const forest = elmWorkspace.getForest();
 
-    const destinations: MoveDestination[] = forest.treeIndex
+    const destinations: IMoveDestination[] = forest.treeIndex
       .filter((tree) => tree.writeable && tree.uri !== params.sourceUri)
       .map((tree) => {
         let uri = URI.parse(tree.uri).fsPath;
@@ -60,7 +60,7 @@ export class MoveRefactoringHandler {
     };
   }
 
-  private handleMoveRequest(params: MoveParams, elmWorkspace: IElmWorkspace) {
+  private handleMoveRequest(params: IMoveParams, elmWorkspace: IElmWorkspace) {
     if (!params.destination) {
       return;
     }

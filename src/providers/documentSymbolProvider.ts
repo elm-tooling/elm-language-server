@@ -25,10 +25,10 @@ export class DocumentSymbolProvider {
     );
   }
 
-  private handleDocumentSymbolRequest = async (
+  private handleDocumentSymbolRequest = (
     param: DocumentSymbolParams,
     elmWorkspace: IElmWorkspace,
-  ): Promise<DocumentSymbolResult> => {
+  ): DocumentSymbolResult => {
     this.connection.console.info(`Document Symbols were requested`);
     const symbolInformationList: SymbolInformation[] = [];
 

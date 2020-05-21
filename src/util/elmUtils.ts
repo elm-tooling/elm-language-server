@@ -140,17 +140,9 @@ function filterSemver(lower: string, upper: string, operator: string) {
   const currentCompare = cmp(lower, upper);
   switch (operator) {
     case "<=":
-      if (currentCompare === -1) {
-        return false;
-      } else {
-        return true;
-      }
+      return currentCompare !== -1;
     case "<":
-      if (currentCompare === -1 || currentCompare === 0) {
-        return false;
-      } else {
-        return true;
-      }
+      return !(currentCompare === -1 || currentCompare === 0);
   }
 }
 
