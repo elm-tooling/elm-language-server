@@ -60,7 +60,10 @@ export class MoveRefactoringHandler {
     };
   }
 
-  private handleMoveRequest(params: IMoveParams, elmWorkspace: IElmWorkspace) {
+  private async handleMoveRequest(
+    params: IMoveParams,
+    elmWorkspace: IElmWorkspace,
+  ) {
     if (!params.destination) {
       return;
     }
@@ -272,7 +275,7 @@ export class MoveRefactoringHandler {
           }
         });
 
-        this.connection.workspace.applyEdit({ changes });
+        await this.connection.workspace.applyEdit({ changes });
       }
     }
   }

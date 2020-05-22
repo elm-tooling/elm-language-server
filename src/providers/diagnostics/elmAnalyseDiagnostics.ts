@@ -14,6 +14,7 @@ import {
   ExecuteCommandParams,
   IConnection,
   TextEdit,
+  ApplyWorkspaceEditResponse,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
@@ -77,14 +78,14 @@ export class ElmAnalyseDiagnostics {
     return this;
   }
 
-  public updateFile(uri: URI, text?: string): void {
+  public async updateFile(uri: URI, text?: string): Promise<void> {
     const workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(uri);
     const analyser = this.elmAnalysers.get(workspace);
     if (!analyser) {
       throw new Error(`No elm-analyse instance loaded for workspace ${uri}.`);
     }
 
-    analyser.then((elmAnalyser) => {
+    await analyser.then((elmAnalyser) => {
       elmAnalyser.ports.fileWatch.send({
         content: text ?? null,
         event: "update",
@@ -139,7 +140,9 @@ export class ElmAnalyseDiagnostics {
       : [];
   }
 
-  public async onExecuteCommand(params: ExecuteCommandParams) {
+  public async onExecuteCommand(
+    params: ExecuteCommandParams,
+  ): Promise<ApplyWorkspaceEditResponse | undefined> {
     let uri: URI;
     switch (params.command) {
       case CODE_ACTION_ELM_ANALYSE:
@@ -320,7 +323,7 @@ export class ElmAnalyseDiagnostics {
 
   private onNewReportForWorkspace = (elmWorkspace: IElmWorkspace) => (
     report: Report,
-  ) => {
+  ): void => {
     this.connection.console.info(
       `Received new elm-analyse report with ${report.messages.length} messages`,
     );

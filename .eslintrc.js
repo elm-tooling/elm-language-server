@@ -5,7 +5,6 @@ module.exports = {
   },
   extends: [
     "eslint:recommended",
-    "plugin:@typescript-eslint/eslint-recommended",
     "plugin:@typescript-eslint/recommended",
     "plugin:@typescript-eslint/recommended-requiring-type-checking",
     "plugin:prettier/recommended",
@@ -37,10 +36,16 @@ module.exports = {
     "@typescript-eslint/no-non-null-assertion": "off",
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/no-inferrable-types": "off",
-    "@typescript-eslint/interface-name-prefix": [
+    "@typescript-eslint/restrict-template-expressions": "off",
+    "@typescript-eslint/no-unsafe-member-access": "off",
+    "@typescript-eslint/no-unsafe-assignment": "off",
+    "@typescript-eslint/no-unsafe-call": "off",
+    "@typescript-eslint/naming-convention": [
       "error",
       {
-        prefixWithI: "always",
+        selector: "interface",
+        format: ["PascalCase"],
+        prefix: ["I"],
       },
     ],
   },

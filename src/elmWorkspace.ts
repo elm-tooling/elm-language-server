@@ -45,13 +45,15 @@ export class ElmWorkspace implements IElmWorkspace {
     private parser: Parser,
   ) {
     this.connection.console.info(
-      `Starting language server for folder: ${this.rootPath}`,
+      `Starting language server for folder: ${this.rootPath.toString()}`,
     );
 
     this.imports = new Imports(parser);
   }
 
-  public async init(progressCallback: (percent: number) => void) {
+  public async init(
+    progressCallback: (percent: number) => void,
+  ): Promise<void> {
     await this.initWorkspace(progressCallback);
   }
 

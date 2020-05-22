@@ -19,7 +19,10 @@ export class WorkspaceSymbolProvider {
     param: WorkspaceSymbolParams,
   ): SymbolInformation[] | null | undefined => {
     this.connection.console.info(`Workspace Symbols were requested`);
-    const symbolInformationMap: Map<string, SymbolInformation[]> = new Map();
+    const symbolInformationMap: Map<string, SymbolInformation[]> = new Map<
+      string,
+      SymbolInformation[]
+    >();
 
     this.elmWorkspaces.forEach((elmWorkspace) => {
       elmWorkspace.getForest().treeIndex.forEach((tree) => {

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { randomBytes } from "crypto";
 import * as path from "path";
 import {
@@ -69,7 +70,10 @@ export class ElmMakeDiagnostics {
   private neededImports: Map<
     string,
     { moduleName: string; valueName?: string; diagnostic: Diagnostic }[]
-  > = new Map();
+  > = new Map<
+    string,
+    { moduleName: string; valueName?: string; diagnostic: Diagnostic }[]
+  >();
 
   constructor(
     private connection: IConnection,

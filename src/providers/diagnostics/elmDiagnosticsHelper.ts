@@ -15,7 +15,7 @@ export class ElmDiagnosticsHelper {
       arr.push(diagnostic);
       acc.set(uri, arr);
       return acc;
-    }, new Map());
+    }, new Map<string, Diagnostic[]>());
   }
 
   private static severityStringToDiagnosticSeverity(

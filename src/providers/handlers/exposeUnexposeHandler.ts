@@ -23,7 +23,7 @@ export class ExposeUnexposeHandler {
     );
   }
 
-  private handleExposeRequest(
+  private async handleExposeRequest(
     params: IExposeUnexposeParams,
     elmWorkspace: IElmWorkspace,
   ) {
@@ -34,7 +34,7 @@ export class ExposeUnexposeHandler {
       const edits = RefactorEditUtils.exposeValueInModule(tree, params.name);
 
       if (edits) {
-        this.connection.workspace.applyEdit({
+        await this.connection.workspace.applyEdit({
           changes: {
             [params.uri]: [edits],
           },
@@ -43,7 +43,7 @@ export class ExposeUnexposeHandler {
     }
   }
 
-  private handleUnexposeRequest(
+  private async handleUnexposeRequest(
     params: IExposeUnexposeParams,
     elmWorkspace: IElmWorkspace,
   ) {
@@ -54,7 +54,7 @@ export class ExposeUnexposeHandler {
       const edits = RefactorEditUtils.unexposedValueInModule(tree, params.name);
 
       if (edits) {
-        this.connection.workspace.applyEdit({
+        await this.connection.workspace.applyEdit({
           changes: {
             [params.uri]: [edits],
           },
