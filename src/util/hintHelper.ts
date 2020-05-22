@@ -39,7 +39,7 @@ export class HintHelper {
 
   public static createHintFromDefinitionInLet(
     declaration: SyntaxNode | undefined,
-  ) {
+  ): string | undefined {
     if (declaration) {
       const comment: string = "Defined in local let scope";
       let annotation: string = "";
@@ -52,12 +52,14 @@ export class HintHelper {
     }
   }
 
-  public static createHintFromDefinitionInCaseBranch() {
+  public static createHintFromDefinitionInCaseBranch(): string | undefined {
     const comment: string = "Defined in local case branch";
     return this.formatHint("", comment);
   }
 
-  private static createHintFromDefinition(declaration: SyntaxNode | undefined) {
+  private static createHintFromDefinition(
+    declaration: SyntaxNode | undefined,
+  ): string | undefined {
     if (declaration) {
       let code: string | undefined;
       let comment: string = "";

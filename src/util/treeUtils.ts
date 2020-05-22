@@ -311,7 +311,7 @@ export class TreeUtils {
     }
   }
 
-  public static isExposedFunction(tree: Tree, functionName: string) {
+  public static isExposedFunction(tree: Tree, functionName: string): boolean {
     const module = this.findModuleDeclaration(tree);
     if (module) {
       const exposingList = this.findFirstNamedChildOfType(
@@ -360,7 +360,10 @@ export class TreeUtils {
     return undefined;
   }
 
-  public static isExposedTypeOrTypeAlias(tree: Tree, typeName: string) {
+  public static isExposedTypeOrTypeAlias(
+    tree: Tree,
+    typeName: string,
+  ): boolean {
     const module = this.findModuleDeclaration(tree);
     if (module) {
       const exposingList = this.findFirstNamedChildOfType(
@@ -589,7 +592,9 @@ export class TreeUtils {
     return result.length === 0 ? undefined : result;
   }
 
-  public static getFunctionNameNodeFromDefinition(node: SyntaxNode) {
+  public static getFunctionNameNodeFromDefinition(
+    node: SyntaxNode,
+  ): SyntaxNode | undefined {
     if (node.type === "lower_case_identifier") {
       return node;
     }
@@ -602,7 +607,9 @@ export class TreeUtils {
     }
   }
 
-  public static getTypeOrTypeAliasNameNodeFromDefinition(node: SyntaxNode) {
+  public static getTypeOrTypeAliasNameNodeFromDefinition(
+    node: SyntaxNode,
+  ): SyntaxNode | undefined {
     return TreeUtils.findFirstNamedChildOfType("upper_case_identifier", node);
   }
 

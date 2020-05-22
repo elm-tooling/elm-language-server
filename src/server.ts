@@ -110,7 +110,7 @@ export class Server implements ILanguageServer {
     };
   }
 
-  public async init() {
+  public async init(): Promise<void> {
     this.progress.begin("Indexing Elm", 0);
     await Promise.all(
       this.elmWorkspaces
@@ -131,7 +131,7 @@ export class Server implements ILanguageServer {
     this.progress.done();
   }
 
-  public async registerInitializedProviders() {
+  public async registerInitializedProviders(): Promise<void> {
     // We can now query the client for up to date settings
     this.settings.initFinished();
 
@@ -209,7 +209,7 @@ export class Server implements ILanguageServer {
   }
 
   private findTopLevelFolders(listOfElmJsonFolders: URI[]) {
-    const result: Map<string, URI> = new Map();
+    const result: Map<string, URI> = new Map<string, URI>();
     listOfElmJsonFolders.forEach((uri) => {
       result.set(uri.fsPath, uri);
     });

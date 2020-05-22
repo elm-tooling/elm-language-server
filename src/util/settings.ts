@@ -35,7 +35,7 @@ export class Settings {
     this.updateSettings(config);
   }
 
-  public initFinished() {
+  public initFinished(): void {
     this.initDone = true;
   }
 

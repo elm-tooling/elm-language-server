@@ -1,6 +1,6 @@
-import execa from "execa";
+import execa, { ExecaReturnValue } from "execa";
 import * as path from "path";
-import { IConnection, SymbolKind } from "vscode-languageserver";
+import { IConnection, CompletionItemKind } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { IClientSettings } from "./settings";
 
@@ -25,7 +25,7 @@ export async function execCmd(
   cwd: string,
   connection: IConnection,
   input?: string,
-) {
+): Promise<ExecaReturnValue<string>> {
   const cmd = cmdFromUser === "" ? cmdStatic : cmdFromUser;
   const preferLocal = cmdFromUser === "";
 
@@ -61,7 +61,11 @@ export function isTestFile(filename: string, rootPath: string): boolean {
 }
 
 // Special type that has no core mock https://github.com/elm/compiler/blob/51e20357137ebc9c3f6136cf0a3fe21c24027f39/compiler/src/Canonicalize/Environment/Foreign.hs#L62
-export function getEmptyTypes() {
+export function getEmptyTypes(): {
+  markdown: string;
+  name: string;
+  symbolKind: CompletionItemKind;
+}[] {
   return [
     {
       markdown: `An \`List\` is a list of items. Every item must be of the same type. Valid syntax for lists includes:
@@ -74,7 +78,7 @@ export function getEmptyTypes() {
 
     `,
       name: "List",
-      symbolKind: SymbolKind.Enum,
+      symbolKind: CompletionItemKind.Enum,
     },
   ];
 }
@@ -108,7 +112,7 @@ export async function getElmVersion(
 export function findDepVersion(
   allVersionFolders: { version: string; versionPath: string }[],
   versionRange: string,
-) {
+): { version: string; versionPath: string } | undefined {
   const regex = /^(\d+\.\d+\.\d+) (<|<=) v (<|<=) (\d+\.\d+\.\d+)$/gm;
 
   const m = regex.exec(versionRange);

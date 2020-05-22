@@ -6,7 +6,7 @@ import { MockElmWorkspace } from "./mockElmWorkspace";
 export class SourceTreeParser {
   private parser?: Parser;
 
-  public async init() {
+  public async init(): Promise<void> {
     if (this.parser) {
       return;
     }

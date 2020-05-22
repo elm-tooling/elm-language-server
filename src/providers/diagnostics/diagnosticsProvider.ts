@@ -56,7 +56,7 @@ export class DiagnosticsProvider {
     };
 
     // register onChange listener if settings are not on-save only
-    this.settings.getClientSettings().then(({ elmAnalyseTrigger }) => {
+    void this.settings.getClientSettings().then(({ elmAnalyseTrigger }) => {
       this.events.on("open", (d) =>
         this.getDiagnostics(d, true, elmAnalyseTrigger),
       );
@@ -164,7 +164,7 @@ export class DiagnosticsProvider {
         (elmMakeDiagnosticsForCurrentFile &&
           elmMakeDiagnosticsForCurrentFile.length === 0))
     ) {
-      this.elmAnalyseDiagnostics.updateFile(uri, text);
+      await this.elmAnalyseDiagnostics.updateFile(uri, text);
     }
 
     this.sendDiagnostics();

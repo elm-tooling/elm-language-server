@@ -16,7 +16,7 @@ export class ElmWorkspaceMatcher<ParamType> {
   public handlerForWorkspace<ResultType>(
     handler: (param: ParamType, elmWorkspace: IElmWorkspace) => ResultType,
   ): (param: ParamType) => ResultType {
-    return (param: ParamType) => {
+    return (param: ParamType): ResultType => {
       return handler(param, this.getElmWorkspaceFor(param));
     };
   }
