@@ -584,6 +584,8 @@ export class CompletionProvider {
     label: string,
     range: Range,
     sortPrefix: string,
+    detail?: string,
+    addImportTextEdit?: TextEdit,
   ): CompletionItem {
     return this.createCompletion(
       markdownDocumentation,
@@ -591,6 +593,8 @@ export class CompletionProvider {
       label,
       range,
       sortPrefix,
+      detail,
+      addImportTextEdit ? [addImportTextEdit] : undefined,
     );
   }
 
@@ -856,6 +860,17 @@ export class CompletionProvider {
         } else if (possibleImport.type === "TypeAlias") {
           result.push(
             this.createTypeAliasCompletion(
+              documentation,
+              possibleImport.value,
+              range,
+              "d",
+              detail,
+              importTextEdit,
+            ),
+          );
+        } else if (possibleImport.type === "Type") {
+          result.push(
+            this.createTypeCompletion(
               documentation,
               possibleImport.value,
               range,
