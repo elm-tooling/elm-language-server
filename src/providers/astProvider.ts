@@ -52,7 +52,7 @@ export class ASTProvider {
       tree = this.parser.parse(changeEvent.text);
     }
     if (tree) {
-      forest.setTree(document.uri, true, true, tree);
+      forest.setTree(document.uri, true, true, tree, true);
 
       // Figure out if we have files importing our changed file - update them
       const urisToRefresh = [];

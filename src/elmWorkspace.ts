@@ -18,6 +18,7 @@ interface IFolder {
   path: string;
   maintainerAndPackageName?: string;
   writeable: boolean;
+  isExposed: boolean;
 }
 
 export interface IElmWorkspace {
@@ -79,7 +80,9 @@ export class ElmWorkspace implements IElmWorkspace {
     return this.rootPath;
   }
 
-  private async initWorkspace(progressCallback: (percent: number) => void) {
+  private async initWorkspace(
+    progressCallback: (percent: number) => void,
+  ): Promise<void> {
     let progress = 0;
     let elmVersion;
     try {
@@ -136,11 +139,11 @@ export class ElmWorkspace implements IElmWorkspace {
           : { ...elmJson.dependencies, ...elmJson["test-dependencies"] };
       if (type === "application") {
         for (const key in dependencies) {
-          if (dependencies.hasOwnProperty(key)) {
+          if (Object.prototype.hasOwnProperty.call(dependencies, key)) {
             const maintainer = key.substring(0, key.indexOf("/"));
             const packageName = key.substring(key.indexOf("/") + 1, key.length);
 
-            const pathToPackageWithVersion = `${packagesRoot}${maintainer}/${packageName}/${dependencies[key]}/src`;
+            const pathToPackageWithVersion = `${packagesRoot}${maintainer}/${packageName}/${dependencies[key]}`;
             this.elmFolders.push({
               maintainerAndPackageName: `${maintainer}/${packageName}`,
               uri: pathToPackageWithVersion,
@@ -150,7 +153,7 @@ export class ElmWorkspace implements IElmWorkspace {
         }
       } else {
         for (const key in dependencies) {
-          if (dependencies.hasOwnProperty(key)) {
+          if (Object.prototype.hasOwnProperty.call(dependencies, key)) {
             const maintainer = key.substring(0, key.indexOf("/"));
             const packageName = key.substring(key.indexOf("/") + 1, key.length);
 
@@ -169,10 +172,10 @@ export class ElmWorkspace implements IElmWorkspace {
               dependencies[key],
             );
             const pathToPackageWithVersion = matchedFolder
-              ? `${matchedFolder.versionPath}/src`
+              ? `${matchedFolder.versionPath}`
               : `${
                   allVersionFolders[allVersionFolders.length - 1].versionPath
-                }/src`;
+                }`;
 
             this.elmFolders.push({
               maintainerAndPackageName: `${maintainer}/${packageName}`,
@@ -183,7 +186,7 @@ export class ElmWorkspace implements IElmWorkspace {
         }
       }
 
-      const elmFilePaths = this.findElmFilesInFolders(this.elmFolders);
+      const elmFilePaths = await this.findElmFilesInFolders(this.elmFolders);
       this.connection.console.info(
         `Found ${elmFilePaths.length.toString()} files to add to the project`,
       );
@@ -225,42 +228,106 @@ export class ElmWorkspace implements IElmWorkspace {
     }
   }
 
-  private findElmFilesInFolders(
+  private async findElmFilesInFolders(
     elmFolders: {
       uri: string;
       writeable: boolean;
       maintainerAndPackageName?: string;
     }[],
-  ): IFolder[] {
-    let elmFilePaths: IFolder[] = [];
+  ): Promise<IFolder[]> {
+    let elmFilePathPromises: Promise<IFolder[]>[] = [];
     for (const element of elmFolders) {
-      elmFilePaths = elmFilePaths.concat(this.findElmFilesInFolder(element));
+      elmFilePathPromises = elmFilePathPromises.concat(
+        this.findElmFilesInFolder(element),
+      );
     }
-    return elmFilePaths;
+    return (await Promise.all(elmFilePathPromises)).reduce(
+      (a, b) => a.concat(b),
+      [],
+    );
   }
 
-  private findElmFilesInFolder(element: {
+  private async findElmFilesInFolder(element: {
     uri: string;
     writeable: boolean;
     maintainerAndPackageName?: string;
-  }): IFolder[] {
+  }): Promise<IFolder[]> {
     // Cleanup the path on windows, as globby does not like backslashes
     const globUri = element.uri.replace(/\\/g, "/");
 
-    return globby
-      .sync(`${globUri}/**/*.elm`, { suppressErrors: true })
-      .map((matchingPath) => ({
+    // As packages are not writeable, we want to handle these differently
+    if (element.writeable) {
+      return (
+        await globby(`${globUri}/**/*.elm`, {
+          suppressErrors: true,
+        })
+      ).map((matchingPath) => ({
         maintainerAndPackageName: element.maintainerAndPackageName,
         path: matchingPath,
         writeable: element.writeable,
+        isExposed: true,
       }));
+    } else {
+      const [elmFiles, elmJsonString] = await Promise.all([
+        globby(`${globUri}/src/**/*.elm`, { suppressErrors: true }),
+        readFile(`${element.uri}/elm.json`, {
+          encoding: "utf-8",
+        }),
+      ]);
+      const exposedModules = this.modulesToFilenames(
+        JSON.parse(elmJsonString),
+        element.uri,
+      );
+      return elmFiles.map((matchingPath) => ({
+        maintainerAndPackageName: element.maintainerAndPackageName,
+        path: matchingPath,
+        writeable: element.writeable,
+        isExposed: exposedModules.includes(matchingPath),
+      }));
+    }
+  }
+
+  private modulesToFilenames(
+    elmJson: unknown,
+    pathToPackage: string,
+  ): string[] {
+    if (!elmJson || !Object.hasOwnProperty.call(elmJson, "exposed-modules")) {
+      return [];
+    }
+    const x = (elmJson as {
+      "exposed-modules": Record<string, string | string[]>;
+    })["exposed-modules"];
+
+    const result: string[] = [];
+
+    for (const key in x) {
+      if (Object.hasOwnProperty.call(x, key)) {
+        const element = x[key];
+        if (typeof element === "string") {
+          result.push(
+            pathToPackage
+              .concat("/src/")
+              .concat(element.replace(".", "/").concat(".elm")),
+          );
+        } else {
+          result.push(
+            ...element.map((element) =>
+              pathToPackage
+                .concat("/src/")
+                .concat(element.replace(".", "/").concat(".elm")),
+            ),
+          );
+        }
+      }
+    }
+    return result;
   }
 
   private packageOrPackagesFolder(elmVersion: string | undefined): string {
     return elmVersion === "0.19.0" ? "package" : "packages";
   }
 
-  private findElmHome() {
+  private findElmHome(): string {
     const elmHomeVar = process.env.ELM_HOME;
 
     if (elmHomeVar) {
@@ -276,27 +343,24 @@ export class ElmWorkspace implements IElmWorkspace {
     filePath: IFolder,
     callback: () => void,
   ): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      try {
-        this.connection.console.info(`Adding ${filePath.path.toString()}`);
-        const fileContent: string = await readFile(filePath.path.toString(), {
-          encoding: "utf-8",
-        });
+    try {
+      this.connection.console.info(`Adding ${filePath.path.toString()}`);
+      const fileContent: string = await readFile(filePath.path.toString(), {
+        encoding: "utf-8",
+      });
 
-        const tree: Tree | undefined = this.parser.parse(fileContent);
-        this.forest.setTree(
-          URI.file(filePath.path).toString(),
-          filePath.writeable,
-          true,
-          tree,
-          filePath.maintainerAndPackageName,
-        );
-        callback();
-        resolve();
-      } catch (error) {
-        this.connection.console.error(error.stack);
-        reject(error);
-      }
-    });
+      const tree: Tree | undefined = this.parser.parse(fileContent);
+      this.forest.setTree(
+        URI.file(filePath.path).toString(),
+        filePath.writeable,
+        true,
+        tree,
+        filePath.isExposed,
+        filePath.maintainerAndPackageName,
+      );
+      callback();
+    } catch (error) {
+      this.connection.console.error(error.stack);
+    }
   }
 }
