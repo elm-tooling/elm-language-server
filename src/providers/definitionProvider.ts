@@ -12,7 +12,7 @@ import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
 
-type DefinitionResult =
+export type DefinitionResult =
   | Location
   | Location[]
   | LocationLink[]

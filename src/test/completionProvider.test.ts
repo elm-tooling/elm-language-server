@@ -7,8 +7,8 @@ import {
 import { IElmWorkspace } from "../elmWorkspace";
 import { SourceTreeParser } from "./utils/sourceTreeParser";
 import { mockUri } from "./utils/mockElmWorkspace";
-import { Position } from "vscode-languageserver-textdocument";
 import { mockDeep } from "jest-mock-extended";
+import { getCaretPositionFromSource } from "./utils/sourceParser";
 
 class MockCompletionProvider extends CompletionProvider {
   public handleCompletion(
@@ -17,26 +17,6 @@ class MockCompletionProvider extends CompletionProvider {
   ): CompletionResult {
     return this.handleCompletionRequest(params, elmWorkspace);
   }
-}
-
-function getCaretPositionFromSource(
-  source: string[],
-): { position?: Position; newSource: string[] } {
-  const result: {
-    newSource: string[];
-    position?: Position;
-  } = { newSource: source };
-
-  source.forEach((s, line) => {
-    const character = s.search("{-caret-}");
-    result.newSource[line] = s.replace("{-caret-}", "");
-
-    if (character >= 0) {
-      result.position = { line, character };
-    }
-  });
-
-  return result;
 }
 
 describe("CompletionProvider", () => {
