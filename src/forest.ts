@@ -7,8 +7,9 @@ export interface ITreeContainer {
   referenced: boolean;
   moduleName?: string;
   maintainerAndPackageName?: string;
-  exposing?: IExposing[];
+  exposing?: IExposing[]; // This file exposes
   tree: Tree;
+  isExposed: boolean; // Is this file exposed by the elm.json
 }
 
 export interface IForest {
@@ -23,6 +24,7 @@ export interface IForest {
     writeable: boolean,
     referenced: boolean,
     tree: Tree,
+    isExposed: boolean,
     packageName?: string,
   ): void;
   removeTree(uri: string): void;
@@ -39,7 +41,7 @@ export class Forest implements IForest {
 
   public getExposingByModuleName(moduleName: string): IExposing[] | undefined {
     const result = this.treeIndex.find(
-      (tree) => tree.moduleName === moduleName,
+      (tree) => tree.moduleName === moduleName && tree.isExposed,
     );
     return result && result.exposing;
   }
@@ -53,7 +55,9 @@ export class Forest implements IForest {
   }
 
   public getByModuleName(moduleName: string): ITreeContainer | undefined {
-    return this.treeIndex.find((tree) => tree.moduleName === moduleName);
+    return this.treeIndex.find(
+      (tree) => tree.moduleName === moduleName && tree.isExposed,
+    );
   }
 
   public getByUri(uri: string): ITreeContainer | undefined {
@@ -65,6 +69,7 @@ export class Forest implements IForest {
     writeable: boolean,
     referenced: boolean,
     tree: Tree,
+    isExposed: boolean,
     maintainerAndPackageName?: string,
   ): void {
     const moduleResult = TreeUtils.getModuleNameAndExposing(tree);
@@ -84,6 +89,7 @@ export class Forest implements IForest {
       tree,
       uri,
       writeable,
+      isExposed,
     };
 
     if (existingTree === -1) {

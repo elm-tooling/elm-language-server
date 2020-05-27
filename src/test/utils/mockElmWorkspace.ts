@@ -14,7 +14,7 @@ export class MockElmWorkspace implements IElmWorkspace {
   constructor(source: string, parser: Parser) {
     const tree = parser.parse(source);
 
-    this.forest.setTree(mockUri, true, true, tree);
+    this.forest.setTree(mockUri, true, true, tree, true);
     this.imports = new Imports(parser);
     this.imports.updateImports(mockUri, tree, this.forest);
   }

@@ -285,20 +285,16 @@ import Platform.Sub as Sub exposing ( Sub )
     uri: string,
     maintainerAndPackageName?: string,
   ): IImport[] {
-    const result: IImport[] = [];
-
-    exposed.forEach((element) => {
-      result.push({
+    return exposed.map((element: IExposing) => {
+      return {
         alias: element.name,
         fromModuleName: moduleName,
         fromUri: uri,
         maintainerAndPackageName,
         node: element.syntaxNode,
         type: element.type,
-      });
+      };
     });
-
-    return result;
   }
 
   private exposedNodesToImports(
