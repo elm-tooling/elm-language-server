@@ -8,6 +8,7 @@ import {
   Position,
   Range,
   TextEdit,
+  CompletionList,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
@@ -22,7 +23,11 @@ import RANKING_LIST from "./ranking";
 import { ImportUtils } from "../util/importUtils";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
 
-export type CompletionResult = CompletionItem[] | null | undefined;
+export type CompletionResult =
+  | CompletionItem[]
+  | CompletionList
+  | null
+  | undefined;
 
 export class CompletionProvider {
   private qidRegex = /[a-zA-Z0-9.]+/;
@@ -222,16 +227,21 @@ export class CompletionProvider {
 
       completions.push(...this.createSnippets());
       completions.push(...this.getKeywords());
-      completions.push(
-        ...this.getPossibleImports(
-          replaceRange,
-          forest,
-          tree,
-          params.textDocument.uri,
-        ),
+
+      const possibleImportCompletions = this.getPossibleImports(
+        replaceRange,
+        forest,
+        tree,
+        params.textDocument.uri,
+        nodeAtPosition.text,
       );
 
-      return completions;
+      completions.push(...possibleImportCompletions.list);
+
+      return {
+        items: completions,
+        isIncomplete: possibleImportCompletions.isIncomplete,
+      };
     }
   };
 
@@ -825,64 +835,74 @@ export class CompletionProvider {
     forest: IForest,
     tree: Tree,
     uri: string,
-  ): CompletionItem[] {
+    filterText: string,
+  ): { list: CompletionItem[]; isIncomplete: boolean } {
     const result: CompletionItem[] = [];
-    ImportUtils.getPossibleImports(forest, uri)
-      .filter(
-        (imp) =>
-          imp.value !== "view" &&
-          imp.value !== "init" &&
-          imp.value !== "update" &&
-          imp.value !== "subscriptions" &&
-          imp.value !== "Model" &&
-          imp.value !== "Msg",
-      )
-      .forEach((possibleImport) => {
-        const documentation = HintHelper.createHint(possibleImport.node);
-        const detail = `Auto import from module '${possibleImport.module}'`;
-        const importTextEdit = RefactorEditUtils.addImport(
-          tree,
-          possibleImport.module,
-          possibleImport.valueToImport ?? possibleImport.value,
+    const possibleImports = ImportUtils.getPossibleImportsFiltered(
+      forest,
+      uri,
+      filterText,
+    ).filter(
+      (imp) =>
+        imp.value !== "view" &&
+        imp.value !== "init" &&
+        imp.value !== "update" &&
+        imp.value !== "subscriptions" &&
+        imp.value !== "Model" &&
+        imp.value !== "Msg",
+    );
+
+    let isIncomplete = false;
+    if (possibleImports.length > 50) {
+      isIncomplete = true;
+    }
+
+    possibleImports.splice(0, 49).forEach((possibleImport, i) => {
+      const documentation = HintHelper.createHint(possibleImport.node);
+      const detail = `Auto import from module '${possibleImport.module}'`;
+      const importTextEdit = RefactorEditUtils.addImport(
+        tree,
+        possibleImport.module,
+        possibleImport.valueToImport ?? possibleImport.value,
+      );
+
+      if (possibleImport.type === "Function") {
+        result.push(
+          this.createFunctionCompletion(
+            documentation,
+            possibleImport.value,
+            range,
+            "e" + i,
+            detail,
+            importTextEdit,
+          ),
         );
+      } else if (possibleImport.type === "TypeAlias") {
+        result.push(
+          this.createTypeAliasCompletion(
+            documentation,
+            possibleImport.value,
+            range,
+            "e" + i,
+            detail,
+            importTextEdit,
+          ),
+        );
+      } else if (possibleImport.type === "Type") {
+        result.push(
+          this.createTypeCompletion(
+            documentation,
+            possibleImport.value,
+            range,
+            "e" + i,
+            detail,
+            importTextEdit,
+          ),
+        );
+      }
+    });
 
-        if (possibleImport.type === "Function") {
-          result.push(
-            this.createFunctionCompletion(
-              documentation,
-              possibleImport.value,
-              range,
-              "d",
-              detail,
-              importTextEdit,
-            ),
-          );
-        } else if (possibleImport.type === "TypeAlias") {
-          result.push(
-            this.createTypeAliasCompletion(
-              documentation,
-              possibleImport.value,
-              range,
-              "d",
-              detail,
-              importTextEdit,
-            ),
-          );
-        } else if (possibleImport.type === "Type") {
-          result.push(
-            this.createTypeCompletion(
-              documentation,
-              possibleImport.value,
-              range,
-              "d",
-              detail,
-              importTextEdit,
-            ),
-          );
-        }
-      });
-
-    return result;
+    return { list: result, isIncomplete };
   }
 
   private createSnippet(

@@ -1222,31 +1222,63 @@ export class TreeUtils {
     }
   }
 
-  public static isValueImported(tree: Tree, valueName: string): boolean {
+  public static getAllImportedValues(
+    forest: IForest,
+    tree: Tree,
+  ): { module: string; value: string }[] {
     const allImports = this.findAllImportNameNodes(tree);
 
+    const allImportedValues: { module: string; value: string }[] = [];
+
     if (allImports) {
-      allImports.find((importClause) => {
+      allImports.forEach((importClause) => {
         const exposingList = TreeUtils.findFirstNamedChildOfType(
           "exposing_list",
           importClause,
         );
 
-        const exposedValues = TreeUtils.descendantsOfType(
+        const moduleName = TreeUtils.findFirstNamedChildOfType(
+          "upper_case_qid",
           importClause,
-          "exposed_value",
-        );
+        )?.text;
 
-        if (exposedValues.find((val) => val.text === valueName)) {
-          return true;
-        }
+        if (exposingList && moduleName) {
+          TreeUtils.findAllNamedChildrenOfType(
+            ["exposed_value", "exposed_type"],
+            exposingList,
+          )?.forEach((node) => {
+            allImportedValues.push({
+              module: moduleName,
+              value: node.text,
+            });
+            // Todo: Add exposing union constructors
+          });
 
-        if (exposingList?.text === "(..)") {
+          // Handle all imports
+          if (exposingList.text === "exposing (..)") {
+            const moduleTree = forest.treeIndex.find(
+              (tree) => tree.moduleName === moduleName,
+            );
+
+            moduleTree?.exposing?.forEach((exposed) => {
+              allImportedValues.push({
+                module: moduleName,
+                value: exposed.name,
+              });
+
+              exposed.exposedUnionConstructors?.forEach((exposedUnion) => {
+                allImportedValues.push({
+                  module: moduleName,
+                  value: exposedUnion.name,
+                });
+              });
+            });
+          }
         }
       });
     }
 
-    return false;
+    return allImportedValues;
   }
 
   public static findImportNameNode(
