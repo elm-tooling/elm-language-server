@@ -38,6 +38,7 @@ describe("CompletionProvider", () => {
     expectedCompletions: string[],
     testExactCompletions?: boolean,
     testDotCompletion?: boolean,
+    dontAddModuleDeclaration?: boolean,
   ) {
     await treeParser.init();
 
@@ -47,9 +48,13 @@ describe("CompletionProvider", () => {
       fail();
     }
 
-    // Add the module header and account for it in the cursor position
-    const sources = ["module Test exposing (..)", "", ...newSource];
-    position.line += 2;
+    let sources = newSource;
+
+    if (!dontAddModuleDeclaration) {
+      // Add the module header and account for it in the cursor position
+      sources = ["module Test exposing (..)", "", ...newSource];
+      position.line += 2;
+    }
 
     function testCompletionsWithContext(context: CompletionContext) {
       const completions =
@@ -71,7 +76,7 @@ describe("CompletionProvider", () => {
       }
 
       expectedCompletions.forEach((completion) => {
-        expect(completions.find((c) => c.label === completion)).toBeTruthy;
+        expect(completions.find((c) => c.label === completion)).toBeTruthy();
       });
     }
 
@@ -185,6 +190,8 @@ describe("CompletionProvider", () => {
       `test param =`,
       `  let`,
       `    list = List.map (\_ -> p{-caret-})`,
+      `  in`,
+      `    ""`,
     ];
 
     await testCompletions(source, ["param"]);
@@ -198,6 +205,9 @@ describe("CompletionProvider", () => {
       `    val = "test"`,
       ``,
       `    another = v{-caret-}`,
+      ``,
+      `  in`,
+      `    ""`,
     ];
 
     await testCompletions(source, ["val"]);
@@ -217,13 +227,137 @@ describe("CompletionProvider", () => {
 
   it("Imported values should have completions", async () => {
     const source = [
-      `import Html exposing (div)`,
+      `import Test2 exposing (testFunction)`,
       ``,
-      `test : Model -> Html msg`,
+      `test : Int -> String`,
       `test param =`,
-      `  d{-caret-}`,
+      `  {-caret-}`,
     ];
 
-    await testCompletions(source, ["div"]);
+    await testCompletions(source, ["testFunction", "Test2.testFunction"]);
+
+    const source2 = [
+      `import Test2 exposing (..)`,
+      ``,
+      `test : T{-caret-} -> String`,
+      `test param =`,
+      `  ""`,
+    ];
+
+    await testCompletions(source2, ["TestType"]);
+  });
+
+  it("Importing modules should have completions", async () => {
+    const source = [`import {-caret-}`];
+
+    await testCompletions(source, ["Test", "Test2"], true);
+
+    const source2 = [`import T{-caret-}`];
+
+    await testCompletions(source2, ["Test", "Test2"], true);
+  });
+
+  it("Exposing a value should have completions", async () => {
+    const source = [`import Test2 exposing ({-caret-})`];
+
+    await testCompletions(source, ["testFunction", "Msg", "TestType"], true);
+
+    const source2 = [`import Test2 exposing (testFunction, {-caret-})`];
+
+    await testCompletions(source2, ["testFunction", "Msg", "TestType"], true);
+
+    const source3 = [`import Test2 exposing (testFunction, T{-caret-})`];
+
+    await testCompletions(source3, ["testFunction", "Msg", "TestType"], true);
+  });
+
+  it("Exposing list should have completions", async () => {
+    const source = [
+      `module Test exposing ({-caret-})`,
+      ``,
+      `testFunc : String`,
+      `testFunc = `,
+      `  ""`,
+      ``,
+      ``,
+      `type Msg = Msg1 | Msg2`,
+      ``,
+      `type alias TestType = `,
+      `  { prop : String }`,
+    ];
+
+    await testCompletions(
+      source,
+      ["testFunc", "Msg", "Msg(..)", "Msg1", "Msg2", "TestType"],
+      true,
+      false,
+      true,
+    );
+
+    const source2 = [
+      `module Test exposing ({-caret-}`,
+      ``,
+      `import Test2 exposing (..)`,
+      ``,
+      `testFunc : String`,
+      `testFunc = `,
+      `  ""`,
+      ``,
+      ``,
+      `type Msg = Msg1 | Msg2`,
+    ];
+
+    await testCompletions(
+      source2,
+      ["testFunc", "Msg", "Msg(..)", "Msg1", "Msg2"],
+      true,
+      false,
+      true,
+    );
+
+    const source3 = [
+      `module Test exposing (testFunc, {-caret-}`,
+      ``,
+      `import Test2 exposing (..)`,
+      ``,
+      `testFunc : String`,
+      `testFunc = `,
+      `  ""`,
+      ``,
+      ``,
+      `type Msg = Msg1 | Msg2`,
+    ];
+
+    await testCompletions(
+      source3,
+      ["testFunc", "Msg", "Msg(..)", "Msg1", "Msg2"],
+      true,
+      false,
+      true,
+    );
+  });
+
+  it("Function name should have completions in annotation and declaration", async () => {
+    const source = [`{-caret-}`, `func = `, `  ""`];
+
+    await testCompletions(source, ["func"], true);
+
+    const source2 = [`func : String`, `f{-caret-} = `, `  ""`];
+
+    await testCompletions(source2, ["func"], true);
+  });
+
+  it("Case branch variables should have completions", async () => {
+    const source = [
+      `type Msg = Msg1 String`,
+      ``,
+      `func : Msg -> String`,
+      `func msg = `,
+      `  case msg of`,
+      `    Msg1 str ->`,
+      `      s{-caret-}`,
+    ];
+
+    await testCompletions(source, ["str"]);
   });
 });
