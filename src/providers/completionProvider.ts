@@ -8,6 +8,7 @@ import {
   Position,
   Range,
   TextEdit,
+  CompletionList,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
@@ -19,8 +20,14 @@ import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
 import { TreeUtils } from "../util/treeUtils";
 import RANKING_LIST from "./ranking";
+import { ImportUtils } from "../util/importUtils";
+import { RefactorEditUtils } from "../util/refactorEditUtils";
 
-export type CompletionResult = CompletionItem[] | null | undefined;
+export type CompletionResult =
+  | CompletionItem[]
+  | CompletionList
+  | null
+  | undefined;
 
 export class CompletionProvider {
   private qidRegex = /[a-zA-Z0-9.]+/;
@@ -221,7 +228,20 @@ export class CompletionProvider {
       completions.push(...this.createSnippets());
       completions.push(...this.getKeywords());
 
-      return completions;
+      const possibleImportCompletions = this.getPossibleImports(
+        replaceRange,
+        forest,
+        tree,
+        params.textDocument.uri,
+        nodeAtPosition.text,
+      );
+
+      completions.push(...possibleImportCompletions.list);
+
+      return {
+        items: completions,
+        isIncomplete: possibleImportCompletions.isIncomplete,
+      };
     }
   };
 
@@ -542,6 +562,8 @@ export class CompletionProvider {
     label: string,
     range: Range,
     sortPrefix: string,
+    detail?: string,
+    addImportTextEdit?: TextEdit,
   ): CompletionItem {
     return this.createCompletion(
       markdownDocumentation,
@@ -549,6 +571,8 @@ export class CompletionProvider {
       label,
       range,
       sortPrefix,
+      detail,
+      addImportTextEdit ? [addImportTextEdit] : undefined,
     );
   }
 
@@ -570,6 +594,8 @@ export class CompletionProvider {
     label: string,
     range: Range,
     sortPrefix: string,
+    detail?: string,
+    addImportTextEdit?: TextEdit,
   ): CompletionItem {
     return this.createCompletion(
       markdownDocumentation,
@@ -577,6 +603,8 @@ export class CompletionProvider {
       label,
       range,
       sortPrefix,
+      detail,
+      addImportTextEdit ? [addImportTextEdit] : undefined,
     );
   }
 
@@ -585,6 +613,8 @@ export class CompletionProvider {
     label: string,
     range: Range,
     sortPrefix: string,
+    detail?: string,
+    addImportTextEdit?: TextEdit,
   ): CompletionItem {
     return this.createCompletion(
       markdownDocumentation,
@@ -592,6 +622,8 @@ export class CompletionProvider {
       label,
       range,
       sortPrefix,
+      detail,
+      addImportTextEdit ? [addImportTextEdit] : undefined,
     );
   }
 
@@ -644,6 +676,8 @@ export class CompletionProvider {
     label: string,
     range: Range,
     sortPrefix: string,
+    detail?: string,
+    additionalTextEdits?: TextEdit[],
   ): CompletionItem {
     return {
       documentation: markdownDocumentation
@@ -656,6 +690,8 @@ export class CompletionProvider {
       label,
       sortText: `${sortPrefix}_${label}`,
       textEdit: TextEdit.replace(range, label),
+      detail,
+      additionalTextEdits,
     };
   }
 
@@ -792,6 +828,81 @@ export class CompletionProvider {
     }
 
     return result;
+  }
+
+  private getPossibleImports(
+    range: Range,
+    forest: IForest,
+    tree: Tree,
+    uri: string,
+    filterText: string,
+  ): { list: CompletionItem[]; isIncomplete: boolean } {
+    const result: CompletionItem[] = [];
+    const possibleImports = ImportUtils.getPossibleImportsFiltered(
+      forest,
+      uri,
+      filterText,
+    ).filter(
+      (imp) =>
+        imp.value !== "view" &&
+        imp.value !== "init" &&
+        imp.value !== "update" &&
+        imp.value !== "subscriptions" &&
+        imp.value !== "Model" &&
+        imp.value !== "Msg",
+    );
+
+    let isIncomplete = false;
+    if (possibleImports.length > 50) {
+      isIncomplete = true;
+    }
+
+    possibleImports.splice(0, 49).forEach((possibleImport, i) => {
+      const documentation = HintHelper.createHint(possibleImport.node);
+      const detail = `Auto import from module '${possibleImport.module}'`;
+      const importTextEdit = RefactorEditUtils.addImport(
+        tree,
+        possibleImport.module,
+        possibleImport.valueToImport ?? possibleImport.value,
+      );
+
+      if (possibleImport.type === "Function") {
+        result.push(
+          this.createFunctionCompletion(
+            documentation,
+            possibleImport.value,
+            range,
+            `e${i}`,
+            detail,
+            importTextEdit,
+          ),
+        );
+      } else if (possibleImport.type === "TypeAlias") {
+        result.push(
+          this.createTypeAliasCompletion(
+            documentation,
+            possibleImport.value,
+            range,
+            `e${i}`,
+            detail,
+            importTextEdit,
+          ),
+        );
+      } else if (possibleImport.type === "Type") {
+        result.push(
+          this.createTypeCompletion(
+            documentation,
+            possibleImport.value,
+            range,
+            `e${i}`,
+            detail,
+            importTextEdit,
+          ),
+        );
+      }
+    });
+
+    return { list: result, isIncomplete };
   }
 
   private createSnippet(

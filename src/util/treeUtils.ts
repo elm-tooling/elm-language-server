@@ -1222,6 +1222,65 @@ export class TreeUtils {
     }
   }
 
+  public static getAllImportedValues(
+    forest: IForest,
+    tree: Tree,
+  ): { module: string; value: string }[] {
+    const allImports = this.findAllImportNameNodes(tree);
+
+    const allImportedValues: { module: string; value: string }[] = [];
+
+    if (allImports) {
+      allImports.forEach((importClause) => {
+        const exposingList = TreeUtils.findFirstNamedChildOfType(
+          "exposing_list",
+          importClause,
+        );
+
+        const moduleName = TreeUtils.findFirstNamedChildOfType(
+          "upper_case_qid",
+          importClause,
+        )?.text;
+
+        if (exposingList && moduleName) {
+          TreeUtils.findAllNamedChildrenOfType(
+            ["exposed_value", "exposed_type"],
+            exposingList,
+          )?.forEach((node) => {
+            allImportedValues.push({
+              module: moduleName,
+              value: node.text,
+            });
+            // Todo: Add exposing union constructors
+          });
+
+          // Handle all imports
+          if (exposingList.text === "exposing (..)") {
+            const moduleTree = forest.treeIndex.find(
+              (tree) => tree.moduleName === moduleName,
+            );
+
+            moduleTree?.exposing?.forEach((exposed) => {
+              allImportedValues.push({
+                module: moduleName,
+                value: exposed.name,
+              });
+
+              exposed.exposedUnionConstructors?.forEach((exposedUnion) => {
+                allImportedValues.push({
+                  module: moduleName,
+                  value: exposedUnion.name,
+                });
+              });
+            });
+          }
+        }
+      });
+    }
+
+    return allImportedValues;
+  }
+
   public static findImportNameNode(
     tree: Tree,
     moduleName: string,
