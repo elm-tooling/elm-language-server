@@ -4,10 +4,8 @@ import Parser, { Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { Forest, IForest } from "../../forest";
 import { Imports } from "../../imports";
-import { readFileSync } from "fs";
 
-export const mockUri = Path.join(__dirname, "../sources/src/Test.elm");
-export const mockUri2 = Path.join(__dirname, "../sources/src/Test2.elm");
+export const baseUri = Path.join(__dirname, "../sources/src/");
 
 export class MockElmWorkspace implements IElmWorkspace {
   private imports!: Imports;
@@ -16,15 +14,22 @@ export class MockElmWorkspace implements IElmWorkspace {
 
   constructor(sources: { [K: string]: string }, parser: Parser) {
     this.parser = parser;
+    this.imports = new Imports(parser);
 
     for (const key in sources) {
       if (sources.hasOwnProperty(key)) {
-        const source = sources[key];
+        this.parseAndAddToForest(key, sources[key]);
+      }
+    }
 
-        const tree = parser.parse(source);
-        this.forest.setTree(mockUri, true, true, tree, true);
-        this.imports = new Imports(parser);
-        this.imports.updateImports(mockUri, tree, this.forest);
+    for (const key in sources) {
+      if (sources.hasOwnProperty(key)) {
+        const uri = URI.file(baseUri + key).toString();
+        const tree = this.forest.getTree(uri);
+
+        if (tree) {
+          this.imports.updateImports(uri, tree, this.forest);
+        }
       }
     }
   }
@@ -56,13 +61,14 @@ export class MockElmWorkspace implements IElmWorkspace {
     return URI.file(Path.join(__dirname, "sources"));
   }
 
-  private readAndAddToForest(uri: string): void {
-    const fileContent = readFileSync(uri, {
-      encoding: "utf-8",
-    });
-
-    const tree: Tree | undefined = this.parser.parse(fileContent);
-    this.forest.setTree(URI.file(uri).toString(), true, true, tree, true);
-    this.imports.updateImports(uri, tree, this.forest);
+  private parseAndAddToForest(fileName: string, source: string): void {
+    const tree: Tree | undefined = this.parser.parse(source);
+    this.forest.setTree(
+      URI.file(baseUri + fileName).toString(),
+      true,
+      true,
+      tree,
+      true,
+    );
   }
 }

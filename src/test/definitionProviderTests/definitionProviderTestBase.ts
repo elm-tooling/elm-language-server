@@ -2,10 +2,13 @@ import { DefinitionProvider, DefinitionResult } from "../../providers";
 import { IConnection, TextDocumentPositionParams } from "vscode-languageserver";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { SourceTreeParser } from "../utils/sourceTreeParser";
-import { mockUri } from "../utils/mockElmWorkspace";
+import { baseUri } from "../utils/mockElmWorkspace";
 import { mockDeep } from "jest-mock-extended";
 import { TreeUtils } from "../../util/treeUtils";
 import { getInvokeAndTargetPositionFromSource } from "../utils/sourceParser";
+import { URI } from "vscode-uri";
+
+const mockUri = URI.file(baseUri + "Main.elm").toString();
 
 class MockDefinitionProvider extends DefinitionProvider {
   public handleDefinition(
