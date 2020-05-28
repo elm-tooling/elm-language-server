@@ -383,7 +383,7 @@ export class CompletionProvider {
   private getSameFileTopLevelCompletions(
     tree: Tree,
     range: Range,
-    moduleDefinition: boolean = false,
+    moduleDefinition = false,
   ): CompletionItem[] {
     const completions: CompletionItem[] = [];
     const topLevelFunctions = TreeUtils.findAllTopLeverFunctionDeclarations(

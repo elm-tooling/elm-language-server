@@ -41,8 +41,8 @@ export class HintHelper {
     declaration: SyntaxNode | undefined,
   ): string | undefined {
     if (declaration) {
-      const comment: string = "Defined in local let scope";
-      let annotation: string = "";
+      const comment = "Defined in local let scope";
+      let annotation = "";
       if (declaration.previousNamedSibling) {
         if (declaration.previousNamedSibling.type === "type_annotation") {
           annotation = declaration.previousNamedSibling.text;
@@ -53,7 +53,7 @@ export class HintHelper {
   }
 
   public static createHintFromDefinitionInCaseBranch(): string | undefined {
-    const comment: string = "Defined in local case branch";
+    const comment = "Defined in local case branch";
     return this.formatHint("", comment);
   }
 
@@ -62,8 +62,8 @@ export class HintHelper {
   ): string | undefined {
     if (declaration) {
       let code: string | undefined;
-      let comment: string = "";
-      let annotation: string = "";
+      let comment = "";
+      let annotation = "";
       if (
         declaration.type === "type_declaration" ||
         declaration.type === "type_alias_declaration"
@@ -108,7 +108,7 @@ export class HintHelper {
 
   private static createHintFromModule(moduleNode: SyntaxNode | undefined) {
     if (moduleNode) {
-      let comment: string = "";
+      let comment = "";
       if (
         moduleNode.nextNamedSibling &&
         moduleNode.nextNamedSibling.type === "block_comment"

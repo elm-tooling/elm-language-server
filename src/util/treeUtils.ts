@@ -16,7 +16,7 @@ export type NodeType =
   | "UnionConstructor"
   | "FieldType";
 
-const functionNameRegex: RegExp = new RegExp("[a-zA-Z0-9_]+");
+const functionNameRegex = new RegExp("[a-zA-Z0-9_]+");
 
 export interface IExposing {
   name: string;
@@ -457,7 +457,7 @@ export class TreeUtils {
   public static findFunction(
     syntaxNode: SyntaxNode,
     functionName: string,
-    onlySearchTopLevel: boolean = true,
+    onlySearchTopLevel = true,
   ): SyntaxNode | undefined {
     const functions = onlySearchTopLevel
       ? syntaxNode.children.filter((a) => a.type === "value_declaration")
