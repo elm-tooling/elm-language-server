@@ -5,7 +5,7 @@ describe("patternDefinition", () => {
 
   // CASE-OF EXPRESSIONS AND PATTERNS
 
-  it(`test case-of pattern wildcard`, async () => {
+  xit(`test case-of pattern wildcard`, async () => {
     const source = `
 f x =
     case x of
@@ -27,7 +27,7 @@ f x =
     await testBase.testDefinition(source);
   });
 
-  it(`test case-of pattern union type constructor with constructor parameter`, async () => {
+  xit(`test case-of pattern union type constructor with constructor parameter`, async () => {
     const source = `
 type Foo = Foo
            --X
@@ -141,7 +141,7 @@ f =
     await testBase.testDefinition(source);
   });
 
-  it(`test pattern alias in let-in destructuring assignment`, async () => {
+  xit(`test pattern alias in let-in destructuring assignment`, async () => {
     const source = `
 f =
     let
@@ -154,7 +154,7 @@ f =
     await testBase.testDefinition(source);
   });
 
-  it(`test pattern alias in case-of branch`, async () => {
+  xit(`test pattern alias in case-of branch`, async () => {
     const source = `
 f x =
     case x of

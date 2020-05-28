@@ -20,7 +20,7 @@ foo a = { a | bar = a.bar }
     await testBase.testDefinition(source);
   });
 
-  it(`test record extension type base ref in type alias decl`, async () => {
+  xit(`test record extension type base ref in type alias decl`, async () => {
     const source = `
 type alias Foo a = { a | bar : Int }
              --X   --^
@@ -28,7 +28,7 @@ type alias Foo a = { a | bar : Int }
     await testBase.testDefinition(source);
   });
 
-  it(`test record extension type base ref in union type decl`, async () => {
+  xit(`test record extension type base ref in union type decl`, async () => {
     const source = `
 type Foo a = Bar { a | bar : Int }
        --X       --^

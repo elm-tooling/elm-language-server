@@ -15,7 +15,7 @@ f = magicNumber + 1
 
   // LET-IN EXPRESSIONS
 
-  it(`test simple value declared by let-in`, async () => {
+  xit(`test simple value declared by let-in`, async () => {
     const source = `
 f x =
     let y = 42
@@ -52,7 +52,7 @@ foo =
 
   // LAMBDAS (ANONYMOUS FUNCTIONS)
 
-  it(`test lambda parameter ref`, async () => {
+  xit(`test lambda parameter ref`, async () => {
     const source = `
 f = \\x -> x
    --X  --^
@@ -60,7 +60,7 @@ f = \\x -> x
     await testBase.testDefinition(source);
   });
 
-  it(`test lambda parameter nested`, async () => {
+  xit(`test lambda parameter nested`, async () => {
     const source = `
 f = \\x -> (\() -> x)
    --X          --^
@@ -76,7 +76,7 @@ f = \() -> x (\\x -> ())
     await testBase.testDefinition(source);
   });
 
-  it(`test lambda parameter destructured record field ref`, async () => {
+  xit(`test lambda parameter destructured record field ref`, async () => {
     const source = `
 f = \{x} -> x
     --X   --^
@@ -84,7 +84,7 @@ f = \{x} -> x
     await testBase.testDefinition(source);
   });
 
-  it(`test lambda parameter destructured tuple ref`, async () => {
+  xit(`test lambda parameter destructured tuple ref`, async () => {
     const source = `
 f = \(x,y) -> x
     --X     --^
@@ -92,7 +92,7 @@ f = \(x,y) -> x
     await testBase.testDefinition(source);
   });
 
-  it(`test lambda parameter destructured with alias`, async () => {
+  xit(`test lambda parameter destructured with alias`, async () => {
     const source = `
 f = \((x,y) as point) -> point
                --X       --^
@@ -102,7 +102,7 @@ f = \((x,y) as point) -> point
 
   // PORTS
 
-  it(`test port ref`, async () => {
+  xit(`test port ref`, async () => {
     const source = `
 port module Ports exposing (..)
 port foo : String -> Cmd msg

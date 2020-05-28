@@ -38,7 +38,7 @@ main r = r.field.nested
     await testBase.testDefinition(source);
   });
 
-  it(`test simple field accessor function`, async () => {
+  xit(`test simple field accessor function`, async () => {
     const source = `
 type alias R = { field : () }
                  --X
@@ -73,7 +73,7 @@ main r = r.field
     await testBase.testDefinition(source);
   });
 
-  it(`test field access to field in record parameter`, async () => {
+  xit(`test field access to field in record parameter`, async () => {
     const source = `
 type alias R a = { a | field : () }
 type alias S = { s : R { field2 : () } }
@@ -85,7 +85,7 @@ main r = r.s.field2
     await testBase.testDefinition(source);
   });
 
-  it(`test field access to nested parameterized record`, async () => {
+  xit(`test field access to nested parameterized record`, async () => {
     const source = `
 type alias S = { nested : () }
                  --X
@@ -97,7 +97,7 @@ main r = r.field.nested
     await testBase.testDefinition(source);
   });
 
-  it(`test field access in lambda call`, async () => {
+  xit(`test field access in lambda call`, async () => {
     const source = `
 type alias R = { field : () }
                  --X
@@ -130,7 +130,7 @@ main r = { r | field = () }.field
     await testBase.testDefinition(source);
   });
 
-  it(`test field access of variant param`, async () => {
+  xit(`test field access of variant param`, async () => {
     const source = `
 type T = T { field : () }
               --X
@@ -144,7 +144,7 @@ main t =
     await testBase.testDefinition(source);
   });
 
-  it(`test record value in function call`, async () => {
+  xit(`test record value in function call`, async () => {
     const source = `
 type alias R = { field : () }
                  --X
@@ -157,7 +157,7 @@ main = func { field = () }
     await testBase.testDefinition(source);
   });
 
-  it(`test record value in forward pipeline`, async () => {
+  xit(`test record value in forward pipeline`, async () => {
     const source = `
 infix left  0 (|>) = apR
 apR : a -> (a -> b) -> b
@@ -173,7 +173,7 @@ main = { field = () } |> func
     await testBase.testDefinition(source);
   });
 
-  it(`test record value in backward pipeline`, async () => {
+  xit(`test record value in backward pipeline`, async () => {
     const source = `
 infix right 0 (<|) = apL
 apL : (a -> b) -> a -> b
@@ -201,7 +201,7 @@ main = { field = () }
     await testBase.testDefinition(source);
   });
 
-  it(`test record value returned from lambda`, async () => {
+  xit(`test record value returned from lambda`, async () => {
     const source = `
 type alias R = { field : () }
                  --X
@@ -227,7 +227,7 @@ main r =
     await testBase.testDefinition(source);
   });
 
-  it(`test nested decl mapper`, async () => {
+  xit(`test nested decl mapper`, async () => {
     const source = `                                        
 type alias R = { field : () }                          
                  --X                                   
@@ -247,7 +247,7 @@ main box =
     await testBase.testDefinition(source);
   });
 
-  it(`test multi resolve`, async () => {
+  xit(`test multi resolve`, async () => {
     const source = `
 type alias R = { field : () }
 type alias S = { field : () }
@@ -264,7 +264,7 @@ main r s =
     await testBase.testDefinition(source);
   });
 
-  it(`test ref to destructuring in function parameter`, async () => {
+  xit(`test ref to destructuring in function parameter`, async () => {
     const source = `
 type alias R = { field : () }
                  --X
@@ -275,7 +275,7 @@ main { field } = field
     await testBase.testDefinition(source);
   });
 
-  it(`test value ref through destructuring in function parameter`, async () => {
+  xit(`test value ref through destructuring in function parameter`, async () => {
     const source = `
 type alias R = { field : () }
                  --X
@@ -286,7 +286,7 @@ main { field } = field
     await testBase.testDefinition(source);
   });
 
-  it(`test ref through destructuring in case`, async () => {
+  xit(`test ref through destructuring in case`, async () => {
     const source = `
 type alias R = { field : () }
                  --X
@@ -299,7 +299,7 @@ main r =
     await testBase.testDefinition(source);
   });
 
-  it(`test ref to destructuring in case`, async () => {
+  xit(`test ref to destructuring in case`, async () => {
     const source = `
 type alias R = { field : () }
                  --X
@@ -312,7 +312,7 @@ main r =
     await testBase.testDefinition(source);
   });
 
-  it(`test repeated reference in list 1`, async () => {
+  xit(`test repeated reference in list 1`, async () => {
     const source = `
 type alias R = { field : () }
                  --X
@@ -325,7 +325,7 @@ main =
     await testBase.testDefinition(source);
   });
 
-  it(`test repeated reference in list 2`, async () => {
+  xit(`test repeated reference in list 2`, async () => {
     const source = `
 type alias R = { field : () }
                  --X
@@ -339,7 +339,7 @@ main =
     await testBase.testDefinition(source);
   });
 
-  it(`test repeated reference in list 3`, async () => {
+  xit(`test repeated reference in list 3`, async () => {
     const source = `
 type alias R = { field : () }
                  --X
@@ -354,7 +354,7 @@ main =
     await testBase.testDefinition(source);
   });
 
-  it(`test nested extension aliases with funcion in type variable passed through another variable via forward pipeline`, async () => {
+  xit(`test nested extension aliases with funcion in type variable passed through another variable via forward pipeline`, async () => {
     const source = `
 infix left  0 (|>) = apR
 apR : a -> (a -> b) -> b
