@@ -38,7 +38,6 @@
     "jest-mock-extended": "^1.0.8",
     "jest": "^26.0.1",
     "prettier": "^2.0.5",
-    "pretty-quick": "^2.0.1",
     "tree-sitter-cli": "^0.16.7",
     "tree-sitter-elm": "^2.7.8",
     "ts-jest": "^26.0.0",
@@ -49,7 +48,6 @@
     "compile": "npm run copy-wasm && tsc -p ./",
     "watch": "npm run copy-wasm && tsc -watch -p ./",
     "lint": "eslint -c .eslintrc.js --ext .ts src",
-    "format:fix": "pretty-quick --staged",
     "build-tree-sitter": "tree-sitter build-wasm ./node_modules/tree-sitter-elm",
     "test": "jest --coverage",
     "generate-toc": "doctoc README.md"
