@@ -20,7 +20,7 @@ export class SourceTreeParser {
     this.parser.setLanguage(language);
   }
 
-  public getWorkspace(source: string[]): IElmWorkspace {
-    return new MockElmWorkspace(source.join("\n"), this.parser!);
+  public getWorkspace(sources: { [K: string]: string }): IElmWorkspace {
+    return new MockElmWorkspace(sources, this.parser!);
   }
 }

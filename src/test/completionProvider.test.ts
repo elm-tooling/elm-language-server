@@ -42,18 +42,10 @@ describe("CompletionProvider", () => {
   ) {
     await treeParser.init();
 
-    const { newSource, position } = getCaretPositionFromSource(source);
+    const { newSources, position } = getCaretPositionFromSource(source);
 
     if (!position) {
       fail();
-    }
-
-    let sources = newSource;
-
-    if (!dontAddModuleDeclaration) {
-      // Add the module header and account for it in the cursor position
-      sources = ["module Test exposing (..)", "", ...newSource];
-      position.line += 2;
     }
 
     function testCompletionsWithContext(context: CompletionContext) {
@@ -64,7 +56,7 @@ describe("CompletionProvider", () => {
             position: position!,
             context,
           },
-          treeParser.getWorkspace(sources),
+          treeParser.getWorkspace(newSources),
         ) ?? [];
 
       if (testExactCompletions) {

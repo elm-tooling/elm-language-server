@@ -51,7 +51,7 @@
     "lint": "eslint -c .eslintrc.js --ext .ts src",
     "format:fix": "pretty-quick --staged",
     "build-tree-sitter": "tree-sitter build-wasm ./node_modules/tree-sitter-elm",
-    "test": "jest",
+    "test": "jest --coverage",
     "generate-toc": "doctoc README.md"
   },
   "bin": {
