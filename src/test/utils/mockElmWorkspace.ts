@@ -2,21 +2,26 @@ import * as Path from "path";
 import { URI } from "vscode-uri";
 import Parser from "web-tree-sitter";
 import { IElmWorkspace } from "../../elmWorkspace";
-import { Forest } from "../../forest";
+import { Forest, IForest } from "../../forest";
 import { Imports } from "../../imports";
 
 export const mockUri = Path.join(__dirname, "../sources/src/Test.elm");
 
 export class MockElmWorkspace implements IElmWorkspace {
-  private imports: Imports;
-  private forest: Forest = new Forest();
+  private imports!: Imports;
+  private forest: IForest = new Forest();
 
-  constructor(source: string, parser: Parser) {
-    const tree = parser.parse(source);
+  constructor(sources: { [K: string]: string }, parser: Parser) {
+    for (const key in sources) {
+      if (sources.hasOwnProperty(key)) {
+        const source = sources[key];
 
-    this.forest.setTree(mockUri, true, true, tree, true);
-    this.imports = new Imports(parser);
-    this.imports.updateImports(mockUri, tree, this.forest);
+        const tree = parser.parse(source);
+        this.forest.setTree(mockUri, true, true, tree, true);
+        this.imports = new Imports(parser);
+        this.imports.updateImports(mockUri, tree, this.forest);
+      }
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
