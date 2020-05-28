@@ -1,34 +1,38 @@
 import { Position } from "vscode-languageserver";
 
 export function getCaretPositionFromSource(
-  source: string[],
-): { position: Position; newSources: { [K: string]: string } } {
-  let tempSource = source;
-  let tempPosition: Position | undefined = undefined;
+  source: string,
+): {
+  position: Position;
+  newSources: { [K: string]: string };
+  fileWithCaret: string;
+} {
+  const sources = getSourceFiles(source);
 
-  source.forEach((s, line) => {
-    const character = s.search("{-caret-}");
-    tempSource[line] = s.replace("{-caret-}", "");
+  let position: Position | undefined;
+  let fileWithCaret = "";
 
-    if (character >= 0) {
-      tempPosition = { line, character };
-    }
-  });
+  for (const fileName in sources) {
+    sources[fileName] = sources[fileName]
+      .split("\n")
+      .map((s, line) => {
+        const character = s.search("{-caret-}");
 
-  if (!tempPosition) {
+        if (character >= 0) {
+          position = { line, character };
+          fileWithCaret = fileName;
+        }
+
+        return s.replace("{-caret-}", "");
+      })
+      .join("\n");
+  }
+
+  if (!position) {
     fail();
   }
 
-  tempSource = ["module Test exposing (..)", "", ...tempSource];
-
-  (tempPosition as Position).line += 2;
-
-  const result: {
-    newSources: { [K: string]: string };
-    position: Position;
-  } = { newSources: {}, position: tempPosition };
-  result.newSources["Main.elm"] = tempSource.join("\n");
-  return result;
+  return { newSources: sources, position, fileWithCaret };
 }
 
 export type TestType =
@@ -93,26 +97,7 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
     }
   });
 
-  const sources: { [K: string]: string } = {};
-  let currentFile = "";
-  const regex = /^--@ ([a-zA-Z]+.elm)$/;
-
-  const x = regex.exec(source);
-
-  if (x == null || x[1] === undefined) {
-    sources["Main.elm"] = source;
-  } else {
-    source.split("\n").forEach((s, line) => {
-      const match = regex.exec(s);
-
-      if (match !== null) {
-        sources[match[1]] = "";
-        currentFile = match[1];
-      } else {
-        sources[currentFile] = sources[currentFile] + s + "\n";
-      }
-    });
-  }
+  const sources = getSourceFiles(source);
 
   if (unresolved) {
     if (!invokePosition) {
@@ -135,4 +120,29 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
     }
     return { kind: "resolves", invokePosition, targetPosition, sources };
   }
+}
+
+function getSourceFiles(source: string): { [K: string]: string } {
+  const sources: { [K: string]: string } = {};
+  let currentFile = "";
+  const regex = /--@ ([a-zA-Z]+.elm)/;
+
+  const x = regex.exec(source);
+
+  if (x == null || x[1] === undefined) {
+    sources["Main.elm"] = source;
+  } else {
+    source.split("\n").forEach((s) => {
+      const match = regex.exec(s);
+
+      if (match !== null) {
+        sources[match[1]] = "";
+        currentFile = match[1];
+      } else if (currentFile !== "") {
+        sources[currentFile] = sources[currentFile] + s + "\n";
+      }
+    });
+  }
+
+  return sources;
 }
