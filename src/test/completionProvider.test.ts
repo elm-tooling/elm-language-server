@@ -3,6 +3,9 @@ import {
   CompletionParams,
   CompletionContext,
   IConnection,
+  CompletionItem,
+  Position,
+  TextEdit,
 } from "vscode-languageserver";
 import { IElmWorkspace } from "../elmWorkspace";
 import { SourceTreeParser } from "./utils/sourceTreeParser";
@@ -36,7 +39,7 @@ describe("CompletionProvider", () => {
    */
   async function testCompletions(
     source: string,
-    expectedCompletions: string[],
+    expectedCompletions: (string | CompletionItem)[],
     testExactCompletions?: boolean,
     testDotCompletion?: boolean,
   ) {
@@ -75,7 +78,21 @@ describe("CompletionProvider", () => {
 
       expectedCompletions.forEach((completion) => {
         expect(
-          completionsList.find((c) => c.label === completion),
+          completionsList.find((c) => {
+            if (typeof completion === "string") {
+              return c.label === completion;
+            } else {
+              // Compare label, detail, and text edit text
+              return (
+                c.label === completion.label &&
+                c.detail === completion.detail &&
+                c.additionalTextEdits &&
+                completion.additionalTextEdits &&
+                c.additionalTextEdits[0].newText ===
+                  completion.additionalTextEdits[0].newText
+              );
+            }
+          }),
         ).toBeTruthy();
       });
     }
@@ -461,5 +478,95 @@ func msg =
 `;
 
     await testCompletions(source, ["str"]);
+  });
+
+  it("There should be auto import completions from other modules", async () => {
+    const source = `
+--@ OtherModule.elm
+module OtherModule exposing (testFunction, TestType)
+
+testFunction : String
+testFunction =
+  ""
+
+type alias TestType = {prop : String}
+
+--@ Test.elm
+module Test exposing (..)
+
+func : String
+func = 
+  {-caret-}
+`;
+
+    await testCompletions(source, [
+      {
+        label: "testFunction",
+        detail: "Auto import from module 'OtherModule'",
+        additionalTextEdits: [
+          TextEdit.insert(
+            Position.create(2, 0),
+            "import OtherModule exposing (testFunction)\n",
+          ),
+        ],
+      },
+      {
+        label: "TestType",
+        detail: "Auto import from module 'OtherModule'",
+        additionalTextEdits: [
+          TextEdit.insert(
+            Position.create(2, 0),
+            "import OtherModule exposing (TestType)\n",
+          ),
+        ],
+      },
+    ]);
+
+    const source2 = `
+--@ OtherModule.elm
+module OtherModule exposing (..)
+
+type Msg = Msg1 | Msg2
+
+--@ Test.elm
+module Test exposing (..)
+
+func : String
+func = 
+  {-caret-}
+`;
+
+    // await testCompletions(source2, [
+    //   {
+    //     label: "Msg",
+    //     detail: "Auto import from module 'OtherModule'",
+    //     additionalTextEdits: [
+    //       TextEdit.insert(
+    //         Position.create(2, 0),
+    //         "import OtherModule exposing (Msg)\n",
+    //       ),
+    //     ],
+    //   },
+    //   {
+    //     label: "Msg1",
+    //     detail: "Auto import from module 'OtherModule'",
+    //     additionalTextEdits: [
+    //       TextEdit.insert(
+    //         Position.create(2, 0),
+    //         "import OtherModule exposing (Msg(..))\n",
+    //       ),
+    //     ],
+    //   },
+    //   {
+    //     label: "Msg2",
+    //     detail: "Auto import from module 'OtherModule'",
+    //     additionalTextEdits: [
+    //       TextEdit.insert(
+    //         Position.create(2, 0),
+    //         "import OtherModule exposing (Msg(..))\n",
+    //       ),
+    //     ],
+    //   },
+    // ]);
   });
 });
