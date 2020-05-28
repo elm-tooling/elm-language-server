@@ -44,66 +44,77 @@ interface IUnresolvedTest {
   kind: "unresolved";
   invokePosition: Position;
   sources: { [K: string]: string };
+  fileWithTarget: string;
 }
 interface IResolvedTest {
   kind: "resolves";
   invokePosition: Position;
   targetPosition: Position;
   sources: { [K: string]: string };
+  fileWithTarget: string;
 }
 interface IResolvesToDifferentFileTest {
   kind: "resolvesToDifferentFile";
   invokePosition: Position;
   targetFile: string;
   sources: { [K: string]: string };
+  fileWithTarget: string;
 }
 
 export function getInvokeAndTargetPositionFromSource(source: string): TestType {
+  const sources = getSourceFiles(source);
+
   let unresolved;
   let invokePosition;
   let targetPosition;
   let targetFile;
-  source.split("\n").forEach((s, line) => {
-    const invokeUnresolvedCharacter = s.search(/--(\^unresolved)/);
-    const invokeFileCharacter = s.search(/--\^([A-Z][a-zA-Z0-9_]*\.elm)/);
-    const invokeCharacter = s.search(/--(\^)/);
-    const targetCharacter = s.search(/--(X)/);
+  let fileWithTarget = "";
 
-    // +2 is the offset for the --prefixing the ^
-    if (invokeUnresolvedCharacter >= 0) {
-      invokePosition = {
-        line: line - 1,
-        character: invokeUnresolvedCharacter + 2,
-      };
-      unresolved = true;
-    } else if (invokeFileCharacter >= 0) {
-      targetFile = /--\^([A-Z][a-zA-Z0-9_]*\.elm)/.exec(s)?.[1];
+  for (const fileName in sources) {
+    sources[fileName].split("\n").forEach((s, line) => {
+      const invokeUnresolvedCharacter = s.search(/--(\^unresolved)/);
+      const invokeFileCharacter = s.search(/--\^([A-Z][a-zA-Z0-9_]*\.elm)/);
+      const invokeCharacter = s.search(/--(\^)/);
+      const targetCharacter = s.search(/--(X)/);
 
-      invokePosition = {
-        line: line - 1,
-        character: invokeFileCharacter + 2,
-      };
-    } else if (invokeCharacter >= 0) {
-      invokePosition = {
-        line: line - 1,
-        character: invokeCharacter + 2,
-      };
-    }
-    if (targetCharacter >= 0) {
-      targetPosition = {
-        line: line - 1,
-        character: targetCharacter + 2,
-      };
-    }
-  });
+      // +2 is the offset for the --prefixing the ^
+      if (invokeUnresolvedCharacter >= 0) {
+        invokePosition = {
+          line: line - 1,
+          character: invokeUnresolvedCharacter + 2,
+        };
+        unresolved = true;
 
-  const sources = getSourceFiles(source);
+        fileWithTarget = fileName;
+      } else if (invokeFileCharacter >= 0) {
+        targetFile = /--\^([A-Z][a-zA-Z0-9_]*\.elm)/.exec(s)?.[1];
+
+        invokePosition = {
+          line: line - 1,
+          character: invokeFileCharacter + 2,
+        };
+        fileWithTarget = fileName;
+      } else if (invokeCharacter >= 0) {
+        invokePosition = {
+          line: line - 1,
+          character: invokeCharacter + 2,
+        };
+        fileWithTarget = fileName;
+      }
+      if (targetCharacter >= 0) {
+        targetPosition = {
+          line: line - 1,
+          character: targetCharacter + 2,
+        };
+      }
+    });
+  }
 
   if (unresolved) {
     if (!invokePosition) {
       fail();
     }
-    return { kind: "unresolved", invokePosition, sources };
+    return { kind: "unresolved", invokePosition, sources, fileWithTarget };
   } else if (targetFile) {
     if (!targetFile || !invokePosition) {
       fail();
@@ -113,12 +124,19 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
       invokePosition,
       sources,
       targetFile,
+      fileWithTarget,
     };
   } else {
     if (!invokePosition || !targetPosition) {
       fail();
     }
-    return { kind: "resolves", invokePosition, targetPosition, sources };
+    return {
+      kind: "resolves",
+      invokePosition,
+      targetPosition,
+      sources,
+      fileWithTarget,
+    };
   }
 }
 

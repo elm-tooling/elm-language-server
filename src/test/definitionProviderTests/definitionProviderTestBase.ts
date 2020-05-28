@@ -8,8 +8,6 @@ import { TreeUtils } from "../../util/treeUtils";
 import { getInvokeAndTargetPositionFromSource } from "../utils/sourceParser";
 import { URI } from "vscode-uri";
 
-const mockUri = URI.file(baseUri + "Main.elm").toString();
-
 class MockDefinitionProvider extends DefinitionProvider {
   public handleDefinition(
     params: TextDocumentPositionParams,
@@ -37,13 +35,18 @@ export class DefinitionProviderTestBase {
     await this.treeParser.init();
 
     const determinedTestType = getInvokeAndTargetPositionFromSource(source);
+    const targetUri = URI.file(
+      baseUri + determinedTestType.fileWithTarget,
+    ).toString();
 
     switch (determinedTestType.kind) {
       case "unresolved":
         {
           const definition = this.definitionProvider.handleDefinition(
             {
-              textDocument: { uri: mockUri },
+              textDocument: {
+                uri: targetUri,
+              },
               position: determinedTestType.invokePosition,
             },
             this.treeParser.getWorkspace(determinedTestType.sources),
@@ -57,7 +60,9 @@ export class DefinitionProviderTestBase {
         {
           const definition = this.definitionProvider.handleDefinition(
             {
-              textDocument: { uri: mockUri },
+              textDocument: {
+                uri: targetUri,
+              },
               position: determinedTestType.invokePosition,
             },
             this.treeParser.getWorkspace(determinedTestType.sources),
@@ -71,23 +76,26 @@ export class DefinitionProviderTestBase {
         {
           const definition = this.definitionProvider.handleDefinition(
             {
-              textDocument: { uri: mockUri },
+              textDocument: {
+                uri: targetUri,
+              },
               position: determinedTestType.invokePosition,
             },
             this.treeParser.getWorkspace(determinedTestType.sources),
           );
 
+          const rootNode = this.treeParser
+            .getWorkspace(determinedTestType.sources)
+            .getForest()
+            .treeIndex.find((a) => a.uri === targetUri)!.tree.rootNode;
           const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-            this.treeParser
-              .getWorkspace(determinedTestType.sources)
-              .getForest()
-              .treeIndex.find((a) => a.uri === mockUri)!.tree.rootNode,
+            rootNode,
             determinedTestType.targetPosition,
           );
 
           expect(definition).toEqual(
             expect.objectContaining({
-              uri: mockUri,
+              uri: targetUri,
               range: {
                 start: {
                   line: determinedTestType.targetPosition.line,
