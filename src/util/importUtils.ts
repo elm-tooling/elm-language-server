@@ -3,7 +3,7 @@ import RANKING_LIST from "../providers/ranking";
 import { TreeUtils, NodeType } from "./treeUtils";
 import { SyntaxNode } from "web-tree-sitter";
 
-interface PossibleImport {
+interface IPossibleImport {
   module: string;
   value: string;
   type: NodeType;
@@ -17,7 +17,7 @@ export class ImportUtils {
     forest: IForest,
     uri: string,
     filterText: string,
-  ): PossibleImport[] {
+  ): IPossibleImport[] {
     const currentTree = forest.getTree(uri);
 
     if (currentTree) {
@@ -52,8 +52,9 @@ export class ImportUtils {
           } else if (!aStartsWith && bStartsWith) {
             return 1;
           } else {
-            const aMatches = aValue.match(filterText);
-            const bMatches = bValue.match(filterText);
+            const regex = new RegExp(filterText);
+            const aMatches = regex.exec(aValue);
+            const bMatches = regex.exec(bValue);
 
             if (aMatches && !bMatches) {
               return -1;
@@ -72,10 +73,10 @@ export class ImportUtils {
   public static getPossibleImports(
     forest: IForest,
     uri: string,
-  ): PossibleImport[] {
+  ): IPossibleImport[] {
     const currentModule = forest.getByUri(uri)?.moduleName;
 
-    const exposedValues: PossibleImport[] = [];
+    const exposedValues: IPossibleImport[] = [];
 
     // Find all exposed values that could be imported
     if (forest) {

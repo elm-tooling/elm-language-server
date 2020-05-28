@@ -61,16 +61,22 @@ describe("CompletionProvider", () => {
           treeParser.getWorkspace(newSources),
         ) ?? [];
 
+      const completionsList = Array.isArray(completions)
+        ? completions
+        : completions.items;
+
       if (testExactCompletions) {
-        expect(completions.length).toBe(expectedCompletions.length);
+        expect(completionsList.length).toBe(expectedCompletions.length);
       } else {
-        expect(completions.length).toBeGreaterThanOrEqual(
+        expect(completionsList.length).toBeGreaterThanOrEqual(
           expectedCompletions.length,
         );
       }
 
       expectedCompletions.forEach((completion) => {
-        expect(completions.find((c) => c.label === completion)).toBeTruthy();
+        expect(
+          completionsList.find((c) => c.label === completion),
+        ).toBeTruthy();
       });
     }
 

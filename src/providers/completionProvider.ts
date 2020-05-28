@@ -403,7 +403,7 @@ export class CompletionProvider {
   private getSameFileTopLevelCompletions(
     tree: Tree,
     range: Range,
-    moduleDefinition: boolean = false,
+    moduleDefinition = false,
   ): CompletionItem[] {
     const completions: CompletionItem[] = [];
     const topLevelFunctions = TreeUtils.findAllTopLeverFunctionDeclarations(
@@ -872,7 +872,7 @@ export class CompletionProvider {
             documentation,
             possibleImport.value,
             range,
-            "e" + i,
+            `e${i}`,
             detail,
             importTextEdit,
           ),
@@ -883,7 +883,7 @@ export class CompletionProvider {
             documentation,
             possibleImport.value,
             range,
-            "e" + i,
+            `e${i}`,
             detail,
             importTextEdit,
           ),
@@ -894,7 +894,7 @@ export class CompletionProvider {
             documentation,
             possibleImport.value,
             range,
-            "e" + i,
+            `e${i}`,
             detail,
             importTextEdit,
           ),
