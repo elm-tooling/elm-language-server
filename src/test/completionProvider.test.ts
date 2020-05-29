@@ -572,4 +572,118 @@ func =
       },
     ]);
   });
+
+  xit("Module name with caret after dot should have completions", async () => {
+    // TODO: Add auto import completions for modules and module values
+    const source = `
+--@ Data/User.elm
+module Data.User exposing (..)
+
+func : String
+func = 
+  ""
+  
+--@ Test.elm
+module Test exposing (..)
+
+import Data.User
+
+test = 
+  Data.{-caret-}
+`;
+
+    await testCompletions(source, ["User"], true, true);
+
+    const source2 = `
+--@ Data/User.elm
+module Data.User exposing (..)
+
+func : String
+func = 
+  ""
+
+type alias TestType = { prop : String }
+  
+--@ Test.elm
+module Test exposing (..)
+
+import Data.User
+
+test = 
+  Data.User.{-caret-}
+`;
+
+    await testCompletions(source2, ["func", "TestType"], true, true);
+  });
+
+  xit("Qualified union constructor completion in expr should have completions", async () => {
+    const source = `
+--@ Page.elm
+module Page exposing (..)
+
+type Page = Home | Away
+
+--@ Test.elm
+import Page
+
+defaultPage = 
+  Page.{-caret-}
+`;
+
+    await testCompletions(source, ["Home", "Away"], true, true);
+  });
+
+  xit("Chained record access should have completions", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Foo = { name : { first : String } }
+
+f : Foo -> String
+f foo =
+    foo.name.{-caret-}
+`;
+
+    await testCompletions(source, ["first"], true, true);
+  });
+
+  it("Union constructor completions from pattern destructuring", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type MyState = State Int
+
+f (S{-caret-} n) = n
+`;
+
+    await testCompletions(source, ["State"]);
+  });
+
+  it("Union type completions in a type annotation", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type Page = Home
+
+defaultPage : P{-caret-}
+`;
+
+    await testCompletions(source, ["Page"]);
+  });
+
+  it("Type alias completions in a type annotation", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias User = { name : String, age : Int }
+
+viewUser : U{-caret-}
+`;
+
+    await testCompletions(source, ["User"]);
+  });
 });
