@@ -13,6 +13,7 @@ import { baseUri } from "./utils/mockElmWorkspace";
 import { mockDeep } from "jest-mock-extended";
 import { getCaretPositionFromSource } from "./utils/sourceParser";
 import { URI } from "vscode-uri";
+import { isDeepStrictEqual } from "util";
 
 class MockCompletionProvider extends CompletionProvider {
   public handleCompletion(
@@ -88,8 +89,10 @@ describe("CompletionProvider", () => {
                 c.detail === completion.detail &&
                 c.additionalTextEdits &&
                 completion.additionalTextEdits &&
-                c.additionalTextEdits[0].newText ===
-                  completion.additionalTextEdits[0].newText
+                isDeepStrictEqual(
+                  c.additionalTextEdits[0],
+                  completion.additionalTextEdits[0],
+                )
               );
             }
           }),
@@ -505,7 +508,7 @@ func =
         detail: "Auto import from module 'OtherModule'",
         additionalTextEdits: [
           TextEdit.insert(
-            Position.create(2, 0),
+            Position.create(1, 0),
             "import OtherModule exposing (testFunction)\n",
           ),
         ],
@@ -515,7 +518,7 @@ func =
         detail: "Auto import from module 'OtherModule'",
         additionalTextEdits: [
           TextEdit.insert(
-            Position.create(2, 0),
+            Position.create(1, 0),
             "import OtherModule exposing (TestType)\n",
           ),
         ],
@@ -524,7 +527,7 @@ func =
 
     const source2 = `
 --@ OtherModule.elm
-module OtherModule exposing (..)
+module OtherModule exposing (Msg(..))
 
 type Msg = Msg1 | Msg2
 
@@ -536,37 +539,151 @@ func =
   {-caret-}
 `;
 
-    // await testCompletions(source2, [
-    //   {
-    //     label: "Msg",
-    //     detail: "Auto import from module 'OtherModule'",
-    //     additionalTextEdits: [
-    //       TextEdit.insert(
-    //         Position.create(2, 0),
-    //         "import OtherModule exposing (Msg)\n",
-    //       ),
-    //     ],
-    //   },
-    //   {
-    //     label: "Msg1",
-    //     detail: "Auto import from module 'OtherModule'",
-    //     additionalTextEdits: [
-    //       TextEdit.insert(
-    //         Position.create(2, 0),
-    //         "import OtherModule exposing (Msg(..))\n",
-    //       ),
-    //     ],
-    //   },
-    //   {
-    //     label: "Msg2",
-    //     detail: "Auto import from module 'OtherModule'",
-    //     additionalTextEdits: [
-    //       TextEdit.insert(
-    //         Position.create(2, 0),
-    //         "import OtherModule exposing (Msg(..))\n",
-    //       ),
-    //     ],
-    //   },
-    // ]);
+    await testCompletions(source2, [
+      {
+        label: "Msg",
+        detail: "Auto import from module 'OtherModule'",
+        additionalTextEdits: [
+          TextEdit.insert(
+            Position.create(1, 0),
+            "import OtherModule exposing (Msg)\n",
+          ),
+        ],
+      },
+      {
+        label: "Msg1",
+        detail: "Auto import from module 'OtherModule'",
+        additionalTextEdits: [
+          TextEdit.insert(
+            Position.create(1, 0),
+            "import OtherModule exposing (Msg(..))\n",
+          ),
+        ],
+      },
+      {
+        label: "Msg2",
+        detail: "Auto import from module 'OtherModule'",
+        additionalTextEdits: [
+          TextEdit.insert(
+            Position.create(1, 0),
+            "import OtherModule exposing (Msg(..))\n",
+          ),
+        ],
+      },
+    ]);
+  });
+
+  xit("Module name with caret after dot should have completions", async () => {
+    // TODO: Add auto import completions for modules and module values
+    const source = `
+--@ Data/User.elm
+module Data.User exposing (..)
+
+func : String
+func = 
+  ""
+  
+--@ Test.elm
+module Test exposing (..)
+
+import Data.User
+
+test = 
+  Data.{-caret-}
+`;
+
+    await testCompletions(source, ["User"], true, true);
+
+    const source2 = `
+--@ Data/User.elm
+module Data.User exposing (..)
+
+func : String
+func = 
+  ""
+
+type alias TestType = { prop : String }
+  
+--@ Test.elm
+module Test exposing (..)
+
+import Data.User
+
+test = 
+  Data.User.{-caret-}
+`;
+
+    await testCompletions(source2, ["func", "TestType"], true, true);
+  });
+
+  xit("Qualified union constructor completion in expr should have completions", async () => {
+    const source = `
+--@ Page.elm
+module Page exposing (..)
+
+type Page = Home | Away
+
+--@ Test.elm
+import Page
+
+defaultPage = 
+  Page.{-caret-}
+`;
+
+    await testCompletions(source, ["Home", "Away"], true, true);
+  });
+
+  xit("Chained record access should have completions", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Foo = { name : { first : String } }
+
+f : Foo -> String
+f foo =
+    foo.name.{-caret-}
+`;
+
+    await testCompletions(source, ["first"], true, true);
+  });
+
+  it("Union constructor completions from pattern destructuring", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type MyState = State Int
+
+f (S{-caret-} n) = n
+`;
+
+    await testCompletions(source, ["State"]);
+  });
+
+  it("Union type completions in a type annotation", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type Page = Home
+
+defaultPage : P{-caret-}
+`;
+
+    await testCompletions(source, ["Page"]);
+  });
+
+  it("Type alias completions in a type annotation", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias User = { name : String, age : Int }
+
+viewUser : U{-caret-}
+`;
+
+    await testCompletions(source, ["User"]);
   });
 });

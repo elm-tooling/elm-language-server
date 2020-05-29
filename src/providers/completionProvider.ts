@@ -646,6 +646,8 @@ export class CompletionProvider {
     label: string,
     range: Range,
     sortPrefix: string,
+    detail?: string,
+    addImportTextEdit?: TextEdit,
   ): CompletionItem {
     return this.createCompletion(
       undefined,
@@ -653,6 +655,8 @@ export class CompletionProvider {
       label,
       range,
       sortPrefix,
+      detail,
+      addImportTextEdit ? [addImportTextEdit] : undefined,
     );
   }
 
@@ -842,20 +846,9 @@ export class CompletionProvider {
       forest,
       uri,
       filterText,
-    ).filter(
-      (imp) =>
-        imp.value !== "view" &&
-        imp.value !== "init" &&
-        imp.value !== "update" &&
-        imp.value !== "subscriptions" &&
-        imp.value !== "Model" &&
-        imp.value !== "Msg",
     );
 
-    let isIncomplete = false;
-    if (possibleImports.length > 50) {
-      isIncomplete = true;
-    }
+    const isIncomplete = possibleImports.length > 50;
 
     possibleImports.splice(0, 49).forEach((possibleImport, i) => {
       const documentation = HintHelper.createHint(possibleImport.node);
@@ -892,6 +885,16 @@ export class CompletionProvider {
         result.push(
           this.createTypeCompletion(
             documentation,
+            possibleImport.value,
+            range,
+            `e${i}`,
+            detail,
+            importTextEdit,
+          ),
+        );
+      } else if (possibleImport.type === "UnionConstructor") {
+        result.push(
+          this.createUnionConstructorCompletion(
             possibleImport.value,
             range,
             `e${i}`,
