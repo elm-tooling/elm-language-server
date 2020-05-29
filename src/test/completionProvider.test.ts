@@ -13,6 +13,7 @@ import { baseUri } from "./utils/mockElmWorkspace";
 import { mockDeep } from "jest-mock-extended";
 import { getCaretPositionFromSource } from "./utils/sourceParser";
 import { URI } from "vscode-uri";
+import { isDeepStrictEqual } from "util";
 
 class MockCompletionProvider extends CompletionProvider {
   public handleCompletion(
@@ -88,8 +89,10 @@ describe("CompletionProvider", () => {
                 c.detail === completion.detail &&
                 c.additionalTextEdits &&
                 completion.additionalTextEdits &&
-                c.additionalTextEdits[0].newText ===
-                  completion.additionalTextEdits[0].newText
+                isDeepStrictEqual(
+                  c.additionalTextEdits[0],
+                  completion.additionalTextEdits[0],
+                )
               );
             }
           }),
@@ -505,7 +508,7 @@ func =
         detail: "Auto import from module 'OtherModule'",
         additionalTextEdits: [
           TextEdit.insert(
-            Position.create(2, 0),
+            Position.create(1, 0),
             "import OtherModule exposing (testFunction)\n",
           ),
         ],
@@ -515,7 +518,7 @@ func =
         detail: "Auto import from module 'OtherModule'",
         additionalTextEdits: [
           TextEdit.insert(
-            Position.create(2, 0),
+            Position.create(1, 0),
             "import OtherModule exposing (TestType)\n",
           ),
         ],
@@ -524,7 +527,7 @@ func =
 
     const source2 = `
 --@ OtherModule.elm
-module OtherModule exposing (..)
+module OtherModule exposing (Msg(..))
 
 type Msg = Msg1 | Msg2
 
@@ -536,37 +539,37 @@ func =
   {-caret-}
 `;
 
-    // await testCompletions(source2, [
-    //   {
-    //     label: "Msg",
-    //     detail: "Auto import from module 'OtherModule'",
-    //     additionalTextEdits: [
-    //       TextEdit.insert(
-    //         Position.create(2, 0),
-    //         "import OtherModule exposing (Msg)\n",
-    //       ),
-    //     ],
-    //   },
-    //   {
-    //     label: "Msg1",
-    //     detail: "Auto import from module 'OtherModule'",
-    //     additionalTextEdits: [
-    //       TextEdit.insert(
-    //         Position.create(2, 0),
-    //         "import OtherModule exposing (Msg(..))\n",
-    //       ),
-    //     ],
-    //   },
-    //   {
-    //     label: "Msg2",
-    //     detail: "Auto import from module 'OtherModule'",
-    //     additionalTextEdits: [
-    //       TextEdit.insert(
-    //         Position.create(2, 0),
-    //         "import OtherModule exposing (Msg(..))\n",
-    //       ),
-    //     ],
-    //   },
-    // ]);
+    await testCompletions(source2, [
+      {
+        label: "Msg",
+        detail: "Auto import from module 'OtherModule'",
+        additionalTextEdits: [
+          TextEdit.insert(
+            Position.create(1, 0),
+            "import OtherModule exposing (Msg)\n",
+          ),
+        ],
+      },
+      {
+        label: "Msg1",
+        detail: "Auto import from module 'OtherModule'",
+        additionalTextEdits: [
+          TextEdit.insert(
+            Position.create(1, 0),
+            "import OtherModule exposing (Msg(..))\n",
+          ),
+        ],
+      },
+      {
+        label: "Msg2",
+        detail: "Auto import from module 'OtherModule'",
+        additionalTextEdits: [
+          TextEdit.insert(
+            Position.create(1, 0),
+            "import OtherModule exposing (Msg(..))\n",
+          ),
+        ],
+      },
+    ]);
   });
 });
