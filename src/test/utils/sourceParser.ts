@@ -143,7 +143,7 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
 function getSourceFiles(source: string): { [K: string]: string } {
   const sources: { [K: string]: string } = {};
   let currentFile = "";
-  const regex = /--@ ([a-zA-Z]+.elm)/;
+  const regex = /--@ ([a-zA-Z/]+.elm)/;
 
   const x = regex.exec(source);
 

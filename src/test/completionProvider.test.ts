@@ -573,7 +573,7 @@ func =
     ]);
   });
 
-  xit("Module name with caret after dot should have completions", async () => {
+  it("Module name with caret after dot should have completions", async () => {
     // TODO: Add auto import completions for modules and module values
     const source = `
 --@ Data/User.elm
@@ -592,7 +592,7 @@ test =
   Data.{-caret-}
 `;
 
-    await testCompletions(source, ["User"], true, true);
+    await testCompletions(source, ["Data.User.func"], false, true);
 
     const source2 = `
 --@ Data/User.elm
@@ -613,10 +613,15 @@ test =
   Data.User.{-caret-}
 `;
 
-    await testCompletions(source2, ["func", "TestType"], true, true);
+    await testCompletions(
+      source2,
+      ["Data.User.func", "Data.User.TestType"],
+      false,
+      true,
+    );
   });
 
-  xit("Qualified union constructor completion in expr should have completions", async () => {
+  it("Qualified union constructor completion in expr should have completions", async () => {
     const source = `
 --@ Page.elm
 module Page exposing (..)
@@ -630,7 +635,7 @@ defaultPage =
   Page.{-caret-}
 `;
 
-    await testCompletions(source, ["Home", "Away"], true, true);
+    await testCompletions(source, ["Page.Home", "Page.Away"], false, true);
   });
 
   xit("Chained record access should have completions", async () => {
