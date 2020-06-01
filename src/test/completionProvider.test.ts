@@ -24,6 +24,9 @@ class MockCompletionProvider extends CompletionProvider {
   }
 }
 
+type exactCompletions = "exactMatch" | "partialMatch";
+type dotCompletions = "triggerdeByDot" | "normal";
+
 describe("CompletionProvider", () => {
   const connectionMock = mockDeep<IConnection>();
 
@@ -41,8 +44,8 @@ describe("CompletionProvider", () => {
   async function testCompletions(
     source: string,
     expectedCompletions: (string | CompletionItem)[],
-    testExactCompletions?: boolean,
-    testDotCompletion?: boolean,
+    testExactCompletions: exactCompletions = "partialMatch",
+    testDotCompletion: dotCompletions = "normal",
   ) {
     await treeParser.init();
 
@@ -69,7 +72,7 @@ describe("CompletionProvider", () => {
         ? completions
         : completions.items;
 
-      if (testExactCompletions) {
+      if (testExactCompletions === "exactMatch") {
         expect(completionsList.length).toBe(expectedCompletions.length);
       } else {
         expect(completionsList.length).toBeGreaterThanOrEqual(
@@ -102,7 +105,7 @@ describe("CompletionProvider", () => {
 
     testCompletionsWithContext({ triggerKind: 1 });
 
-    if (testDotCompletion) {
+    if (testDotCompletion === "triggerdeByDot") {
       testCompletionsWithContext({ triggerKind: 2, triggerCharacter: "." });
     }
   }
@@ -122,7 +125,7 @@ view model =
   { model | p{-caret-} }
 `;
 
-    await testCompletions(source, ["prop1", "prop2"], true);
+    await testCompletions(source, ["prop1", "prop2"], "exactMatch");
   });
 
   it("Updating a nested record should have completions", async () => {
@@ -145,7 +148,7 @@ view model =
   { model | prop1 = { i{-caret-} } }
 `;
 
-    await testCompletions(source, ["item1", "item2"], true);
+    await testCompletions(source, ["item1", "item2"], "exactMatch");
   });
 
   it("A record return type should have completions", async () => {
@@ -163,7 +166,7 @@ view =
   { p{-caret-} }
 `;
 
-    await testCompletions(source, ["prop1", "prop2"], true);
+    await testCompletions(source, ["prop1", "prop2"], "exactMatch");
 
     const source2 = `
 --@ Test.elm
@@ -184,7 +187,7 @@ view =
   in
 `;
 
-    await testCompletions(source2, ["prop1", "prop2"], true);
+    await testCompletions(source2, ["prop1", "prop2"], "exactMatch");
   });
 
   it("Record access should have completions inside a let", async () => {
@@ -210,7 +213,12 @@ view model =
     model
 `;
 
-    await testCompletions(source, ["prop1", "prop2"], true, true);
+    await testCompletions(
+      source,
+      ["prop1", "prop2"],
+      "exactMatch",
+      "triggerdeByDot",
+    );
   });
 
   it("Function parameter should have completions in a function", async () => {
@@ -345,7 +353,11 @@ module Test exposing (..)
 import {-caret-}
 `;
 
-    await testCompletions(otherSource + source, ["Test", "OtherModule"], true);
+    await testCompletions(
+      otherSource + source,
+      ["Test", "OtherModule"],
+      "exactMatch",
+    );
 
     const source2 = `
 --@ Test.elm
@@ -354,7 +366,11 @@ module Test exposing (..)
 import T{-caret-}
 `;
 
-    await testCompletions(otherSource + source2, ["Test", "OtherModule"], true);
+    await testCompletions(
+      otherSource + source2,
+      ["Test", "OtherModule"],
+      "exactMatch",
+    );
   });
 
   it("Exposing a value from another module should have completions", async () => {
@@ -390,7 +406,7 @@ import OtherModule exposing ({-caret-})
     await testCompletions(
       otherSource + source,
       ["testFunction", "Msg", "TestType"],
-      true,
+      "exactMatch",
     );
 
     const source2 = `
@@ -403,7 +419,7 @@ import OtherModule exposing (testFunction, {-caret-})
     await testCompletions(
       otherSource + source2,
       ["testFunction", "Msg", "TestType"],
-      true,
+      "exactMatch",
     );
 
     const source3 = `
@@ -416,7 +432,7 @@ import OtherModule exposing (testFunction, T{-caret-})
     await testCompletions(
       otherSource + source3,
       ["testFunction", "Msg", "TestType"],
-      true,
+      "exactMatch",
     );
   });
 
@@ -438,7 +454,7 @@ type alias TestType =
     await testCompletions(
       source,
       ["testFunc", "Msg", "Msg(..)", "Msg1", "Msg2", "TestType"],
-      true,
+      "exactMatch",
     );
   });
 
@@ -452,7 +468,7 @@ func =
   ""
     `;
 
-    await testCompletions(source, ["func"], true);
+    await testCompletions(source, ["func"], "exactMatch");
 
     const source2 = `
 --@ Test.elm
@@ -463,7 +479,7 @@ f{-caret-} =
   ""
 `;
 
-    await testCompletions(source2, ["func"], true);
+    await testCompletions(source2, ["func"], "exactMatch");
   });
 
   it("Case branch variables should have completions", async () => {
@@ -592,7 +608,12 @@ test =
   Data.{-caret-}
 `;
 
-    await testCompletions(source, ["Data.User.func"], false, true);
+    await testCompletions(
+      source,
+      ["Data.User.func"],
+      "partialMatch",
+      "triggerdeByDot",
+    );
 
     const source2 = `
 --@ Data/User.elm
@@ -616,8 +637,8 @@ test =
     await testCompletions(
       source2,
       ["Data.User.func", "Data.User.TestType"],
-      false,
-      true,
+      "partialMatch",
+      "triggerdeByDot",
     );
   });
 
@@ -635,7 +656,12 @@ defaultPage =
   Page.{-caret-}
 `;
 
-    await testCompletions(source, ["Page.Home", "Page.Away"], false, true);
+    await testCompletions(
+      source,
+      ["Page.Home", "Page.Away"],
+      "partialMatch",
+      "triggerdeByDot",
+    );
   });
 
   xit("Chained record access should have completions", async () => {
@@ -650,7 +676,7 @@ f foo =
     foo.name.{-caret-}
 `;
 
-    await testCompletions(source, ["first"], true, true);
+    await testCompletions(source, ["first"], "exactMatch", "triggerdeByDot");
   });
 
   it("Union constructor completions from pattern destructuring", async () => {
