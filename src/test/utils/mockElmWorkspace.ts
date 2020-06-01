@@ -17,13 +17,13 @@ export class MockElmWorkspace implements IElmWorkspace {
     this.imports = new Imports(parser);
 
     for (const key in sources) {
-      if (sources.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(sources, key)) {
         this.parseAndAddToForest(key, sources[key]);
       }
     }
 
     for (const key in sources) {
-      if (sources.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(sources, key)) {
         const uri = URI.file(baseUri + key).toString();
         const tree = this.forest.getTree(uri);
 
