@@ -1775,7 +1775,6 @@ export class TreeUtils {
       );
   }
 
-  // tslint:disable-next-line: no-identical-functions
   private static findAllImportNameNodes(tree: Tree): SyntaxNode[] | undefined {
     const result = tree.rootNode.children.filter(
       (a) => a.type === "import_clause",

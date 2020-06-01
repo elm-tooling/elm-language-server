@@ -931,8 +931,6 @@ export class CompletionProvider {
     };
   }
 
-  // tslint:disable: no-duplicate-string
-  // tslint:disable: no-big-function
   private createSnippets() {
     return [
       this.createSnippet(

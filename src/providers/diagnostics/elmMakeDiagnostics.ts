@@ -283,7 +283,6 @@ export class ElmMakeDiagnostics {
         const regex = /^\s{4}#(.*)#$/gm;
         let matches;
 
-        // tslint:disable-next-line: no-conditional-assignment
         while ((matches = regex.exec(diagnostic.message)) !== null) {
           // This is necessary to avoid infinite loops with zero-width matches
           if (matches.index === regex.lastIndex) {

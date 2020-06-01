@@ -35,11 +35,9 @@ export class CodeActionProvider {
     this.connection.onExecuteCommand(this.onExecuteCommand);
 
     if (settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
-      // tslint:disable-next-line: no-unused-expression
       new MoveRefactoringHandler(this.connection, this.elmWorkspaces);
     }
 
-    // tslint:disable-next-line: no-unused-expression
     new ExposeUnexposeHandler(this.connection, this.elmWorkspaces);
   }
 

@@ -167,7 +167,6 @@ export class Server implements ILanguageServer {
       this.settings,
     );
 
-    // tslint:disable:no-unused-expression
     new DiagnosticsProvider(
       this.connection,
       this.elmWorkspaces,
@@ -185,7 +184,6 @@ export class Server implements ILanguageServer {
       elmMake,
     );
 
-    // tslint:disable:no-unused-expression
     new ASTProvider(
       this.connection,
       this.elmWorkspaces,
