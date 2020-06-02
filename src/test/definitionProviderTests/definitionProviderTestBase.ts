@@ -1,5 +1,9 @@
 import { DefinitionProvider, DefinitionResult } from "../../providers";
-import { IConnection, TextDocumentPositionParams } from "vscode-languageserver";
+import {
+  IConnection,
+  TextDocumentPositionParams,
+  Location,
+} from "vscode-languageserver";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { SourceTreeParser } from "../utils/sourceTreeParser";
 import { baseUri } from "../utils/mockElmWorkspace";
@@ -68,7 +72,10 @@ export class DefinitionProviderTestBase {
             this.treeParser.getWorkspace(determinedTestType.sources),
           );
 
-          expect(definition).toEqual(undefined);
+          expect(definition).toBeDefined();
+          expect((definition as Location).uri).toContain(
+            determinedTestType.targetFile,
+          );
         }
         break;
 

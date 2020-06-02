@@ -73,7 +73,7 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
   for (const fileName in sources) {
     sources[fileName].split("\n").forEach((s, line) => {
       const invokeUnresolvedCharacter = s.search(/--(\^unresolved)/);
-      const invokeFileCharacter = s.search(/--\^([A-Z][a-zA-Z0-9_]*\.elm)/);
+      const invokeFileCharacter = s.search(/--\^([A-Z][a-zA-Z0-9_/]*\.elm)/);
       const invokeCharacter = s.search(/--(\^)/);
       const targetCharacter = s.search(/--(X)/);
 
@@ -87,7 +87,7 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
 
         fileWithTarget = fileName;
       } else if (invokeFileCharacter >= 0) {
-        targetFile = /--\^([A-Z][a-zA-Z0-9_]*\.elm)/.exec(s)?.[1];
+        targetFile = /--\^([A-Z][a-zA-Z0-9_/]*\.elm)/.exec(s)?.[1];
 
         invokePosition = {
           line: line - 1,
