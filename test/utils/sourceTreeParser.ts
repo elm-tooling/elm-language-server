@@ -1,6 +1,6 @@
 import * as Path from "path";
 import Parser from "web-tree-sitter";
-import { IElmWorkspace } from "../../elmWorkspace";
+import { IElmWorkspace } from "../../src/elmWorkspace";
 import { MockElmWorkspace } from "./mockElmWorkspace";
 
 export class SourceTreeParser {
@@ -12,7 +12,7 @@ export class SourceTreeParser {
     }
 
     await Parser.init();
-    const absolute = Path.join(__dirname, "../../../tree-sitter-elm.wasm");
+    const absolute = Path.join(__dirname, "../../tree-sitter-elm.wasm");
     const pathToWasm = Path.relative(process.cwd(), absolute);
 
     const language = await Parser.Language.load(pathToWasm);

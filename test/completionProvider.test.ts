@@ -1,4 +1,4 @@
-import { CompletionProvider, CompletionResult } from "../providers";
+import { CompletionProvider, CompletionResult } from "../src/providers";
 import {
   CompletionParams,
   CompletionContext,
@@ -7,7 +7,7 @@ import {
   Position,
   TextEdit,
 } from "vscode-languageserver";
-import { IElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../src/elmWorkspace";
 import { SourceTreeParser } from "./utils/sourceTreeParser";
 import { baseUri } from "./utils/mockElmWorkspace";
 import { mockDeep } from "jest-mock-extended";

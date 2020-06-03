@@ -1,9 +1,9 @@
 import * as Path from "path";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../../elmWorkspace";
-import { Forest, IForest } from "../../forest";
-import { Imports } from "../../imports";
+import { IElmWorkspace } from "../../src/elmWorkspace";
+import { Forest, IForest } from "../../src/forest";
+import { Imports } from "../../src/imports";
 
 export const baseUri = Path.join(__dirname, "../sources/src/");
 

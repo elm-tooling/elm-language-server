@@ -1,14 +1,14 @@
-import { DefinitionProvider, DefinitionResult } from "../../providers";
+import { DefinitionProvider, DefinitionResult } from "../../src/providers";
 import {
   IConnection,
   TextDocumentPositionParams,
   Location,
 } from "vscode-languageserver";
-import { IElmWorkspace } from "../../elmWorkspace";
+import { IElmWorkspace } from "../../src/elmWorkspace";
 import { SourceTreeParser } from "../utils/sourceTreeParser";
 import { baseUri } from "../utils/mockElmWorkspace";
 import { mockDeep } from "jest-mock-extended";
-import { TreeUtils } from "../../util/treeUtils";
+import { TreeUtils } from "../../src/util/treeUtils";
 import { getInvokeAndTargetPositionFromSource } from "../utils/sourceParser";
 import { URI } from "vscode-uri";
 
