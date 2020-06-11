@@ -196,16 +196,18 @@ export class CompletionProvider {
         )?.startPosition.column;
 
         if (dotIndex) {
-          return this.getRecordCompletions(
-            accessSegmentNode,
-            tree,
-            Range.create(
-              Position.create(params.position.line, dotIndex + 1),
-              params.position,
+          completions.push(
+            ...this.getRecordCompletions(
+              accessSegmentNode,
+              tree,
+              Range.create(
+                Position.create(params.position.line, dotIndex + 1),
+                params.position,
+              ),
+              elmWorkspace.getImports(),
+              params.textDocument.uri,
+              forest,
             ),
-            elmWorkspace.getImports(),
-            params.textDocument.uri,
-            forest,
           );
         }
       }
