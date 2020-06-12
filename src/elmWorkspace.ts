@@ -282,15 +282,14 @@ export class ElmWorkspace implements IElmWorkspace {
         maintainerAndPackageName: element.maintainerAndPackageName,
         path: matchingPath,
         writeable: element.writeable,
-        isExposed: exposedModules.includes(matchingPath),
+        isExposed: exposedModules.some(
+          (a) => a.fsPath === URI.file(matchingPath).fsPath,
+        ),
       }));
     }
   }
 
-  private modulesToFilenames(
-    elmJson: unknown,
-    pathToPackage: string,
-  ): string[] {
+  private modulesToFilenames(elmJson: unknown, pathToPackage: string): URI[] {
     if (!elmJson || !Object.hasOwnProperty.call(elmJson, "exposed-modules")) {
       return [];
     }
@@ -298,23 +297,28 @@ export class ElmWorkspace implements IElmWorkspace {
       "exposed-modules": Record<string, string | string[]>;
     })["exposed-modules"];
 
-    const result: string[] = [];
+    const result: URI[] = [];
 
     for (const key in x) {
       if (Object.hasOwnProperty.call(x, key)) {
         const element = x[key];
         if (typeof element === "string") {
           result.push(
-            pathToPackage
-              .concat("/src/")
-              .concat(element.replace(".", "/").concat(".elm")),
+            URI.file(
+              pathToPackage
+                .concat("/src/")
+                .concat(element.replace(".", "/").concat(".elm"))
+                .concat(element.replace(".", "/").concat(".elm")),
+            ),
           );
         } else {
           result.push(
             ...element.map((element) =>
-              pathToPackage
-                .concat("/src/")
-                .concat(element.replace(".", "/").concat(".elm")),
+              URI.file(
+                pathToPackage
+                  .concat("/src/")
+                  .concat(element.replace(".", "/").concat(".elm")),
+              ),
             ),
           );
         }
