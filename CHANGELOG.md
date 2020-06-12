@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.8.1
+
+- Fix imports form other files not showing up in some cases
+
 ## 1.8.0
 
 - Add completions for possible imports
