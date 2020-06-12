@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.8.2
+
+- Fix problem on import generation for windows systems
+
 ## 1.8.1
 
 - Fix imports form other files not showing up in some cases
