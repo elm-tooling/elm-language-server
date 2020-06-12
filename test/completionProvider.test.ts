@@ -25,7 +25,7 @@ class MockCompletionProvider extends CompletionProvider {
 }
 
 type exactCompletions = "exactMatch" | "partialMatch";
-type dotCompletions = "triggerdeByDot" | "normal";
+type dotCompletions = "triggeredByDot" | "normal";
 
 describe("CompletionProvider", () => {
   const connectionMock = mockDeep<IConnection>();
@@ -105,7 +105,7 @@ describe("CompletionProvider", () => {
 
     testCompletionsWithContext({ triggerKind: 1 });
 
-    if (testDotCompletion === "triggerdeByDot") {
+    if (testDotCompletion === "triggeredByDot") {
       testCompletionsWithContext({ triggerKind: 2, triggerCharacter: "." });
     }
   }
@@ -216,8 +216,8 @@ view model =
     await testCompletions(
       source,
       ["prop1", "prop2"],
-      "exactMatch",
-      "triggerdeByDot",
+      "partialMatch",
+      "triggeredByDot",
     );
   });
 
@@ -612,7 +612,7 @@ test =
       source,
       ["Data.User.func"],
       "partialMatch",
-      "triggerdeByDot",
+      "triggeredByDot",
     );
 
     const source2 = `
@@ -638,7 +638,7 @@ test =
       source2,
       ["Data.User.func", "Data.User.TestType"],
       "partialMatch",
-      "triggerdeByDot",
+      "triggeredByDot",
     );
   });
 
@@ -660,7 +660,7 @@ defaultPage =
       source,
       ["Page.Home", "Page.Away"],
       "partialMatch",
-      "triggerdeByDot",
+      "triggeredByDot",
     );
   });
 
@@ -676,7 +676,7 @@ f foo =
     foo.name.{-caret-}
 `;
 
-    await testCompletions(source, ["first"], "exactMatch", "triggerdeByDot");
+    await testCompletions(source, ["first"], "exactMatch", "triggeredByDot");
   });
 
   it("Union constructor completions from pattern destructuring", async () => {
