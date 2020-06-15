@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.8.3
+
+- Fixed bug that was causing problems with completions from external packages
+
 ## 1.8.2
 
 - Fix problem on import generation for windows systems
