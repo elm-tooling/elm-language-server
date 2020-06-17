@@ -307,7 +307,6 @@ export class ElmWorkspace implements IElmWorkspace {
             URI.file(
               pathToPackage
                 .concat("/src/")
-                .concat(element.replace(".", "/").concat(".elm"))
                 .concat(element.replace(".", "/").concat(".elm")),
             ),
           );
