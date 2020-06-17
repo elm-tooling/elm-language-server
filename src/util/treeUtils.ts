@@ -842,6 +842,21 @@ export class TreeUtils {
       if (!definitionNode) {
         definitionFromOtherFile = this.findImportFromImportList(
           uri,
+          TreeUtils.findImportNameNode(tree, upperCaseQid.text)?.text ??
+            upperCaseQid.text,
+          "Module",
+          imports,
+        );
+        if (definitionFromOtherFile) {
+          return {
+            node: definitionFromOtherFile.node,
+            nodeType: "Module",
+            uri: definitionFromOtherFile.fromUri,
+          };
+        }
+
+        definitionFromOtherFile = this.findImportFromImportList(
+          uri,
           upperCaseQid.text,
           "Type",
           imports,
@@ -958,18 +973,45 @@ export class TreeUtils {
       );
 
       if (!topLevelDefinitionNode) {
-        const definitionFromOtherFile = this.findImportFromImportList(
+        // Get the full module name and handle an import alias if there is one
+        const endPos =
+          nodeAtPosition.parent.text.indexOf(nodeAtPosition.text) +
+          nodeAtPosition.text.length;
+        const moduleNameOrAlias = nodeAtPosition.parent.text.substring(
+          0,
+          endPos,
+        );
+        const moduleName =
+          TreeUtils.findImportNameNode(tree, moduleNameOrAlias)?.text ??
+          moduleNameOrAlias;
+
+        const moduleDefinitionFromOtherFile = this.findImportFromImportList(
+          uri,
+          moduleName,
+          "Module",
+          imports,
+        );
+
+        if (moduleDefinitionFromOtherFile) {
+          return {
+            node: moduleDefinitionFromOtherFile.node,
+            nodeType: "Module",
+            uri: moduleDefinitionFromOtherFile.fromUri,
+          };
+        }
+
+        const functionDefinitionFromOtherFile = this.findImportFromImportList(
           uri,
           nodeAtPosition.parent.text,
           "Function",
           imports,
         );
 
-        if (definitionFromOtherFile) {
+        if (functionDefinitionFromOtherFile) {
           return {
-            node: definitionFromOtherFile.node,
+            node: functionDefinitionFromOtherFile.node,
             nodeType: "Function",
-            uri: definitionFromOtherFile.fromUri,
+            uri: functionDefinitionFromOtherFile.fromUri,
           };
         }
       }
@@ -1090,6 +1132,37 @@ export class TreeUtils {
           };
         }
       }
+    } else if (
+      nodeAtPosition.type === "upper_case_identifier" &&
+      nodeAtPosition.parent?.type === "ERROR"
+    ) {
+      let fullModuleName = nodeAtPosition.text;
+
+      // Get fully qualified module name
+      // Ex: nodeAtPosition.text is Attributes, we need to get Html.Attributes manually
+      let currentNode = nodeAtPosition.previousNamedSibling;
+      while (
+        currentNode?.type === "dot" &&
+        currentNode.previousNamedSibling?.type === "upper_case_identifier"
+      ) {
+        fullModuleName = `${currentNode.previousNamedSibling.text}.${fullModuleName}`;
+        currentNode = currentNode.previousNamedSibling.previousNamedSibling;
+      }
+
+      const definitionFromOtherFile = this.findImportFromImportList(
+        uri,
+        TreeUtils.findImportNameNode(tree, fullModuleName)?.text ??
+          fullModuleName,
+        "Module",
+        imports,
+      );
+      if (definitionFromOtherFile) {
+        return {
+          node: definitionFromOtherFile.node,
+          nodeType: "Module",
+          uri: definitionFromOtherFile.fromUri,
+        };
+      }
     }
   }
 
@@ -1099,7 +1172,8 @@ export class TreeUtils {
   ): SyntaxNode | undefined {
     if (node.parent) {
       if (
-        node.parent.type === "value_declaration" &&
+        (node.parent.type === "value_declaration" ||
+          node.parent.type === "ERROR") &&
         node.parent.firstChild &&
         node.parent.firstChild.type === "function_declaration_left"
       ) {
@@ -1289,9 +1363,12 @@ export class TreeUtils {
     if (allImports) {
       const match = allImports.find(
         (a) =>
-          a.children.length > 1 &&
-          a.children[1].type === "upper_case_qid" &&
-          a.children[1].text === moduleName,
+          (a.children.length > 1 &&
+            a.children[1].type === "upper_case_qid" &&
+            a.children[1].text === moduleName) ||
+          (a.children.length > 2 &&
+            a.children[2].type === "as_clause" &&
+            a.children[2].lastNamedChild?.text === moduleName),
       );
       if (match) {
         return match.children[1];
@@ -1572,6 +1649,15 @@ export class TreeUtils {
           TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
             node.parent.parent.parent,
           )?.parent ?? undefined;
+      }
+
+      // Handle when the record and dot are not group, like the end of let expression
+      if (
+        !type &&
+        node.type === "value_qid" &&
+        node.parent.nextNamedSibling?.type === "dot"
+      ) {
+        type = node;
       }
 
       if (type) {

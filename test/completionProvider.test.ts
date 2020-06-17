@@ -33,6 +33,8 @@ describe("CompletionProvider", () => {
   const completionProvider = new MockCompletionProvider(connectionMock, []);
   const treeParser = new SourceTreeParser();
 
+  const debug = process.argv.find((arg) => arg === "--debug");
+
   /**
    * Run completion tests on a source
    *
@@ -72,6 +74,24 @@ describe("CompletionProvider", () => {
         ? completions
         : completions.items;
 
+      if (debug && completionsList.length === 0) {
+        console.log(
+          `No completions found with context ${JSON.stringify(
+            context,
+          )}, expected completions: ${JSON.stringify(expectedCompletions)}`,
+        );
+      } else if (
+        debug &&
+        testExactCompletions === "exactMatch" &&
+        completionsList.length !== expectedCompletions.length
+      ) {
+        console.log(
+          `Wrong completions: ${JSON.stringify(
+            completionsList.map((c) => c.label),
+          )}, expected: ${JSON.stringify(expectedCompletions)}`,
+        );
+      }
+
       if (testExactCompletions === "exactMatch") {
         expect(completionsList.length).toBe(expectedCompletions.length);
       } else {
@@ -81,25 +101,33 @@ describe("CompletionProvider", () => {
       }
 
       expectedCompletions.forEach((completion) => {
-        expect(
-          completionsList.find((c) => {
-            if (typeof completion === "string") {
-              return c.label === completion;
-            } else {
-              // Compare label, detail, and text edit text
-              return (
-                c.label === completion.label &&
-                c.detail === completion.detail &&
-                c.additionalTextEdits &&
-                completion.additionalTextEdits &&
-                isDeepStrictEqual(
-                  c.additionalTextEdits[0],
-                  completion.additionalTextEdits[0],
-                )
-              );
-            }
-          }),
-        ).toBeTruthy();
+        const result = completionsList.find((c) => {
+          if (typeof completion === "string") {
+            return c.label === completion;
+          } else {
+            // Compare label, detail, and text edit text
+            return (
+              c.label === completion.label &&
+              c.detail === completion.detail &&
+              c.additionalTextEdits &&
+              completion.additionalTextEdits &&
+              isDeepStrictEqual(
+                c.additionalTextEdits[0],
+                completion.additionalTextEdits[0],
+              )
+            );
+          }
+        });
+
+        if (!result && debug) {
+          console.log(
+            `Could not find ${completion} in ${JSON.stringify(
+              completionsList,
+            )}`,
+          );
+        }
+
+        expect(result).toBeTruthy();
       });
     }
 
@@ -216,7 +244,34 @@ view model =
     await testCompletions(
       source,
       ["prop1", "prop2"],
-      "partialMatch",
+      "exactMatch",
+      "triggeredByDot",
+    );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Model = 
+  { prop1: String
+  , prop2: Int
+  }
+
+view : Model -> Model
+view model =
+  let
+    var : String
+    var = 
+      model.{-caret-}
+
+  in
+    model
+`;
+
+    await testCompletions(
+      source2,
+      ["prop1", "prop2"],
+      "exactMatch",
       "triggeredByDot",
     );
   });
@@ -589,8 +644,7 @@ func =
     ]);
   });
 
-  it("Module name with caret after dot should have completions", async () => {
-    // TODO: Add auto import completions for modules and module values
+  it("Imported modules should have fully qualified completions", async () => {
     const source = `
 --@ Data/User.elm
 module Data.User exposing (..)
@@ -605,7 +659,7 @@ module Test exposing (..)
 import Data.User
 
 test = 
-  Data.{-caret-}
+  {-caret-}
 `;
 
     await testCompletions(
@@ -631,7 +685,7 @@ module Test exposing (..)
 import Data.User
 
 test = 
-  Data.User.{-caret-}
+  Da{-caret-}
 `;
 
     await testCompletions(
@@ -650,15 +704,41 @@ module Page exposing (..)
 type Page = Home | Away
 
 --@ Test.elm
+module Test exposing (..)
+
 import Page
 
 defaultPage = 
   Page.{-caret-}
+
+func = ""
 `;
 
     await testCompletions(
       source,
-      ["Page.Home", "Page.Away"],
+      ["Home", "Away"],
+      "partialMatch",
+      "triggeredByDot",
+    );
+
+    const source2 = `
+--@ Page.elm
+module Page exposing (..)
+
+type Page = Home | Away
+
+--@ Test.elm
+module Test exposing (..)
+
+import Page
+
+defaultPage = 
+  Page.{-caret-}
+    `;
+
+    await testCompletions(
+      source2,
+      ["Home", "Away"],
       "partialMatch",
       "triggeredByDot",
     );
@@ -716,5 +796,192 @@ viewUser : U{-caret-}
 `;
 
     await testCompletions(source, ["User"]);
+  });
+
+  it("Possible submodule completions", async () => {
+    const source = `
+--@ Module/Submodule.elm
+module Module.Submodule exposing (..)
+
+func = ""
+
+--@ Module/Submodule/AnotherSubmodule.elm
+module Module.Submodule.AnotherSubmodule exposing (..)
+
+func = ""
+
+--@ Test.elm
+module Test exposing (..)
+
+test : Module.{-caret-}
+`;
+
+    await testCompletions(
+      source,
+      ["Submodule", "Submodule.AnotherSubmodule"],
+      "exactMatch",
+      "triggeredByDot",
+    );
+
+    const source2 = `
+--@ Module/Submodule.elm
+module Module.Submodule exposing (..)
+
+func = ""
+
+--@ Module/Submodule/AnotherSubmodule.elm
+module Module.Submodule.AnotherSubmodule exposing (..)
+
+func = ""
+
+--@ Test.elm
+module Test exposing (..)
+
+test = Module.Submodule.{-caret-}
+    `;
+
+    await testCompletions(
+      source2,
+      ["AnotherSubmodule"],
+      "exactMatch",
+      "triggeredByDot",
+    );
+
+    const source3 = `
+--@ Module/Submodule.elm
+module Module.Submodule exposing (..)
+
+func = ""
+
+--@ Module/Submodule/AnotherSubmodule.elm
+module Module.Submodule.AnotherSubmodule exposing (..)
+
+func = ""
+
+--@ Test.elm
+module Test exposing (..)
+
+test = Module.sub{-caret-}
+    `;
+
+    await testCompletions(
+      source3,
+      ["Submodule", "Submodule.AnotherSubmodule"],
+      "exactMatch",
+    );
+  });
+
+  it("Imported qualified modules should have value completions", async () => {
+    const source = `
+--@ Module.elm
+module Module exposing (..)
+
+func = ""
+
+type Msg = Msg1 | Msg2
+
+type alias Model = { field : String }
+
+--@ Test.elm
+module Test exposing (..)
+
+import Module
+
+test = div [] [ Module.{-caret-} ]
+`;
+
+    await testCompletions(
+      source,
+      ["func", "Msg", "Msg1", "Msg2", "Model"],
+      "exactMatch",
+      "triggeredByDot",
+    );
+
+    const source2 = `
+--@ Module.elm
+module Module exposing (..)
+
+func = ""
+
+type Msg = Msg1 | Msg2
+
+type alias Model = { field : String }
+
+--@ Test.elm
+module Test exposing (..)
+
+import Module
+
+test = Module.fu{-caret-}
+`;
+
+    await testCompletions(
+      source2,
+      ["func", "Msg", "Msg1", "Msg2", "Model"],
+      "exactMatch",
+    );
+
+    const source3 = `
+--@ Module.elm
+module Module exposing (..)
+
+func = ""
+
+type Msg = Msg1 | Msg2
+
+type alias Model = { field : String }
+
+--@ Test.elm
+module Test exposing (..)
+
+import Module
+
+test = Module.{-caret-}
+`;
+
+    await testCompletions(
+      source3,
+      ["func", "Msg", "Msg1", "Msg2", "Model"],
+      "exactMatch",
+      "triggeredByDot",
+    );
+  });
+
+  // Ref: https://github.com/elm-tooling/elm-language-server/issues/288
+  it("Record completions should not interfere with Module completions", async () => {
+    const source = `
+--@ Other.elm
+module Other exposing (..)
+
+func = ""
+
+type alias Data = { prop : String }
+
+--@ Test.elm
+module Test exposing (..)
+
+import Other
+
+type alias Model = 
+{ prop1: String
+, prop2: Int
+}
+
+view : Model -> Model
+view model =
+  let
+    var = Other.{-caret-}
+
+    test = model.prop1
+  in
+    model
+`;
+
+    await testCompletions(
+      source,
+      ["func", "Data"],
+      "exactMatch",
+      "triggeredByDot",
+    );
   });
 });
