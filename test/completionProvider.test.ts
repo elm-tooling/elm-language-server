@@ -82,11 +82,14 @@ describe("CompletionProvider", () => {
         );
       } else if (
         debug &&
+        testExactCompletions === "exactMatch" &&
         completionsList.length !== expectedCompletions.length
       ) {
-        `Wrong completions: ${JSON.stringify(
-          completionsList,
-        )}, expected: ${JSON.stringify(expectedCompletions)}`;
+        console.log(
+          `Wrong completions: ${JSON.stringify(
+            completionsList.map((c) => c.label),
+          )}, expected: ${JSON.stringify(expectedCompletions)}`,
+        );
       }
 
       if (testExactCompletions === "exactMatch") {
@@ -241,7 +244,34 @@ view model =
     await testCompletions(
       source,
       ["prop1", "prop2"],
-      "partialMatch",
+      "exactMatch",
+      "triggeredByDot",
+    );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Model = 
+  { prop1: String
+  , prop2: Int
+  }
+
+view : Model -> Model
+view model =
+  let
+    var : String
+    var = 
+      model.{-caret-}
+
+  in
+    model
+`;
+
+    await testCompletions(
+      source2,
+      ["prop1", "prop2"],
+      "exactMatch",
       "triggeredByDot",
     );
   });
@@ -912,6 +942,44 @@ test = Module.{-caret-}
     await testCompletions(
       source3,
       ["func", "Msg", "Msg1", "Msg2", "Model"],
+      "exactMatch",
+      "triggeredByDot",
+    );
+  });
+
+  // Ref: https://github.com/elm-tooling/elm-language-server/issues/288
+  it("Record completions should not interfere with Module completions", async () => {
+    const source = `
+--@ Other.elm
+module Other exposing (..)
+
+func = ""
+
+type alias Data = { prop : String }
+
+--@ Test.elm
+module Test exposing (..)
+
+import Other
+
+type alias Model = 
+{ prop1: String
+, prop2: Int
+}
+
+view : Model -> Model
+view model =
+  let
+    var = Other.{-caret-}
+
+    test = model.prop1
+  in
+    model
+`;
+
+    await testCompletions(
+      source,
+      ["func", "Data"],
       "exactMatch",
       "triggeredByDot",
     );

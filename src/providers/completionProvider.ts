@@ -188,30 +188,42 @@ export class CompletionProvider {
           forest,
         );
       } else if (
-        (nodeAtPosition.type === "field_access_segment" ||
-          nodeAtPosition.parent?.type === "field_access_segment" ||
-          TreeUtils.descendantsOfType(nodeAtPosition, "field_access_segment")
-            .length > 0) &&
-        nodeAtPosition.parent
+        nodeAtPosition.type === "field_access_segment" ||
+        nodeAtPosition.parent?.type === "field_access_segment" ||
+        RegExp("^[a-z]+.*.$").exec(targetWord)
       ) {
-        const accessSegmentNode =
+        let accessSegmentNode =
           nodeAtPosition.type === "field_access_segment"
             ? nodeAtPosition
             : nodeAtPosition.parent?.type === "field_access_segment"
             ? nodeAtPosition.parent
-            : TreeUtils.descendantsOfType(
-                nodeAtPosition,
-                "field_access_segment",
-              )[0];
+            : undefined;
 
-        const dotIndex = TreeUtils.findFirstNamedChildOfType(
-          "dot",
-          accessSegmentNode,
-        )?.startPosition.column;
+        if (!accessSegmentNode) {
+          accessSegmentNode =
+            TreeUtils.getNamedDescendantForPosition(tree.rootNode, {
+              ...params.position,
+              character: params.position.character - 1,
+            }).parent ?? undefined;
+        }
 
-        if (dotIndex) {
-          completions.push(
-            ...this.getRecordCompletions(
+        if (accessSegmentNode) {
+          let dotIndex = TreeUtils.findFirstNamedChildOfType(
+            "dot",
+            accessSegmentNode,
+          )?.startPosition.column;
+
+          if (!dotIndex) {
+            const wordDot = targetWord.lastIndexOf(".");
+
+            if (wordDot >= 0) {
+              dotIndex =
+                params.position.character - (targetWord.length - wordDot);
+            }
+          }
+
+          if (dotIndex) {
+            return this.getRecordCompletions(
               accessSegmentNode,
               tree,
               Range.create(
@@ -221,8 +233,8 @@ export class CompletionProvider {
               elmWorkspace.getImports(),
               params.textDocument.uri,
               forest,
-            ),
-          );
+            );
+          }
         }
       } else if (
         (nodeAtPosition.parent?.type === "value_qid" &&

@@ -1172,7 +1172,8 @@ export class TreeUtils {
   ): SyntaxNode | undefined {
     if (node.parent) {
       if (
-        node.parent.type === "value_declaration" &&
+        (node.parent.type === "value_declaration" ||
+          node.parent.type === "ERROR") &&
         node.parent.firstChild &&
         node.parent.firstChild.type === "function_declaration_left"
       ) {
@@ -1648,6 +1649,15 @@ export class TreeUtils {
           TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
             node.parent.parent.parent,
           )?.parent ?? undefined;
+      }
+
+      // Handle when the record and dot are not group, like the end of let expression
+      if (
+        !type &&
+        node.type === "value_qid" &&
+        node.parent.nextNamedSibling?.type === "dot"
+      ) {
+        type = node;
       }
 
       if (type) {
