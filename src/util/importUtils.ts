@@ -1,4 +1,4 @@
-import { IForest } from "../forest";
+import { IForest, ITreeContainer } from "../forest";
 import RANKING_LIST from "../providers/ranking";
 import { TreeUtils, NodeType } from "./treeUtils";
 import { SyntaxNode } from "web-tree-sitter";
@@ -89,38 +89,7 @@ export class ImportUtils {
             tree.uri !== uri,
         )
         .forEach((tree) => {
-          tree.exposing?.forEach((exposed) => {
-            const module = tree.moduleName;
-            if (module) {
-              exposedValues.push({
-                module,
-                value: exposed.name,
-                package: tree.maintainerAndPackageName,
-                type: exposed.type,
-                node: exposed.syntaxNode,
-              });
-
-              exposed.exposedUnionConstructors?.forEach((exp) => {
-                if (exp.syntaxNode.parent) {
-                  const value = TreeUtils.findFirstNamedChildOfType(
-                    "upper_case_identifier",
-                    exp.syntaxNode.parent,
-                  )?.text;
-
-                  if (value) {
-                    exposedValues.push({
-                      module,
-                      value: exp.name,
-                      valueToImport: `${value}(..)`,
-                      package: tree.maintainerAndPackageName,
-                      type: "UnionConstructor",
-                      node: exp.syntaxNode,
-                    });
-                  }
-                }
-              });
-            }
-          });
+          exposedValues.push(...ImportUtils.getPossibleImportsOfTree(tree));
         });
     }
 
@@ -162,6 +131,47 @@ export class ImportUtils {
         } else {
           return 0;
         }
+      }
+    });
+
+    return exposedValues;
+  }
+
+  public static getPossibleImportsOfTree(
+    tree: ITreeContainer,
+  ): IPossibleImport[] {
+    const exposedValues: IPossibleImport[] = [];
+
+    tree.exposing?.forEach((exposed) => {
+      const module = tree.moduleName;
+      if (module) {
+        exposedValues.push({
+          module,
+          value: exposed.name,
+          package: tree.maintainerAndPackageName,
+          type: exposed.type,
+          node: exposed.syntaxNode,
+        });
+
+        exposed.exposedUnionConstructors?.forEach((exp) => {
+          if (exp.syntaxNode.parent) {
+            const value = TreeUtils.findFirstNamedChildOfType(
+              "upper_case_identifier",
+              exp.syntaxNode.parent,
+            )?.text;
+
+            if (value) {
+              exposedValues.push({
+                module,
+                value: exp.name,
+                valueToImport: `${value}(..)`,
+                package: tree.maintainerAndPackageName,
+                type: "UnionConstructor",
+                node: exp.syntaxNode,
+              });
+            }
+          }
+        });
       }
     });
 

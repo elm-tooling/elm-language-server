@@ -99,6 +99,11 @@ export class CompletionProvider {
         targetLine.slice(0, params.position.character - 1),
       );
 
+      const targetWord = targetLine.substring(
+        replaceRange.start.character,
+        replaceRange.end.character,
+      );
+
       if (
         isAtStartOfLine &&
         nodeAtLineBefore.type === "lower_case_identifier" &&
@@ -218,6 +223,49 @@ export class CompletionProvider {
               forest,
             ),
           );
+        }
+      } else if (
+        (nodeAtPosition.parent?.type === "value_qid" &&
+          nodeAtPosition.previousNamedSibling?.type === "dot") ||
+        RegExp("^[A-Z]+.*.$").exec(targetWord) // Handles the 'Html.Attributes.' case
+      ) {
+        let targetNode = nodeAtPosition.parent;
+
+        if (targetNode?.type !== "value_qid") {
+          targetNode = TreeUtils.getNamedDescendantForPosition(tree.rootNode, {
+            ...params.position,
+            character: params.position.character - 1,
+          }).parent;
+        }
+
+        if (targetNode) {
+          const dotNodes = TreeUtils.findAllNamedChildrenOfType(
+            "dot",
+            targetNode,
+          );
+
+          // Get the last dot index
+          const dotIndex =
+            dotNodes && dotNodes.length > 0
+              ? dotNodes[dotNodes.length - 1].startPosition.column
+              : targetWord.endsWith(".")
+              ? params.position.character - 1
+              : undefined;
+
+          if (dotIndex) {
+            return this.getSubmodulesOrValues(
+              targetNode,
+              params.textDocument.uri,
+              tree,
+              elmWorkspace.getImports(),
+              forest,
+              Range.create(
+                Position.create(params.position.line, dotIndex + 1),
+                params.position,
+              ),
+              targetLine.substring(replaceRange.start.character, dotIndex),
+            );
+          }
         }
       }
 
@@ -901,6 +949,113 @@ export class CompletionProvider {
     });
 
     return { list: result, isIncomplete };
+  }
+
+  private getSubmodulesOrValues(
+    node: SyntaxNode,
+    uri: string,
+    tree: Tree,
+    imports: IImports,
+    forest: IForest,
+    range: Range,
+    targetModule: string,
+  ): CompletionItem[] {
+    const result: CompletionItem[] = [];
+
+    // Handle possible submodules
+    forest.treeIndex
+      .filter(
+        (t) =>
+          t.moduleName?.startsWith(targetModule + ".") &&
+          t.moduleName !== targetModule,
+      )
+      .forEach((t) => {
+        const moduleNode = TreeUtils.findModuleDeclaration(t.tree);
+        if (t.moduleName) {
+          const markdownDocumentation = HintHelper.createHint(moduleNode);
+
+          result.push(
+            this.createModuleCompletion({
+              label: t.moduleName.slice(targetModule.length + 1),
+              sortPrefix: "b",
+              range,
+              markdownDocumentation,
+            }),
+          );
+        }
+      });
+
+    const moduleNodes = TreeUtils.findAllNamedChildrenOfType(
+      "upper_case_identifier",
+      node,
+    )?.filter((node) => node.text !== "");
+
+    if (moduleNodes && moduleNodes.length > 0) {
+      const moduleNode = moduleNodes[moduleNodes.length - 1];
+
+      const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
+        moduleNode,
+        uri,
+        tree,
+        imports,
+      );
+
+      if (definitionNode && definitionNode.nodeType === "Module") {
+        // Get exposed values
+        const tree = forest.getByUri(definitionNode.uri);
+
+        if (tree) {
+          const imports = ImportUtils.getPossibleImportsOfTree(tree);
+          imports.forEach((value) => {
+            const markdownDocumentation = HintHelper.createHint(value.node);
+            switch (value.type) {
+              case "Function":
+                result.push(
+                  this.createFunctionCompletion({
+                    label: value.value,
+                    sortPrefix: "a",
+                    range,
+                    markdownDocumentation,
+                  }),
+                );
+                break;
+              case "Type":
+                result.push(
+                  this.createTypeCompletion({
+                    label: value.value,
+                    sortPrefix: "a",
+                    range,
+                    markdownDocumentation,
+                  }),
+                );
+                break;
+              case "TypeAlias":
+                result.push(
+                  this.createTypeAliasCompletion({
+                    label: value.value,
+                    sortPrefix: "a",
+                    range,
+                    markdownDocumentation,
+                  }),
+                );
+                break;
+              case "UnionConstructor":
+                result.push(
+                  this.createUnionConstructorCompletion({
+                    label: value.value,
+                    sortPrefix: "a",
+                    range,
+                    markdownDocumentation,
+                  }),
+                );
+                break;
+            }
+          });
+        }
+      }
+    }
+
+    return result;
   }
 
   private createSnippet(
