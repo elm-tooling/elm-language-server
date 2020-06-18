@@ -22,7 +22,7 @@ import { TreeUtils } from "../util/treeUtils";
 import RANKING_LIST from "./ranking";
 import { ImportUtils } from "../util/importUtils";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
-import { Utils } from "src/util/utils";
+import { Utils } from "../util/utils";
 
 export type CompletionResult =
   | CompletionItem[]
