@@ -1,4 +1,4 @@
-import globby from "globby";
+import fdir, { PathsOutput } from "fdir";
 import path from "path";
 import {
   Connection,
@@ -65,10 +65,20 @@ export class Server implements ILanguageServer {
       const globUri = uri.fsPath.replace(/\\/g, "/");
       const elmJsonGlob = `${globUri}/**/elm.json`;
 
-      const elmJsons = globby.sync(
-        [elmJsonGlob, "!**/node_modules/**", "!**/elm-stuff/**"],
-        { suppressErrors: true },
-      );
+      let elmJsons = new fdir()
+        .glob(elmJsonGlob)
+        .exclude(
+          (dir) =>
+            dir.startsWith(".") ||
+            dir === "node_modules" ||
+            dir === "elm-stuff",
+        )
+        .withFullPaths()
+        .crawl(".")
+        .sync();
+
+      elmJsons = elmJsons as PathsOutput;
+
       if (elmJsons.length > 0) {
         connection.console.info(
           `Found ${elmJsons.length} elm.json files for workspace ${globUri}`,
