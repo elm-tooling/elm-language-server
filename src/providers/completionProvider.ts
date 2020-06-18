@@ -106,6 +106,12 @@ export class CompletionProvider {
       );
 
       if (
+        TreeUtils.findParentOfType("block_comment", nodeAtPosition) ||
+        TreeUtils.findParentOfType("line_comment", nodeAtPosition)
+      ) {
+        // Don't complete in comments
+        return [];
+      } else if (
         isAtStartOfLine &&
         nodeAtLineBefore.type === "lower_case_identifier" &&
         nodeAtLineBefore.parent &&
