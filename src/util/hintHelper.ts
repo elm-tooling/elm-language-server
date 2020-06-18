@@ -106,7 +106,9 @@ export class HintHelper {
     }
   }
 
-  private static createHintFromModule(moduleNode: SyntaxNode | undefined) {
+  private static createHintFromModule(
+    moduleNode: SyntaxNode | undefined,
+  ): string | undefined {
     if (moduleNode) {
       let comment = "";
       if (
@@ -123,7 +125,7 @@ export class HintHelper {
     annotation: string,
     comment: string,
     code?: string,
-  ) {
+  ): string {
     let value = "";
     if (annotation) {
       value += this.wrapCodeInMarkdown(annotation);

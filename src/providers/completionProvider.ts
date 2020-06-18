@@ -22,6 +22,7 @@ import { TreeUtils } from "../util/treeUtils";
 import RANKING_LIST from "./ranking";
 import { ImportUtils } from "../util/importUtils";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
+import { Utils } from "src/util/utils";
 
 export type CompletionResult =
   | CompletionItem[]
@@ -288,17 +289,12 @@ export class CompletionProvider {
         ...this.findDefinitionsForScope(nodeAtPosition, tree, replaceRange),
       );
 
-      const currentTarget = targetLine.substring(
-        replaceRange.start.character,
-        replaceRange.end.character,
-      );
-
       completions.push(
         ...this.getCompletionsFromOtherFile(
           elmWorkspace.getImports(),
           params.textDocument.uri,
           replaceRange,
-          currentTarget,
+          targetWord,
         ),
       );
 
@@ -322,7 +318,10 @@ export class CompletionProvider {
     }
   };
 
-  private findPreviousWord(currentCharacter: number, targetLine: string) {
+  private findPreviousWord(
+    currentCharacter: number,
+    targetLine: string,
+  ): string {
     currentCharacter--;
     const previousWordEnd = currentCharacter;
     while (
@@ -339,10 +338,11 @@ export class CompletionProvider {
     range: Range,
   ): CompletionItem[] {
     return forest.treeIndex
-      .filter((a) => a.moduleName)
-      .map((a) =>
+      .map((a) => a.moduleName)
+      .filter(Utils.notUndefined)
+      .map((label) =>
         this.createModuleCompletion({
-          label: a.moduleName!,
+          label,
           range,
           sortPrefix: "b",
         }),
@@ -367,54 +367,54 @@ export class CompletionProvider {
       exposingListNode.previousNamedSibling &&
       exposingListNode.previousNamedSibling.type === "upper_case_qid"
     ) {
-      const prefix = "c";
+      const sortPrefix = "c";
       const moduleName = exposingListNode.previousNamedSibling.text;
       const exposedByModule = forest.getExposingByModuleName(moduleName);
       if (exposedByModule) {
         return exposedByModule
           .map((a) => {
-            const value = HintHelper.createHint(a.syntaxNode);
+            const markdownDocumentation = HintHelper.createHint(a.syntaxNode);
             switch (a.type) {
               case "TypeAlias":
                 return [
                   this.createTypeAliasCompletion({
-                    markdownDocumentation: value,
+                    markdownDocumentation,
                     label: a.name,
                     range,
-                    sortPrefix: prefix,
+                    sortPrefix,
                   }),
                 ];
               case "Type":
                 return a.exposedUnionConstructors
                   ? [
                       this.createTypeCompletion({
-                        markdownDocumentation: value,
+                        markdownDocumentation,
                         label: `${a.name}(..)`,
                         range,
-                        sortPrefix: prefix,
+                        sortPrefix,
                       }),
                       this.createTypeCompletion({
-                        markdownDocumentation: value,
+                        markdownDocumentation,
                         label: a.name,
                         range,
-                        sortPrefix: prefix,
+                        sortPrefix,
                       }),
                     ]
                   : [
                       this.createTypeCompletion({
-                        markdownDocumentation: value,
+                        markdownDocumentation,
                         label: a.name,
                         range,
-                        sortPrefix: prefix,
+                        sortPrefix,
                       }),
                     ];
               default:
                 return [
                   this.createFunctionCompletion({
-                    markdownDocumentation: value,
+                    markdownDocumentation,
                     label: a.name,
                     range,
-                    sortPrefix: prefix,
+                    sortPrefix,
                   }),
                 ];
             }
@@ -435,15 +435,15 @@ export class CompletionProvider {
     if (imports.imports && imports.imports[uri]) {
       const importList = imports.imports[uri];
       importList.forEach((element) => {
-        const value = HintHelper.createHint(element.node);
-        let prefix = "d";
+        const markdownDocumentation = HintHelper.createHint(element.node);
+        let sortPrefix = "d";
         if (element.maintainerAndPackageName) {
           const matchedRanking: string = (RANKING_LIST as {
             [index: string]: string;
           })[element.maintainerAndPackageName];
 
           if (matchedRanking) {
-            prefix = `e${matchedRanking}`;
+            sortPrefix = `e${matchedRanking}`;
           }
         }
 
@@ -462,10 +462,10 @@ export class CompletionProvider {
           case "Function":
             completions.push(
               this.createFunctionCompletion({
-                markdownDocumentation: value,
+                markdownDocumentation,
                 label,
                 range,
-                sortPrefix: prefix,
+                sortPrefix,
                 filterText,
               }),
             );
@@ -475,7 +475,7 @@ export class CompletionProvider {
               this.createUnionConstructorCompletion({
                 label,
                 range,
-                sortPrefix: prefix,
+                sortPrefix,
                 filterText,
               }),
             );
@@ -483,20 +483,20 @@ export class CompletionProvider {
           case "Operator":
             completions.push(
               this.createOperatorCompletion({
-                markdownDocumentation: value,
+                markdownDocumentation,
                 label,
                 range,
-                sortPrefix: prefix,
+                sortPrefix,
               }),
             );
             break;
           case "Type":
             completions.push(
               this.createTypeCompletion({
-                markdownDocumentation: value,
+                markdownDocumentation,
                 label,
                 range,
-                sortPrefix: prefix,
+                sortPrefix,
                 filterText,
               }),
             );
@@ -504,10 +504,10 @@ export class CompletionProvider {
           case "TypeAlias":
             completions.push(
               this.createTypeAliasCompletion({
-                markdownDocumentation: value,
+                markdownDocumentation,
                 label,
                 range,
-                sortPrefix: prefix,
+                sortPrefix,
                 filterText,
               }),
             );
@@ -541,7 +541,7 @@ export class CompletionProvider {
     const topLevelFunctions = TreeUtils.findAllTopLeverFunctionDeclarations(
       tree,
     );
-    const prefix = "b";
+    const sortPrefix = "b";
     // Add functions
     if (topLevelFunctions) {
       const declarations = topLevelFunctions.filter(
@@ -552,13 +552,13 @@ export class CompletionProvider {
           a.firstNamedChild.firstNamedChild.type === "lower_case_identifier",
       );
       for (const declaration of declarations) {
-        const value = HintHelper.createHint(declaration);
+        const markdownDocumentation = HintHelper.createHint(declaration);
         completions.push(
           this.createFunctionCompletion({
-            markdownDocumentation: value,
+            markdownDocumentation,
             label: declaration.firstNamedChild!.firstNamedChild!.text,
             range,
-            sortPrefix: prefix,
+            sortPrefix,
           }),
         );
       }
@@ -567,7 +567,7 @@ export class CompletionProvider {
     const typeDeclarations = TreeUtils.findAllTypeDeclarations(tree);
     if (typeDeclarations) {
       for (const declaration of typeDeclarations) {
-        const value = HintHelper.createHint(declaration);
+        const markdownDocumentation = HintHelper.createHint(declaration);
         const name = TreeUtils.findFirstNamedChildOfType(
           "upper_case_identifier",
           declaration,
@@ -575,19 +575,19 @@ export class CompletionProvider {
         if (name) {
           completions.push(
             this.createTypeCompletion({
-              markdownDocumentation: value,
+              markdownDocumentation,
               label: name.text,
               range,
-              sortPrefix: prefix,
+              sortPrefix,
             }),
           );
           if (moduleDefinition) {
             completions.push(
               this.createTypeCompletion({
-                markdownDocumentation: value,
+                markdownDocumentation,
                 label: `${name.text}(..)`,
                 range,
-                sortPrefix: prefix,
+                sortPrefix,
               }),
             );
           }
@@ -607,7 +607,7 @@ export class CompletionProvider {
               this.createUnionConstructorCompletion({
                 label: unionVariantName.text,
                 range,
-                sortPrefix: prefix,
+                sortPrefix,
               }),
             );
           }
@@ -618,7 +618,7 @@ export class CompletionProvider {
     const typeAliasDeclarations = TreeUtils.findAllTypeAliasDeclarations(tree);
     if (typeAliasDeclarations) {
       for (const declaration of typeAliasDeclarations) {
-        const value = HintHelper.createHint(declaration);
+        const markdownDocumentation = HintHelper.createHint(declaration);
         const name = TreeUtils.findFirstNamedChildOfType(
           "upper_case_identifier",
           declaration,
@@ -626,10 +626,10 @@ export class CompletionProvider {
         if (name) {
           completions.push(
             this.createTypeAliasCompletion({
-              markdownDocumentation: value,
+              markdownDocumentation,
               label: name.text,
               range,
-              sortPrefix: prefix,
+              sortPrefix,
             }),
           );
         }
@@ -794,7 +794,7 @@ export class CompletionProvider {
     range: Range,
   ): CompletionItem[] {
     const result: CompletionItem[] = [];
-    const prefix = "a";
+    const sortPrefix = "a";
     if (node.parent) {
       if (node.parent.type === "let_in_expr") {
         const letNode = TreeUtils.findFirstNamedChildOfType("let", node.parent);
@@ -810,15 +810,15 @@ export class CompletionProvider {
               nodeToProcess.firstNamedChild.firstNamedChild.type ===
                 "lower_case_identifier"
             ) {
-              const value = HintHelper.createHintFromDefinitionInLet(
+              const markdownDocumentation = HintHelper.createHintFromDefinitionInLet(
                 nodeToProcess,
               );
               result.push(
                 this.createFunctionCompletion({
-                  markdownDocumentation: value,
+                  markdownDocumentation,
                   label: nodeToProcess.firstNamedChild.firstNamedChild.text,
                   range,
-                  sortPrefix: prefix,
+                  sortPrefix,
                 }),
               );
             }
@@ -839,13 +839,13 @@ export class CompletionProvider {
         );
         if (caseBranchVariableNodes) {
           caseBranchVariableNodes.forEach((a) => {
-            const value = HintHelper.createHintFromDefinitionInCaseBranch();
+            const markdownDocumentation = HintHelper.createHintFromDefinitionInCaseBranch();
             result.push(
               this.createFunctionCompletion({
-                markdownDocumentation: value,
+                markdownDocumentation,
                 label: a.text,
                 range,
-                sortPrefix: prefix,
+                sortPrefix,
               }),
             );
           });
@@ -1020,45 +1020,25 @@ export class CompletionProvider {
           const imports = ImportUtils.getPossibleImportsOfTree(tree);
           imports.forEach((value) => {
             const markdownDocumentation = HintHelper.createHint(value.node);
+            const completionOptions = {
+              label: value.value,
+              sortPrefix: "a",
+              range,
+              markdownDocumentation,
+            };
             switch (value.type) {
               case "Function":
-                result.push(
-                  this.createFunctionCompletion({
-                    label: value.value,
-                    sortPrefix: "a",
-                    range,
-                    markdownDocumentation,
-                  }),
-                );
+                result.push(this.createFunctionCompletion(completionOptions));
                 break;
               case "Type":
-                result.push(
-                  this.createTypeCompletion({
-                    label: value.value,
-                    sortPrefix: "a",
-                    range,
-                    markdownDocumentation,
-                  }),
-                );
+                result.push(this.createTypeCompletion(completionOptions));
                 break;
               case "TypeAlias":
-                result.push(
-                  this.createTypeAliasCompletion({
-                    label: value.value,
-                    sortPrefix: "a",
-                    range,
-                    markdownDocumentation,
-                  }),
-                );
+                result.push(this.createTypeAliasCompletion(completionOptions));
                 break;
               case "UnionConstructor":
                 result.push(
-                  this.createUnionConstructorCompletion({
-                    label: value.value,
-                    sortPrefix: "a",
-                    range,
-                    markdownDocumentation,
-                  }),
+                  this.createUnionConstructorCompletion(completionOptions),
                 );
                 break;
             }
@@ -1093,7 +1073,7 @@ export class CompletionProvider {
     };
   }
 
-  private createSnippets() {
+  private createSnippets(): CompletionItem[] {
     return [
       this.createSnippet(
         "module",

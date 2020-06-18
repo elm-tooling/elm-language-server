@@ -4,6 +4,8 @@ import {
   CodeActionParams,
   ExecuteCommandParams,
   IConnection,
+  ApplyWorkspaceEditParams,
+  ApplyWorkspaceEditResponse,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
@@ -56,7 +58,9 @@ export class CodeActionProvider {
     ];
   }
 
-  private async onExecuteCommand(params: ExecuteCommandParams) {
+  private async onExecuteCommand(
+    params: ExecuteCommandParams,
+  ): Promise<ApplyWorkspaceEditResponse | null | undefined> {
     this.connection.console.info("A command execution was requested");
     return this.elmAnalyse && this.elmAnalyse.onExecuteCommand(params);
   }
@@ -151,7 +155,7 @@ export class CodeActionProvider {
     params: CodeActionParams,
     tree: Tree,
     nodeAtPosition: SyntaxNode,
-  ) {
+  ): CodeAction[] {
     const codeActions: CodeAction[] = [];
 
     if (

@@ -63,7 +63,7 @@ export class MoveRefactoringHandler {
   private async handleMoveRequest(
     params: IMoveParams,
     elmWorkspace: IElmWorkspace,
-  ) {
+  ): Promise<void> {
     if (!params.destination) {
       return;
     }

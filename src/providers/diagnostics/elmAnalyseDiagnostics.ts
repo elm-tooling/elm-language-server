@@ -62,7 +62,7 @@ export class ElmAnalyseDiagnostics {
   ) {
     this.onExecuteCommand = this.onExecuteCommand.bind(this);
     this.onCodeAction = this.onCodeAction.bind(this);
-    this.diagnostics = new Map();
+    this.diagnostics = new Map<string, Diagnostic[]>();
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(
       elmWorkspaces,
       (uri) => uri,
@@ -82,7 +82,9 @@ export class ElmAnalyseDiagnostics {
     const workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(uri);
     const analyser = this.elmAnalysers.get(workspace);
     if (!analyser) {
-      throw new Error(`No elm-analyse instance loaded for workspace ${uri}.`);
+      throw new Error(
+        `No elm-analyse instance loaded for workspace ${uri.fsPath}.`,
+      );
     }
 
     await analyser.then((elmAnalyser) => {
@@ -187,7 +189,10 @@ export class ElmAnalyseDiagnostics {
    * If a diagnosticId is provided it will fix the single issue, if no
    * id is provided it will fix the entire file.
    */
-  private async fixer(uri: URI, diagnosticId?: number) {
+  private async fixer(
+    uri: URI,
+    diagnosticId?: number,
+  ): Promise<ApplyWorkspaceEditResponse> {
     const elmWorkspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(uri);
 
     const edits = await this.getFixEdits(elmWorkspace, uri, diagnosticId);
@@ -208,7 +213,9 @@ export class ElmAnalyseDiagnostics {
     const settings = await this.settings.getClientSettings();
 
     if (!elmAnalyse) {
-      throw new Error(`No elm-analyse instance loaded for workspace ${uri}.`);
+      throw new Error(
+        `No elm-analyse instance loaded for workspace ${uri.fsPath}.`,
+      );
     }
 
     const filePath = URI.parse(uri.toString()).fsPath;
@@ -219,7 +226,9 @@ export class ElmAnalyseDiagnostics {
 
     return new Promise((resolve, reject) => {
       // Naming the function here so that we can unsubscribe once we get the new file content
-      const onFixComplete = (fixedFile: FixedFile) => {
+      const onFixComplete = (
+        fixedFile: FixedFile,
+      ): Promise<TextEdit[]> | undefined | void => {
         this.connection.console.info(
           `Received fixed file from elm-analyse for path: ${filePath}`,
         );
@@ -271,7 +280,7 @@ export class ElmAnalyseDiagnostics {
     oldText: string,
     newText: string,
     elmFormatEdits: TextEdit[] | undefined,
-  ) {
+  ): Promise<TextEdit[]> {
     if (elmFormatEdits) {
       // Fake a `TextDocument` so that we can use `applyEdits` on `TextDocument`
       const formattedFile = TextDocument.create(
@@ -310,7 +319,7 @@ export class ElmAnalyseDiagnostics {
 
     return new Promise((resolve) => {
       // Wait for elm-analyse to send back the first report
-      const cb = (firstReport: any) => {
+      const cb = (firstReport: any): void => {
         elmAnalyse.ports.sendReportValue.unsubscribe(cb);
         const onNewReport = this.onNewReportForWorkspace(elmWorkspace);
         onNewReport(firstReport);

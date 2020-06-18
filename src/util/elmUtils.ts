@@ -140,7 +140,11 @@ export function findDepVersion(
   }
 }
 
-function filterSemver(lower: string, upper: string, operator: string) {
+function filterSemver(
+  lower: string,
+  upper: string,
+  operator: string,
+): boolean | undefined {
   const currentCompare = cmp(lower, upper);
   switch (operator) {
     case "<=":
@@ -150,7 +154,7 @@ function filterSemver(lower: string, upper: string, operator: string) {
   }
 }
 
-function cmp(a: string, b: string) {
+function cmp(a: string, b: string): number {
   const pa = a.split(".");
   const pb = b.split(".");
   for (let i = 0; i < 3; i++) {

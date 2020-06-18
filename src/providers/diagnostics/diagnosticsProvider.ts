@@ -91,13 +91,15 @@ export class DiagnosticsProvider {
     });
   }
 
-  private newElmAnalyseDiagnostics(diagnostics: Map<string, Diagnostic[]>) {
+  private newElmAnalyseDiagnostics(
+    diagnostics: Map<string, Diagnostic[]>,
+  ): void {
     this.currentDiagnostics.elmAnalyse = diagnostics;
     this.sendDiagnostics();
   }
 
-  private sendDiagnostics() {
-    const allDiagnostics: Map<string, Diagnostic[]> = new Map();
+  private sendDiagnostics(): void {
+    const allDiagnostics = new Map<string, Diagnostic[]>();
 
     for (const [uri, diagnostics] of this.currentDiagnostics.elmMake) {
       allDiagnostics.set(uri, diagnostics);

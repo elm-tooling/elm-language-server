@@ -26,7 +26,7 @@ export class ExposeUnexposeHandler {
   private async handleExposeRequest(
     params: IExposeUnexposeParams,
     elmWorkspace: IElmWorkspace,
-  ) {
+  ): Promise<void> {
     const forest = elmWorkspace.getForest();
     const tree = forest.getTree(params.uri);
 
@@ -46,7 +46,7 @@ export class ExposeUnexposeHandler {
   private async handleUnexposeRequest(
     params: IExposeUnexposeParams,
     elmWorkspace: IElmWorkspace,
-  ) {
+  ): Promise<void> {
     const forest = elmWorkspace.getForest();
     const tree = forest.getTree(params.uri);
 

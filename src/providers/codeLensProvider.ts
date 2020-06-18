@@ -161,7 +161,7 @@ export class CodeLensProvider {
     nameNode: SyntaxNode,
     uri: string,
     isFunction: boolean,
-  ) {
+  ): CodeLens {
     return CodeLens.create(
       Range.create(
         Position.create(node.startPosition.row, node.startPosition.column),
@@ -171,7 +171,10 @@ export class CodeLensProvider {
     );
   }
 
-  private createReferenceCodeLens(placementNode: SyntaxNode, uri: string) {
+  private createReferenceCodeLens(
+    placementNode: SyntaxNode,
+    uri: string,
+  ): CodeLens {
     return CodeLens.create(
       Range.create(
         Position.create(
@@ -234,7 +237,7 @@ export class CodeLensProvider {
     return codeLens;
   }
 
-  private getReferencesCodeLenses(tree: Tree, uri: string) {
+  private getReferencesCodeLenses(tree: Tree, uri: string): CodeLens[] {
     const codeLens: CodeLens[] = [];
     tree.rootNode.children.forEach((node) => {
       if (

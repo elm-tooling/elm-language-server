@@ -206,7 +206,7 @@ export class Server implements ILanguageServer {
     return URI.file(path.dirname(uri));
   }
 
-  private findTopLevelFolders(listOfElmJsonFolders: URI[]) {
+  private findTopLevelFolders(listOfElmJsonFolders: URI[]): Map<string, URI> {
     const result: Map<string, URI> = new Map<string, URI>();
     listOfElmJsonFolders.forEach((uri) => {
       result.set(uri.fsPath, uri);
@@ -225,7 +225,7 @@ export class Server implements ILanguageServer {
     return result;
   }
 
-  private getWorkspaceUri(params: InitializeParams) {
+  private getWorkspaceUri(params: InitializeParams): URI | null {
     if (params.rootUri) {
       return URI.parse(params.rootUri);
     } else if (params.rootPath) {
