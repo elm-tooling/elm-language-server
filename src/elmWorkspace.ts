@@ -1,5 +1,5 @@
 import fs from "fs";
-import globby from "globby";
+import fdir, { PathsOutput } from "fdir";
 import os from "os";
 import path from "path";
 import util from "util";
@@ -255,13 +255,17 @@ export class ElmWorkspace implements IElmWorkspace {
     // Cleanup the path on windows, as globby does not like backslashes
     const globUri = element.uri.replace(/\\/g, "/");
 
+    this.connection.console.info(`Glob ${globUri}/**/*.elm`);
+
     // As packages are not writeable, we want to handle these differently
     if (element.writeable) {
-      return (
-        await globby(`${globUri}/**/*.elm`, {
-          suppressErrors: true,
-        })
-      ).map((matchingPath) => ({
+      const globbedPaths = await new fdir()
+        .glob(`**/*.elm`)
+        .withFullPaths()
+        .crawl(globUri)
+        .withPromise();
+
+      return (globbedPaths as PathsOutput).map((matchingPath) => ({
         maintainerAndPackageName: element.maintainerAndPackageName,
         path: matchingPath,
         writeable: element.writeable,
@@ -269,7 +273,11 @@ export class ElmWorkspace implements IElmWorkspace {
       }));
     } else {
       const [elmFiles, elmJsonString] = await Promise.all([
-        globby(`${globUri}/src/**/*.elm`, { suppressErrors: true }),
+        new fdir()
+          .glob(`**/*.elm`)
+          .withFullPaths()
+          .crawl(`${globUri}/src`)
+          .withPromise(),
         readFile(`${element.uri}/elm.json`, {
           encoding: "utf-8",
         }),
@@ -278,7 +286,7 @@ export class ElmWorkspace implements IElmWorkspace {
         JSON.parse(elmJsonString),
         element.uri,
       );
-      return elmFiles.map((matchingPath) => ({
+      return (elmFiles as PathsOutput).map((matchingPath) => ({
         maintainerAndPackageName: element.maintainerAndPackageName,
         path: matchingPath,
         writeable: element.writeable,
