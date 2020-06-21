@@ -208,8 +208,8 @@ type alias Model =
 view : Model
 view =
   let
-    func : Model
-    func = 
+    testFunc : Model
+    testFunc = 
       { p{-caret-} }
 
   in
@@ -529,8 +529,8 @@ testFunc =
 --@ Test.elm
 module Test exposing (..)
 
-func : String
-f{-caret-} =  
+testFunc : String
+t{-caret-} =  
   ""
 `;
 
@@ -568,8 +568,8 @@ type alias TestType = {prop : String}
 --@ Test.elm
 module Test exposing (..)
 
-func : String
-func = 
+testFunc : String
+testFunc = 
   {-caret-}
 `;
 
@@ -605,8 +605,8 @@ type Msg = Msg1 | Msg2
 --@ Test.elm
 module Test exposing (..)
 
-func : String
-func = 
+testFunc : String
+testFunc = 
   {-caret-}
 `;
 
