@@ -563,7 +563,7 @@ export class TreeUtils {
     }
   }
 
-  public static findAllTopLeverFunctionDeclarations(
+  public static findAllTopLevelFunctionDeclarations(
     tree: Tree,
   ): SyntaxNode[] | undefined {
     const result = tree.rootNode.children.filter(

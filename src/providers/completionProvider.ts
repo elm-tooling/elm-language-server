@@ -140,6 +140,36 @@ export class CompletionProvider {
             sortPrefix: "a",
           }),
         ];
+      } else if (isAtStartOfLine) {
+        const topLevelFunctions = TreeUtils.findAllTopLevelFunctionDeclarations(
+          tree,
+        );
+
+        const exposedValues = TreeUtils.descendantsOfType(
+          tree.rootNode,
+          "exposed_value",
+        );
+
+        return TreeUtils.descendantsOfType(tree.rootNode, "function_call_expr")
+          .filter((a) => a.firstChild && !a.firstChild.text.includes("."))
+          .filter((a) =>
+            exposedValues.some(
+              (b) => b.firstChild?.text !== a.firstChild?.text,
+            ),
+          )
+          .filter((a) =>
+            topLevelFunctions?.some(
+              (b) => b.firstChild?.text !== a.firstChild?.text,
+            ),
+          )
+          .map((a) =>
+            this.createCompletion({
+              kind: CompletionItemKind.Text,
+              label: a.firstChild!.text,
+              range: replaceRange,
+              sortPrefix: "a",
+            }),
+          );
       } else if (previousWord && previousWord === "module") {
         return undefined;
       } else if (
@@ -544,7 +574,7 @@ export class CompletionProvider {
     moduleDefinition = false,
   ): CompletionItem[] {
     const completions: CompletionItem[] = [];
-    const topLevelFunctions = TreeUtils.findAllTopLeverFunctionDeclarations(
+    const topLevelFunctions = TreeUtils.findAllTopLevelFunctionDeclarations(
       tree,
     );
     const sortPrefix = "b";
