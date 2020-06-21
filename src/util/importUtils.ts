@@ -2,6 +2,7 @@ import { IForest, ITreeContainer } from "../forest";
 import RANKING_LIST from "../providers/ranking";
 import { TreeUtils, NodeType } from "./treeUtils";
 import { SyntaxNode } from "web-tree-sitter";
+import escapeStringRegexp from "escape-string-regexp";
 
 interface IPossibleImport {
   module: string;
@@ -52,7 +53,7 @@ export class ImportUtils {
           } else if (!aStartsWith && bStartsWith) {
             return 1;
           } else {
-            const regex = new RegExp(filterText);
+            const regex = new RegExp(escapeStringRegexp(filterText));
             const aMatches = regex.exec(aValue);
             const bMatches = regex.exec(bValue);
 
