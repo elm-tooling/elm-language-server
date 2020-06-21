@@ -208,8 +208,8 @@ type alias Model =
 view : Model
 view =
   let
-    func : Model
-    func = 
+    testFunc : Model
+    testFunc = 
       { p{-caret-} }
 
   in
@@ -519,22 +519,22 @@ type alias TestType =
 module Test exposing (..)
 
 {-caret-} 
-func =
+testFunc =
   ""
     `;
 
-    await testCompletions(source, ["func"], "exactMatch");
+    await testCompletions(source, ["testFunc"], "exactMatch");
 
     const source2 = `
 --@ Test.elm
 module Test exposing (..)
 
-func : String
-f{-caret-} =  
+testFunc : String
+t{-caret-} =  
   ""
 `;
 
-    await testCompletions(source2, ["func"], "exactMatch");
+    await testCompletions(source2, ["testFunc"], "exactMatch");
   });
 
   it("Case branch variables should have completions", async () => {
@@ -544,8 +544,8 @@ module Test exposing (..)
 
 type Msg = Msg1 String
 
-func : Msg -> String
-func msg = 
+testFunc : Msg -> String
+testFunc msg = 
   case msg of
     Msg1 str ->
       s{-caret-}
@@ -568,8 +568,8 @@ type alias TestType = {prop : String}
 --@ Test.elm
 module Test exposing (..)
 
-func : String
-func = 
+testFunc : String
+testFunc = 
   {-caret-}
 `;
 
@@ -605,8 +605,8 @@ type Msg = Msg1 | Msg2
 --@ Test.elm
 module Test exposing (..)
 
-func : String
-func = 
+testFunc : String
+testFunc = 
   {-caret-}
 `;
 
@@ -876,7 +876,7 @@ test = Module.sub{-caret-}
 --@ Module.elm
 module Module exposing (..)
 
-func = ""
+testFunc = ""
 
 type Msg = Msg1 | Msg2
 
@@ -892,7 +892,7 @@ test = div [] [ Module.{-caret-} ]
 
     await testCompletions(
       source,
-      ["func", "Msg", "Msg1", "Msg2", "Model"],
+      ["testFunc", "Msg", "Msg1", "Msg2", "Model"],
       "exactMatch",
       "triggeredByDot",
     );
@@ -901,7 +901,7 @@ test = div [] [ Module.{-caret-} ]
 --@ Module.elm
 module Module exposing (..)
 
-func = ""
+testFunc = ""
 
 type Msg = Msg1 | Msg2
 
@@ -917,7 +917,7 @@ test = Module.fu{-caret-}
 
     await testCompletions(
       source2,
-      ["func", "Msg", "Msg1", "Msg2", "Model"],
+      ["testFunc", "Msg", "Msg1", "Msg2", "Model"],
       "exactMatch",
     );
 
@@ -925,7 +925,7 @@ test = Module.fu{-caret-}
 --@ Module.elm
 module Module exposing (..)
 
-func = ""
+testFunc = ""
 
 type Msg = Msg1 | Msg2
 
@@ -941,7 +941,7 @@ test = Module.{-caret-}
 
     await testCompletions(
       source3,
-      ["func", "Msg", "Msg1", "Msg2", "Model"],
+      ["testFunc", "Msg", "Msg1", "Msg2", "Model"],
       "exactMatch",
       "triggeredByDot",
     );
@@ -953,7 +953,7 @@ test = Module.{-caret-}
 --@ Other.elm
 module Other exposing (..)
 
-func = ""
+testFunc = ""
 
 type alias Data = { prop : String }
 
@@ -979,9 +979,79 @@ view model =
 
     await testCompletions(
       source,
-      ["func", "Data"],
+      ["testFunc", "Data"],
       "exactMatch",
       "triggeredByDot",
+    );
+  });
+
+  it("Complete used but undefined functions", async () => {
+    const source = `
+module Main exposing (..)
+
+import Json.Encode
+
+
+type alias Scope =
+  { user : User
+  }
+
+
+type alias User =
+  { name : String
+  }
+
+
+encodeScope : Scope -> Json.Encode.Value
+encodeScope scope =
+  Json.Encode.object
+  [ ( "tag", Json.Encode.string "Scope" )
+  , ( "user", encodeUser scope.user )
+  ]
+
+{-caret-}
+  `;
+
+    await testCompletions(
+      source,
+      ["encodeUser", "func encodeUser"],
+      "partialMatch",
+      "normal",
+    );
+  });
+
+  it("Complete used but undefined functions, remove funcs exported from other file", async () => {
+    const source = `
+module Main exposing (..)
+
+import Json.Encode exposing (string)
+
+
+type alias Scope =
+  { user : User
+  }
+
+
+type alias User =
+  { name : String
+  }
+
+
+encodeScope : Scope -> Json.Encode.Value
+encodeScope scope =
+  Json.Encode.object
+  [ ( "tag", string "Scope" )
+  , ( "user", encodeUser scope.user )
+  ]
+
+{-caret-}
+  `;
+
+    await testCompletions(
+      source,
+      ["encodeUser", "func encodeUser"],
+      "partialMatch",
+      "normal",
     );
   });
 });

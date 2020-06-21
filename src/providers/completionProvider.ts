@@ -43,7 +43,6 @@ interface ICompletionOptions {
 
 export class CompletionProvider {
   private qidRegex = /[a-zA-Z0-9.]+/;
-  private qidAtStartOfLineRegex = /^[a-zA-Z0-9 .]*$/;
 
   constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
     connection.onCompletion(
@@ -96,9 +95,7 @@ export class CompletionProvider {
 
       const previousWord = this.findPreviousWord(currentCharacter, targetLine);
 
-      const isAtStartOfLine = this.qidAtStartOfLineRegex.test(
-        targetLine.slice(0, params.position.character - 1),
-      );
+      const isAtStartOfLine = replaceRange.start.character === 0;
 
       const targetWord = targetLine.substring(
         replaceRange.start.character,
@@ -139,6 +136,60 @@ export class CompletionProvider {
             range: replaceRange,
             sortPrefix: "a",
           }),
+        ];
+      } else if (isAtStartOfLine) {
+        const topLevelFunctions = TreeUtils.findAllTopLevelFunctionDeclarations(
+          tree,
+        );
+
+        const exposedValues = TreeUtils.descendantsOfType(
+          tree.rootNode,
+          "exposed_value",
+        );
+
+        const possibleMissingImplementations = TreeUtils.descendantsOfType(
+          tree.rootNode,
+          "function_call_expr",
+        )
+          .filter((a) => a.firstChild && !a.firstChild.text.includes("."))
+          .filter(
+            (a) =>
+              !exposedValues.some(
+                (b) => b.firstChild?.text === a.firstChild?.text,
+              ),
+          )
+          .filter(
+            (a) =>
+              !topLevelFunctions?.some(
+                (b) => b.firstChild?.text === a.firstChild?.text,
+              ),
+          );
+
+        const snippetsFroMissingImplementations = possibleMissingImplementations.map(
+          (a) =>
+            this.createSnippet(
+              "func " + a.firstChild!.text,
+              [
+                a.firstChild!.text + " : ${1:ArgumentType} -> ${2:ReturnType}",
+                a.firstChild!.text + " ${3:arguments} =",
+                "    ${4}",
+              ],
+              "Function with type annotation",
+            ),
+        );
+
+        return [
+          ...snippetsFroMissingImplementations,
+          ...possibleMissingImplementations.map((a) =>
+            this.createCompletion({
+              kind: CompletionItemKind.Text,
+              label: a.firstChild!.text,
+              range: replaceRange,
+              sortPrefix: "a",
+            }),
+          ), // Add plain text recommendations
+          ...this.getKeywordsStartOfLine(),
+          ...this.createSnippetsStartOfLine(),
         ];
       } else if (previousWord && previousWord === "module") {
         return undefined;
@@ -304,8 +355,8 @@ export class CompletionProvider {
         ),
       );
 
-      completions.push(...this.createSnippets());
-      completions.push(...this.getKeywords());
+      completions.push(...this.createSnippetsInline());
+      completions.push(...this.getKeywordsInline());
 
       const possibleImportCompletions = this.getPossibleImports(
         replaceRange,
@@ -544,7 +595,7 @@ export class CompletionProvider {
     moduleDefinition = false,
   ): CompletionItem[] {
     const completions: CompletionItem[] = [];
-    const topLevelFunctions = TreeUtils.findAllTopLeverFunctionDeclarations(
+    const topLevelFunctions = TreeUtils.findAllTopLevelFunctionDeclarations(
       tree,
     );
     const sortPrefix = "b";
@@ -1079,18 +1130,8 @@ export class CompletionProvider {
     };
   }
 
-  private createSnippets(): CompletionItem[] {
+  private createSnippetsInline(): CompletionItem[] {
     return [
-      this.createSnippet(
-        "module",
-        "module ${1:Name} exposing (${2:..})",
-        "Module definition",
-      ),
-      this.createSnippet(
-        "import",
-        "import ${1:Name} exposing (${2:..})",
-        "Unqualified import",
-      ),
       this.createSnippet(
         "of",
         ["of", "   $0"],
@@ -1106,6 +1147,36 @@ export class CompletionProvider {
         "if",
         [" if ${1:expression} then", "    ${2}", " else", "    ${3}"],
         "If-Else statement",
+      ),
+      this.createSnippet(
+        "record update",
+        ["{ ${1:recordName} | ${2:key} = ${3} }"],
+        "Update record",
+      ),
+      this.createSnippet(
+        "anonymous",
+        ["\\ ${1:argument} -> ${1:argument}"],
+        "Anonymous function",
+      ),
+      this.createSnippet(
+        "let in",
+        ["let", "    ${1}", "in", "${0}"],
+        "Let expression",
+      ),
+    ];
+  }
+
+  private createSnippetsStartOfLine(): CompletionItem[] {
+    return [
+      this.createSnippet(
+        "module",
+        "module ${1:Name} exposing (${2:..})",
+        "Module definition",
+      ),
+      this.createSnippet(
+        "import",
+        "import ${1:Name} exposing (${2:..})",
+        "Unqualified import",
       ),
       this.createSnippet("comment", ["{-", "${0}", "-}"], "Multi-line comment"),
       this.createSnippet(
@@ -1129,16 +1200,6 @@ export class CompletionProvider {
         "Type alias",
       ),
       this.createSnippet(
-        "record update",
-        ["{ ${1:recordName} | ${2:key} = ${3} }"],
-        "Update record",
-      ),
-      this.createSnippet(
-        "anonymous",
-        ["\\ ${1:argument} -> ${1:argument}"],
-        "Anonymous function",
-      ),
-      this.createSnippet(
         "type",
         ["type ${1:Typename}", "    = ${2:Value1}", "    | ${3:Value2}"],
         "Custom type",
@@ -1156,11 +1217,6 @@ export class CompletionProvider {
           "    ${5}",
         ],
         "Function with type annotation",
-      ),
-      this.createSnippet(
-        "let in",
-        ["let", "    ${1}", "in", "${0}"],
-        "Let expression",
       ),
       this.createSnippet(
         "update",
@@ -1555,7 +1611,7 @@ export class CompletionProvider {
     };
   }
 
-  private getKeywords(): CompletionItem[] {
+  private getKeywordsInline(): CompletionItem[] {
     return [
       this.createKeywordCompletion("if"),
       this.createKeywordCompletion("then"),
@@ -1563,10 +1619,17 @@ export class CompletionProvider {
       this.createKeywordCompletion("let"),
       this.createKeywordCompletion("in"),
       this.createKeywordCompletion("case"),
-      this.createKeywordCompletion("type"),
       this.createKeywordCompletion("alias"),
-      this.createKeywordCompletion("import"),
       this.createKeywordCompletion("exposing"),
+    ];
+  }
+
+  private getKeywordsStartOfLine(): CompletionItem[] {
+    return [
+      this.createKeywordCompletion("type"),
+      this.createKeywordCompletion("import"),
+      this.createKeywordCompletion("module"),
+      this.createKeywordCompletion("port"),
     ];
   }
 }
