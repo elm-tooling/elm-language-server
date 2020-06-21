@@ -519,11 +519,11 @@ type alias TestType =
 module Test exposing (..)
 
 {-caret-} 
-func =
+testFunc =
   ""
     `;
 
-    await testCompletions(source, ["func"], "exactMatch");
+    await testCompletions(source, ["testFunc"], "exactMatch");
 
     const source2 = `
 --@ Test.elm
@@ -534,7 +534,7 @@ f{-caret-} =
   ""
 `;
 
-    await testCompletions(source2, ["func"], "exactMatch");
+    await testCompletions(source2, ["testFunc"], "exactMatch");
   });
 
   it("Case branch variables should have completions", async () => {
@@ -544,8 +544,8 @@ module Test exposing (..)
 
 type Msg = Msg1 String
 
-func : Msg -> String
-func msg = 
+testFunc : Msg -> String
+testFunc msg = 
   case msg of
     Msg1 str ->
       s{-caret-}
@@ -876,7 +876,7 @@ test = Module.sub{-caret-}
 --@ Module.elm
 module Module exposing (..)
 
-func = ""
+testFunc = ""
 
 type Msg = Msg1 | Msg2
 
@@ -892,7 +892,7 @@ test = div [] [ Module.{-caret-} ]
 
     await testCompletions(
       source,
-      ["func", "Msg", "Msg1", "Msg2", "Model"],
+      ["testFunc", "Msg", "Msg1", "Msg2", "Model"],
       "exactMatch",
       "triggeredByDot",
     );
@@ -901,7 +901,7 @@ test = div [] [ Module.{-caret-} ]
 --@ Module.elm
 module Module exposing (..)
 
-func = ""
+testFunc = ""
 
 type Msg = Msg1 | Msg2
 
@@ -917,7 +917,7 @@ test = Module.fu{-caret-}
 
     await testCompletions(
       source2,
-      ["func", "Msg", "Msg1", "Msg2", "Model"],
+      ["testFunc", "Msg", "Msg1", "Msg2", "Model"],
       "exactMatch",
     );
 
@@ -925,7 +925,7 @@ test = Module.fu{-caret-}
 --@ Module.elm
 module Module exposing (..)
 
-func = ""
+testFunc = ""
 
 type Msg = Msg1 | Msg2
 
@@ -941,7 +941,7 @@ test = Module.{-caret-}
 
     await testCompletions(
       source3,
-      ["func", "Msg", "Msg1", "Msg2", "Model"],
+      ["testFunc", "Msg", "Msg1", "Msg2", "Model"],
       "exactMatch",
       "triggeredByDot",
     );
@@ -953,7 +953,7 @@ test = Module.{-caret-}
 --@ Other.elm
 module Other exposing (..)
 
-func = ""
+testFunc = ""
 
 type alias Data = { prop : String }
 
@@ -979,7 +979,7 @@ view model =
 
     await testCompletions(
       source,
-      ["func", "Data"],
+      ["testFunc", "Data"],
       "exactMatch",
       "triggeredByDot",
     );
