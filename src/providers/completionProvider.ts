@@ -152,15 +152,17 @@ export class CompletionProvider {
           "function_call_expr",
         )
           .filter((a) => a.firstChild && !a.firstChild.text.includes("."))
-          .filter((a) =>
-            exposedValues.some(
-              (b) => b.firstChild?.text !== a.firstChild?.text,
-            ),
+          .filter(
+            (a) =>
+              !exposedValues.some(
+                (b) => b.firstChild?.text === a.firstChild?.text,
+              ),
           )
-          .filter((a) =>
-            topLevelFunctions?.some(
-              (b) => b.firstChild?.text !== a.firstChild?.text,
-            ),
+          .filter(
+            (a) =>
+              !topLevelFunctions?.some(
+                (b) => b.firstChild?.text === a.firstChild?.text,
+              ),
           );
 
         const snippetsFroMissingImplementations = possibleMissingImplementations.map(
