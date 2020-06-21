@@ -147,26 +147,30 @@ export class CompletionProvider {
           "exposed_value",
         );
 
-        return TreeUtils.descendantsOfType(tree.rootNode, "function_call_expr")
-          .filter((a) => a.firstChild && !a.firstChild.text.includes("."))
-          .filter((a) =>
-            exposedValues.some(
-              (b) => b.firstChild?.text !== a.firstChild?.text,
+        return [
+          ...TreeUtils.descendantsOfType(tree.rootNode, "function_call_expr")
+            .filter((a) => a.firstChild && !a.firstChild.text.includes("."))
+            .filter((a) =>
+              exposedValues.some(
+                (b) => b.firstChild?.text !== a.firstChild?.text,
+              ),
+            )
+            .filter((a) =>
+              topLevelFunctions?.some(
+                (b) => b.firstChild?.text !== a.firstChild?.text,
+              ),
+            )
+            .map((a) =>
+              this.createCompletion({
+                kind: CompletionItemKind.Text,
+                label: a.firstChild!.text,
+                range: replaceRange,
+                sortPrefix: "a",
+              }),
             ),
-          )
-          .filter((a) =>
-            topLevelFunctions?.some(
-              (b) => b.firstChild?.text !== a.firstChild?.text,
-            ),
-          )
-          .map((a) =>
-            this.createCompletion({
-              kind: CompletionItemKind.Text,
-              label: a.firstChild!.text,
-              range: replaceRange,
-              sortPrefix: "a",
-            }),
-          );
+          ...this.getKeywordsStartOfLine(),
+          ...this.createSnippetsStartOfLine(),
+        ];
       } else if (previousWord && previousWord === "module") {
         return undefined;
       } else if (
@@ -331,8 +335,8 @@ export class CompletionProvider {
         ),
       );
 
-      completions.push(...this.createSnippets());
-      completions.push(...this.getKeywords());
+      completions.push(...this.createSnippetsInline());
+      completions.push(...this.getKeywordsInline());
 
       const possibleImportCompletions = this.getPossibleImports(
         replaceRange,
@@ -1106,18 +1110,8 @@ export class CompletionProvider {
     };
   }
 
-  private createSnippets(): CompletionItem[] {
+  private createSnippetsInline(): CompletionItem[] {
     return [
-      this.createSnippet(
-        "module",
-        "module ${1:Name} exposing (${2:..})",
-        "Module definition",
-      ),
-      this.createSnippet(
-        "import",
-        "import ${1:Name} exposing (${2:..})",
-        "Unqualified import",
-      ),
       this.createSnippet(
         "of",
         ["of", "   $0"],
@@ -1133,6 +1127,36 @@ export class CompletionProvider {
         "if",
         [" if ${1:expression} then", "    ${2}", " else", "    ${3}"],
         "If-Else statement",
+      ),
+      this.createSnippet(
+        "record update",
+        ["{ ${1:recordName} | ${2:key} = ${3} }"],
+        "Update record",
+      ),
+      this.createSnippet(
+        "anonymous",
+        ["\\ ${1:argument} -> ${1:argument}"],
+        "Anonymous function",
+      ),
+      this.createSnippet(
+        "let in",
+        ["let", "    ${1}", "in", "${0}"],
+        "Let expression",
+      ),
+    ];
+  }
+
+  private createSnippetsStartOfLine(): CompletionItem[] {
+    return [
+      this.createSnippet(
+        "module",
+        "module ${1:Name} exposing (${2:..})",
+        "Module definition",
+      ),
+      this.createSnippet(
+        "import",
+        "import ${1:Name} exposing (${2:..})",
+        "Unqualified import",
       ),
       this.createSnippet("comment", ["{-", "${0}", "-}"], "Multi-line comment"),
       this.createSnippet(
@@ -1156,16 +1180,6 @@ export class CompletionProvider {
         "Type alias",
       ),
       this.createSnippet(
-        "record update",
-        ["{ ${1:recordName} | ${2:key} = ${3} }"],
-        "Update record",
-      ),
-      this.createSnippet(
-        "anonymous",
-        ["\\ ${1:argument} -> ${1:argument}"],
-        "Anonymous function",
-      ),
-      this.createSnippet(
         "type",
         ["type ${1:Typename}", "    = ${2:Value1}", "    | ${3:Value2}"],
         "Custom type",
@@ -1183,11 +1197,6 @@ export class CompletionProvider {
           "    ${5}",
         ],
         "Function with type annotation",
-      ),
-      this.createSnippet(
-        "let in",
-        ["let", "    ${1}", "in", "${0}"],
-        "Let expression",
       ),
       this.createSnippet(
         "update",
@@ -1582,7 +1591,7 @@ export class CompletionProvider {
     };
   }
 
-  private getKeywords(): CompletionItem[] {
+  private getKeywordsInline(): CompletionItem[] {
     return [
       this.createKeywordCompletion("if"),
       this.createKeywordCompletion("then"),
@@ -1590,10 +1599,17 @@ export class CompletionProvider {
       this.createKeywordCompletion("let"),
       this.createKeywordCompletion("in"),
       this.createKeywordCompletion("case"),
-      this.createKeywordCompletion("type"),
       this.createKeywordCompletion("alias"),
-      this.createKeywordCompletion("import"),
       this.createKeywordCompletion("exposing"),
+    ];
+  }
+
+  private getKeywordsStartOfLine(): CompletionItem[] {
+    return [
+      this.createKeywordCompletion("type"),
+      this.createKeywordCompletion("import"),
+      this.createKeywordCompletion("module"),
+      this.createKeywordCompletion("port"),
     ];
   }
 }
