@@ -1,5 +1,17 @@
 # Change Log
 
+## 1.9.0
+
+- We changed the used globbing lib to a slightly faster one
+- Improved sorting of autoimport completions
+- Don't complete in comments
+- Separate snippets and keywords by type and show them in different circumstances
+- Added completions for module values or possible submodules
+- Added function completion for used but not declared function
+- Fix for possible exception on completion
+- Fix external modules not being found in some cases
+- Fix record completions interfering with Module completions
+
 ## 1.8.3
 
 - Fixed bug that was causing problems with completions from external packages
