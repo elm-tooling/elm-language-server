@@ -147,27 +147,45 @@ export class CompletionProvider {
           "exposed_value",
         );
 
-        return [
-          ...TreeUtils.descendantsOfType(tree.rootNode, "function_call_expr")
-            .filter((a) => a.firstChild && !a.firstChild.text.includes("."))
-            .filter((a) =>
-              exposedValues.some(
-                (b) => b.firstChild?.text !== a.firstChild?.text,
-              ),
-            )
-            .filter((a) =>
-              topLevelFunctions?.some(
-                (b) => b.firstChild?.text !== a.firstChild?.text,
-              ),
-            )
-            .map((a) =>
-              this.createCompletion({
-                kind: CompletionItemKind.Text,
-                label: a.firstChild!.text,
-                range: replaceRange,
-                sortPrefix: "a",
-              }),
+        const possibleMissingImplementations = TreeUtils.descendantsOfType(
+          tree.rootNode,
+          "function_call_expr",
+        )
+          .filter((a) => a.firstChild && !a.firstChild.text.includes("."))
+          .filter((a) =>
+            exposedValues.some(
+              (b) => b.firstChild?.text !== a.firstChild?.text,
             ),
+          )
+          .filter((a) =>
+            topLevelFunctions?.some(
+              (b) => b.firstChild?.text !== a.firstChild?.text,
+            ),
+          );
+
+        const snippetsFroMissingImplementations = possibleMissingImplementations.map(
+          (a) =>
+            this.createSnippet(
+              "func " + a.firstChild!.text,
+              [
+                a.firstChild!.text + " : ${1:ArgumentType} -> ${2:ReturnType}",
+                a.firstChild!.text + " ${3:arguments} =",
+                "    ${4}",
+              ],
+              "Function with type annotation",
+            ),
+        );
+
+        return [
+          ...snippetsFroMissingImplementations,
+          ...possibleMissingImplementations.map((a) =>
+            this.createCompletion({
+              kind: CompletionItemKind.Text,
+              label: a.firstChild!.text,
+              range: replaceRange,
+              sortPrefix: "a",
+            }),
+          ), // Add plain text recommendations
           ...this.getKeywordsStartOfLine(),
           ...this.createSnippetsStartOfLine(),
         ];
