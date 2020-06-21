@@ -1,6 +1,6 @@
 import fs from "fs";
-import fdir, { PathsOutput } from "fdir";
 import os from "os";
+import globby from "globby";
 import path from "path";
 import util from "util";
 import { IConnection } from "vscode-languageserver";
@@ -259,13 +259,11 @@ export class ElmWorkspace implements IElmWorkspace {
 
     // As packages are not writeable, we want to handle these differently
     if (element.writeable) {
-      const globbedPaths = await new fdir()
-        .glob(`**/*.elm`)
-        .withFullPaths()
-        .crawl(globUri)
-        .withPromise();
-
-      return (globbedPaths as PathsOutput).map((matchingPath) => ({
+      return (
+        await globby(`${globUri}/**/*.elm`, {
+          suppressErrors: true,
+        })
+      ).map((matchingPath) => ({
         maintainerAndPackageName: element.maintainerAndPackageName,
         path: matchingPath,
         writeable: element.writeable,
@@ -273,11 +271,7 @@ export class ElmWorkspace implements IElmWorkspace {
       }));
     } else {
       const [elmFiles, elmJsonString] = await Promise.all([
-        new fdir()
-          .glob(`**/*.elm`)
-          .withFullPaths()
-          .crawl(`${globUri}/src`)
-          .withPromise(),
+        globby(`${globUri}/src/**/*.elm`, { suppressErrors: true }),
         readFile(`${element.uri}/elm.json`, {
           encoding: "utf-8",
         }),
@@ -286,7 +280,7 @@ export class ElmWorkspace implements IElmWorkspace {
         JSON.parse(elmJsonString),
         element.uri,
       );
-      return (elmFiles as PathsOutput).map((matchingPath) => ({
+      return elmFiles.map((matchingPath) => ({
         maintainerAndPackageName: element.maintainerAndPackageName,
         path: matchingPath,
         writeable: element.writeable,

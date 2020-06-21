@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.9.1
+
+- Revert "We changed the used globbing lib to a slightly faster one"
+
 ## 1.9.0
 
 - We changed the used globbing lib to a slightly faster one
