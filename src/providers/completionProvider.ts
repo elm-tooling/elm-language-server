@@ -43,7 +43,6 @@ interface ICompletionOptions {
 
 export class CompletionProvider {
   private qidRegex = /[a-zA-Z0-9.]+/;
-  private qidAtStartOfLineRegex = /^[a-zA-Z0-9 .]*$/;
 
   constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
     connection.onCompletion(
@@ -96,9 +95,7 @@ export class CompletionProvider {
 
       const previousWord = this.findPreviousWord(currentCharacter, targetLine);
 
-      const isAtStartOfLine = this.qidAtStartOfLineRegex.test(
-        targetLine.slice(0, params.position.character - 1),
-      );
+      const isAtStartOfLine = replaceRange.start.character === 0;
 
       const targetWord = targetLine.substring(
         replaceRange.start.character,
