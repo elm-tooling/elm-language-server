@@ -842,7 +842,7 @@ test = Module.Submodule.{-caret-}
 
     await testCompletions(
       source2,
-      ["AnotherSubmodule"],
+      ["AnotherSubmodule", "func"],
       "exactMatch",
       "triggeredByDot",
     );
@@ -942,6 +942,67 @@ test = Module.{-caret-}
     await testCompletions(
       source3,
       ["testFunc", "Msg", "Msg1", "Msg2", "Model"],
+      "exactMatch",
+      "triggeredByDot",
+    );
+  });
+
+  it("Non imported qualified modules should have value completions with auto imports", async () => {
+    const source = `
+--@ Module.elm
+module Module exposing (..)
+
+testFunc = ""
+
+type Msg = Msg1 | Msg2
+
+type alias Model = { field : String }
+
+--@ Test.elm
+module Test exposing (..)
+
+test = div [] [ Module.{-caret-} ]
+`;
+
+    await testCompletions(
+      source,
+      [
+        {
+          label: "testFunc",
+          detail: "Auto import module 'Module'",
+          additionalTextEdits: [
+            TextEdit.insert(Position.create(1, 0), "import Module\n"),
+          ],
+        },
+        {
+          label: "Msg",
+          detail: "Auto import module 'Module'",
+          additionalTextEdits: [
+            TextEdit.insert(Position.create(1, 0), "import Module\n"),
+          ],
+        },
+        {
+          label: "Msg1",
+          detail: "Auto import module 'Module'",
+          additionalTextEdits: [
+            TextEdit.insert(Position.create(1, 0), "import Module\n"),
+          ],
+        },
+        {
+          label: "Msg2",
+          detail: "Auto import module 'Module'",
+          additionalTextEdits: [
+            TextEdit.insert(Position.create(1, 0), "import Module\n"),
+          ],
+        },
+        {
+          label: "Model",
+          detail: "Auto import module 'Module'",
+          additionalTextEdits: [
+            TextEdit.insert(Position.create(1, 0), "import Module\n"),
+          ],
+        },
+      ],
       "exactMatch",
       "triggeredByDot",
     );

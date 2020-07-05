@@ -13,7 +13,7 @@ import {
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
-import { IForest } from "../forest";
+import { IForest, ITreeContainer } from "../forest";
 import { IImports } from "../imports";
 import { getEmptyTypes } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
@@ -1062,6 +1062,9 @@ export class CompletionProvider {
     if (moduleNodes && moduleNodes.length > 0) {
       const moduleNode = moduleNodes[moduleNodes.length - 1];
 
+      let alreadyImported = true;
+
+      // Try to find the module definition that is already imported
       const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
         moduleNode,
         uri,
@@ -1069,38 +1072,60 @@ export class CompletionProvider {
         imports,
       );
 
-      if (definitionNode && definitionNode.nodeType === "Module") {
-        // Get exposed values
-        const tree = forest.getByUri(definitionNode.uri);
+      let moduleTree: ITreeContainer | undefined;
 
-        if (tree) {
-          const imports = ImportUtils.getPossibleImportsOfTree(tree);
-          imports.forEach((value) => {
-            const markdownDocumentation = HintHelper.createHint(value.node);
-            const completionOptions = {
-              label: value.value,
-              sortPrefix: "a",
-              range,
-              markdownDocumentation,
-            };
-            switch (value.type) {
-              case "Function":
-                result.push(this.createFunctionCompletion(completionOptions));
-                break;
-              case "Type":
-                result.push(this.createTypeCompletion(completionOptions));
-                break;
-              case "TypeAlias":
-                result.push(this.createTypeAliasCompletion(completionOptions));
-                break;
-              case "UnionConstructor":
-                result.push(
-                  this.createUnionConstructorCompletion(completionOptions),
-                );
-                break;
+      if (definitionNode && definitionNode.nodeType === "Module") {
+        moduleTree = forest.getByUri(definitionNode.uri);
+      } else {
+        // Try to find this module in the forest to import
+        moduleTree = forest.getByModuleName(targetModule);
+        alreadyImported = false;
+      }
+
+      if (moduleTree) {
+        // Get exposed values
+        const imports = ImportUtils.getPossibleImportsOfTree(moduleTree);
+        imports.forEach((value) => {
+          const markdownDocumentation = HintHelper.createHint(value.node);
+          let additionalTextEdits: TextEdit[] | undefined;
+          let detail: string | undefined;
+
+          // Add the import text edit if not imported
+          if (!alreadyImported) {
+            const importEdit = RefactorEditUtils.addImport(tree, targetModule);
+
+            if (importEdit) {
+              additionalTextEdits = [importEdit];
+              detail = `Auto import module '${targetModule}'`;
             }
-          });
-        }
+          }
+
+          const completionOptions: ICompletionOptions = {
+            label: value.value,
+            sortPrefix: "a",
+            range,
+            markdownDocumentation,
+            additionalTextEdits,
+            detail,
+          };
+
+          switch (value.type) {
+            case "Function":
+              result.push(this.createFunctionCompletion(completionOptions));
+              break;
+            case "Type":
+              result.push(this.createTypeCompletion(completionOptions));
+              break;
+            case "TypeAlias":
+              result.push(this.createTypeAliasCompletion(completionOptions));
+              break;
+            case "UnionConstructor":
+              result.push(
+                this.createUnionConstructorCompletion(completionOptions),
+              );
+              break;
+          }
+        });
       }
     }
 
