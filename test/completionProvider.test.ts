@@ -871,6 +871,67 @@ test = Module.sub{-caret-}
     );
   });
 
+  it("Possible import completions", async () => {
+    const source = `
+--@ Module.elm
+module Module exposing (..)
+
+func = ""
+
+--@ Module/Submodule.elm
+module Module.Submodule exposing (..)
+
+func = ""
+
+--@ Module/Submodule/AnotherSubmodule.elm
+module Module.Submodule.AnotherSubmodule exposing (..)
+
+func = ""
+
+--@ Test.elm
+module Test exposing (..)
+
+import Module.{-caret-}
+
+`;
+
+    await testCompletions(
+      source,
+      ["Submodule", "Submodule.AnotherSubmodule"],
+      "exactMatch",
+      "triggeredByDot",
+    );
+
+    const source2 = `
+--@ Module.elm
+module Module exposing (..)
+
+func = ""
+
+--@ Module/Submodule.elm
+module Module.Submodule exposing (..)
+
+func = ""
+
+--@ Module/Submodule/AnotherSubmodule.elm
+module Module.Submodule.AnotherSubmodule exposing (..)
+
+func = ""
+
+--@ Test.elm
+module Test exposing (..)
+
+import Module.Sub{-caret-}
+
+`;
+
+    await testCompletions(
+      source2,
+      ["Submodule", "Submodule.AnotherSubmodule"],
+      "exactMatch",
+    );
+  });
+
   it("Imported qualified modules should have value completions", async () => {
     const source = `
 --@ Module.elm

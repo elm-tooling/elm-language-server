@@ -29,3 +29,18 @@ export class PositionUtil {
     };
   }
 }
+
+export function comparePosition(pos1: VSPosition, pos2: TSPosition): number {
+  if (pos1.line === pos2.row && pos1.character === pos2.column) {
+    return 0;
+  }
+
+  if (
+    pos1.line < pos2.row ||
+    (pos1.line === pos2.row && pos1.character < pos2.column)
+  ) {
+    return -1;
+  }
+
+  return 1;
+}

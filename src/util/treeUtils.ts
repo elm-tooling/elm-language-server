@@ -3,6 +3,7 @@ import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IImport, IImports } from "../imports";
 import { IForest } from "../forest";
 import { Utils } from "./utils";
+import { PositionUtil, comparePosition } from "../positionUtil";
 
 export type NodeType =
   | "Function"
@@ -1624,25 +1625,6 @@ export class TreeUtils {
           node.parent,
         );
 
-      if (!type) {
-        const valueNodes =
-          TreeUtils.findAllNamedChildrenOfType(
-            ["value_expr", "field_access_segment"],
-            node.parent,
-          ) ??
-          TreeUtils.findAllNamedChildrenOfType(
-            ["value_expr", "field_access_segment"],
-            node.parent.parent,
-          );
-
-        // We don't want the current access segment
-        valueNodes?.pop();
-
-        if (valueNodes?.length) {
-          type = valueNodes[valueNodes.length - 1].lastNamedChild;
-        }
-      }
-
       // Handle records of function returns
       if (!type && node.parent.parent.parent) {
         type =
@@ -1651,12 +1633,7 @@ export class TreeUtils {
           )?.parent ?? undefined;
       }
 
-      // Handle when the record and dot are not group, like the end of let expression
-      if (
-        !type &&
-        node.type === "value_qid" &&
-        node.parent.nextNamedSibling?.type === "dot"
-      ) {
+      if (!type) {
         type = node;
       }
 
@@ -1774,6 +1751,70 @@ export class TreeUtils {
     }
   }
 
+  public static findPreviousNode(
+    node: SyntaxNode,
+    position: Position,
+  ): SyntaxNode | undefined {
+    function nodeHasTokens(n: SyntaxNode): boolean {
+      return n.endIndex - n.startIndex !== 0;
+    }
+
+    function findRightmostChildWithTokens(
+      childrenList: SyntaxNode[],
+      startIndex: number,
+    ): SyntaxNode | undefined {
+      for (let i = startIndex - 1; i >= 0; i--) {
+        if (nodeHasTokens(childrenList[i])) {
+          return childrenList[i];
+        }
+      }
+    }
+
+    function findRightmostNode(n: SyntaxNode): SyntaxNode | undefined {
+      if (n.children.length === 0) {
+        return n;
+      }
+
+      const candidate = findRightmostChildWithTokens(
+        n.children,
+        n.children.length,
+      );
+
+      if (candidate) {
+        return findRightmostNode(candidate);
+      }
+    }
+
+    const children = node.children;
+
+    if (children.length === 0) {
+      return node;
+    }
+
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      if (comparePosition(position, child.endPosition) < 0) {
+        const lookInPreviousChild =
+          comparePosition(position, child.startPosition) <= 0 ||
+          !nodeHasTokens(child);
+
+        if (lookInPreviousChild) {
+          const candidate = findRightmostChildWithTokens(children, i);
+          if (candidate) {
+            return findRightmostNode(candidate);
+          }
+        } else {
+          return this.findPreviousNode(child, position);
+        }
+      }
+    }
+
+    const candidate = findRightmostChildWithTokens(children, children.length);
+    if (candidate) {
+      return findRightmostNode(candidate);
+    }
+  }
+
   public static getNamedDescendantForLineBeforePosition(
     node: SyntaxNode,
     position: Position,
@@ -1867,5 +1908,12 @@ export class TreeUtils {
     );
 
     return result.length === 0 ? undefined : result;
+  }
+
+  public static isIdentifier(node: SyntaxNode): boolean {
+    return (
+      node.type === "lower_case_identifier" ||
+      node.type === "upper_case_identifier"
+    );
   }
 }
