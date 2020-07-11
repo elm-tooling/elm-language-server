@@ -1916,4 +1916,11 @@ export class TreeUtils {
       node.type === "upper_case_identifier"
     );
   }
+
+  public static isImport(node: SyntaxNode): boolean {
+    return (
+      node.parent?.firstNamedChild?.type === "import" ||
+      node.parent?.parent?.firstNamedChild?.type === "import"
+    );
+  }
 }

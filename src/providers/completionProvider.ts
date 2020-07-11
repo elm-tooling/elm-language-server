@@ -124,67 +124,6 @@ export class CompletionProvider {
 
       const isAfterDot = contextNode?.type === "dot";
 
-      let targetNode;
-
-      if (isAfterDot && contextNode) {
-        targetWord = targetLine.substring(
-          replaceRange.start.character,
-          contextNode.startPosition.column,
-        );
-
-        replaceRange = Range.create(
-          Position.create(
-            params.position.line,
-            contextNode.startPosition.column + 1,
-          ),
-          params.position,
-        );
-
-        const parent = contextNode.parent;
-        if (parent?.type === "value_qid") {
-          // Qualified value access
-          targetNode = contextNode.previousNamedSibling;
-        } else if (parent?.type === "field_access_segment") {
-          // Record field access
-          targetNode =
-            parent?.previousNamedSibling?.lastNamedChild?.lastNamedChild ??
-            parent.previousNamedSibling?.lastNamedChild;
-        } else if (parent?.type === "upper_case_qid") {
-          // Imports
-          targetNode = contextNode.previousNamedSibling;
-        } else if (parent?.type === "ERROR") {
-          targetNode = TreeUtils.findPreviousNode(
-            tree.rootNode,
-            PositionUtil.FROM_TS_POSITION(
-              contextNode.startPosition,
-            ).toVSPosition(),
-          );
-        }
-      }
-
-      if (targetNode) {
-        const moduleCompletions = this.getSubmodulesOrValues(
-          targetNode,
-          params.textDocument.uri,
-          tree,
-          elmWorkspace.getImports(),
-          forest,
-          replaceRange,
-          targetWord,
-        );
-
-        return moduleCompletions.length > 0
-          ? moduleCompletions
-          : this.getRecordCompletions(
-              targetNode,
-              tree,
-              replaceRange,
-              elmWorkspace.getImports(),
-              params.textDocument.uri,
-              forest,
-            );
-      }
-
       if (
         TreeUtils.findParentOfType("block_comment", nodeAtPosition) ||
         TreeUtils.findParentOfType("line_comment", nodeAtPosition)
@@ -293,8 +232,6 @@ export class CompletionProvider {
           nodeAtPosition.type === "right_parenthesis")
       ) {
         return this.getSameFileTopLevelCompletions(tree, replaceRange, true);
-      } else if (previousWord && previousWord === "import") {
-        return this.getImportableModules(forest, replaceRange);
       } else if (
         nodeAtPosition.parent?.type === "exposing_list" &&
         nodeAtPosition.parent.parent?.type === "import_clause" &&
@@ -328,6 +265,73 @@ export class CompletionProvider {
           params.textDocument.uri,
           forest,
         );
+      }
+
+      let targetNode;
+
+      if (contextNode) {
+        const parent = contextNode.parent;
+        if (isAfterDot) {
+          targetWord = targetLine.substring(
+            replaceRange.start.character,
+            contextNode.startPosition.column,
+          );
+
+          replaceRange = Range.create(
+            Position.create(
+              params.position.line,
+              contextNode.startPosition.column + 1,
+            ),
+            params.position,
+          );
+
+          if (parent?.type === "value_qid") {
+            // Qualified submodule and value access
+            targetNode = contextNode.previousNamedSibling;
+          } else if (parent?.type === "field_access_segment") {
+            // Record field access
+            targetNode =
+              parent?.previousNamedSibling?.lastNamedChild?.lastNamedChild ??
+              parent.previousNamedSibling?.lastNamedChild;
+          } else if (parent?.type === "upper_case_qid") {
+            // Imports
+            targetNode = contextNode.previousNamedSibling;
+          } else if (parent?.type === "ERROR") {
+            targetNode = TreeUtils.findPreviousNode(
+              tree.rootNode,
+              PositionUtil.FROM_TS_POSITION(
+                contextNode.startPosition,
+              ).toVSPosition(),
+            );
+          }
+        } else {
+          if (contextNode.type === "import") {
+            return this.getImportableModules(tree, forest, replaceRange);
+          }
+        }
+      }
+
+      if (targetNode) {
+        const moduleCompletions = this.getSubmodulesOrValues(
+          targetNode,
+          params.textDocument.uri,
+          tree,
+          elmWorkspace.getImports(),
+          forest,
+          replaceRange,
+          targetWord,
+        );
+
+        return moduleCompletions.length > 0
+          ? moduleCompletions
+          : this.getRecordCompletions(
+              targetNode,
+              tree,
+              replaceRange,
+              elmWorkspace.getImports(),
+              params.textDocument.uri,
+              forest,
+            );
       }
 
       completions.push(
@@ -382,19 +386,35 @@ export class CompletionProvider {
   }
 
   private getImportableModules(
+    tree: Tree,
     forest: IForest,
     range: Range,
+    targetModule?: string,
   ): CompletionItem[] {
+    const currentModuleNameNode = TreeUtils.getModuleNameNode(tree);
+    console.log(currentModuleNameNode?.text);
     return forest.treeIndex
-      .map((a) => a.moduleName)
-      .filter(Utils.notUndefined)
-      .map((label) =>
-        this.createModuleCompletion({
-          label,
-          range,
+      .filter(
+        (t) =>
+          t.moduleName &&
+          (!targetModule || t.moduleName?.startsWith(targetModule + ".")) &&
+          t.moduleName !== currentModuleNameNode?.text &&
+          t.moduleName !== targetModule,
+      )
+      .map((t) => {
+        const moduleNode = TreeUtils.findModuleDeclaration(t.tree);
+        const markdownDocumentation = HintHelper.createHint(moduleNode);
+
+        return this.createModuleCompletion({
+          label:
+            (targetModule
+              ? t.moduleName?.slice(targetModule.length + 1) ?? t.moduleName
+              : t.moduleName) ?? "",
           sortPrefix: "b",
-        }),
-      );
+          range,
+          markdownDocumentation,
+        });
+      });
   }
 
   private getExposedFromModule(
@@ -1023,33 +1043,12 @@ export class CompletionProvider {
     const result: CompletionItem[] = [];
 
     // Handle possible submodules
-    forest.treeIndex
-      .filter(
-        (t) =>
-          t.moduleName?.startsWith(targetModule + ".") &&
-          t.moduleName !== targetModule,
-      )
-      .forEach((t) => {
-        const moduleNode = TreeUtils.findModuleDeclaration(t.tree);
-        if (t.moduleName) {
-          const markdownDocumentation = HintHelper.createHint(moduleNode);
-
-          result.push(
-            this.createModuleCompletion({
-              label: t.moduleName.slice(targetModule.length + 1),
-              sortPrefix: "b",
-              range,
-              markdownDocumentation,
-            }),
-          );
-        }
-      });
+    result.push(
+      ...this.getImportableModules(tree, forest, range, targetModule),
+    );
 
     // If we are in an import completion, don't return any values
-    if (
-      node.parent?.firstNamedChild?.type === "import" ||
-      node.parent?.parent?.firstNamedChild?.type === "import"
-    ) {
+    if (TreeUtils.isImport(node)) {
       return result;
     }
 
