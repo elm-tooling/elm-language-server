@@ -392,7 +392,6 @@ export class CompletionProvider {
     targetModule?: string,
   ): CompletionItem[] {
     const currentModuleNameNode = TreeUtils.getModuleNameNode(tree);
-    console.log(currentModuleNameNode?.text);
     return forest.treeIndex
       .filter(
         (t) =>
