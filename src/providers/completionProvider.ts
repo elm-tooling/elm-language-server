@@ -23,6 +23,7 @@ import RANKING_LIST from "./ranking";
 import { ImportUtils } from "../util/importUtils";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { Utils } from "../util/utils";
+import { comparePosition, PositionUtil } from "../positionUtil";
 
 export type CompletionResult =
   | CompletionItem[]
@@ -88,7 +89,7 @@ export class CompletionProvider {
         currentCharacter--;
       }
 
-      const replaceRange = Range.create(
+      let replaceRange = Range.create(
         Position.create(params.position.line, currentCharacter),
         params.position,
       );
@@ -97,10 +98,31 @@ export class CompletionProvider {
 
       const isAtStartOfLine = replaceRange.start.character === 0;
 
-      const targetWord = targetLine.substring(
+      let targetWord = targetLine.substring(
         replaceRange.start.character,
         replaceRange.end.character,
       );
+
+      let contextNode = TreeUtils.findPreviousNode(
+        tree.rootNode,
+        params.position,
+      );
+
+      // If we are in a partial identifier, skip that and adjust the contextNode to be the previous node
+      if (
+        contextNode &&
+        comparePosition(params.position, contextNode.endPosition) <= 0 &&
+        TreeUtils.isIdentifier(contextNode)
+      ) {
+        contextNode = TreeUtils.findPreviousNode(
+          tree.rootNode,
+          PositionUtil.FROM_TS_POSITION(
+            contextNode.startPosition,
+          ).toVSPosition(),
+        );
+      }
+
+      const isAfterDot = contextNode?.type === "dot";
 
       if (
         TreeUtils.findParentOfType("block_comment", nodeAtPosition) ||
@@ -210,8 +232,6 @@ export class CompletionProvider {
           nodeAtPosition.type === "right_parenthesis")
       ) {
         return this.getSameFileTopLevelCompletions(tree, replaceRange, true);
-      } else if (previousWord && previousWord === "import") {
-        return this.getImportableModules(forest, replaceRange);
       } else if (
         nodeAtPosition.parent?.type === "exposing_list" &&
         nodeAtPosition.parent.parent?.type === "import_clause" &&
@@ -245,98 +265,73 @@ export class CompletionProvider {
           params.textDocument.uri,
           forest,
         );
-      } else if (
-        nodeAtPosition.type === "field_access_segment" ||
-        nodeAtPosition.parent?.type === "field_access_segment" ||
-        RegExp("^[a-z]+.*.$").exec(targetWord)
-      ) {
-        let accessSegmentNode =
-          nodeAtPosition.type === "field_access_segment"
-            ? nodeAtPosition
-            : nodeAtPosition.parent?.type === "field_access_segment"
-            ? nodeAtPosition.parent
-            : undefined;
+      }
 
-        if (!accessSegmentNode) {
-          accessSegmentNode =
-            TreeUtils.getNamedDescendantForPosition(tree.rootNode, {
-              ...params.position,
-              character: params.position.character - 1,
-            }).parent ?? undefined;
-        }
+      let targetNode;
 
-        if (accessSegmentNode) {
-          let dotIndex = TreeUtils.findFirstNamedChildOfType(
-            "dot",
-            accessSegmentNode,
-          )?.startPosition.column;
-
-          if (!dotIndex) {
-            const wordDot = targetWord.lastIndexOf(".");
-
-            if (wordDot >= 0) {
-              dotIndex =
-                params.position.character - (targetWord.length - wordDot);
-            }
-          }
-
-          if (dotIndex) {
-            return this.getRecordCompletions(
-              accessSegmentNode,
-              tree,
-              Range.create(
-                Position.create(params.position.line, dotIndex + 1),
-                params.position,
-              ),
-              elmWorkspace.getImports(),
-              params.textDocument.uri,
-              forest,
-            );
-          }
-        }
-      } else if (
-        (nodeAtPosition.parent?.type === "value_qid" &&
-          nodeAtPosition.previousNamedSibling?.type === "dot") ||
-        RegExp("^[A-Z]+.*.$").exec(targetWord) // Handles the 'Html.Attributes.' case
-      ) {
-        let targetNode = nodeAtPosition.parent;
-
-        if (targetNode?.type !== "value_qid") {
-          targetNode = TreeUtils.getNamedDescendantForPosition(tree.rootNode, {
-            ...params.position,
-            character: params.position.character - 1,
-          }).parent;
-        }
-
-        if (targetNode) {
-          const dotNodes = TreeUtils.findAllNamedChildrenOfType(
-            "dot",
-            targetNode,
+      if (contextNode) {
+        const parent = contextNode.parent;
+        if (isAfterDot) {
+          targetWord = targetLine.substring(
+            replaceRange.start.character,
+            contextNode.startPosition.column,
           );
 
-          // Get the last dot index
-          const dotIndex =
-            dotNodes && dotNodes.length > 0
-              ? dotNodes[dotNodes.length - 1].startPosition.column
-              : targetWord.endsWith(".")
-              ? params.position.character - 1
-              : undefined;
+          replaceRange = Range.create(
+            Position.create(
+              params.position.line,
+              contextNode.startPosition.column + 1,
+            ),
+            params.position,
+          );
 
-          if (dotIndex) {
-            return this.getSubmodulesOrValues(
-              targetNode,
-              params.textDocument.uri,
-              tree,
-              elmWorkspace.getImports(),
-              forest,
-              Range.create(
-                Position.create(params.position.line, dotIndex + 1),
-                params.position,
-              ),
-              targetLine.substring(replaceRange.start.character, dotIndex),
+          if (parent?.type === "value_qid") {
+            // Qualified submodule and value access
+            targetNode = contextNode.previousNamedSibling;
+          } else if (parent?.type === "field_access_segment") {
+            // Record field access
+            targetNode =
+              parent?.previousNamedSibling?.lastNamedChild?.lastNamedChild ??
+              parent.previousNamedSibling?.lastNamedChild;
+          } else if (parent?.type === "upper_case_qid") {
+            // Imports
+            targetNode = contextNode.previousNamedSibling;
+          } else if (parent?.type === "ERROR") {
+            targetNode = TreeUtils.findPreviousNode(
+              tree.rootNode,
+              PositionUtil.FROM_TS_POSITION(
+                contextNode.startPosition,
+              ).toVSPosition(),
             );
           }
+        } else {
+          if (contextNode.type === "import") {
+            return this.getImportableModules(tree, forest, replaceRange);
+          }
         }
+      }
+
+      if (targetNode) {
+        const moduleCompletions = this.getSubmodulesOrValues(
+          targetNode,
+          params.textDocument.uri,
+          tree,
+          elmWorkspace.getImports(),
+          forest,
+          replaceRange,
+          targetWord,
+        );
+
+        return moduleCompletions.length > 0
+          ? moduleCompletions
+          : this.getRecordCompletions(
+              targetNode,
+              tree,
+              replaceRange,
+              elmWorkspace.getImports(),
+              params.textDocument.uri,
+              forest,
+            );
       }
 
       completions.push(
@@ -391,19 +386,34 @@ export class CompletionProvider {
   }
 
   private getImportableModules(
+    tree: Tree,
     forest: IForest,
     range: Range,
+    targetModule?: string,
   ): CompletionItem[] {
+    const currentModuleNameNode = TreeUtils.getModuleNameNode(tree);
     return forest.treeIndex
-      .map((a) => a.moduleName)
-      .filter(Utils.notUndefined)
-      .map((label) =>
-        this.createModuleCompletion({
-          label,
-          range,
+      .filter(
+        (t) =>
+          t.moduleName &&
+          (!targetModule || t.moduleName?.startsWith(targetModule + ".")) &&
+          t.moduleName !== currentModuleNameNode?.text &&
+          t.moduleName !== targetModule,
+      )
+      .map((t) => {
+        const moduleNode = TreeUtils.findModuleDeclaration(t.tree);
+        const markdownDocumentation = HintHelper.createHint(moduleNode);
+
+        return this.createModuleCompletion({
+          label:
+            (targetModule
+              ? t.moduleName?.slice(targetModule.length + 1) ?? t.moduleName
+              : t.moduleName) ?? "",
           sortPrefix: "b",
-        }),
-      );
+          range,
+          markdownDocumentation,
+        });
+      });
   }
 
   private getExposedFromModule(
@@ -1032,101 +1042,79 @@ export class CompletionProvider {
     const result: CompletionItem[] = [];
 
     // Handle possible submodules
-    forest.treeIndex
-      .filter(
-        (t) =>
-          t.moduleName?.startsWith(targetModule + ".") &&
-          t.moduleName !== targetModule,
-      )
-      .forEach((t) => {
-        const moduleNode = TreeUtils.findModuleDeclaration(t.tree);
-        if (t.moduleName) {
-          const markdownDocumentation = HintHelper.createHint(moduleNode);
+    result.push(
+      ...this.getImportableModules(tree, forest, range, targetModule),
+    );
 
-          result.push(
-            this.createModuleCompletion({
-              label: t.moduleName.slice(targetModule.length + 1),
-              sortPrefix: "b",
-              range,
-              markdownDocumentation,
-            }),
-          );
+    // If we are in an import completion, don't return any values
+    if (TreeUtils.isImport(node)) {
+      return result;
+    }
+
+    let alreadyImported = true;
+
+    // Try to find the module definition that is already imported
+    const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
+      node,
+      uri,
+      tree,
+      imports,
+    );
+
+    let moduleTree: ITreeContainer | undefined;
+
+    if (definitionNode && definitionNode.nodeType === "Module") {
+      moduleTree = forest.getByUri(definitionNode.uri);
+    } else {
+      // Try to find this module in the forest to import
+      moduleTree = forest.getByModuleName(targetModule);
+      alreadyImported = false;
+    }
+
+    if (moduleTree) {
+      // Get exposed values
+      const imports = ImportUtils.getPossibleImportsOfTree(moduleTree);
+      imports.forEach((value) => {
+        const markdownDocumentation = HintHelper.createHint(value.node);
+        let additionalTextEdits: TextEdit[] | undefined;
+        let detail: string | undefined;
+
+        // Add the import text edit if not imported
+        if (!alreadyImported) {
+          const importEdit = RefactorEditUtils.addImport(tree, targetModule);
+
+          if (importEdit) {
+            additionalTextEdits = [importEdit];
+            detail = `Auto import module '${targetModule}'`;
+          }
+        }
+
+        const completionOptions: ICompletionOptions = {
+          label: value.value,
+          sortPrefix: "a",
+          range,
+          markdownDocumentation,
+          additionalTextEdits,
+          detail,
+        };
+
+        switch (value.type) {
+          case "Function":
+            result.push(this.createFunctionCompletion(completionOptions));
+            break;
+          case "Type":
+            result.push(this.createTypeCompletion(completionOptions));
+            break;
+          case "TypeAlias":
+            result.push(this.createTypeAliasCompletion(completionOptions));
+            break;
+          case "UnionConstructor":
+            result.push(
+              this.createUnionConstructorCompletion(completionOptions),
+            );
+            break;
         }
       });
-
-    const moduleNodes = TreeUtils.findAllNamedChildrenOfType(
-      "upper_case_identifier",
-      node,
-    )?.filter((node) => node.text !== "");
-
-    if (moduleNodes && moduleNodes.length > 0) {
-      const moduleNode = moduleNodes[moduleNodes.length - 1];
-
-      let alreadyImported = true;
-
-      // Try to find the module definition that is already imported
-      const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
-        moduleNode,
-        uri,
-        tree,
-        imports,
-      );
-
-      let moduleTree: ITreeContainer | undefined;
-
-      if (definitionNode && definitionNode.nodeType === "Module") {
-        moduleTree = forest.getByUri(definitionNode.uri);
-      } else {
-        // Try to find this module in the forest to import
-        moduleTree = forest.getByModuleName(targetModule);
-        alreadyImported = false;
-      }
-
-      if (moduleTree) {
-        // Get exposed values
-        const imports = ImportUtils.getPossibleImportsOfTree(moduleTree);
-        imports.forEach((value) => {
-          const markdownDocumentation = HintHelper.createHint(value.node);
-          let additionalTextEdits: TextEdit[] | undefined;
-          let detail: string | undefined;
-
-          // Add the import text edit if not imported
-          if (!alreadyImported) {
-            const importEdit = RefactorEditUtils.addImport(tree, targetModule);
-
-            if (importEdit) {
-              additionalTextEdits = [importEdit];
-              detail = `Auto import module '${targetModule}'`;
-            }
-          }
-
-          const completionOptions: ICompletionOptions = {
-            label: value.value,
-            sortPrefix: "a",
-            range,
-            markdownDocumentation,
-            additionalTextEdits,
-            detail,
-          };
-
-          switch (value.type) {
-            case "Function":
-              result.push(this.createFunctionCompletion(completionOptions));
-              break;
-            case "Type":
-              result.push(this.createTypeCompletion(completionOptions));
-              break;
-            case "TypeAlias":
-              result.push(this.createTypeAliasCompletion(completionOptions));
-              break;
-            case "UnionConstructor":
-              result.push(
-                this.createUnionConstructorCompletion(completionOptions),
-              );
-              break;
-          }
-        });
-      }
     }
 
     return result;

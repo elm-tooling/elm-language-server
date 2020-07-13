@@ -408,11 +408,7 @@ module Test exposing (..)
 import {-caret-}
 `;
 
-    await testCompletions(
-      otherSource + source,
-      ["Test", "OtherModule"],
-      "exactMatch",
-    );
+    await testCompletions(otherSource + source, ["OtherModule"], "exactMatch");
 
     const source2 = `
 --@ Test.elm
@@ -421,11 +417,7 @@ module Test exposing (..)
 import T{-caret-}
 `;
 
-    await testCompletions(
-      otherSource + source2,
-      ["Test", "OtherModule"],
-      "exactMatch",
-    );
+    await testCompletions(otherSource + source2, ["OtherModule"], "exactMatch");
   });
 
   it("Exposing a value from another module should have completions", async () => {
@@ -867,6 +859,96 @@ test = Module.sub{-caret-}
     await testCompletions(
       source3,
       ["Submodule", "Submodule.AnotherSubmodule"],
+      "exactMatch",
+    );
+  });
+
+  it("Possible import completions", async () => {
+    const source = `
+--@ Module.elm
+module Module exposing (..)
+
+func = ""
+
+--@ Module/Submodule.elm
+module Module.Submodule exposing (..)
+
+func = ""
+
+--@ Module/Submodule/AnotherSubmodule.elm
+module Module.Submodule.AnotherSubmodule exposing (..)
+
+func = ""
+
+--@ Test.elm
+module Test exposing (..)
+
+import Module.{-caret-}
+
+`;
+
+    await testCompletions(
+      source,
+      ["Submodule", "Submodule.AnotherSubmodule"],
+      "exactMatch",
+      "triggeredByDot",
+    );
+
+    const source2 = `
+--@ Module.elm
+module Module exposing (..)
+
+func = ""
+
+--@ Module/Submodule.elm
+module Module.Submodule exposing (..)
+
+func = ""
+
+--@ Module/Submodule/AnotherSubmodule.elm
+module Module.Submodule.AnotherSubmodule exposing (..)
+
+func = ""
+
+--@ Test.elm
+module Test exposing (..)
+
+import Module.Sub{-caret-}
+
+`;
+
+    await testCompletions(
+      source2,
+      ["Submodule", "Submodule.AnotherSubmodule"],
+      "exactMatch",
+    );
+
+    const source3 = `
+--@ Module.elm
+module Module exposing (..)
+
+func = ""
+
+--@ Module/Submodule.elm
+module Module.Submodule exposing (..)
+
+func = ""
+
+--@ Module/Submodule/AnotherSubmodule.elm
+module Module.Submodule.AnotherSubmodule exposing (..)
+
+func = ""
+
+--@ Test.elm
+module Test exposing (..)
+
+import {-caret-}
+
+`;
+
+    await testCompletions(
+      source3,
+      ["Module", "Module.Submodule", "Module.Submodule.AnotherSubmodule"],
       "exactMatch",
     );
   });
