@@ -41,7 +41,7 @@ export class CapabilityCalculator {
         prepareProvider: true,
       },
       selectionRangeProvider: true,
-      textDocumentSync: TextDocumentSyncKind.Full,
+      textDocumentSync: TextDocumentSyncKind.Incremental,
       workspaceSymbolProvider: true,
     };
   }

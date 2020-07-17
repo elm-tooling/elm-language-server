@@ -83,7 +83,9 @@ export class TypeExpression {
         .getTypeCache()
         .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter);
     } else {
-      return setter();
+      return workspace
+        .getTypeCache()
+        .getOrSet("PROJECT_TYPE_AND_TYPE_ALIAS", e, setter);
     }
   }
 
@@ -115,7 +117,9 @@ export class TypeExpression {
         .getTypeCache()
         .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter);
     } else {
-      return setter();
+      return workspace
+        .getTypeCache()
+        .getOrSet("PROJECT_TYPE_AND_TYPE_ALIAS", e, setter);
     }
   }
 
@@ -152,7 +156,9 @@ export class TypeExpression {
         .getTypeCache()
         .getOrSet("PACKAGE_TYPE_ANNOTATION", e.typeExpression, setter);
     } else {
-      return setter();
+      return workspace
+        .getTypeCache()
+        .getOrSet("PROJECT_TYPE_ANNOTATION", e.typeExpression, setter);
     }
   }
 

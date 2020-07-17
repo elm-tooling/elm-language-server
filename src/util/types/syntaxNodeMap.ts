@@ -39,4 +39,16 @@ export class SyntaxNodeMap<K extends SyntaxNode, V> {
       callback(val, ({ id: key } as unknown) as K),
     );
   }
+
+  public clear(): void {
+    this.map.clear();
+  }
+
+  public delete(key: K): void {
+    if (!("id" in key)) {
+      throw new Error("SyntaxNodeMap key must have an `id` property");
+    }
+
+    this.map.delete((<any>key).id);
+  }
 }

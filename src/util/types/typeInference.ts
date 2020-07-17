@@ -585,7 +585,9 @@ export class InferenceScope {
         .getTypeCache()
         .getOrSet("PACKAGE_VALUE", declaration, setter);
     } else {
-      return setter();
+      return elmWorkspace
+        .getTypeCache()
+        .getOrSet("PROJECT_VALUE", declaration, setter);
     }
   }
 
@@ -1344,7 +1346,7 @@ export class InferenceScope {
       expr,
     );
 
-    if (!fieldIdentifier) {
+    if (!fieldIdentifier || fieldIdentifier.text === "") {
       return TUnknown;
     }
 
@@ -1394,7 +1396,7 @@ export class InferenceScope {
       }
     }
 
-    const type = targetTy.fields[fieldIdentifier.text];
+    const type = targetTy.fields[fieldIdentifier.text] ?? TUnknown;
     this.expressionTypes.set(expr, type);
     return type;
   }
@@ -1911,6 +1913,10 @@ export class InferenceScope {
     endExpr?: Expression,
     patternBinding = false,
   ): boolean {
+    if (!type1 || !type2) {
+      throw new Error("Undefined type error");
+    }
+
     let assignable: boolean;
 
     if (expr.nodeType === "CaseOfExpr") {
@@ -2423,7 +2429,7 @@ export function findType(
         expr.startIndex === expr.parent?.startIndex &&
         expr.endIndex === expr.parent?.endIndex
       ) {
-        return findTypeOrParentType(mapSyntaxNodeToExpression(expr.parent));
+        return findTypeOrParentType(expr.parent);
       }
     };
 
