@@ -31,6 +31,20 @@ export interface IExposing {
   }[];
 }
 
+function flatMap<T>(
+  array: T[],
+  callback: (value: T, index: number, array: T[]) => any[],
+): any[] {
+  const flattend: T[] = [];
+  for (let i = 0; i < array.length; i++) {
+    const elementArray = callback(array[i], i, array);
+    for (const el of elementArray) {
+      flattend.push(el);
+    }
+  }
+  return flattend;
+}
+
 export class TreeUtils {
   public static getModuleNameNode(tree: Tree): SyntaxNode | undefined {
     const moduleDeclaration:
@@ -1185,11 +1199,15 @@ export class TreeUtils {
         parentType,
       ];
 
-      const allTypeVariables = allAnnotations.flatMap((annotation) =>
+      // Remove `flatMap` function when Node 10 is dropped
+      const callback = (annotation: SyntaxNode | undefined) =>
         annotation
           ? TreeUtils.descendantsOfType(annotation, "type_variable")
-          : [],
-      );
+          : [];
+
+      const allTypeVariables = allAnnotations.flatMap
+        ? allAnnotations.flatMap(callback)
+        : flatMap(allAnnotations, callback);
 
       const firstMatching = allTypeVariables.find(
         (t) => t.text === nodeAtPosition.text,
