@@ -1,6 +1,6 @@
 import { DefinitionProviderTestBase } from "./definitionProviderTestBase";
 
-xdescribe("typeVariableDefinition", () => {
+describe("typeVariableDefinition", () => {
   const testBase = new DefinitionProviderTestBase();
 
   it(`test return value to param`, async () => {
