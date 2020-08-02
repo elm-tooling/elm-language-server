@@ -1,5 +1,14 @@
 # Change Log
 
+## 1.10.0
+
+- Add value completions for non-imported modules
+- Add definition handling for type variables
+- Improved annotation/function name completions
+- Various other completion improvements
+- Fixed wrong wildcard shadowing rules
+- Update tree sitter and other dependencies
+
 ## 1.9.1
 
 - Revert "We changed the used globbing lib to a slightly faster one"
