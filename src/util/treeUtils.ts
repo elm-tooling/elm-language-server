@@ -3,7 +3,7 @@ import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IImport, IImports } from "../imports";
 import { IForest } from "../forest";
 import { Utils } from "./utils";
-import { PositionUtil, comparePosition } from "../positionUtil";
+import { comparePosition } from "../positionUtil";
 
 export type NodeType =
   | "Function"
@@ -31,11 +31,11 @@ export interface IExposing {
   }[];
 }
 
-function flatMap<T>(
+function flatMap<T, U>(
   array: T[],
-  callback: (value: T, index: number, array: T[]) => any[],
-): any[] {
-  const flattend: T[] = [];
+  callback: (value: T, index: number, array: T[]) => U[],
+): U[] {
+  const flattend: U[] = [];
   for (let i = 0; i < array.length; i++) {
     const elementArray = callback(array[i], i, array);
     for (const el of elementArray) {
@@ -1200,12 +1200,12 @@ export class TreeUtils {
       ];
 
       // Remove `flatMap` function when Node 10 is dropped
-      const callback = (annotation: SyntaxNode | undefined) =>
+      const callback = (annotation: SyntaxNode | undefined): SyntaxNode[] =>
         annotation
           ? TreeUtils.descendantsOfType(annotation, "type_variable")
           : [];
 
-      const allTypeVariables = allAnnotations.flatMap
+      const allTypeVariables: SyntaxNode[] = allAnnotations.flatMap
         ? allAnnotations.flatMap(callback)
         : flatMap(allAnnotations, callback);
 
