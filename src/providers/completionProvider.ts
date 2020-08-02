@@ -149,12 +149,13 @@ export class CompletionProvider {
         nodeAtLineAfter.type === "lower_case_identifier" &&
         nodeAtLineAfter.parent &&
         (nodeAtLineAfter.parent.type === "value_qid" ||
-          nodeAtLineAfter.parent.type === "function_declaration_left")
+          nodeAtLineAfter.parent.type === "function_declaration_left" ||
+          nodeAtLineAfter.parent.type === "lower_pattern")
       ) {
         return [
           this.createCompletion({
             kind: CompletionItemKind.Text,
-            label: nodeAtLineAfter.text,
+            label: `${nodeAtLineAfter.text} : `,
             range: replaceRange,
             sortPrefix: "a",
           }),

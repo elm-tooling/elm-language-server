@@ -506,7 +506,7 @@ type alias TestType =
   });
 
   it("Function name should have completions in annotation and declaration", async () => {
-    const source = `
+    const sourceAnnotation = `
 --@ Test.elm
 module Test exposing (..)
 
@@ -514,10 +514,29 @@ module Test exposing (..)
 testFunc =
   ""
     `;
+    await testCompletions(sourceAnnotation, ["testFunc : "], "exactMatch");
 
-    await testCompletions(source, ["testFunc"], "exactMatch");
+    const sourceAnnotation2 = `
+--@ Test.elm
+module Test exposing (..)
 
-    const source2 = `
+c{-caret-}
+count =
+  15
+  `;
+    await testCompletions(sourceAnnotation2, ["count : "], "exactMatch");
+
+    const sourceFunc = `
+--@ Test.elm
+module Test exposing (..)
+
+count : Int
+{-caret-}
+    
+    `;
+    await testCompletions(sourceFunc, ["count"], "exactMatch");
+
+    const sourceFunc1 = `
 --@ Test.elm
 module Test exposing (..)
 
@@ -525,8 +544,7 @@ testFunc : String
 t{-caret-} =  
   ""
 `;
-
-    await testCompletions(source2, ["testFunc"], "exactMatch");
+    await testCompletions(sourceFunc1, ["testFunc"], "exactMatch");
   });
 
   it("Case branch variables should have completions", async () => {
