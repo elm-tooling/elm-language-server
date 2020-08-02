@@ -1345,11 +1345,19 @@ export class TreeUtils {
     if (imports.imports) {
       const allFileImports = imports.imports[uri];
       if (allFileImports) {
+        // We prefer explicitlyExposed functions as in "import Foo exposing (Bar)" to "import Bar exposing (..)"
         const foundNode = allFileImports.find(
-          (a) => a.alias === nodeName && a.type === type,
+          (a) => a.alias === nodeName && a.type === type && a.explicitlyExposed,
         );
         if (foundNode) {
           return foundNode;
+        } else {
+          const foundNode = allFileImports.find(
+            (a) => a.alias === nodeName && a.type === type,
+          );
+          if (foundNode) {
+            return foundNode;
+          }
         }
       }
     }

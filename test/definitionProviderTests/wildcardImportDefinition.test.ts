@@ -3,7 +3,7 @@ import { DefinitionProviderTestBase } from "./definitionProviderTestBase";
 describe("wildcardImportDefinition", () => {
   const testBase = new DefinitionProviderTestBase();
 
-  xit(`test explicit import shadowing wildcard`, async () => {
+  it(`test explicit import shadowing wildcard`, async () => {
     const source = `
 --@ main.elm
 import Foo exposing (..)
@@ -20,7 +20,7 @@ bar = 99
     await testBase.testDefinition(source);
   });
 
-  xit(`test explicit import shadowing wildcard 2`, async () => {
+  it(`test explicit import shadowing wildcard 2`, async () => {
     const source = `
 --@ main.elm
 import Bar exposing (..)

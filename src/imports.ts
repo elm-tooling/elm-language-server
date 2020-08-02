@@ -9,6 +9,7 @@ export interface IImport {
   fromModuleName: string;
   maintainerAndPackageName?: string;
   type: NodeType;
+  explicitlyExposed: boolean; // needed to resolve shadowing of (..) definitions
 }
 
 export interface IImports {
@@ -50,6 +51,7 @@ export class Imports implements IImports {
                 maintainerAndPackageName: foundModule.maintainerAndPackageName,
                 node: foundModuleNode,
                 type: "Module",
+                explicitlyExposed: false,
               });
 
               const exposedFromRemoteModule = forest.getExposingByModuleName(
@@ -193,6 +195,7 @@ export class Imports implements IImports {
             maintainerAndPackageName,
             node: element.syntaxNode,
             type: element.type,
+            explicitlyExposed: false,
           });
           break;
         case "Type":
@@ -203,6 +206,7 @@ export class Imports implements IImports {
             maintainerAndPackageName,
             node: element.syntaxNode,
             type: element.type,
+            explicitlyExposed: false,
           });
           if (element.exposedUnionConstructors) {
             result.push(
@@ -214,6 +218,7 @@ export class Imports implements IImports {
                   maintainerAndPackageName,
                   node: a.syntaxNode,
                   type: "UnionConstructor" as NodeType,
+                  explicitlyExposed: false,
                 };
               }),
             );
@@ -229,6 +234,7 @@ export class Imports implements IImports {
                     maintainerAndPackageName,
                     node: a.syntaxNode,
                     type: "UnionConstructor" as NodeType,
+                    explicitlyExposed: false,
                   };
                 }),
             );
@@ -293,6 +299,7 @@ import Platform.Sub as Sub exposing ( Sub )
         maintainerAndPackageName,
         node: element.syntaxNode,
         type: element.type,
+        explicitlyExposed: false,
       };
     });
   }
@@ -318,6 +325,7 @@ import Platform.Sub as Sub exposing ( Sub )
         maintainerAndPackageName: foundModule.maintainerAndPackageName,
         node: a.syntaxNode,
         type: a.type,
+        explicitlyExposed: true,
       };
     });
   }
