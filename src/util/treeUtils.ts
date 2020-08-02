@@ -3,7 +3,7 @@ import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IImport, IImports } from "../imports";
 import { IForest } from "../forest";
 import { Utils } from "./utils";
-import { PositionUtil, comparePosition } from "../positionUtil";
+import { comparePosition } from "../positionUtil";
 
 export type NodeType =
   | "Function"
@@ -15,7 +15,8 @@ export type NodeType =
   | "CasePattern"
   | "AnonymousFunctionParameter"
   | "UnionConstructor"
-  | "FieldType";
+  | "FieldType"
+  | "TypeVariable";
 
 const functionNameRegex = new RegExp("[a-zA-Z0-9_]+");
 
@@ -28,6 +29,20 @@ export interface IExposing {
     syntaxNode: SyntaxNode;
     accessibleWithoutPrefix: boolean;
   }[];
+}
+
+function flatMap<T, U>(
+  array: T[],
+  callback: (value: T, index: number, array: T[]) => U[],
+): U[] {
+  const flattend: U[] = [];
+  for (let i = 0; i < array.length; i++) {
+    const elementArray = callback(array[i], i, array);
+    for (const el of elementArray) {
+      flattend.push(el);
+    }
+  }
+  return flattend;
 }
 
 export class TreeUtils {
@@ -1165,6 +1180,64 @@ export class TreeUtils {
         };
       }
     }
+
+    const parentType =
+      TreeUtils.findParentOfType("type_annotation", nodeAtPosition) ??
+      TreeUtils.findParentOfType("type_declaration", nodeAtPosition) ??
+      TreeUtils.findParentOfType("type_alias_declaration", nodeAtPosition);
+
+    if (parentType?.type === "type_annotation") {
+      const ancestorDeclarations = TreeUtils.getAllAncestorValueDeclarations(
+        parentType,
+      );
+
+      const allAnnotations = [
+        ...ancestorDeclarations
+          .map((n) => TreeUtils.getTypeAnnotation(n))
+          .filter((n) => !!n)
+          .reverse(),
+        parentType,
+      ];
+
+      // Remove `flatMap` function when Node 10 is dropped
+      const callback = (annotation: SyntaxNode | undefined): SyntaxNode[] =>
+        annotation
+          ? TreeUtils.descendantsOfType(annotation, "type_variable")
+          : [];
+
+      const allTypeVariables: SyntaxNode[] = allAnnotations.flatMap
+        ? allAnnotations.flatMap(callback)
+        : flatMap(allAnnotations, callback);
+
+      const firstMatching = allTypeVariables.find(
+        (t) => t.text === nodeAtPosition.text,
+      );
+
+      if (firstMatching) {
+        return {
+          node: firstMatching,
+          nodeType: "TypeVariable",
+          uri,
+        };
+      }
+    } else if (parentType) {
+      const allTypeNames = TreeUtils.findAllNamedChildrenOfType(
+        "lower_type_name",
+        parentType,
+      );
+
+      const firstMatching = allTypeNames?.find(
+        (t) => t.text === nodeAtPosition.text,
+      );
+
+      if (firstMatching) {
+        return {
+          node: firstMatching,
+          nodeType: "TypeVariable",
+          uri,
+        };
+      }
+    }
   }
 
   public static findFunctionParameterDefinition(
@@ -1864,6 +1937,52 @@ export class TreeUtils {
       node.previousNamedSibling?.previousNamedSibling?.type ===
         "upper_case_identifier"
     );
+  }
+
+  public static getTypeAnnotation(
+    valueDeclaration?: SyntaxNode,
+  ): SyntaxNode | undefined {
+    if (valueDeclaration?.type !== "value_declaration") {
+      return;
+    }
+
+    let candidate = valueDeclaration.previousNamedSibling;
+
+    // Skip comments
+    while (
+      candidate?.type === "line_comment" ||
+      candidate?.type === "comment_block"
+    ) {
+      candidate = candidate.previousNamedSibling;
+    }
+
+    if (candidate?.type === "type_annotation") {
+      return candidate;
+    }
+  }
+
+  /**
+   * This gets a list of all ancestor value declarations
+   * in order from the closest declaration up to the top level declaration
+   */
+  public static getAllAncestorValueDeclarations(
+    node: SyntaxNode,
+  ): SyntaxNode[] {
+    const declarations = [];
+
+    while (node.type !== "file") {
+      if (node.type === "value_declaration") {
+        declarations.push(node);
+      }
+
+      if (node.parent) {
+        node = node.parent;
+      } else {
+        break;
+      }
+    }
+
+    return declarations;
   }
 
   private static findExposedTopLevelFunctions(
