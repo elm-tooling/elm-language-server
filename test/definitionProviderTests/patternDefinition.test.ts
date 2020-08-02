@@ -96,17 +96,6 @@ foo ( x, y ) = x + y
     await testBase.testDefinition(source);
   });
 
-  // TODO [drop 0.18] this becomes invalid at the top-level in 0.19
-  it(`test top-level value destructuring`, async () => {
-    const source = `
-( x, y ) = (0, 0)
-   --X
-f = y + 20
-  --^
-`;
-    await testBase.testDefinition(source);
-  });
-
   it(`test nested function parameter destructuring`, async () => {
     const source = `
 f =
