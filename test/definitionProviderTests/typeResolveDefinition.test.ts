@@ -116,7 +116,7 @@ title : Person a -> String
     await testBase.testDefinition(source);
   });
 
-  xit(`test variable in union type`, async () => {
+  it(`test variable in union type`, async () => {
     const source = `
 type Page a = Home a
         --X      --^
@@ -124,7 +124,7 @@ type Page a = Home a
     await testBase.testDefinition(source);
   });
 
-  xit(`test variable in a record type alias`, async () => {
+  it(`test variable in a record type alias`, async () => {
     const source = `
 type alias User details = { name : String, extra : details }
                 --X                                --^
