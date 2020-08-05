@@ -138,6 +138,42 @@ describe("CompletionProvider", () => {
     }
   }
 
+  it("Should complete module keyword", async () => {
+    const sourceModule = `
+--@ Test.elm
+{-caret-} 
+  ""
+    `;
+    await testCompletions(sourceModule, ["module"], "partialMatch");
+
+    const sourceModule2 = `
+--@ Test.elm
+m{-caret-}
+
+  `;
+    await testCompletions(sourceModule2, ["module"], "partialMatch");
+  });
+
+  it("Should complete import keyword", async () => {
+    const sourceImport = `
+--@ Test.elm
+module Test exposing (..)
+
+{-caret-}
+    
+    `;
+    await testCompletions(sourceImport, ["import"], "partialMatch");
+
+    const sourceImport2 = `
+--@ Test.elm
+module Test exposing (..)
+
+i{-caret-}
+  ""
+`;
+    await testCompletions(sourceImport2, ["import"], "partialMatch");
+  });
+
   it("Updating a record should have completions", async () => {
     const source = `
 --@ Test.elm
