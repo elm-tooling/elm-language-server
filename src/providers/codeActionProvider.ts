@@ -22,10 +22,14 @@ import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 export class CodeActionProvider {
   private connection: IConnection;
   private settings: Settings;
-  constructor(
-    private elmAnalyse: ElmAnalyseDiagnostics | null,
-    private elmMake: ElmMakeDiagnostics,
-  ) {
+  private elmAnalyse: ElmAnalyseDiagnostics | null;
+  private elmMake: ElmMakeDiagnostics;
+
+  constructor() {
+    this.elmAnalyse = container.resolve<ElmAnalyseDiagnostics | null>(
+      ElmAnalyseDiagnostics,
+    );
+    this.elmMake = container.resolve<ElmMakeDiagnostics>(ElmMakeDiagnostics);
     const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<IConnection>("Connection");

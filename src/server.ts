@@ -28,9 +28,7 @@ import {
   SelectionRangeProvider,
   WorkspaceSymbolProvider,
 } from "./providers";
-import { DocumentEvents } from "./util/documentEvents";
 import { Settings } from "./util/settings";
-import { TextDocumentEvents } from "./util/textDocumentEvents";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -39,22 +37,11 @@ export interface ILanguageServer {
 }
 
 export class Server implements ILanguageServer {
-  private calculator: CapabilityCalculator;
   private settings: Settings;
   private connection: IConnection;
 
-  constructor(
-    private params: InitializeParams,
-    private progress: WorkDoneProgress,
-  ) {
+  constructor(params: InitializeParams, private progress: WorkDoneProgress) {
     this.connection = container.resolve("Connection");
-    this.calculator = new CapabilityCalculator(params.capabilities);
-    const initializationOptions = this.params.initializationOptions ?? {};
-
-    container.register("Settings", {
-      useValue: new Settings(initializationOptions, params.capabilities),
-    });
-
     this.settings = container.resolve("Settings");
 
     const uri = this.getWorkspaceUri(params);
@@ -101,8 +88,11 @@ export class Server implements ILanguageServer {
   }
 
   get capabilities(): InitializeResult {
+    const calculator: CapabilityCalculator = container.resolve(
+      CapabilityCalculator,
+    );
     return {
-      capabilities: this.calculator.capabilities,
+      capabilities: calculator.capabilities,
     };
   }
 
@@ -132,26 +122,27 @@ export class Server implements ILanguageServer {
     // We can now query the client for up to date settings
     this.settings.initFinished();
 
-    container.registerSingleton("DocumentEvents", DocumentEvents);
-    container.register(TextDocumentEvents, {
-      useValue: new TextDocumentEvents(),
-    });
+    // these register calls rely on settings having been setup
     container.register(DocumentFormattingProvider, {
       useValue: new DocumentFormattingProvider(),
     });
 
+    container.register(ElmMakeDiagnostics, {
+      useValue: new ElmMakeDiagnostics(),
+    });
+
     const settings = await this.settings.getClientSettings();
 
-    const elmAnalyse =
-      settings.elmAnalyseTrigger !== "never"
-        ? new ElmAnalyseDiagnostics()
-        : null;
+    container.register(ElmAnalyseDiagnostics, {
+      useValue:
+        settings.elmAnalyseTrigger !== "never"
+          ? new ElmAnalyseDiagnostics()
+          : null,
+    });
 
-    const elmMake = new ElmMakeDiagnostics();
+    new DiagnosticsProvider();
 
-    new DiagnosticsProvider(elmAnalyse, elmMake);
-
-    new CodeActionProvider(elmAnalyse, elmMake);
+    new CodeActionProvider();
 
     new ASTProvider();
 

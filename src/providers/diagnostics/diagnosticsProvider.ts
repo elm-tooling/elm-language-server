@@ -39,10 +39,11 @@ export class DiagnosticsProvider {
   private connection: IConnection;
   private settings: Settings;
 
-  constructor(
-    elmAnalyse: ElmAnalyseDiagnostics | null,
-    elmMake: ElmMakeDiagnostics,
-  ) {
+  constructor() {
+    const elmAnalyse = container.resolve<ElmAnalyseDiagnostics | null>(
+      ElmAnalyseDiagnostics,
+    );
+    const elmMake = container.resolve<ElmMakeDiagnostics>(ElmMakeDiagnostics);
     const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<IConnection>("Connection");
