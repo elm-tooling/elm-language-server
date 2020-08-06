@@ -37,12 +37,10 @@ export interface ILanguageServer {
 }
 
 export class Server implements ILanguageServer {
-  private settings: Settings;
   private connection: IConnection;
 
   constructor(params: InitializeParams, private progress: WorkDoneProgress) {
     this.connection = container.resolve("Connection");
-    this.settings = container.resolve("Settings");
 
     const uri = this.getWorkspaceUri(params);
 
@@ -71,7 +69,7 @@ export class Server implements ILanguageServer {
 
         const elmWorkspaces: ElmWorkspace[] = [];
         topLevelElmJsons.forEach((elmWorkspace) => {
-          elmWorkspaces.push(new ElmWorkspace(elmWorkspace, this.settings));
+          elmWorkspaces.push(new ElmWorkspace(elmWorkspace));
         });
         container.register("ElmWorkspaces", {
           useValue: elmWorkspaces,
@@ -119,8 +117,9 @@ export class Server implements ILanguageServer {
   }
 
   public async registerInitializedProviders(): Promise<void> {
+    const settings = container.resolve<Settings>("Settings");
     // We can now query the client for up to date settings
-    this.settings.initFinished();
+    settings.initFinished();
 
     // these register calls rely on settings having been setup
     container.register(DocumentFormattingProvider, {
@@ -131,11 +130,11 @@ export class Server implements ILanguageServer {
       useValue: new ElmMakeDiagnostics(),
     });
 
-    const settings = await this.settings.getClientSettings();
+    const clientSettings = await settings.getClientSettings();
 
     container.register(ElmAnalyseDiagnostics, {
       useValue:
-        settings.elmAnalyseTrigger !== "never"
+        clientSettings.elmAnalyseTrigger !== "never"
           ? new ElmAnalyseDiagnostics()
           : null,
     });

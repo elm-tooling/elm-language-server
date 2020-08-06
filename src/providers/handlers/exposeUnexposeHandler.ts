@@ -1,26 +1,30 @@
-import { IConnection } from "vscode-languageserver";
-import { IElmWorkspace } from "../../elmWorkspace";
-import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { URI } from "vscode-uri";
-import { ExposeRequest, UnexposeRequest } from "../../protocol";
-import { IExposeUnexposeParams } from "../../protocol";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { container } from "tsyringe";
+import { IConnection } from "vscode-languageserver";
+import { URI } from "vscode-uri";
+import { IElmWorkspace } from "../../elmWorkspace";
+import {
+  ExposeRequest,
+  IExposeUnexposeParams,
+  UnexposeRequest,
+} from "../../protocol";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
+import { RefactorEditUtils } from "../../util/refactorEditUtils";
 
 export class ExposeUnexposeHandler {
   private connection: IConnection;
-  constructor(elmWorkspaces: IElmWorkspace[]) {
+
+  constructor() {
     this.connection = container.resolve("Connection");
     this.connection.onRequest(
       ExposeRequest,
-      new ElmWorkspaceMatcher(elmWorkspaces, (params: IExposeUnexposeParams) =>
+      new ElmWorkspaceMatcher((params: IExposeUnexposeParams) =>
         URI.parse(params.uri),
       ).handlerForWorkspace(this.handleExposeRequest.bind(this)),
     );
 
     this.connection.onRequest(
       UnexposeRequest,
-      new ElmWorkspaceMatcher(elmWorkspaces, (params: IExposeUnexposeParams) =>
+      new ElmWorkspaceMatcher((params: IExposeUnexposeParams) =>
         URI.parse(params.uri),
       ).handlerForWorkspace(this.handleUnexposeRequest.bind(this)),
     );

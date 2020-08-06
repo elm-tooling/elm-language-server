@@ -19,13 +19,10 @@ export class HoverProvider {
   private connection: IConnection;
 
   constructor() {
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.connection.onHover(
-      new ElmWorkspaceMatcher(
-        elmWorkspaces,
-        (param: TextDocumentPositionParams) =>
-          URI.parse(param.textDocument.uri),
+      new ElmWorkspaceMatcher((param: TextDocumentPositionParams) =>
+        URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleHoverRequest),
     );
   }

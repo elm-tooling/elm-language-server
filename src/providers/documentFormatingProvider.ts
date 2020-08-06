@@ -21,15 +21,12 @@ export class DocumentFormattingProvider {
   private settings: Settings;
 
   constructor() {
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.settings = container.resolve<Settings>("Settings");
     this.connection = container.resolve<IConnection>("Connection");
     this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.connection.onDocumentFormatting(
-      new ElmWorkspaceMatcher(
-        elmWorkspaces,
-        (params: DocumentFormattingParams) =>
-          URI.parse(params.textDocument.uri),
+      new ElmWorkspaceMatcher((params: DocumentFormattingParams) =>
+        URI.parse(params.textDocument.uri),
       ).handlerForWorkspace(this.handleFormattingRequest),
     );
   }

@@ -22,16 +22,15 @@ export class RenameProvider {
   private connection: IConnection;
 
   constructor() {
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.connection.onPrepareRename(
-      new ElmWorkspaceMatcher(elmWorkspaces, (params: PrepareRenameParams) =>
+      new ElmWorkspaceMatcher((params: PrepareRenameParams) =>
         URI.parse(params.textDocument.uri),
       ).handlerForWorkspace(this.handlePrepareRenameRequest),
     );
 
     this.connection.onRenameRequest(
-      new ElmWorkspaceMatcher(elmWorkspaces, (params: RenameParams) =>
+      new ElmWorkspaceMatcher((params: RenameParams) =>
         URI.parse(params.textDocument.uri),
       ).handlerForWorkspace(this.handleRenameRequest),
     );

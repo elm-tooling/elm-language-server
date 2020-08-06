@@ -17,10 +17,9 @@ export class SelectionRangeProvider {
   private connection: IConnection;
 
   constructor() {
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.connection.onSelectionRanges(
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: SelectionRangeParams) =>
+      new ElmWorkspaceMatcher((param: SelectionRangeParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleSelectionRangeRequest),
     );

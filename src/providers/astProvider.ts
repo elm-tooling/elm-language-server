@@ -16,17 +16,14 @@ export class ASTProvider {
   private parser: Parser;
 
   constructor() {
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.parser = container.resolve("Parser");
     this.connection = container.resolve<IConnection>("Connection");
     const documentEvents = container.resolve<IDocumentEvents>("DocumentEvents");
 
     documentEvents.on(
       "change",
-      new ElmWorkspaceMatcher(
-        elmWorkspaces,
-        (params: DidChangeTextDocumentParams) =>
-          URI.parse(params.textDocument.uri),
+      new ElmWorkspaceMatcher((params: DidChangeTextDocumentParams) =>
+        URI.parse(params.textDocument.uri),
       ).handlerForWorkspace(this.handleChangeTextDocument),
     );
   }

@@ -21,10 +21,9 @@ export class DocumentSymbolProvider {
   private connection: IConnection;
 
   constructor() {
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.connection.onDocumentSymbol(
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: DocumentSymbolParams) =>
+      new ElmWorkspaceMatcher((param: DocumentSymbolParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleDocumentSymbolRequest),
     );

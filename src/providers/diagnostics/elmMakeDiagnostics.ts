@@ -11,7 +11,6 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../../elmWorkspace";
 import { Forest, ITreeContainer } from "../../forest";
 import { IImports } from "../../imports";
 import * as utils from "../../util/elmUtils";
@@ -78,13 +77,9 @@ export class ElmMakeDiagnostics {
   private connection: IConnection;
 
   constructor() {
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<IConnection>("Connection");
-    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(
-      elmWorkspaces,
-      (uri) => uri,
-    );
+    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
   }
 
   public createDiagnostics = async (

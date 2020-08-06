@@ -24,16 +24,15 @@ export class CodeLensProvider {
   private readonly settings: Settings;
 
   constructor() {
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.settings = container.resolve<Settings>("Settings");
     this.connection.onCodeLens(
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: CodeLensParams) =>
+      new ElmWorkspaceMatcher((param: CodeLensParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleCodeLensRequest),
     );
     this.connection.onCodeLensResolve(
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: CodeLens) =>
+      new ElmWorkspaceMatcher((param: CodeLens) =>
         URI.parse(param.data.uri),
       ).handlerForWorkspace(this.handleCodeLensResolveRequest),
     );

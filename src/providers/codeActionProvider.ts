@@ -30,24 +30,23 @@ export class CodeActionProvider {
       ElmAnalyseDiagnostics,
     );
     this.elmMake = container.resolve<ElmMakeDiagnostics>(ElmMakeDiagnostics);
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<IConnection>("Connection");
 
     this.onCodeAction = this.onCodeAction.bind(this);
     this.onExecuteCommand = this.onExecuteCommand.bind(this);
     this.connection.onCodeAction(
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: CodeActionParams) =>
+      new ElmWorkspaceMatcher((param: CodeActionParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.onCodeAction),
     );
     this.connection.onExecuteCommand(this.onExecuteCommand);
 
     if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
-      new MoveRefactoringHandler(elmWorkspaces);
+      new MoveRefactoringHandler();
     }
 
-    new ExposeUnexposeHandler(elmWorkspaces);
+    new ExposeUnexposeHandler();
   }
 
   private onCodeAction(

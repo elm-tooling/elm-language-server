@@ -47,10 +47,9 @@ export class CompletionProvider {
   private connection: IConnection;
 
   constructor() {
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.connection.onCompletion(
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: CompletionParams) =>
+      new ElmWorkspaceMatcher((param: CompletionParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleCompletionRequest),
     );

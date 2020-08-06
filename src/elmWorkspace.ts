@@ -1,7 +1,8 @@
 import fs from "fs";
-import os from "os";
 import globby from "globby";
+import os from "os";
 import path from "path";
+import { container } from "tsyringe";
 import util from "util";
 import { IConnection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -10,7 +11,6 @@ import { Forest } from "./forest";
 import { Imports } from "./imports";
 import * as utils from "./util/elmUtils";
 import { Settings } from "./util/settings";
-import { container } from "tsyringe";
 
 const readFile = util.promisify(fs.readFile);
 const readdir = util.promisify(fs.readdir);
@@ -41,8 +41,10 @@ export class ElmWorkspace implements IElmWorkspace {
   private imports: Imports;
   private parser: Parser;
   private connection: IConnection;
+  private settings: Settings;
 
-  constructor(private rootPath: URI, private settings: Settings) {
+  constructor(private rootPath: URI) {
+    this.settings = container.resolve("Settings");
     this.connection = container.resolve("Connection");
     this.parser = container.resolve("Parser");
     this.connection.console.info(

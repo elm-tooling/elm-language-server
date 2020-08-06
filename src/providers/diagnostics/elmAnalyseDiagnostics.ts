@@ -68,10 +68,7 @@ export class ElmAnalyseDiagnostics {
     this.onExecuteCommand = this.onExecuteCommand.bind(this);
     this.onCodeAction = this.onCodeAction.bind(this);
     this.diagnostics = new Map<string, Diagnostic[]>();
-    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(
-      elmWorkspaces,
-      (uri) => uri,
-    );
+    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
 
     this.elmAnalysers = new Map(
       elmWorkspaces.map((ws) => [ws, this.setupElmAnalyse(ws)]),

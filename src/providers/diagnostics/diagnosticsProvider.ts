@@ -2,7 +2,6 @@ import { container, injectable } from "tsyringe";
 import { Diagnostic, FileChangeType, IConnection } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { NoWorkspaceContainsError } from "../../util/noWorkspaceContainsError";
 import { ElmAnalyseTrigger, Settings } from "../../util/settings";
@@ -44,14 +43,13 @@ export class DiagnosticsProvider {
       ElmAnalyseDiagnostics,
     );
     const elmMake = container.resolve<ElmMakeDiagnostics>(ElmMakeDiagnostics);
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<IConnection>("Connection");
     this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmMakeDiagnostics = elmMake;
     this.elmAnalyseDiagnostics = elmAnalyse;
-    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(elmWorkspaces, (doc) =>
+    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((doc) =>
       URI.parse(doc.uri),
     );
 

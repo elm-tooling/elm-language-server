@@ -23,13 +23,10 @@ export type DefinitionResult =
 export class DefinitionProvider {
   private connection: IConnection;
   constructor() {
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.connection.onDefinition(
-      new ElmWorkspaceMatcher(
-        elmWorkspaces,
-        (param: TextDocumentPositionParams) =>
-          URI.parse(param.textDocument.uri),
+      new ElmWorkspaceMatcher((param: TextDocumentPositionParams) =>
+        URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleDefinitionRequest),
     );
   }

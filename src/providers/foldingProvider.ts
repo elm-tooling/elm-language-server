@@ -26,12 +26,10 @@ export class FoldingRangeProvider {
   ]);
   private connection: IConnection;
   constructor() {
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.connection.onFoldingRanges(
-      new ElmWorkspaceMatcher(
-        elmWorkspaces,
-        (param: FoldingRangeRequestParam) => URI.parse(param.textDocument.uri),
+      new ElmWorkspaceMatcher((param: FoldingRangeRequestParam) =>
+        URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleFoldingRange),
     );
   }
