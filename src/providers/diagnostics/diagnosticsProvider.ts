@@ -124,7 +124,7 @@ export class DiagnosticsProvider {
     }
 
     for (const [uri, diagnostics] of allDiagnostics) {
-      this.connection?.sendDiagnostics({ uri, diagnostics });
+      this.connection.sendDiagnostics({ uri, diagnostics });
     }
   }
 
@@ -133,7 +133,7 @@ export class DiagnosticsProvider {
     isSaveOrOpen: boolean,
     elmAnalyseTrigger: ElmAnalyseTrigger,
   ): Promise<void> {
-    this.connection?.console.info(
+    this.connection.console.info(
       `Diagnostics were requested due to a file ${
         isSaveOrOpen ? "open or save" : "change"
       }`,
@@ -144,7 +144,7 @@ export class DiagnosticsProvider {
       this.elmWorkspaceMatcher.getElmWorkspaceFor(document);
     } catch (error) {
       if (error instanceof NoWorkspaceContainsError) {
-        this.connection?.console.info(error.message);
+        this.connection.console.info(error.message);
         return; // ignore file that doesn't correspond to a workspace
       }
 
