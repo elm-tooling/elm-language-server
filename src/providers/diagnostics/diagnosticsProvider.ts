@@ -39,16 +39,16 @@ export class DiagnosticsProvider {
   private settings: Settings;
 
   constructor() {
-    const elmAnalyse = container.resolve<ElmAnalyseDiagnostics | null>(
+    this.elmAnalyseDiagnostics = container.resolve<ElmAnalyseDiagnostics | null>(
       ElmAnalyseDiagnostics,
     );
-    const elmMake = container.resolve<ElmMakeDiagnostics>(ElmMakeDiagnostics);
+    this.elmMakeDiagnostics = container.resolve<ElmMakeDiagnostics>(
+      ElmMakeDiagnostics,
+    );
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<IConnection>("Connection");
     this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
-    this.elmMakeDiagnostics = elmMake;
-    this.elmAnalyseDiagnostics = elmAnalyse;
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((doc) =>
       URI.parse(doc.uri),
     );
