@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   IConnection,
   Location,
@@ -7,20 +8,17 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { Tree } from "web-tree-sitter";
-import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
 import { TreeUtils } from "../util/treeUtils";
-import { container, DependencyContainer } from "tsyringe";
 
 type ReferenceResult = Location[] | null | undefined;
 
 export class ReferencesProvider {
   private connection: IConnection;
-  constructor(workspaceChildContainer: DependencyContainer) {
-    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
-      "ElmWorkspaces",
-    );
+  constructor() {
+    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.connection.onReferences(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: ReferenceParams) =>

@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   FoldingRange,
   FoldingRangeKind,
@@ -6,9 +7,8 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { container, DependencyContainer } from "tsyringe";
 
 export class FoldingRangeProvider {
   private readonly REGION_CONSTRUCTS: Set<string> = new Set([
@@ -25,10 +25,8 @@ export class FoldingRangeProvider {
     "else",
   ]);
   private connection: IConnection;
-  constructor(workspaceChildContainer: DependencyContainer) {
-    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
-      "ElmWorkspaces",
-    );
+  constructor() {
+    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.connection.onFoldingRanges(
       new ElmWorkspaceMatcher(

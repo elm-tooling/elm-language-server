@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   IConnection,
   Position,
@@ -11,15 +12,12 @@ import { IElmWorkspace } from "../elmWorkspace";
 import { PositionUtil } from "../positionUtil";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
-import { container, DependencyContainer } from "tsyringe";
 
 export class SelectionRangeProvider {
   private connection: IConnection;
 
-  constructor(workspaceChildContainer: DependencyContainer) {
-    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
-      "ElmWorkspaces",
-    );
+  constructor() {
+    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.connection.onSelectionRanges(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: SelectionRangeParams) =>

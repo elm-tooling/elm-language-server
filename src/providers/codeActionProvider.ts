@@ -1,23 +1,23 @@
+import { container } from "tsyringe";
 import {
+  ApplyWorkspaceEditResponse,
   CodeAction,
   CodeActionKind,
   CodeActionParams,
   ExecuteCommandParams,
   IConnection,
-  ApplyWorkspaceEditResponse,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
+import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { Settings } from "../util/settings";
 import { TreeUtils } from "../util/treeUtils";
 import { ElmAnalyseDiagnostics } from "./diagnostics/elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
-import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
-import { RefactorEditUtils } from "../util/refactorEditUtils";
-import { DependencyContainer } from "tsyringe";
+import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 
 export class CodeActionProvider {
   private connection: IConnection;
@@ -25,15 +25,10 @@ export class CodeActionProvider {
   constructor(
     private elmAnalyse: ElmAnalyseDiagnostics | null,
     private elmMake: ElmMakeDiagnostics,
-    workspaceChildContainer: DependencyContainer,
   ) {
-    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
-      "ElmWorkspaces",
-    );
-    this.settings = workspaceChildContainer.resolve("Settings");
-    this.connection = workspaceChildContainer.resolve<IConnection>(
-      "Connection",
-    );
+    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
+    this.settings = container.resolve("Settings");
+    this.connection = container.resolve<IConnection>("Connection");
 
     this.onCodeAction = this.onCodeAction.bind(this);
     this.onExecuteCommand = this.onExecuteCommand.bind(this);

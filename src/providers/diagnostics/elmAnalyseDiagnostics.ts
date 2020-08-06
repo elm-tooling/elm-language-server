@@ -3,8 +3,10 @@ import { ElmApp, FixedFile, Message, Report } from "elm-analyse/ts/domain";
 import { EventEmitter } from "events";
 import * as fs from "fs";
 import * as path from "path";
+import { container, injectable } from "tsyringe";
 import util from "util";
 import {
+  ApplyWorkspaceEditResponse,
   CodeAction,
   CodeActionKind,
   CodeActionParams,
@@ -14,17 +16,15 @@ import {
   ExecuteCommandParams,
   IConnection,
   TextEdit,
-  ApplyWorkspaceEditResponse,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { IElmWorkspace, ElmWorkspace } from "../../elmWorkspace";
+import { IElmWorkspace } from "../../elmWorkspace";
 import * as Diff from "../../util/diff";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { DocumentFormattingProvider } from "../documentFormatingProvider";
-import { DependencyContainer, injectable } from "tsyringe";
 
 const readFile = util.promisify(fs.readFile);
 const fixableErrors = [
@@ -59,20 +59,12 @@ export class ElmAnalyseDiagnostics {
   private settings: Settings;
   private formattingProvider: DocumentFormattingProvider;
 
-  constructor(workspaceChildContainer: DependencyContainer) {
-    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
-      "ElmWorkspaces",
-    );
-    this.formattingProvider = workspaceChildContainer.resolve(
-      DocumentFormattingProvider,
-    );
-    this.settings = workspaceChildContainer.resolve("Settings");
-    this.connection = workspaceChildContainer.resolve<IConnection>(
-      "Connection",
-    );
-    this.events = workspaceChildContainer.resolve<TextDocumentEvents>(
-      TextDocumentEvents,
-    );
+  constructor() {
+    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
+    this.formattingProvider = container.resolve(DocumentFormattingProvider);
+    this.settings = container.resolve("Settings");
+    this.connection = container.resolve<IConnection>("Connection");
+    this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.onExecuteCommand = this.onExecuteCommand.bind(this);
     this.onCodeAction = this.onCodeAction.bind(this);
     this.diagnostics = new Map<string, Diagnostic[]>();

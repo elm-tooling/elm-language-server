@@ -1,6 +1,8 @@
+import { container } from "tsyringe";
 import {
   CompletionItem,
   CompletionItemKind,
+  CompletionList,
   CompletionParams,
   IConnection,
   InsertTextFormat,
@@ -8,23 +10,20 @@ import {
   Position,
   Range,
   TextEdit,
-  CompletionList,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { IForest, ITreeContainer } from "../forest";
 import { IImports } from "../imports";
+import { comparePosition, PositionUtil } from "../positionUtil";
 import { getEmptyTypes } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
-import { TreeUtils } from "../util/treeUtils";
-import RANKING_LIST from "./ranking";
 import { ImportUtils } from "../util/importUtils";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
-import { Utils } from "../util/utils";
-import { comparePosition, PositionUtil } from "../positionUtil";
-import { container, DependencyContainer } from "tsyringe";
+import { TreeUtils } from "../util/treeUtils";
+import RANKING_LIST from "./ranking";
 
 export type CompletionResult =
   | CompletionItem[]
@@ -47,10 +46,8 @@ export class CompletionProvider {
   private qidRegex = /[a-zA-Z0-9.]+/;
   private connection: IConnection;
 
-  constructor(workspaceChildContainer: DependencyContainer) {
-    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
-      "ElmWorkspaces",
-    );
+  constructor() {
+    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.connection.onCompletion(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: CompletionParams) =>

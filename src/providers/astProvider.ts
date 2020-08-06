@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-
+import { container } from "tsyringe";
 import {
   DidChangeTextDocumentParams,
   IConnection,
@@ -7,26 +7,19 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
-import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { IDocumentEvents } from "../util/documentEvents";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { DependencyContainer, container } from "tsyringe";
 
 export class ASTProvider {
   private connection: IConnection;
   private parser: Parser;
 
-  constructor(workspaceChildContainer: DependencyContainer) {
-    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
-      "ElmWorkspaces",
-    );
+  constructor() {
+    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.parser = container.resolve("Parser");
-    this.connection = workspaceChildContainer.resolve<IConnection>(
-      "Connection",
-    );
-    const documentEvents = workspaceChildContainer.resolve<IDocumentEvents>(
-      "DocumentEvents",
-    );
+    this.connection = container.resolve<IConnection>("Connection");
+    const documentEvents = container.resolve<IDocumentEvents>("DocumentEvents");
 
     documentEvents.on(
       "change",

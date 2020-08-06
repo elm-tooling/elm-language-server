@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   CodeLens,
   CodeLensParams,
@@ -9,12 +10,11 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
-import { TreeUtils } from "../util/treeUtils";
 import { Settings } from "../util/settings";
-import { container, DependencyContainer } from "tsyringe";
+import { TreeUtils } from "../util/treeUtils";
 
 type CodeLensType = "exposed" | "referenceCounter";
 type CodeLensResult = CodeLens[] | null | undefined;
@@ -23,12 +23,10 @@ export class CodeLensProvider {
   private readonly connection: IConnection;
   private readonly settings: Settings;
 
-  constructor(workspaceChildContainer: DependencyContainer) {
-    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
-      "ElmWorkspaces",
-    );
+  constructor() {
+    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
-    this.settings = workspaceChildContainer.resolve<Settings>("Settings");
+    this.settings = container.resolve<Settings>("Settings");
     this.connection.onCodeLens(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: CodeLensParams) =>
         URI.parse(param.textDocument.uri),

@@ -1,19 +1,17 @@
-import { CompletionProvider, CompletionResult } from "../src/providers";
+import { isDeepStrictEqual } from "util";
 import {
-  CompletionParams,
   CompletionContext,
-  IConnection,
   CompletionItem,
+  CompletionParams,
   Position,
   TextEdit,
 } from "vscode-languageserver";
+import { URI } from "vscode-uri";
 import { IElmWorkspace } from "../src/elmWorkspace";
-import { SourceTreeParser } from "./utils/sourceTreeParser";
+import { CompletionProvider, CompletionResult } from "../src/providers";
 import { baseUri } from "./utils/mockElmWorkspace";
 import { getCaretPositionFromSource } from "./utils/sourceParser";
-import { URI } from "vscode-uri";
-import { isDeepStrictEqual } from "util";
-import { container } from "tsyringe";
+import { SourceTreeParser } from "./utils/sourceTreeParser";
 
 class MockCompletionProvider extends CompletionProvider {
   public handleCompletion(
@@ -28,7 +26,7 @@ type exactCompletions = "exactMatch" | "partialMatch";
 type dotCompletions = "triggeredByDot" | "normal";
 
 describe("CompletionProvider", () => {
-  const completionProvider = new MockCompletionProvider(container);
+  const completionProvider = new MockCompletionProvider();
   const treeParser = new SourceTreeParser();
 
   const debug = process.argv.find((arg) => arg === "--debug");

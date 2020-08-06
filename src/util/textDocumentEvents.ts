@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { container } from "tsyringe";
 import {
   DidChangeTextDocumentParams,
   DidCloseTextDocumentParams,
@@ -6,9 +7,8 @@ import {
   DidSaveTextDocumentParams,
   TextDocumentsConfiguration,
 } from "vscode-languageserver";
-import { IDocumentEvents } from "./documentEvents";
-import { DependencyContainer } from "tsyringe";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { IDocumentEvents } from "./documentEvents";
 
 // This is loosely based on https://github.com/Microsoft/vscode-languageserver-node/blob/73180893ca/server/src/main.ts#L124
 // With some simplifications and the ability to support multiple listeners
@@ -19,11 +19,9 @@ export class TextDocumentEvents extends EventEmitter {
     TextDocument
   > = TextDocument;
 
-  constructor(workspaceChildContainer: DependencyContainer) {
+  constructor() {
     super();
-    const events = workspaceChildContainer.resolve<IDocumentEvents>(
-      "DocumentEvents",
-    );
+    const events = container.resolve<IDocumentEvents>("DocumentEvents");
     this._documents = Object.create(null);
 
     events.on("open", (params: DidOpenTextDocumentParams) => {

@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   IConnection,
   Position,
@@ -16,15 +17,12 @@ import { IImports } from "../imports";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
 import { TreeUtils } from "../util/treeUtils";
-import { container, DependencyContainer } from "tsyringe";
 
 export class RenameProvider {
   private connection: IConnection;
 
-  constructor(workspaceChildContainer: DependencyContainer) {
-    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
-      "ElmWorkspaces",
-    );
+  constructor() {
+    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.connection.onPrepareRename(
       new ElmWorkspaceMatcher(elmWorkspaces, (params: PrepareRenameParams) =>

@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   DocumentSymbol,
   DocumentSymbolParams,
@@ -6,10 +7,9 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
-import { container, DependencyContainer } from "tsyringe";
 
 type DocumentSymbolResult =
   | SymbolInformation[]
@@ -20,10 +20,8 @@ type DocumentSymbolResult =
 export class DocumentSymbolProvider {
   private connection: IConnection;
 
-  constructor(workspaceChildContainer: DependencyContainer) {
-    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
-      "ElmWorkspaces",
-    );
+  constructor() {
+    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     this.connection = container.resolve<IConnection>("Connection");
     this.connection.onDocumentSymbol(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: DocumentSymbolParams) =>
