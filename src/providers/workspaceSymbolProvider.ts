@@ -6,12 +6,17 @@ import {
 import { SyntaxNode } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
+import { container, DependencyContainer } from "tsyringe";
 
 export class WorkspaceSymbolProvider {
-  constructor(
-    private readonly connection: IConnection,
-    private readonly elmWorkspaces: IElmWorkspace[],
-  ) {
+  private readonly connection: IConnection;
+  private readonly elmWorkspaces: IElmWorkspace[];
+
+  constructor(workspaceChildContainer: DependencyContainer) {
+    this.elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
+    this.connection = container.resolve<IConnection>("Connection");
     this.connection.onWorkspaceSymbol(this.workspaceSymbolRequest);
   }
 

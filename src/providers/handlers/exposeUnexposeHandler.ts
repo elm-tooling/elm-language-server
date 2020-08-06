@@ -5,9 +5,12 @@ import { URI } from "vscode-uri";
 import { ExposeRequest, UnexposeRequest } from "../../protocol";
 import { IExposeUnexposeParams } from "../../protocol";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
+import { container } from "tsyringe";
 
 export class ExposeUnexposeHandler {
-  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
+  private connection: IConnection;
+  constructor(elmWorkspaces: IElmWorkspace[]) {
+    this.connection = container.resolve("Connection");
     this.connection.onRequest(
       ExposeRequest,
       new ElmWorkspaceMatcher(elmWorkspaces, (params: IExposeUnexposeParams) =>

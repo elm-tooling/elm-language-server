@@ -4,12 +4,11 @@ import {
   CodeActionParams,
   ExecuteCommandParams,
   IConnection,
-  ApplyWorkspaceEditParams,
   ApplyWorkspaceEditResponse,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Settings } from "../util/settings";
 import { TreeUtils } from "../util/treeUtils";
@@ -18,15 +17,24 @@ import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
+import { DependencyContainer } from "tsyringe";
 
 export class CodeActionProvider {
+  private connection: IConnection;
+  private settings: Settings;
   constructor(
-    private connection: IConnection,
-    private elmWorkspaces: IElmWorkspace[],
-    private settings: Settings,
     private elmAnalyse: ElmAnalyseDiagnostics | null,
     private elmMake: ElmMakeDiagnostics,
+    workspaceChildContainer: DependencyContainer,
   ) {
+    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
+    this.settings = workspaceChildContainer.resolve("Settings");
+    this.connection = workspaceChildContainer.resolve<IConnection>(
+      "Connection",
+    );
+
     this.onCodeAction = this.onCodeAction.bind(this);
     this.onExecuteCommand = this.onExecuteCommand.bind(this);
     this.connection.onCodeAction(
@@ -36,11 +44,11 @@ export class CodeActionProvider {
     );
     this.connection.onExecuteCommand(this.onExecuteCommand);
 
-    if (settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
-      new MoveRefactoringHandler(this.connection, this.elmWorkspaces);
+    if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
+      new MoveRefactoringHandler(elmWorkspaces);
     }
 
-    new ExposeUnexposeHandler(this.connection, this.elmWorkspaces);
+    new ExposeUnexposeHandler(elmWorkspaces);
   }
 
   private onCodeAction(

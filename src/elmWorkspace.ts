@@ -10,6 +10,7 @@ import { Forest } from "./forest";
 import { Imports } from "./imports";
 import * as utils from "./util/elmUtils";
 import { Settings } from "./util/settings";
+import { container } from "tsyringe";
 
 const readFile = util.promisify(fs.readFile);
 const readdir = util.promisify(fs.readdir);
@@ -38,18 +39,17 @@ export class ElmWorkspace implements IElmWorkspace {
   }[] = [];
   private forest: Forest = new Forest();
   private imports: Imports;
+  private parser: Parser;
+  private connection: IConnection;
 
-  constructor(
-    private rootPath: URI,
-    private connection: IConnection,
-    private settings: Settings,
-    private parser: Parser,
-  ) {
+  constructor(private rootPath: URI, private settings: Settings) {
+    this.connection = container.resolve("Connection");
+    this.parser = container.resolve("Parser");
     this.connection.console.info(
       `Starting language server for folder: ${this.rootPath.toString()}`,
     );
 
-    this.imports = new Imports(parser);
+    this.imports = new Imports();
   }
 
   public async init(

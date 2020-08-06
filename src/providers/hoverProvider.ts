@@ -6,16 +6,23 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
 import { getEmptyTypes } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
 import { NodeType, TreeUtils } from "../util/treeUtils";
+import { container, DependencyContainer } from "tsyringe";
 
 type HoverResult = Hover | null | undefined;
 
 export class HoverProvider {
-  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
+  private connection: IConnection;
+
+  constructor(workspaceChildContainer: DependencyContainer) {
+    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
+    this.connection = container.resolve<IConnection>("Connection");
     this.connection.onHover(
       new ElmWorkspaceMatcher(
         elmWorkspaces,

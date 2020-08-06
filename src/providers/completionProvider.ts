@@ -12,7 +12,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
 import { IForest, ITreeContainer } from "../forest";
 import { IImports } from "../imports";
 import { getEmptyTypes } from "../util/elmUtils";
@@ -24,6 +24,7 @@ import { ImportUtils } from "../util/importUtils";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { Utils } from "../util/utils";
 import { comparePosition, PositionUtil } from "../positionUtil";
+import { container, DependencyContainer } from "tsyringe";
 
 export type CompletionResult =
   | CompletionItem[]
@@ -44,9 +45,14 @@ interface ICompletionOptions {
 
 export class CompletionProvider {
   private qidRegex = /[a-zA-Z0-9.]+/;
+  private connection: IConnection;
 
-  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
-    connection.onCompletion(
+  constructor(workspaceChildContainer: DependencyContainer) {
+    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
+    this.connection = container.resolve<IConnection>("Connection");
+    this.connection.onCompletion(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: CompletionParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleCompletionRequest),

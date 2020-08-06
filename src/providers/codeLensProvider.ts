@@ -9,21 +9,26 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
 import { TreeUtils } from "../util/treeUtils";
 import { Settings } from "../util/settings";
+import { container, DependencyContainer } from "tsyringe";
 
 type CodeLensType = "exposed" | "referenceCounter";
 type CodeLensResult = CodeLens[] | null | undefined;
 
 export class CodeLensProvider {
-  constructor(
-    private readonly connection: IConnection,
-    elmWorkspaces: IElmWorkspace[],
-    private settings: Settings,
-  ) {
+  private readonly connection: IConnection;
+  private readonly settings: Settings;
+
+  constructor(workspaceChildContainer: DependencyContainer) {
+    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
+    this.connection = container.resolve<IConnection>("Connection");
+    this.settings = workspaceChildContainer.resolve<Settings>("Settings");
     this.connection.onCodeLens(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: CodeLensParams) =>
         URI.parse(param.textDocument.uri),

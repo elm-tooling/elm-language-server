@@ -21,7 +21,7 @@ module.exports = {
     project: ["./tsconfig.test.json"],
   },
   plugins: ["@typescript-eslint", "prettier"],
-  ignorePatterns: ["*.test.ts"],
+  ignorePatterns: ["*.test.ts", "jest.config.js", ".eslintrc.js"],
   rules: {
     "prettier/prettier": "error",
     "no-prototype-builtins": "warn",

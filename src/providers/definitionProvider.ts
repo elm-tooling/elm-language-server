@@ -8,9 +8,10 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
+import { container, DependencyContainer } from "tsyringe";
 
 export type DefinitionResult =
   | Location
@@ -20,7 +21,12 @@ export type DefinitionResult =
   | undefined;
 
 export class DefinitionProvider {
-  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
+  private connection: IConnection;
+  constructor(workspaceChildContainer: DependencyContainer) {
+    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
+    this.connection = container.resolve<IConnection>("Connection");
     this.connection.onDefinition(
       new ElmWorkspaceMatcher(
         elmWorkspaces,

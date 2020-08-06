@@ -1,11 +1,12 @@
 import { EventEmitter } from "events";
 import {
-  Connection,
   DidChangeTextDocumentParams,
   DidCloseTextDocumentParams,
   DidOpenTextDocumentParams,
   DidSaveTextDocumentParams,
+  IConnection,
 } from "vscode-languageserver";
+import { injectable, container } from "tsyringe";
 
 type DidChangeCallback = (params: DidChangeTextDocumentParams) => void;
 type DidCloseCallback = (params: DidCloseTextDocumentParams) => void;
@@ -19,8 +20,10 @@ export interface IDocumentEvents {
   on(event: "save", listener: DidSaveCallback): this;
 }
 
+@injectable()
 export class DocumentEvents extends EventEmitter implements IDocumentEvents {
-  constructor(connection: Connection) {
+  constructor() {
+    const connection = container.resolve<IConnection>("Connection");
     super();
 
     connection.onDidChangeTextDocument((e) => this.emit("change", e));

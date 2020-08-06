@@ -18,12 +18,13 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../../elmWorkspace";
+import { IElmWorkspace, ElmWorkspace } from "../../elmWorkspace";
 import * as Diff from "../../util/diff";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { DocumentFormattingProvider } from "../documentFormatingProvider";
+import { DependencyContainer, injectable } from "tsyringe";
 
 const readFile = util.promisify(fs.readFile);
 const fixableErrors = [
@@ -46,20 +47,32 @@ export interface IElmAnalyseEvents {
   on(event: "new-report", diagnostics: Map<string, Diagnostic[]>): this;
 }
 
+@injectable()
 export class ElmAnalyseDiagnostics {
   private elmAnalysers: Map<IElmWorkspace, Promise<ElmApp>>;
   private diagnostics: Map<string, Diagnostic[]>;
   private filesWithDiagnostics: Set<string> = new Set();
   private eventEmitter: EventEmitter = new EventEmitter();
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
+  private events: TextDocumentEvents;
+  private connection: IConnection;
+  private settings: Settings;
+  private formattingProvider: DocumentFormattingProvider;
 
-  constructor(
-    private connection: IConnection,
-    elmWorkspaces: IElmWorkspace[],
-    private events: TextDocumentEvents<TextDocument>,
-    private settings: Settings,
-    private formattingProvider: DocumentFormattingProvider,
-  ) {
+  constructor(workspaceChildContainer: DependencyContainer) {
+    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
+    this.formattingProvider = workspaceChildContainer.resolve(
+      DocumentFormattingProvider,
+    );
+    this.settings = workspaceChildContainer.resolve("Settings");
+    this.connection = workspaceChildContainer.resolve<IConnection>(
+      "Connection",
+    );
+    this.events = workspaceChildContainer.resolve<TextDocumentEvents>(
+      TextDocumentEvents,
+    );
     this.onExecuteCommand = this.onExecuteCommand.bind(this);
     this.onCodeAction = this.onCodeAction.bind(this);
     this.diagnostics = new Map<string, Diagnostic[]>();

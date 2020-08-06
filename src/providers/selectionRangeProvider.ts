@@ -11,10 +11,17 @@ import { IElmWorkspace } from "../elmWorkspace";
 import { PositionUtil } from "../positionUtil";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
+import { container, DependencyContainer } from "tsyringe";
 
 export class SelectionRangeProvider {
-  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
-    connection.onSelectionRanges(
+  private connection: IConnection;
+
+  constructor(workspaceChildContainer: DependencyContainer) {
+    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
+    this.connection = container.resolve<IConnection>("Connection");
+    this.connection.onSelectionRanges(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: SelectionRangeParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleSelectionRangeRequest),

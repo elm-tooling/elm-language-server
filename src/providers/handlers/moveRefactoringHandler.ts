@@ -12,12 +12,13 @@ import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { References } from "../../util/references";
 import { TreeUtils } from "../../util/treeUtils";
+import { container } from "tsyringe";
 
 export class MoveRefactoringHandler {
-  constructor(
-    private connection: IConnection,
-    private elmWorkspaces: IElmWorkspace[],
-  ) {
+  private connection: IConnection;
+
+  constructor(private elmWorkspaces: IElmWorkspace[]) {
+    this.connection = container.resolve("Connection");
     this.connection.onRequest(
       GetMoveDestinationRequest,
       new ElmWorkspaceMatcher(elmWorkspaces, (param: IMoveParams) =>

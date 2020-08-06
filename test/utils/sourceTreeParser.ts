@@ -2,6 +2,7 @@ import * as Path from "path";
 import Parser from "web-tree-sitter";
 import { IElmWorkspace } from "../../src/elmWorkspace";
 import { MockElmWorkspace } from "./mockElmWorkspace";
+import { container } from "tsyringe";
 
 export class SourceTreeParser {
   private parser?: Parser;
@@ -16,11 +17,11 @@ export class SourceTreeParser {
     const pathToWasm = Path.relative(process.cwd(), absolute);
 
     const language = await Parser.Language.load(pathToWasm);
-    this.parser = new Parser();
-    this.parser.setLanguage(language);
+    container.registerSingleton("Parser", Parser);
+    container.resolve<Parser>("Parser").setLanguage(language);
   }
 
   public getWorkspace(sources: { [K: string]: string }): IElmWorkspace {
-    return new MockElmWorkspace(sources, this.parser!);
+    return new MockElmWorkspace(sources);
   }
 }

@@ -1,4 +1,5 @@
 import { ClientCapabilities, IConnection } from "vscode-languageserver";
+import { injectable, container } from "tsyringe";
 
 export interface IClientSettings {
   elmFormatPath: string;
@@ -16,6 +17,7 @@ export interface IExtendedCapabilites {
 
 export type ElmAnalyseTrigger = "change" | "save" | "never";
 
+@injectable()
 export class Settings {
   private clientSettings: IClientSettings = {
     elmAnalyseTrigger: "change",
@@ -24,14 +26,12 @@ export class Settings {
     elmTestPath: "",
     trace: { server: "off" },
   };
+  private connection: IConnection;
 
   private initDone = false;
 
-  constructor(
-    private connection: IConnection,
-    config: any,
-    private clientCapabilities: ClientCapabilities,
-  ) {
+  constructor(config: any, private clientCapabilities: ClientCapabilities) {
+    this.connection = container.resolve<IConnection>("Connection");
     this.updateSettings(config);
   }
 

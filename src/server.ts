@@ -1,16 +1,14 @@
 import globby from "globby";
 import path from "path";
 import {
-  Connection,
   InitializeParams,
   InitializeResult,
+  IConnection,
 } from "vscode-languageserver";
-import { TextDocument } from "vscode-languageserver-textdocument";
 import { WorkDoneProgress } from "vscode-languageserver/lib/progress";
 import { URI } from "vscode-uri";
-import Parser from "web-tree-sitter";
 import { CapabilityCalculator } from "./capabilityCalculator";
-import { ElmWorkspace } from "./elmWorkspace";
+import { ElmWorkspace, IElmWorkspace } from "./elmWorkspace";
 import {
   ASTProvider,
   CodeActionProvider,
@@ -32,6 +30,7 @@ import {
 import { DocumentEvents } from "./util/documentEvents";
 import { Settings } from "./util/settings";
 import { TextDocumentEvents } from "./util/textDocumentEvents";
+import { container, DependencyContainer } from "tsyringe";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -42,21 +41,23 @@ export interface ILanguageServer {
 export class Server implements ILanguageServer {
   private calculator: CapabilityCalculator;
   private settings: Settings;
-  private elmWorkspaces: ElmWorkspace[] = [];
+  private workspaceChildContainer: DependencyContainer;
+  private connection: IConnection;
 
   constructor(
-    private connection: Connection,
     private params: InitializeParams,
-    private parser: Parser,
     private progress: WorkDoneProgress,
   ) {
+    this.connection = container.resolve("Connection");
+    this.workspaceChildContainer = container.createChildContainer();
     this.calculator = new CapabilityCalculator(params.capabilities);
     const initializationOptions = this.params.initializationOptions ?? {};
-    this.settings = new Settings(
-      this.connection,
-      initializationOptions,
-      params.capabilities,
-    );
+
+    this.workspaceChildContainer.register("Settings", {
+      useValue: new Settings(initializationOptions, params.capabilities),
+    });
+
+    this.settings = this.workspaceChildContainer.resolve("Settings");
 
     const uri = this.getWorkspaceUri(params);
 
@@ -70,7 +71,7 @@ export class Server implements ILanguageServer {
         { suppressErrors: true },
       );
       if (elmJsons.length > 0) {
-        connection.console.info(
+        this.connection.console.info(
           `Found ${elmJsons.length} elm.json files for workspace ${globUri}`,
         );
         const listOfElmJsonFolders = elmJsons.map((a) =>
@@ -79,19 +80,16 @@ export class Server implements ILanguageServer {
         const topLevelElmJsons: Map<string, URI> = this.findTopLevelFolders(
           listOfElmJsonFolders,
         );
-        connection.console.info(
+        this.connection.console.info(
           `Found ${topLevelElmJsons.size} unique elmWorkspaces for workspace ${globUri}`,
         );
 
+        const elmWorkspaces: ElmWorkspace[] = [];
         topLevelElmJsons.forEach((elmWorkspace) => {
-          this.elmWorkspaces.push(
-            new ElmWorkspace(
-              elmWorkspace,
-              connection,
-              this.settings,
-              this.parser,
-            ),
-          );
+          elmWorkspaces.push(new ElmWorkspace(elmWorkspace, this.settings));
+        });
+        this.workspaceChildContainer.register("ElmWorkspaces", {
+          useValue: elmWorkspaces,
         });
       } else {
         this.connection.window.showErrorMessage(
@@ -112,8 +110,11 @@ export class Server implements ILanguageServer {
 
   public async init(): Promise<void> {
     this.progress.begin("Indexing Elm", 0);
+    const elmWorkspaces = this.workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
     await Promise.all(
-      this.elmWorkspaces
+      elmWorkspaces
         .map((ws) => ({ ws, indexedPercent: 0 }))
         .map((indexingWs, _, all) =>
           indexingWs.ws.init((percent: number) => {
@@ -135,71 +136,42 @@ export class Server implements ILanguageServer {
     // We can now query the client for up to date settings
     this.settings.initFinished();
 
-    const documentEvents = new DocumentEvents(this.connection);
-    const textDocumentEvents = new TextDocumentEvents(
-      TextDocument,
-      documentEvents,
+    this.workspaceChildContainer.registerSingleton(
+      "DocumentEvents",
+      DocumentEvents,
     );
+    this.workspaceChildContainer.register(TextDocumentEvents, {
+      useValue: new TextDocumentEvents(this.workspaceChildContainer),
+    });
+    this.workspaceChildContainer.register(DocumentFormattingProvider, {
+      useValue: new DocumentFormattingProvider(this.workspaceChildContainer),
+    });
 
     const settings = await this.settings.getClientSettings();
 
-    const documentFormattingProvider = new DocumentFormattingProvider(
-      this.connection,
-      this.elmWorkspaces,
-      textDocumentEvents,
-      this.settings,
-    );
-
     const elmAnalyse =
       settings.elmAnalyseTrigger !== "never"
-        ? new ElmAnalyseDiagnostics(
-            this.connection,
-            this.elmWorkspaces,
-            textDocumentEvents,
-            this.settings,
-            documentFormattingProvider,
-          )
+        ? new ElmAnalyseDiagnostics(this.workspaceChildContainer)
         : null;
 
-    const elmMake = new ElmMakeDiagnostics(
-      this.connection,
-      this.elmWorkspaces,
-      this.settings,
-    );
+    const elmMake = new ElmMakeDiagnostics(this.workspaceChildContainer);
 
-    new DiagnosticsProvider(
-      this.connection,
-      this.elmWorkspaces,
-      this.settings,
-      textDocumentEvents,
-      elmAnalyse,
-      elmMake,
-    );
+    new DiagnosticsProvider(elmAnalyse, elmMake, this.workspaceChildContainer);
 
-    new CodeActionProvider(
-      this.connection,
-      this.elmWorkspaces,
-      this.settings,
-      elmAnalyse,
-      elmMake,
-    );
+    new CodeActionProvider(elmAnalyse, elmMake, this.workspaceChildContainer);
 
-    new ASTProvider(
-      this.connection,
-      this.elmWorkspaces,
-      documentEvents,
-      this.parser,
-    );
-    new FoldingRangeProvider(this.connection, this.elmWorkspaces);
-    new CompletionProvider(this.connection, this.elmWorkspaces);
-    new HoverProvider(this.connection, this.elmWorkspaces);
-    new DefinitionProvider(this.connection, this.elmWorkspaces);
-    new ReferencesProvider(this.connection, this.elmWorkspaces);
-    new DocumentSymbolProvider(this.connection, this.elmWorkspaces);
-    new WorkspaceSymbolProvider(this.connection, this.elmWorkspaces);
-    new CodeLensProvider(this.connection, this.elmWorkspaces, this.settings);
-    new SelectionRangeProvider(this.connection, this.elmWorkspaces);
-    new RenameProvider(this.connection, this.elmWorkspaces);
+    new ASTProvider(this.workspaceChildContainer);
+
+    new FoldingRangeProvider(this.workspaceChildContainer);
+    new CompletionProvider(this.workspaceChildContainer);
+    new HoverProvider(this.workspaceChildContainer);
+    new DefinitionProvider(this.workspaceChildContainer);
+    new ReferencesProvider(this.workspaceChildContainer);
+    new DocumentSymbolProvider(this.workspaceChildContainer);
+    new WorkspaceSymbolProvider(this.workspaceChildContainer);
+    new CodeLensProvider(this.workspaceChildContainer);
+    new SelectionRangeProvider(this.workspaceChildContainer);
+    new RenameProvider(this.workspaceChildContainer);
   }
 
   private getElmJsonFolder(uri: string): URI {

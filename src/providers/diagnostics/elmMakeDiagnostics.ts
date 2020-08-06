@@ -10,7 +10,7 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../../elmWorkspace";
+import { IElmWorkspace, ElmWorkspace } from "../../elmWorkspace";
 import * as utils from "../../util/elmUtils";
 import { execCmd } from "../../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
@@ -25,6 +25,7 @@ import { Utils } from "../../util/utils";
 import { ITreeContainer } from "../../forest";
 import { Forest } from "../../forest";
 import { IImports } from "../../imports";
+import { DependencyContainer } from "tsyringe";
 
 const ELM_MAKE = "Elm";
 const NAMING_ERROR = "NAMING ERROR";
@@ -74,12 +75,17 @@ export class ElmMakeDiagnostics {
     string,
     { moduleName: string; valueName?: string; diagnostic: Diagnostic }[]
   >();
+  private settings: Settings;
+  private connection: IConnection;
 
-  constructor(
-    private connection: IConnection,
-    elmWorkspaces: IElmWorkspace[],
-    private settings: Settings,
-  ) {
+  constructor(workspaceChildContainer: DependencyContainer) {
+    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
+    this.settings = workspaceChildContainer.resolve("Settings");
+    this.connection = workspaceChildContainer.resolve<IConnection>(
+      "Connection",
+    );
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(
       elmWorkspaces,
       (uri) => uri,

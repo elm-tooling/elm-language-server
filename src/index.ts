@@ -10,6 +10,9 @@ import {
 } from "vscode-languageserver";
 import Parser from "web-tree-sitter";
 import { ILanguageServer } from "./server";
+import "reflect-metadata";
+
+import { container } from "tsyringe"; //must be after reflect-metadata
 
 // Show version for `-v` or `--version` arguments
 if (process.argv[2] === "-v" || process.argv[2] === "--version") {
@@ -23,7 +26,11 @@ if (process.argv.length === 2) {
   process.argv.push("--stdio");
 }
 
-const connection: IConnection = createConnection(ProposedFeatures.all);
+container.register<IConnection>("Connection", {
+  useValue: createConnection(ProposedFeatures.all),
+});
+const connection = container.resolve<IConnection>("Connection");
+
 let server: ILanguageServer;
 
 connection.onInitialize(
@@ -39,11 +46,11 @@ connection.onInitialize(
       `Loading Elm tree-sitter syntax from ${pathToWasm}`,
     );
     const language = await Parser.Language.load(pathToWasm);
-    const parser = new Parser();
-    parser.setLanguage(language);
+    container.registerSingleton<Parser>("Parser", Parser);
+    container.resolve<Parser>("Parser").setLanguage(language);
 
     const { Server } = await import("./server");
-    server = new Server(connection, params, parser, progress);
+    server = new Server(params, progress);
     await server.init();
 
     return server.capabilities;

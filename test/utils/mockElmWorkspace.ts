@@ -4,6 +4,7 @@ import Parser, { Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../../src/elmWorkspace";
 import { Forest, IForest } from "../../src/forest";
 import { Imports } from "../../src/imports";
+import { container } from "tsyringe";
 
 export const baseUri = Path.join(__dirname, "../sources/src/");
 
@@ -12,9 +13,9 @@ export class MockElmWorkspace implements IElmWorkspace {
   private forest: IForest = new Forest();
   private parser: Parser;
 
-  constructor(sources: { [K: string]: string }, parser: Parser) {
-    this.parser = parser;
-    this.imports = new Imports(parser);
+  constructor(sources: { [K: string]: string }) {
+    this.parser = container.resolve("Parser");
+    this.imports = new Imports();
 
     for (const key in sources) {
       if (Object.prototype.hasOwnProperty.call(sources, key)) {

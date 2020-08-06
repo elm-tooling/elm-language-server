@@ -11,6 +11,7 @@ import { mockDeep } from "jest-mock-extended";
 import { TreeUtils } from "../../src/util/treeUtils";
 import { getInvokeAndTargetPositionFromSource } from "../utils/sourceParser";
 import { URI } from "vscode-uri";
+import { container } from "tsyringe";
 
 class MockDefinitionProvider extends DefinitionProvider {
   public handleDefinition(
@@ -22,16 +23,10 @@ class MockDefinitionProvider extends DefinitionProvider {
 }
 
 export class DefinitionProviderTestBase {
-  private connectionMock: IConnection;
   private definitionProvider: MockDefinitionProvider;
   private treeParser: SourceTreeParser;
   constructor() {
-    this.connectionMock = mockDeep<IConnection>();
-
-    this.definitionProvider = new MockDefinitionProvider(
-      this.connectionMock,
-      [],
-    );
+    this.definitionProvider = new MockDefinitionProvider(container);
     this.treeParser = new SourceTreeParser();
   }
 

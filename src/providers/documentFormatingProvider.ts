@@ -3,24 +3,34 @@ import {
   IConnection,
   TextEdit,
 } from "vscode-languageserver";
-import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
 import * as Diff from "../util/diff";
 import { execCmd } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Settings } from "../util/settings";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
+import { DependencyContainer, injectable } from "tsyringe";
 
 type DocumentFormattingResult = Promise<TextEdit[] | undefined>;
 
+@injectable()
 export class DocumentFormattingProvider {
-  constructor(
-    private connection: IConnection,
-    elmWorkspaces: IElmWorkspace[],
-    private events: TextDocumentEvents<TextDocument>,
-    private settings: Settings,
-  ) {
+  private events: TextDocumentEvents;
+  private connection: IConnection;
+  private settings: Settings;
+
+  constructor(workspaceChildContainer: DependencyContainer) {
+    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
+    this.settings = workspaceChildContainer.resolve<Settings>("Settings");
+    this.connection = workspaceChildContainer.resolve<IConnection>(
+      "Connection",
+    );
+    this.events = workspaceChildContainer.resolve<TextDocumentEvents>(
+      TextDocumentEvents,
+    );
     this.connection.onDocumentFormatting(
       new ElmWorkspaceMatcher(
         elmWorkspaces,

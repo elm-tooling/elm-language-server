@@ -7,17 +7,27 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
 import { IDocumentEvents } from "../util/documentEvents";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
+import { DependencyContainer, container } from "tsyringe";
 
 export class ASTProvider {
-  constructor(
-    private connection: IConnection,
-    elmWorkspaces: IElmWorkspace[],
-    documentEvents: IDocumentEvents,
-    private parser: Parser,
-  ) {
+  private connection: IConnection;
+  private parser: Parser;
+
+  constructor(workspaceChildContainer: DependencyContainer) {
+    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
+    this.parser = container.resolve("Parser");
+    this.connection = workspaceChildContainer.resolve<IConnection>(
+      "Connection",
+    );
+    const documentEvents = workspaceChildContainer.resolve<IDocumentEvents>(
+      "DocumentEvents",
+    );
+
     documentEvents.on(
       "change",
       new ElmWorkspaceMatcher(

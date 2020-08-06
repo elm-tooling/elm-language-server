@@ -7,15 +7,21 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
+import { IElmWorkspace, ElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
 import { TreeUtils } from "../util/treeUtils";
+import { container, DependencyContainer } from "tsyringe";
 
 type ReferenceResult = Location[] | null | undefined;
 
 export class ReferencesProvider {
-  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
+  private connection: IConnection;
+  constructor(workspaceChildContainer: DependencyContainer) {
+    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
+    this.connection = container.resolve<IConnection>("Connection");
     this.connection.onReferences(
       new ElmWorkspaceMatcher(elmWorkspaces, (param: ReferenceParams) =>
         URI.parse(param.textDocument.uri),

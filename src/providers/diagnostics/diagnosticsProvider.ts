@@ -1,13 +1,14 @@
 import { Diagnostic, FileChangeType, IConnection } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../../elmWorkspace";
+import { IElmWorkspace, ElmWorkspace } from "../../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { NoWorkspaceContainsError } from "../../util/noWorkspaceContainsError";
 import { ElmAnalyseTrigger, Settings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { ElmAnalyseDiagnostics } from "./elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
+import { DependencyContainer, injectable } from "tsyringe";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -24,6 +25,7 @@ export interface IElmIssue {
   file: string;
 }
 
+@injectable()
 export class DiagnosticsProvider {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
   private elmAnalyseDiagnostics: ElmAnalyseDiagnostics | null;
@@ -33,15 +35,25 @@ export class DiagnosticsProvider {
     elmAnalyse: Map<string, Diagnostic[]>;
     elmTest: Map<string, Diagnostic[]>;
   };
+  private events: TextDocumentEvents;
+  private connection: IConnection;
+  private settings: Settings;
 
   constructor(
-    private connection: IConnection,
-    elmWorkspaces: IElmWorkspace[],
-    private settings: Settings,
-    private events: TextDocumentEvents<TextDocument>,
     elmAnalyse: ElmAnalyseDiagnostics | null,
     elmMake: ElmMakeDiagnostics,
+    workspaceChildContainer: DependencyContainer,
   ) {
+    const elmWorkspaces = workspaceChildContainer.resolve<IElmWorkspace[]>(
+      "ElmWorkspaces",
+    );
+    this.settings = workspaceChildContainer.resolve("Settings");
+    this.connection = workspaceChildContainer.resolve<IConnection>(
+      "Connection",
+    );
+    this.events = workspaceChildContainer.resolve<TextDocumentEvents>(
+      TextDocumentEvents,
+    );
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmMakeDiagnostics = elmMake;
     this.elmAnalyseDiagnostics = elmAnalyse;
@@ -120,7 +132,7 @@ export class DiagnosticsProvider {
     }
 
     for (const [uri, diagnostics] of allDiagnostics) {
-      this.connection.sendDiagnostics({ uri, diagnostics });
+      this.connection?.sendDiagnostics({ uri, diagnostics });
     }
   }
 
@@ -129,7 +141,7 @@ export class DiagnosticsProvider {
     isSaveOrOpen: boolean,
     elmAnalyseTrigger: ElmAnalyseTrigger,
   ): Promise<void> {
-    this.connection.console.info(
+    this.connection?.console.info(
       `Diagnostics were requested due to a file ${
         isSaveOrOpen ? "open or save" : "change"
       }`,
@@ -140,7 +152,7 @@ export class DiagnosticsProvider {
       this.elmWorkspaceMatcher.getElmWorkspaceFor(document);
     } catch (error) {
       if (error instanceof NoWorkspaceContainsError) {
-        this.connection.console.info(error.message);
+        this.connection?.console.info(error.message);
         return; // ignore file that doesn't correspond to a workspace
       }
 
