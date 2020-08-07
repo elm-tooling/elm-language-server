@@ -344,6 +344,7 @@ export class CompletionProvider {
 
       completions.push(
         ...this.getCompletionsFromOtherFile(
+          tree,
           elmWorkspace.getImports(),
           params.textDocument.uri,
           replaceRange,
@@ -493,6 +494,7 @@ export class CompletionProvider {
   }
 
   private getCompletionsFromOtherFile(
+    tree: Tree,
     imports: IImports,
     uri: string,
     range: Range,
@@ -521,8 +523,22 @@ export class CompletionProvider {
         const dotIndex = label.lastIndexOf(".");
         const valuePart = label.slice(dotIndex + 1);
 
+        const importNode = TreeUtils.findImportClauseByName(
+          tree,
+          element.fromModuleName,
+        );
+
+        // Check if a value is already imported for this module using the exposing list
+        // In this case, we want to prefex the unqualified value since they are using the import exposing list
+        const valuesAlreadyExposed =
+          importNode &&
+          !!TreeUtils.findFirstNamedChildOfType("exposing_list", importNode);
+
         // Try to determine if just the value is being typed
-        if (valuePart.toLowerCase().startsWith(inputText.toLowerCase())) {
+        if (
+          !valuesAlreadyExposed &&
+          valuePart.toLowerCase().startsWith(inputText.toLowerCase())
+        ) {
           filterText = valuePart;
         }
 
@@ -1001,11 +1017,13 @@ export class CompletionProvider {
         possibleImport.valueToImport ?? possibleImport.value,
       );
 
+      const sortText = i < 10 ? `0${i}` : i;
+
       const completionOptions = {
         markdownDocumentation,
         label: possibleImport.value,
         range,
-        sortPrefix: `f${i}`,
+        sortPrefix: `f${sortText}`,
         detail,
         additionalTextEdits: importTextEdit ? [importTextEdit] : undefined,
       };

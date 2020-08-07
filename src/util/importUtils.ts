@@ -27,6 +27,11 @@ export class ImportUtils {
         currentTree,
       );
 
+      const importedModules =
+        TreeUtils.findAllImportClauseNodes(currentTree)?.map(
+          (n) => TreeUtils.findFirstNamedChildOfType("upper_case_qid", n)?.text,
+        ) ?? [];
+
       // Filter out already imported values
       // Then sort by startsWith filter text, then matches filter text
       return this.getPossibleImports(forest, uri)
@@ -62,7 +67,16 @@ export class ImportUtils {
             } else if (!aMatches && bMatches) {
               return 1;
             } else {
-              return 0;
+              const aModuleImported = importedModules.includes(a.module);
+              const bModuleImported = importedModules.includes(b.module);
+
+              if (aModuleImported && !bModuleImported) {
+                return -1;
+              } else if (!aModuleImported && bModuleImported) {
+                return 1;
+              } else {
+                return 0;
+              }
             }
           }
         });
