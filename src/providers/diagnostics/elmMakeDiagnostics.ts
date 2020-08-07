@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import { randomBytes } from "crypto";
 import * as path from "path";
+import { container } from "tsyringe";
 import {
   CodeAction,
   CodeActionKind,
@@ -10,21 +11,19 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../../elmWorkspace";
+import { Forest, ITreeContainer } from "../../forest";
+import { IImports } from "../../imports";
 import * as utils from "../../util/elmUtils";
 import { execCmd } from "../../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
+import { ImportUtils } from "../../util/importUtils";
+import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { Settings } from "../../util/settings";
+import { TreeUtils } from "../../util/treeUtils";
+import { Utils } from "../../util/utils";
 import { IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
-import { ImportUtils } from "../../util/importUtils";
-import { TreeUtils } from "../../util/treeUtils";
-import { Utils } from "../../util/utils";
-import { ITreeContainer } from "../../forest";
-import { Forest } from "../../forest";
-import { IImports } from "../../imports";
 
 const ELM_MAKE = "Elm";
 const NAMING_ERROR = "NAMING ERROR";
@@ -74,16 +73,13 @@ export class ElmMakeDiagnostics {
     string,
     { moduleName: string; valueName?: string; diagnostic: Diagnostic }[]
   >();
+  private settings: Settings;
+  private connection: IConnection;
 
-  constructor(
-    private connection: IConnection,
-    elmWorkspaces: IElmWorkspace[],
-    private settings: Settings,
-  ) {
-    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(
-      elmWorkspaces,
-      (uri) => uri,
-    );
+  constructor() {
+    this.settings = container.resolve("Settings");
+    this.connection = container.resolve<IConnection>("Connection");
+    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
   }
 
   public createDiagnostics = async (

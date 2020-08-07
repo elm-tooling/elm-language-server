@@ -1,7 +1,8 @@
 import fs from "fs";
-import os from "os";
 import globby from "globby";
+import os from "os";
 import path from "path";
+import { container } from "tsyringe";
 import util from "util";
 import { IConnection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -38,18 +39,19 @@ export class ElmWorkspace implements IElmWorkspace {
   }[] = [];
   private forest: Forest = new Forest();
   private imports: Imports;
+  private parser: Parser;
+  private connection: IConnection;
+  private settings: Settings;
 
-  constructor(
-    private rootPath: URI,
-    private connection: IConnection,
-    private settings: Settings,
-    private parser: Parser,
-  ) {
+  constructor(private rootPath: URI) {
+    this.settings = container.resolve("Settings");
+    this.connection = container.resolve("Connection");
+    this.parser = container.resolve("Parser");
     this.connection.console.info(
       `Starting language server for folder: ${this.rootPath.toString()}`,
     );
 
-    this.imports = new Imports(parser);
+    this.imports = new Imports();
   }
 
   public async init(

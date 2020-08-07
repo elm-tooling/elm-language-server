@@ -1,5 +1,5 @@
 import { readFileSync } from "fs";
-
+import { container } from "tsyringe";
 import {
   DidChangeTextDocumentParams,
   IConnection,
@@ -12,18 +12,18 @@ import { IDocumentEvents } from "../util/documentEvents";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 
 export class ASTProvider {
-  constructor(
-    private connection: IConnection,
-    elmWorkspaces: IElmWorkspace[],
-    documentEvents: IDocumentEvents,
-    private parser: Parser,
-  ) {
+  private connection: IConnection;
+  private parser: Parser;
+
+  constructor() {
+    this.parser = container.resolve("Parser");
+    this.connection = container.resolve<IConnection>("Connection");
+    const documentEvents = container.resolve<IDocumentEvents>("DocumentEvents");
+
     documentEvents.on(
       "change",
-      new ElmWorkspaceMatcher(
-        elmWorkspaces,
-        (params: DidChangeTextDocumentParams) =>
-          URI.parse(params.textDocument.uri),
+      new ElmWorkspaceMatcher((params: DidChangeTextDocumentParams) =>
+        URI.parse(params.textDocument.uri),
       ).handlerForWorkspace(this.handleChangeTextDocument),
     );
   }

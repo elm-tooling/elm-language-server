@@ -1,46 +1,52 @@
+import { container } from "tsyringe";
 import {
+  ApplyWorkspaceEditResponse,
   CodeAction,
   CodeActionKind,
   CodeActionParams,
   ExecuteCommandParams,
   IConnection,
-  ApplyWorkspaceEditParams,
-  ApplyWorkspaceEditResponse,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
+import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { Settings } from "../util/settings";
 import { TreeUtils } from "../util/treeUtils";
 import { ElmAnalyseDiagnostics } from "./diagnostics/elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
-import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
-import { RefactorEditUtils } from "../util/refactorEditUtils";
+import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 
 export class CodeActionProvider {
-  constructor(
-    private connection: IConnection,
-    private elmWorkspaces: IElmWorkspace[],
-    private settings: Settings,
-    private elmAnalyse: ElmAnalyseDiagnostics | null,
-    private elmMake: ElmMakeDiagnostics,
-  ) {
+  private connection: IConnection;
+  private settings: Settings;
+  private elmAnalyse: ElmAnalyseDiagnostics | null;
+  private elmMake: ElmMakeDiagnostics;
+
+  constructor() {
+    this.elmAnalyse = container.resolve<ElmAnalyseDiagnostics | null>(
+      ElmAnalyseDiagnostics,
+    );
+    this.elmMake = container.resolve<ElmMakeDiagnostics>(ElmMakeDiagnostics);
+    this.settings = container.resolve("Settings");
+    this.connection = container.resolve<IConnection>("Connection");
+
     this.onCodeAction = this.onCodeAction.bind(this);
     this.onExecuteCommand = this.onExecuteCommand.bind(this);
     this.connection.onCodeAction(
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: CodeActionParams) =>
+      new ElmWorkspaceMatcher((param: CodeActionParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.onCodeAction),
     );
     this.connection.onExecuteCommand(this.onExecuteCommand);
 
-    if (settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
-      new MoveRefactoringHandler(this.connection, this.elmWorkspaces);
+    if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
+      new MoveRefactoringHandler();
     }
 
-    new ExposeUnexposeHandler(this.connection, this.elmWorkspaces);
+    new ExposeUnexposeHandler();
   }
 
   private onCodeAction(

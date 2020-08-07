@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   CodeLens,
   CodeLensParams,
@@ -12,25 +13,26 @@ import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
-import { TreeUtils } from "../util/treeUtils";
 import { Settings } from "../util/settings";
+import { TreeUtils } from "../util/treeUtils";
 
 type CodeLensType = "exposed" | "referenceCounter";
 type CodeLensResult = CodeLens[] | null | undefined;
 
 export class CodeLensProvider {
-  constructor(
-    private readonly connection: IConnection,
-    elmWorkspaces: IElmWorkspace[],
-    private settings: Settings,
-  ) {
+  private readonly connection: IConnection;
+  private readonly settings: Settings;
+
+  constructor() {
+    this.connection = container.resolve<IConnection>("Connection");
+    this.settings = container.resolve<Settings>("Settings");
     this.connection.onCodeLens(
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: CodeLensParams) =>
+      new ElmWorkspaceMatcher((param: CodeLensParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleCodeLensRequest),
     );
     this.connection.onCodeLensResolve(
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: CodeLens) =>
+      new ElmWorkspaceMatcher((param: CodeLens) =>
         URI.parse(param.data.uri),
       ).handlerForWorkspace(this.handleCodeLensResolveRequest),
     );

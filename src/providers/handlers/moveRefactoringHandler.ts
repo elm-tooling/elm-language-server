@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import { IConnection, Position, Range, TextEdit } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { IElmWorkspace } from "../../elmWorkspace";
@@ -14,20 +15,20 @@ import { References } from "../../util/references";
 import { TreeUtils } from "../../util/treeUtils";
 
 export class MoveRefactoringHandler {
-  constructor(
-    private connection: IConnection,
-    private elmWorkspaces: IElmWorkspace[],
-  ) {
+  private connection: IConnection;
+
+  constructor() {
+    this.connection = container.resolve("Connection");
     this.connection.onRequest(
       GetMoveDestinationRequest,
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: IMoveParams) =>
+      new ElmWorkspaceMatcher((param: IMoveParams) =>
         URI.parse(param.sourceUri),
       ).handlerForWorkspace(this.handleGetMoveDestinationsRequest.bind(this)),
     );
 
     this.connection.onRequest(
       MoveRequest,
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: IMoveParams) =>
+      new ElmWorkspaceMatcher((param: IMoveParams) =>
         URI.parse(param.sourceUri),
       ).handlerForWorkspace(this.handleMoveRequest.bind(this)),
     );

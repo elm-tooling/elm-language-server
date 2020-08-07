@@ -3,8 +3,10 @@ import { ElmApp, FixedFile, Message, Report } from "elm-analyse/ts/domain";
 import { EventEmitter } from "events";
 import * as fs from "fs";
 import * as path from "path";
+import { container, injectable } from "tsyringe";
 import util from "util";
 import {
+  ApplyWorkspaceEditResponse,
   CodeAction,
   CodeActionKind,
   CodeActionParams,
@@ -14,7 +16,6 @@ import {
   ExecuteCommandParams,
   IConnection,
   TextEdit,
-  ApplyWorkspaceEditResponse,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
@@ -46,27 +47,28 @@ export interface IElmAnalyseEvents {
   on(event: "new-report", diagnostics: Map<string, Diagnostic[]>): this;
 }
 
+@injectable()
 export class ElmAnalyseDiagnostics {
   private elmAnalysers: Map<IElmWorkspace, Promise<ElmApp>>;
   private diagnostics: Map<string, Diagnostic[]>;
   private filesWithDiagnostics: Set<string> = new Set();
   private eventEmitter: EventEmitter = new EventEmitter();
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
+  private events: TextDocumentEvents;
+  private connection: IConnection;
+  private settings: Settings;
+  private formattingProvider: DocumentFormattingProvider;
 
-  constructor(
-    private connection: IConnection,
-    elmWorkspaces: IElmWorkspace[],
-    private events: TextDocumentEvents<TextDocument>,
-    private settings: Settings,
-    private formattingProvider: DocumentFormattingProvider,
-  ) {
+  constructor() {
+    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
+    this.formattingProvider = container.resolve(DocumentFormattingProvider);
+    this.settings = container.resolve("Settings");
+    this.connection = container.resolve<IConnection>("Connection");
+    this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.onExecuteCommand = this.onExecuteCommand.bind(this);
     this.onCodeAction = this.onCodeAction.bind(this);
     this.diagnostics = new Map<string, Diagnostic[]>();
-    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher(
-      elmWorkspaces,
-      (uri) => uri,
-    );
+    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
 
     this.elmAnalysers = new Map(
       elmWorkspaces.map((ws) => [ws, this.setupElmAnalyse(ws)]),

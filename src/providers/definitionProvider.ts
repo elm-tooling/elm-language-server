@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   IConnection,
   Location,
@@ -20,12 +21,12 @@ export type DefinitionResult =
   | undefined;
 
 export class DefinitionProvider {
-  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
+  private connection: IConnection;
+  constructor() {
+    this.connection = container.resolve<IConnection>("Connection");
     this.connection.onDefinition(
-      new ElmWorkspaceMatcher(
-        elmWorkspaces,
-        (param: TextDocumentPositionParams) =>
-          URI.parse(param.textDocument.uri),
+      new ElmWorkspaceMatcher((param: TextDocumentPositionParams) =>
+        URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleDefinitionRequest),
     );
   }

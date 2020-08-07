@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   Hover,
   IConnection,
@@ -15,12 +16,13 @@ import { NodeType, TreeUtils } from "../util/treeUtils";
 type HoverResult = Hover | null | undefined;
 
 export class HoverProvider {
-  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
+  private connection: IConnection;
+
+  constructor() {
+    this.connection = container.resolve<IConnection>("Connection");
     this.connection.onHover(
-      new ElmWorkspaceMatcher(
-        elmWorkspaces,
-        (param: TextDocumentPositionParams) =>
-          URI.parse(param.textDocument.uri),
+      new ElmWorkspaceMatcher((param: TextDocumentPositionParams) =>
+        URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleHoverRequest),
     );
   }

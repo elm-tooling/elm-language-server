@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   IConnection,
   Location,
@@ -15,9 +16,11 @@ import { TreeUtils } from "../util/treeUtils";
 type ReferenceResult = Location[] | null | undefined;
 
 export class ReferencesProvider {
-  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
+  private connection: IConnection;
+  constructor() {
+    this.connection = container.resolve<IConnection>("Connection");
     this.connection.onReferences(
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: ReferenceParams) =>
+      new ElmWorkspaceMatcher((param: ReferenceParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleReferencesRequest),
     );

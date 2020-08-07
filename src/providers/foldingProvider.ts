@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   FoldingRange,
   FoldingRangeKind,
@@ -23,12 +24,12 @@ export class FoldingRangeProvider {
     "then",
     "else",
   ]);
-
-  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
-    connection.onFoldingRanges(
-      new ElmWorkspaceMatcher(
-        elmWorkspaces,
-        (param: FoldingRangeRequestParam) => URI.parse(param.textDocument.uri),
+  private connection: IConnection;
+  constructor() {
+    this.connection = container.resolve<IConnection>("Connection");
+    this.connection.onFoldingRanges(
+      new ElmWorkspaceMatcher((param: FoldingRangeRequestParam) =>
+        URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleFoldingRange),
     );
   }

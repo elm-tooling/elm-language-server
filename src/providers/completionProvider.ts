@@ -1,6 +1,8 @@
+import { container } from "tsyringe";
 import {
   CompletionItem,
   CompletionItemKind,
+  CompletionList,
   CompletionParams,
   IConnection,
   InsertTextFormat,
@@ -8,22 +10,20 @@ import {
   Position,
   Range,
   TextEdit,
-  CompletionList,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { IForest, ITreeContainer } from "../forest";
 import { IImports } from "../imports";
+import { comparePosition, PositionUtil } from "../positionUtil";
 import { getEmptyTypes } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
-import { TreeUtils } from "../util/treeUtils";
-import RANKING_LIST from "./ranking";
 import { ImportUtils } from "../util/importUtils";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
-import { Utils } from "../util/utils";
-import { comparePosition, PositionUtil } from "../positionUtil";
+import { TreeUtils } from "../util/treeUtils";
+import RANKING_LIST from "./ranking";
 
 export type CompletionResult =
   | CompletionItem[]
@@ -44,10 +44,12 @@ interface ICompletionOptions {
 
 export class CompletionProvider {
   private qidRegex = /[a-zA-Z0-9.]+/;
+  private connection: IConnection;
 
-  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
-    connection.onCompletion(
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: CompletionParams) =>
+  constructor() {
+    this.connection = container.resolve<IConnection>("Connection");
+    this.connection.onCompletion(
+      new ElmWorkspaceMatcher((param: CompletionParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleCompletionRequest),
     );

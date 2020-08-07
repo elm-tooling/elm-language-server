@@ -1,6 +1,7 @@
 import Parser, { SyntaxNode, Tree } from "web-tree-sitter";
 import { IForest, ITreeContainer } from "./forest";
 import { IExposing, NodeType, TreeUtils } from "./util/treeUtils";
+import { container } from "tsyringe";
 
 export interface IImport {
   alias: string;
@@ -19,8 +20,11 @@ export interface IImports {
 
 export class Imports implements IImports {
   public imports?: { [uri: string]: IImport[] } = {};
+  private parser: Parser;
 
-  constructor(private parser: Parser) {}
+  constructor() {
+    this.parser = container.resolve("Parser");
+  }
 
   public updateImports(uri: string, tree: Tree, forest: IForest): void {
     const result: IImport[] = [];

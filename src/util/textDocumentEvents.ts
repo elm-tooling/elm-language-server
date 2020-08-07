@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { container } from "tsyringe";
 import {
   DidChangeTextDocumentParams,
   DidCloseTextDocumentParams,
@@ -6,22 +7,22 @@ import {
   DidSaveTextDocumentParams,
   TextDocumentsConfiguration,
 } from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import { IDocumentEvents } from "./documentEvents";
 
 // This is loosely based on https://github.com/Microsoft/vscode-languageserver-node/blob/73180893ca/server/src/main.ts#L124
 // With some simplifications and the ability to support multiple listeners
-export class TextDocumentEvents<T> extends EventEmitter {
+export class TextDocumentEvents extends EventEmitter {
   // a single store of documents shared by all workspaces
-  private _documents: { [uri: string]: T };
-  private _configuration: TextDocumentsConfiguration<T>;
+  private _documents: { [uri: string]: TextDocument };
+  private _configuration: TextDocumentsConfiguration<
+    TextDocument
+  > = TextDocument;
 
-  constructor(
-    configuration: TextDocumentsConfiguration<T>,
-    events: IDocumentEvents,
-  ) {
+  constructor() {
     super();
+    const events = container.resolve<IDocumentEvents>("DocumentEvents");
     this._documents = Object.create(null);
-    this._configuration = configuration;
 
     events.on("open", (params: DidOpenTextDocumentParams) => {
       const td = params.textDocument;
@@ -81,7 +82,7 @@ export class TextDocumentEvents<T> extends EventEmitter {
    * @param uri The text document's URI to retrieve.
    * @return the text document or `undefined`.
    */
-  public get(uri: string): T | undefined {
+  public get(uri: string): TextDocument | undefined {
     return this._documents[uri];
   }
 }

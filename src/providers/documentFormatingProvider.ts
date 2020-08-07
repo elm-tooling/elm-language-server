@@ -1,9 +1,9 @@
+import { container, injectable } from "tsyringe";
 import {
   DocumentFormattingParams,
   IConnection,
   TextEdit,
 } from "vscode-languageserver";
-import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import { IElmWorkspace } from "../elmWorkspace";
 import * as Diff from "../util/diff";
@@ -14,18 +14,19 @@ import { TextDocumentEvents } from "../util/textDocumentEvents";
 
 type DocumentFormattingResult = Promise<TextEdit[] | undefined>;
 
+@injectable()
 export class DocumentFormattingProvider {
-  constructor(
-    private connection: IConnection,
-    elmWorkspaces: IElmWorkspace[],
-    private events: TextDocumentEvents<TextDocument>,
-    private settings: Settings,
-  ) {
+  private events: TextDocumentEvents;
+  private connection: IConnection;
+  private settings: Settings;
+
+  constructor() {
+    this.settings = container.resolve<Settings>("Settings");
+    this.connection = container.resolve<IConnection>("Connection");
+    this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.connection.onDocumentFormatting(
-      new ElmWorkspaceMatcher(
-        elmWorkspaces,
-        (params: DocumentFormattingParams) =>
-          URI.parse(params.textDocument.uri),
+      new ElmWorkspaceMatcher((params: DocumentFormattingParams) =>
+        URI.parse(params.textDocument.uri),
       ).handlerForWorkspace(this.handleFormattingRequest),
     );
   }

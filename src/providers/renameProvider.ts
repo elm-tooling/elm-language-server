@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   IConnection,
   Position,
@@ -18,15 +19,18 @@ import { References } from "../util/references";
 import { TreeUtils } from "../util/treeUtils";
 
 export class RenameProvider {
-  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
+  private connection: IConnection;
+
+  constructor() {
+    this.connection = container.resolve<IConnection>("Connection");
     this.connection.onPrepareRename(
-      new ElmWorkspaceMatcher(elmWorkspaces, (params: PrepareRenameParams) =>
+      new ElmWorkspaceMatcher((params: PrepareRenameParams) =>
         URI.parse(params.textDocument.uri),
       ).handlerForWorkspace(this.handlePrepareRenameRequest),
     );
 
     this.connection.onRenameRequest(
-      new ElmWorkspaceMatcher(elmWorkspaces, (params: RenameParams) =>
+      new ElmWorkspaceMatcher((params: RenameParams) =>
         URI.parse(params.textDocument.uri),
       ).handlerForWorkspace(this.handleRenameRequest),
     );

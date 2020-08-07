@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   DocumentSymbol,
   DocumentSymbolParams,
@@ -17,9 +18,12 @@ type DocumentSymbolResult =
   | undefined;
 
 export class DocumentSymbolProvider {
-  constructor(private connection: IConnection, elmWorkspaces: IElmWorkspace[]) {
-    connection.onDocumentSymbol(
-      new ElmWorkspaceMatcher(elmWorkspaces, (param: DocumentSymbolParams) =>
+  private connection: IConnection;
+
+  constructor() {
+    this.connection = container.resolve<IConnection>("Connection");
+    this.connection.onDocumentSymbol(
+      new ElmWorkspaceMatcher((param: DocumentSymbolParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleDocumentSymbolRequest),
     );

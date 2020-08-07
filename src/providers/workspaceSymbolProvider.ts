@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import {
   IConnection,
   SymbolInformation,
@@ -8,10 +9,12 @@ import { IElmWorkspace } from "../elmWorkspace";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 
 export class WorkspaceSymbolProvider {
-  constructor(
-    private readonly connection: IConnection,
-    private readonly elmWorkspaces: IElmWorkspace[],
-  ) {
+  private readonly connection: IConnection;
+  private readonly elmWorkspaces: IElmWorkspace[];
+
+  constructor() {
+    this.elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
+    this.connection = container.resolve<IConnection>("Connection");
     this.connection.onWorkspaceSymbol(this.workspaceSymbolRequest);
   }
 

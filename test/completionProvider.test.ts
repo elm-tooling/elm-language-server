@@ -1,19 +1,17 @@
-import { CompletionProvider, CompletionResult } from "../src/providers";
+import { isDeepStrictEqual } from "util";
 import {
-  CompletionParams,
   CompletionContext,
-  IConnection,
   CompletionItem,
+  CompletionParams,
   Position,
   TextEdit,
 } from "vscode-languageserver";
-import { IElmWorkspace } from "../src/elmWorkspace";
-import { SourceTreeParser } from "./utils/sourceTreeParser";
-import { baseUri } from "./utils/mockElmWorkspace";
-import { mockDeep } from "jest-mock-extended";
-import { getCaretPositionFromSource } from "./utils/sourceParser";
 import { URI } from "vscode-uri";
-import { isDeepStrictEqual } from "util";
+import { IElmWorkspace } from "../src/elmWorkspace";
+import { CompletionProvider, CompletionResult } from "../src/providers";
+import { baseUri } from "./utils/mockElmWorkspace";
+import { getCaretPositionFromSource } from "./utils/sourceParser";
+import { SourceTreeParser } from "./utils/sourceTreeParser";
 
 class MockCompletionProvider extends CompletionProvider {
   public handleCompletion(
@@ -28,9 +26,7 @@ type exactCompletions = "exactMatch" | "partialMatch";
 type dotCompletions = "triggeredByDot" | "normal";
 
 describe("CompletionProvider", () => {
-  const connectionMock = mockDeep<IConnection>();
-
-  const completionProvider = new MockCompletionProvider(connectionMock, []);
+  const completionProvider = new MockCompletionProvider();
   const treeParser = new SourceTreeParser();
 
   const debug = process.argv.find((arg) => arg === "--debug");

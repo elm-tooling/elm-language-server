@@ -11,7 +11,9 @@
     "lib": ["es2019"],
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "composite": true
+    "composite": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "include": ["src"],
   "exclude": ["node_modules", ".vscode-test", "**/*.test.ts"]

@@ -1,16 +1,11 @@
-import { DefinitionProvider, DefinitionResult } from "../../src/providers";
-import {
-  IConnection,
-  TextDocumentPositionParams,
-  Location,
-} from "vscode-languageserver";
-import { IElmWorkspace } from "../../src/elmWorkspace";
-import { SourceTreeParser } from "../utils/sourceTreeParser";
-import { baseUri } from "../utils/mockElmWorkspace";
-import { mockDeep } from "jest-mock-extended";
-import { TreeUtils } from "../../src/util/treeUtils";
-import { getInvokeAndTargetPositionFromSource } from "../utils/sourceParser";
+import { Location, TextDocumentPositionParams } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import { IElmWorkspace } from "../../src/elmWorkspace";
+import { DefinitionProvider, DefinitionResult } from "../../src/providers";
+import { TreeUtils } from "../../src/util/treeUtils";
+import { baseUri } from "../utils/mockElmWorkspace";
+import { getInvokeAndTargetPositionFromSource } from "../utils/sourceParser";
+import { SourceTreeParser } from "../utils/sourceTreeParser";
 
 class MockDefinitionProvider extends DefinitionProvider {
   public handleDefinition(
@@ -22,16 +17,10 @@ class MockDefinitionProvider extends DefinitionProvider {
 }
 
 export class DefinitionProviderTestBase {
-  private connectionMock: IConnection;
   private definitionProvider: MockDefinitionProvider;
   private treeParser: SourceTreeParser;
   constructor() {
-    this.connectionMock = mockDeep<IConnection>();
-
-    this.definitionProvider = new MockDefinitionProvider(
-      this.connectionMock,
-      [],
-    );
+    this.definitionProvider = new MockDefinitionProvider();
     this.treeParser = new SourceTreeParser();
   }
 

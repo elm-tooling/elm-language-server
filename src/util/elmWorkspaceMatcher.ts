@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import { URI } from "vscode-uri";
 import { IElmWorkspace } from "../elmWorkspace";
 import { NoWorkspaceContainsError } from "./noWorkspaceContainsError";
@@ -8,10 +9,11 @@ import { NoWorkspaceContainsError } from "./noWorkspaceContainsError";
  * (handlerForWorkspace).
  */
 export class ElmWorkspaceMatcher<ParamType> {
-  constructor(
-    protected readonly elmWorkspaces: IElmWorkspace[],
-    protected readonly getUriFor: (param: ParamType) => URI,
-  ) {}
+  private elmWorkspaces: IElmWorkspace[];
+
+  constructor(private getUriFor: (param: ParamType) => URI) {
+    this.elmWorkspaces = container.resolve("ElmWorkspaces");
+  }
 
   public handlerForWorkspace<ResultType>(
     handler: (param: ParamType, elmWorkspace: IElmWorkspace) => ResultType,
