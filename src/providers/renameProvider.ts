@@ -1,3 +1,4 @@
+import { IForest } from "src/forest";
 import { container } from "tsyringe";
 import {
   IConnection,
@@ -12,7 +13,6 @@ import {
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
-import { Forest } from "../forest";
 import { IImports } from "../imports";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
@@ -112,7 +112,7 @@ export class RenameProvider {
       }
     | undefined {
     const imports: IImports = elmWorkspace.getImports();
-    const forest: Forest = elmWorkspace.getForest();
+    const forest: IForest = elmWorkspace.getForest();
     const tree: Tree | undefined = forest.getTree(uri);
 
     if (tree) {

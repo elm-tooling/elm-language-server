@@ -6,7 +6,6 @@ import {
   InitializeParams,
   InitializeResult,
 } from "vscode-languageserver";
-import { WorkDoneProgress } from "vscode-languageserver/lib/progress";
 import { URI } from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { ElmWorkspace, IElmWorkspace } from "./elmWorkspace";
@@ -39,7 +38,7 @@ export interface ILanguageServer {
 export class Server implements ILanguageServer {
   private connection: IConnection;
 
-  constructor(params: InitializeParams, private progress: WorkDoneProgress) {
+  constructor(params: InitializeParams) {
     this.connection = container.resolve("Connection");
 
     const uri = this.getWorkspaceUri(params);
@@ -95,25 +94,12 @@ export class Server implements ILanguageServer {
   }
 
   public async init(): Promise<void> {
-    this.progress.begin("Indexing Elm", 0);
     const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
     await Promise.all(
       elmWorkspaces
         .map((ws) => ({ ws, indexedPercent: 0 }))
-        .map((indexingWs, _, all) =>
-          indexingWs.ws.init((percent: number) => {
-            // update progress for this workspace
-            indexingWs.indexedPercent = percent;
-
-            // report average progress across all workspaces
-            const avgIndexed =
-              all.reduce((sum, { indexedPercent }) => sum + indexedPercent, 0) /
-              all.length;
-            this.progress.report(avgIndexed, `${Math.round(avgIndexed)}%`);
-          }),
-        ),
+        .map((indexingWs, _, all) => indexingWs.ws.init()),
     );
-    this.progress.done();
   }
 
   public async registerInitializedProviders(): Promise<void> {

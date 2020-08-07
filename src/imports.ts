@@ -43,9 +43,9 @@ export class Imports implements IImports {
         );
         if (moduleNameNode) {
           const foundModule = forest.getByModuleName(moduleNameNode.text);
-          if (foundModule) {
+          if (foundModule?.parsed) {
             const foundModuleNode = TreeUtils.findModuleDeclaration(
-              foundModule.tree,
+              foundModule.parsed.tree,
             );
             if (foundModuleNode) {
               result.push({

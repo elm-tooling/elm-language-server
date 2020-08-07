@@ -6,9 +6,8 @@ import { container } from "tsyringe";
 import util from "util";
 import { IConnection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import Parser, { Tree } from "web-tree-sitter";
-import { Forest } from "./forest";
-import { Imports } from "./imports";
+import { Forest, IForest } from "./forest";
+import { IImports, Imports } from "./imports";
 import * as utils from "./util/elmUtils";
 import { Settings } from "./util/settings";
 
@@ -16,18 +15,19 @@ const readFile = util.promisify(fs.readFile);
 const readdir = util.promisify(fs.readdir);
 
 interface IFolder {
-  path: string;
+  filePath: string;
   maintainerAndPackageName?: string;
   writeable: boolean;
   isExposed: boolean;
+  homeFolders: string[];
 }
 
 export interface IElmWorkspace {
-  init(progressCallback: (percent: number) => void): void;
+  init(): void;
   hasDocument(uri: URI): boolean;
   hasPath(uri: URI): boolean;
-  getForest(): Forest;
-  getImports(): Imports;
+  getForest(): IForest;
+  getImports(): IImports;
   getRootPath(): URI;
 }
 
@@ -39,14 +39,12 @@ export class ElmWorkspace implements IElmWorkspace {
   }[] = [];
   private forest: Forest = new Forest();
   private imports: Imports;
-  private parser: Parser;
   private connection: IConnection;
   private settings: Settings;
 
   constructor(private rootPath: URI) {
     this.settings = container.resolve("Settings");
     this.connection = container.resolve("Connection");
-    this.parser = container.resolve("Parser");
     this.connection.console.info(
       `Starting language server for folder: ${this.rootPath.toString()}`,
     );
@@ -54,14 +52,12 @@ export class ElmWorkspace implements IElmWorkspace {
     this.imports = new Imports();
   }
 
-  public async init(
-    progressCallback: (percent: number) => void,
-  ): Promise<void> {
-    await this.initWorkspace(progressCallback);
+  public async init(): Promise<void> {
+    await this.initWorkspace();
   }
 
   public hasDocument(uri: URI): boolean {
-    return !!this.forest.getTree(uri.toString());
+    return this.forest.existsTree(uri.toString());
   }
 
   public hasPath(uri: URI): boolean {
@@ -70,11 +66,11 @@ export class ElmWorkspace implements IElmWorkspace {
       .some((elmFolder) => uri.fsPath.startsWith(elmFolder));
   }
 
-  public getForest(): Forest {
+  public getForest(): IForest {
     return this.forest;
   }
 
-  public getImports(): Imports {
+  public getImports(): IImports {
     return this.imports;
   }
 
@@ -82,10 +78,7 @@ export class ElmWorkspace implements IElmWorkspace {
     return this.rootPath;
   }
 
-  private async initWorkspace(
-    progressCallback: (percent: number) => void,
-  ): Promise<void> {
-    let progress = 0;
+  private async initWorkspace(): Promise<void> {
     let elmVersion;
     try {
       elmVersion = await utils.getElmVersion(
@@ -199,26 +192,9 @@ export class ElmWorkspace implements IElmWorkspace {
         );
       }
 
-      const promiseList: Promise<void>[] = [];
-      const PARSE_STAGES = 3;
-      const progressDelta = 100 / (elmFilePaths.length * PARSE_STAGES);
       for (const filePath of elmFilePaths) {
-        progressCallback((progress += progressDelta));
-        promiseList.push(
-          this.readAndAddToForest(filePath, () => {
-            progressCallback((progress += progressDelta));
-          }),
-        );
+        this.readAndAddToForest(filePath);
       }
-      await Promise.all(promiseList);
-
-      this.forest.treeIndex.forEach((item) => {
-        this.connection.console.info(
-          `Adding imports ${URI.parse(item.uri).fsPath}`,
-        );
-        this.imports.updateImports(item.uri, item.tree, this.forest);
-        progressCallback((progress += progressDelta));
-      });
 
       this.connection.console.info(
         `Done parsing all files for ${pathToElmJson}`,
@@ -267,9 +243,10 @@ export class ElmWorkspace implements IElmWorkspace {
         })
       ).map((matchingPath) => ({
         maintainerAndPackageName: element.maintainerAndPackageName,
-        path: matchingPath,
+        filePath: matchingPath,
         writeable: element.writeable,
         isExposed: true,
+        homeFolders: [element.uri],
       }));
     } else {
       const [elmFiles, elmJsonString] = await Promise.all([
@@ -278,17 +255,18 @@ export class ElmWorkspace implements IElmWorkspace {
           encoding: "utf-8",
         }),
       ]);
-      const exposedModules = this.modulesToFilenames(
-        JSON.parse(elmJsonString),
-        element.uri,
-      );
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const parsedJson: unknown = JSON.parse(elmJsonString);
+      const exposedModules = this.modulesToFilenames(parsedJson, element.uri);
+      const homeFolders = this.homeFolders(parsedJson, element.uri);
       return elmFiles.map((matchingPath) => ({
         maintainerAndPackageName: element.maintainerAndPackageName,
-        path: matchingPath,
+        filePath: matchingPath,
         writeable: element.writeable,
         isExposed: exposedModules.some(
           (a) => a.fsPath === URI.file(matchingPath).fsPath,
         ),
+        homeFolders: homeFolders,
       }));
     }
   }
@@ -330,6 +308,20 @@ export class ElmWorkspace implements IElmWorkspace {
     return result;
   }
 
+  private homeFolders(elmJson: unknown, pathToPackage: string): string[] {
+    if (
+      !elmJson ||
+      !Object.hasOwnProperty.call(elmJson, "source-directories")
+    ) {
+      return [`${pathToPackage}/src`];
+    }
+    const x = (elmJson as {
+      "source-directories": string[];
+    })["source-directories"];
+
+    return x.map((a) => `${pathToPackage}/${a}`);
+  }
+
   private packageOrPackagesFolder(elmVersion: string | undefined): string {
     return elmVersion === "0.19.0" ? "package" : "packages";
   }
@@ -346,26 +338,18 @@ export class ElmWorkspace implements IElmWorkspace {
       : `${os.homedir()}/.elm`;
   }
 
-  private async readAndAddToForest(
-    filePath: IFolder,
-    callback: () => void,
-  ): Promise<void> {
+  private readAndAddToForest(filePath: IFolder): void {
     try {
-      this.connection.console.info(`Adding ${filePath.path.toString()}`);
-      const fileContent: string = await readFile(filePath.path.toString(), {
-        encoding: "utf-8",
-      });
+      this.connection.console.info(`Adding ${filePath.filePath.toString()}`);
 
-      const tree: Tree | undefined = this.parser.parse(fileContent);
-      this.forest.setTree(
-        URI.file(filePath.path).toString(),
+      this.forest.setEmptyTreeNode(
+        URI.file(filePath.filePath).toString(),
         filePath.writeable,
         true,
-        tree,
         filePath.isExposed,
+        filePath.homeFolders,
         filePath.maintainerAndPackageName,
       );
-      callback();
     } catch (error) {
       this.connection.console.error(error.stack);
     }

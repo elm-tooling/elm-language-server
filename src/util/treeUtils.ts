@@ -1430,7 +1430,7 @@ export class TreeUtils {
               (tree) => tree.moduleName === moduleName,
             );
 
-            moduleTree?.exposing?.forEach((exposed) => {
+            moduleTree?.parsed?.exposing?.forEach((exposed) => {
               allImportedValues.push({
                 module: moduleName,
                 value: exposed.name,

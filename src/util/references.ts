@@ -16,7 +16,9 @@ export class References {
       const refSourceTree = forest.getByUri(definitionNode.uri);
 
       if (refSourceTree) {
-        const moduleNameNode = TreeUtils.getModuleNameNode(refSourceTree.tree);
+        const moduleNameNode = TreeUtils.getModuleNameNode(
+          refSourceTree.parsed!.tree,
+        );
         switch (definitionNode.nodeType) {
           case "Function":
             const annotationNameNode = this.getFunctionAnnotationNameNodeFromDefinition(
@@ -49,7 +51,7 @@ export class References {
                       functionNameNode.text,
                     )
                   : this.findFunctionCalls(
-                      refSourceTree.tree.rootNode,
+                      refSourceTree.parsed!.tree.rootNode,
                       functionNameNode.text,
                     );
 
@@ -63,12 +65,12 @@ export class References {
 
               if (
                 TreeUtils.isExposedFunction(
-                  refSourceTree.tree,
+                  refSourceTree.parsed!.tree,
                   functionNameNode.text,
                 )
               ) {
                 const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
-                  refSourceTree.tree,
+                  refSourceTree.parsed!.tree,
                 );
                 if (moduleDeclarationNode) {
                   const exposedNode = TreeUtils.findExposedFunctionNode(
@@ -101,7 +103,7 @@ export class References {
 
                         if (treeToCheck && treeToCheck.writeable) {
                           const importClauseNode = TreeUtils.findImportClauseByName(
-                            treeToCheck.tree,
+                            treeToCheck.parsed!.tree,
                             moduleNameNode.text,
                           );
                           if (importClauseNode) {
@@ -120,7 +122,7 @@ export class References {
 
                           needsToBeChecked.forEach((a) => {
                             const functions = this.findFunctionCalls(
-                              treeToCheck.tree.rootNode,
+                              treeToCheck.parsed!.tree.rootNode,
                               a.alias,
                             );
                             if (functions) {
@@ -155,7 +157,7 @@ export class References {
               }
 
               const localFunctions = TreeUtils.findTypeOrTypeAliasCalls(
-                refSourceTree.tree,
+                refSourceTree.parsed!.tree,
                 typeOrTypeAliasNameNode.text,
               );
               if (localFunctions && refSourceTree.writeable) {
@@ -168,12 +170,12 @@ export class References {
 
               if (
                 TreeUtils.isExposedTypeOrTypeAlias(
-                  refSourceTree.tree,
+                  refSourceTree.parsed!.tree,
                   typeOrTypeAliasNameNode.text,
                 )
               ) {
                 const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
-                  refSourceTree.tree,
+                  refSourceTree.parsed!.tree,
                 );
                 if (moduleDeclarationNode) {
                   const exposedNode = TreeUtils.findExposedTypeOrTypeAliasNode(
@@ -208,7 +210,7 @@ export class References {
 
                         if (treeToCheck && treeToCheck.writeable) {
                           const importClauseNode = TreeUtils.findImportClauseByName(
-                            treeToCheck.tree,
+                            treeToCheck.parsed!.tree,
                             moduleNameNode.text,
                           );
                           if (importClauseNode) {
@@ -227,7 +229,7 @@ export class References {
 
                           needsToBeChecked.forEach((a) => {
                             const typeOrTypeAliasCalls = TreeUtils.findTypeOrTypeAliasCalls(
-                              treeToCheck.tree,
+                              treeToCheck.parsed!.tree,
                               a.alias,
                             );
                             if (typeOrTypeAliasCalls) {
@@ -271,7 +273,7 @@ export class References {
                     if (treeToCheck && treeToCheck.writeable) {
                       needsToBeChecked.forEach((a) => {
                         const importNameNode = TreeUtils.findImportNameNode(
-                          treeToCheck.tree,
+                          treeToCheck.parsed!.tree,
                           a.alias,
                         );
                         if (importNameNode) {
@@ -390,7 +392,7 @@ export class References {
                   uri: definitionNode.uri,
                 });
                 const unionConstructorCalls = TreeUtils.findUnionConstructorCalls(
-                  refSourceTree.tree,
+                  refSourceTree.parsed!.tree,
                   nameNode.text,
                 );
 
@@ -418,7 +420,7 @@ export class References {
                     const treeToCheck = forest.getByUri(uri);
                     if (treeToCheck && treeToCheck.writeable) {
                       const unionConstructorCallsFromOtherFiles = TreeUtils.findUnionConstructorCalls(
-                        treeToCheck.tree,
+                        treeToCheck.parsed!.tree,
                         nameNode.text,
                       );
                       if (unionConstructorCallsFromOtherFiles) {

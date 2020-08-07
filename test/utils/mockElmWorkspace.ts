@@ -1,10 +1,10 @@
 import * as Path from "path";
+import { container } from "tsyringe";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../../src/elmWorkspace";
 import { Forest, IForest } from "../../src/forest";
 import { Imports } from "../../src/imports";
-import { container } from "tsyringe";
 
 export const baseUri = Path.join(__dirname, "../sources/src/");
 
@@ -35,8 +35,7 @@ export class MockElmWorkspace implements IElmWorkspace {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  init(progressCallback: (percent: number) => void): void {
+  init(): void {
     return;
   }
 
@@ -50,7 +49,7 @@ export class MockElmWorkspace implements IElmWorkspace {
     return false;
   }
 
-  getForest(): Forest {
+  getForest(): IForest {
     return this.forest;
   }
 

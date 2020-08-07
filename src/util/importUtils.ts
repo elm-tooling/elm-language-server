@@ -157,7 +157,7 @@ export class ImportUtils {
   ): IPossibleImport[] {
     const exposedValues: IPossibleImport[] = [];
 
-    tree.exposing?.forEach((exposed) => {
+    tree.parsed?.exposing?.forEach((exposed) => {
       const module = tree.moduleName;
       if (module) {
         exposedValues.push({

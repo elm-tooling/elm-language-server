@@ -11,7 +11,7 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { Forest, ITreeContainer } from "../../forest";
+import { IForest, ITreeContainer } from "../../forest";
 import { IImports } from "../../imports";
 import * as utils from "../../util/elmUtils";
 import { execCmd } from "../../util/elmUtils";
@@ -114,7 +114,7 @@ export class ElmMakeDiagnostics {
 
       innerDiagnostics.forEach((diagnostic) => {
         if (diagnostic.message.startsWith(NAMING_ERROR)) {
-          const valueNode = sourceTree?.tree.rootNode.namedDescendantForPosition(
+          const valueNode = sourceTree?.parsed?.tree.rootNode.namedDescendantForPosition(
             {
               column: diagnostic.range.start.character,
               row: diagnostic.range.start.line,
@@ -191,7 +191,7 @@ export class ElmMakeDiagnostics {
 
     diagnostics.forEach((diagnostic) => {
       if (diagnostic.message.startsWith(NAMING_ERROR)) {
-        const valueNode = sourceTree?.tree.rootNode.namedDescendantForPosition(
+        const valueNode = sourceTree?.parsed?.tree.rootNode.namedDescendantForPosition(
           {
             column: diagnostic.range.start.character,
             row: diagnostic.range.start.line,
@@ -354,10 +354,10 @@ export class ElmMakeDiagnostics {
     diagnostic: Diagnostic,
     imports: IImports,
     uri: string,
-    forest: Forest,
+    forest: IForest,
   ): CodeAction[] {
     const result = [];
-    const valueNode = sourceTree?.tree.rootNode.namedDescendantForPosition(
+    const valueNode = sourceTree?.parsed?.tree.rootNode.namedDescendantForPosition(
       {
         column: diagnostic.range.start.character,
         row: diagnostic.range.start.line,
@@ -380,7 +380,7 @@ export class ElmMakeDiagnostics {
 
         const typeDeclarationNode = TreeUtils.getTypeAliasOfCase(
           valueNode.namedChildren[1].firstNamedChild!.firstNamedChild!,
-          sourceTree!.tree,
+          sourceTree!.parsed!.tree,
           imports,
           uri,
           forest,

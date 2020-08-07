@@ -402,10 +402,11 @@ export class CompletionProvider {
           t.moduleName &&
           (!targetModule || t.moduleName?.startsWith(targetModule + ".")) &&
           t.moduleName !== currentModuleNameNode?.text &&
-          t.moduleName !== targetModule,
+          t.moduleName !== targetModule &&
+          t.parsed,
       )
       .map((t) => {
-        const moduleNode = TreeUtils.findModuleDeclaration(t.tree);
+        const moduleNode = TreeUtils.findModuleDeclaration(t.parsed!.tree);
         const markdownDocumentation = HintHelper.createHint(moduleNode);
 
         return this.createModuleCompletion({

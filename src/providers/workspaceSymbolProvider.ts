@@ -53,7 +53,7 @@ export class WorkspaceSymbolProvider {
 
         // skip URIs already traversed in a previous Elm workspace
         if (tree && !symbolInformationMap.get(tree.uri)) {
-          traverse(tree.tree.rootNode);
+          traverse(tree.parsed!.tree.rootNode);
         }
       });
     });
