@@ -12,6 +12,7 @@ import {
 } from "vscode-languageserver";
 import Parser from "web-tree-sitter";
 import { CapabilityCalculator } from "./capabilityCalculator";
+import { Forest } from "./forest";
 import { ILanguageServer } from "./server";
 import { DocumentEvents } from "./util/documentEvents";
 import { Settings } from "./util/settings";
@@ -36,6 +37,7 @@ container.register<IConnection>("Connection", {
 container.registerSingleton<Parser>("Parser", Parser);
 
 container.registerSingleton("DocumentEvents", DocumentEvents);
+container.registerSingleton("Forest", Forest);
 container.register(TextDocumentEvents, {
   useValue: new TextDocumentEvents(),
 });

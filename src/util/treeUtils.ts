@@ -1,9 +1,9 @@
 import { Position } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IImport, IImports } from "../imports";
 import { IForest } from "../forest";
-import { Utils } from "./utils";
+import { IImport, IImports } from "../imports";
 import { comparePosition } from "../positionUtil";
+import { Utils } from "./utils";
 
 export type NodeType =
   | "Function"
@@ -1356,22 +1356,20 @@ export class TreeUtils {
     type: NodeType,
     imports: IImports,
   ): IImport | undefined {
-    if (imports.imports) {
-      const allFileImports = imports.imports[uri];
-      if (allFileImports) {
-        // We prefer explicitlyExposed functions as in "import Foo exposing (Bar)" to "import Bar exposing (..)"
+    const allFileImports = imports.getImportListByUri(uri);
+    if (allFileImports) {
+      // We prefer explicitlyExposed functions as in "import Foo exposing (Bar)" to "import Bar exposing (..)"
+      const foundNode = allFileImports.find(
+        (a) => a.alias === nodeName && a.type === type && a.explicitlyExposed,
+      );
+      if (foundNode) {
+        return foundNode;
+      } else {
         const foundNode = allFileImports.find(
-          (a) => a.alias === nodeName && a.type === type && a.explicitlyExposed,
+          (a) => a.alias === nodeName && a.type === type,
         );
         if (foundNode) {
           return foundNode;
-        } else {
-          const foundNode = allFileImports.find(
-            (a) => a.alias === nodeName && a.type === type,
-          );
-          if (foundNode) {
-            return foundNode;
-          }
         }
       }
     }

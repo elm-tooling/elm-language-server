@@ -1,7 +1,7 @@
+import { container } from "tsyringe";
 import Parser, { SyntaxNode, Tree } from "web-tree-sitter";
 import { IForest, ITreeContainer } from "./forest";
 import { IExposing, NodeType, TreeUtils } from "./util/treeUtils";
-import { container } from "tsyringe";
 
 export interface IImport {
   alias: string;
@@ -14,19 +14,55 @@ export interface IImport {
 }
 
 export interface IImports {
-  imports?: { [uri: string]: IImport[] };
-  updateImports(uri: string, tree: Tree, forest: IForest): void;
+  getImportListByUri(uri: string): IImport[] | undefined;
+  updateImports(uri: string, tree: Tree): void;
+  addEmptyImport(uri: string): void;
+  getUrisOfAllImports(): string[];
 }
 
 export class Imports implements IImports {
-  public imports?: { [uri: string]: IImport[] } = {};
+  public imports?: { [uri: string]: IImport[] | undefined } = {};
   private parser: Parser;
+  private forest: IForest;
 
   constructor() {
     this.parser = container.resolve("Parser");
+    this.forest = container.resolve<IForest>("Forest");
   }
 
-  public updateImports(uri: string, tree: Tree, forest: IForest): void {
+  public addEmptyImport(uri: string): void {
+    if (!this.imports) {
+      this.imports = {};
+    }
+    this.imports[uri] = undefined;
+  }
+
+  public getImportListByUri(uri: string): IImport[] | undefined {
+    let importList = undefined;
+    if (this.imports && this.imports[uri]) {
+      importList = this.imports[uri];
+    }
+
+    if (!importList) {
+      this.updateImports(uri, this.forest.getTree(uri)!);
+    }
+
+    return importList;
+  }
+
+  public getUrisOfAllImports(): string[] {
+    const result: string[] = [];
+
+    for (const uri in this.imports) {
+      if (this.imports.hasOwnProperty(uri)) {
+        result.push(uri);
+      }
+    }
+
+    return result;
+  }
+
+  public updateImports(uri: string, tree: Tree): void {
     const result: IImport[] = [];
     // Add standard imports
     let importNodes = this.getVirtualImports();
@@ -42,7 +78,7 @@ export class Imports implements IImports {
           importNode,
         );
         if (moduleNameNode) {
-          const foundModule = forest.getByModuleName(moduleNameNode.text);
+          const foundModule = this.forest.getByModuleName(moduleNameNode.text);
           if (foundModule?.parsed) {
             const foundModuleNode = TreeUtils.findModuleDeclaration(
               foundModule.parsed.tree,
@@ -58,7 +94,7 @@ export class Imports implements IImports {
                 explicitlyExposed: false,
               });
 
-              const exposedFromRemoteModule = forest.getExposingByModuleName(
+              const exposedFromRemoteModule = this.forest.getExposingByModuleName(
                 moduleNameNode.text,
               );
               if (exposedFromRemoteModule) {

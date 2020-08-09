@@ -107,7 +107,7 @@ export class DefinitionProviderTestBase {
           const rootNode = this.treeParser
             .getWorkspace(determinedTestType.sources)
             .getForest()
-            .treeIndex.find((a) => a.uri === targetUri)!.tree.rootNode;
+            .treeIndex.find((a) => a.uri === targetUri)!.parsed.tree.rootNode;
           const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
             rootNode,
             determinedTestType.targetPosition,

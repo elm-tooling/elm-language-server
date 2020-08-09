@@ -3,34 +3,24 @@ import { container } from "tsyringe";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../../src/elmWorkspace";
-import { Forest, IForest } from "../../src/forest";
+import { IForest } from "../../src/forest";
 import { Imports } from "../../src/imports";
 
 export const baseUri = Path.join(__dirname, "../sources/src/");
 
 export class MockElmWorkspace implements IElmWorkspace {
   private imports!: Imports;
-  private forest: IForest = new Forest();
+  private forest: IForest;
   private parser: Parser;
 
   constructor(sources: { [K: string]: string }) {
+    this.forest = container.resolve("Forest");
     this.parser = container.resolve("Parser");
     this.imports = new Imports();
 
     for (const key in sources) {
       if (Object.prototype.hasOwnProperty.call(sources, key)) {
         this.parseAndAddToForest(key, sources[key]);
-      }
-    }
-
-    for (const key in sources) {
-      if (Object.prototype.hasOwnProperty.call(sources, key)) {
-        const uri = URI.file(baseUri + key).toString();
-        const tree = this.forest.getTree(uri);
-
-        if (tree) {
-          this.imports.updateImports(uri, tree, this.forest);
-        }
       }
     }
   }
@@ -70,5 +60,7 @@ export class MockElmWorkspace implements IElmWorkspace {
       tree,
       true,
     );
+
+    this.imports.updateImports(URI.file(baseUri + fileName).toString(), tree);
   }
 }

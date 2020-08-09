@@ -37,12 +37,13 @@ export class ElmWorkspace implements IElmWorkspace {
     writeable: boolean;
     maintainerAndPackageName?: string;
   }[] = [];
-  private forest: Forest = new Forest();
+  private forest: Forest;
   private imports: Imports;
   private connection: IConnection;
   private settings: Settings;
 
   constructor(private rootPath: URI) {
+    this.forest = container.resolve("Forest");
     this.settings = container.resolve("Settings");
     this.connection = container.resolve("Connection");
     this.connection.console.info(
@@ -348,6 +349,7 @@ export class ElmWorkspace implements IElmWorkspace {
         true,
         filePath.isExposed,
         filePath.homeFolders,
+        this.imports,
         filePath.maintainerAndPackageName,
       );
     } catch (error) {

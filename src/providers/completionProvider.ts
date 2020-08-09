@@ -505,104 +505,102 @@ export class CompletionProvider {
   ): CompletionItem[] {
     const completions: CompletionItem[] = [];
 
-    if (imports.imports && imports.imports[uri]) {
-      const importList = imports.imports[uri];
-      importList.forEach((element) => {
-        const markdownDocumentation = HintHelper.createHint(element.node);
-        let sortPrefix = "d";
-        if (element.maintainerAndPackageName) {
-          const matchedRanking: string = (RANKING_LIST as {
-            [index: string]: string;
-          })[element.maintainerAndPackageName];
+    const importList = imports.getImportListByUri(uri);
+    importList?.forEach((element) => {
+      const markdownDocumentation = HintHelper.createHint(element.node);
+      let sortPrefix = "d";
+      if (element.maintainerAndPackageName) {
+        const matchedRanking: string = (RANKING_LIST as {
+          [index: string]: string;
+        })[element.maintainerAndPackageName];
 
-          if (matchedRanking) {
-            sortPrefix = `e${matchedRanking}`;
-          }
+        if (matchedRanking) {
+          sortPrefix = `e${matchedRanking}`;
         }
+      }
 
-        const label = element.alias;
-        let filterText = label;
+      const label = element.alias;
+      let filterText = label;
 
-        const dotIndex = label.lastIndexOf(".");
-        const valuePart = label.slice(dotIndex + 1);
+      const dotIndex = label.lastIndexOf(".");
+      const valuePart = label.slice(dotIndex + 1);
 
-        const importNode = TreeUtils.findImportClauseByName(
-          tree,
-          element.fromModuleName,
-        );
+      const importNode = TreeUtils.findImportClauseByName(
+        tree,
+        element.fromModuleName,
+      );
 
-        // Check if a value is already imported for this module using the exposing list
-        // In this case, we want to prefex the unqualified value since they are using the import exposing list
-        const valuesAlreadyExposed =
-          importNode &&
-          !!TreeUtils.findFirstNamedChildOfType("exposing_list", importNode);
+      // Check if a value is already imported for this module using the exposing list
+      // In this case, we want to prefex the unqualified value since they are using the import exposing list
+      const valuesAlreadyExposed =
+        importNode &&
+        !!TreeUtils.findFirstNamedChildOfType("exposing_list", importNode);
 
-        // Try to determine if just the value is being typed
-        if (
-          !valuesAlreadyExposed &&
-          valuePart.toLowerCase().startsWith(inputText.toLowerCase())
-        ) {
-          filterText = valuePart;
-        }
+      // Try to determine if just the value is being typed
+      if (
+        !valuesAlreadyExposed &&
+        valuePart.toLowerCase().startsWith(inputText.toLowerCase())
+      ) {
+        filterText = valuePart;
+      }
 
-        switch (element.type) {
-          case "Function":
-            completions.push(
-              this.createFunctionCompletion({
-                markdownDocumentation,
-                label,
-                range,
-                sortPrefix,
-                filterText,
-              }),
-            );
-            break;
-          case "UnionConstructor":
-            completions.push(
-              this.createUnionConstructorCompletion({
-                label,
-                range,
-                sortPrefix,
-                filterText,
-              }),
-            );
-            break;
-          case "Operator":
-            completions.push(
-              this.createOperatorCompletion({
-                markdownDocumentation,
-                label,
-                range,
-                sortPrefix,
-              }),
-            );
-            break;
-          case "Type":
-            completions.push(
-              this.createTypeCompletion({
-                markdownDocumentation,
-                label,
-                range,
-                sortPrefix,
-                filterText,
-              }),
-            );
-            break;
-          case "TypeAlias":
-            completions.push(
-              this.createTypeAliasCompletion({
-                markdownDocumentation,
-                label,
-                range,
-                sortPrefix,
-                filterText,
-              }),
-            );
-            break;
-          // Do not handle operators, they are not valid if prefixed
-        }
-      });
-    }
+      switch (element.type) {
+        case "Function":
+          completions.push(
+            this.createFunctionCompletion({
+              markdownDocumentation,
+              label,
+              range,
+              sortPrefix,
+              filterText,
+            }),
+          );
+          break;
+        case "UnionConstructor":
+          completions.push(
+            this.createUnionConstructorCompletion({
+              label,
+              range,
+              sortPrefix,
+              filterText,
+            }),
+          );
+          break;
+        case "Operator":
+          completions.push(
+            this.createOperatorCompletion({
+              markdownDocumentation,
+              label,
+              range,
+              sortPrefix,
+            }),
+          );
+          break;
+        case "Type":
+          completions.push(
+            this.createTypeCompletion({
+              markdownDocumentation,
+              label,
+              range,
+              sortPrefix,
+              filterText,
+            }),
+          );
+          break;
+        case "TypeAlias":
+          completions.push(
+            this.createTypeAliasCompletion({
+              markdownDocumentation,
+              label,
+              range,
+              sortPrefix,
+              filterText,
+            }),
+          );
+          break;
+        // Do not handle operators, they are not valid if prefixed
+      }
+    });
 
     completions.push(
       ...getEmptyTypes().map((a) =>

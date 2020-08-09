@@ -3,6 +3,7 @@ import { container } from "tsyringe";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "./elmWorkspace";
+import { IImports } from "./imports";
 import { ElmWorkspaceMatcher } from "./util/elmWorkspaceMatcher";
 import { IExposing, TreeUtils } from "./util/treeUtils";
 
@@ -36,6 +37,15 @@ export interface IForest {
     tree: Tree,
     isExposed: boolean,
     packageName?: string,
+  ): void;
+  setEmptyTreeNode(
+    uri: string,
+    writeable: boolean,
+    referenced: boolean,
+    isExposed: boolean,
+    homeFolder: string[],
+    imports: IImports,
+    maintainerAndPackageName?: string,
   ): void;
   removeTree(uri: string): void;
   upsertTreeAndImports(
@@ -156,6 +166,7 @@ export class Forest implements IForest {
     referenced: boolean,
     isExposed: boolean,
     homeFolder: string[],
+    imports: IImports,
     maintainerAndPackageName?: string,
   ): void {
     const moduleName: string | undefined = this.transformUriToModuleName(
@@ -179,6 +190,8 @@ export class Forest implements IForest {
     } else {
       this.treeIndex[existingTree] = treeContainer;
     }
+
+    imports.addEmptyImport(uri);
   }
 
   private transformUriToModuleName(
@@ -222,19 +235,17 @@ export class Forest implements IForest {
       this.setTree(uri, true, true, tree, true);
       // Figure out if we have files importing our changed file - update them
       const urisToRefresh = [];
-      for (const uri in imports.imports) {
-        if (imports.imports.hasOwnProperty(uri)) {
-          const fileImports = imports.imports[uri];
-          if (fileImports.some((a) => a.fromUri === uri)) {
-            urisToRefresh.push(uri);
-          }
+      for (const uri of imports.getUrisOfAllImports()) {
+        const fileImports = imports.getImportListByUri(uri);
+        if (fileImports?.some((a) => a.fromUri === uri)) {
+          urisToRefresh.push(uri);
         }
       }
       urisToRefresh.forEach((a) => {
-        imports.updateImports(a, this.getTree(a)!, this);
+        imports.updateImports(a, this.getTree(a)!);
       });
       // Refresh imports of the calling file
-      imports.updateImports(uri, tree, this);
+      imports.updateImports(uri, tree);
     }
   }
 }
