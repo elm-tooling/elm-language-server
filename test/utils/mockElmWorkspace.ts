@@ -9,7 +9,7 @@ import { container } from "tsyringe";
 export const baseUri = Path.join(__dirname, "../sources/src/");
 
 export class MockElmWorkspace implements IElmWorkspace {
-  private imports!: Imports;
+  private imports: Imports;
   private forest: IForest = new Forest();
   private parser: Parser;
 

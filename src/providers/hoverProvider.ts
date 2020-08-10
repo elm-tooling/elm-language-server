@@ -12,6 +12,8 @@ import { getEmptyTypes } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
 import { NodeType, TreeUtils } from "../util/treeUtils";
+import { ITreeContainer } from "src/forest";
+import { typeToString, findType } from "../util/types/typeInference";
 
 type HoverResult = Hover | null | undefined;
 
@@ -34,36 +36,52 @@ export class HoverProvider {
     this.connection.console.info(`A hover was requested`);
 
     const forest = elmWorkspace.getForest();
-    const tree: Tree | undefined = forest.getTree(params.textDocument.uri);
+    const tree: ITreeContainer | undefined = forest.getByUri(
+      params.textDocument.uri,
+    );
 
     if (tree) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        tree.rootNode,
+        tree.tree.rootNode,
         params.position,
       );
 
-      const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
-        nodeAtPosition,
-        params.textDocument.uri,
-        tree,
-        elmWorkspace.getImports(),
-      );
-
-      if (definitionNode) {
-        return this.createMarkdownHoverFromDefinition(definitionNode);
-      } else {
-        const specialMatch = getEmptyTypes().find(
-          (a) => a.name === nodeAtPosition.text,
+      try {
+        const typeString: string = typeToString(
+          findType(nodeAtPosition, params.textDocument.uri, elmWorkspace),
         );
-        if (specialMatch) {
+
+        if (typeString && typeString !== "Unknown") {
           return {
-            contents: {
-              kind: MarkupKind.Markdown,
-              value: specialMatch.markdown,
-            },
+            contents: typeString,
           };
         }
+      } catch (e) {
+        console.log(e);
       }
+
+      // const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
+      //   nodeAtPosition,
+      //   params.textDocument.uri,
+      //   tree.tree,
+      //   elmWorkspace.getImports(),
+      // );
+
+      // if (definitionNode) {
+      //   return this.createMarkdownHoverFromDefinition(definitionNode);
+      // } else {
+      //   const specialMatch = getEmptyTypes().find(
+      //     (a) => a.name === nodeAtPosition.text,
+      //   );
+      //   if (specialMatch) {
+      //     return {
+      //       contents: {
+      //         kind: MarkupKind.Markdown,
+      //         value: specialMatch.markdown,
+      //       },
+      //     };
+      //   }
+      // }
     }
   };
 

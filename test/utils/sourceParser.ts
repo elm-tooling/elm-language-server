@@ -142,7 +142,37 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
   }
 }
 
-function getSourceFiles(source: string): { [K: string]: string } {
+export function getTargetPositionFromSource(
+  source: string,
+): { position: Position; sources: { [K: string]: string } } | undefined {
+  const sources = getSourceFiles(source);
+
+  console.log(sources);
+
+  let position: Position | undefined;
+
+  for (const fileName in sources) {
+    sources[fileName].split("\n").forEach((s, line) => {
+      const invokeCharacter = s.search(/--(\^)/);
+
+      if (invokeCharacter >= 0) {
+        position = {
+          line: line - 1,
+          character: invokeCharacter + 2,
+        };
+      }
+    });
+  }
+
+  if (position) {
+    return {
+      position,
+      sources,
+    };
+  }
+}
+
+export function getSourceFiles(source: string): { [K: string]: string } {
   const sources: { [K: string]: string } = {};
   let currentFile = "";
   const regex = /--@ ([a-zA-Z/]+.elm)/;

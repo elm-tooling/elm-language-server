@@ -9,6 +9,8 @@ import { NoWorkspaceContainsError } from "../../util/noWorkspaceContainsError";
 import { ElmAnalyseTrigger } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
+import { TypeInferenceDiagnostics } from "./typeInferenceDiagnostics";
+import { ASTProvider } from "../astProvider";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -29,11 +31,13 @@ export interface IElmIssue {
 export class DiagnosticsProvider {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
   private elmAnalyseDiagnostics: ElmAnalyseDiagnostics | null = null;
-  private elmWorkspaceMatcher: ElmWorkspaceMatcher<TextDocument>;
+  private typeInferenceDiagnostics: TypeInferenceDiagnostics;
+  private elmWorkspaceMatcher: ElmWorkspaceMatcher<{ uri: string }>;
   private currentDiagnostics: {
     elmMake: Map<string, Diagnostic[]>;
     elmAnalyse: Map<string, Diagnostic[]>;
     elmTest: Map<string, Diagnostic[]>;
+    typeInference: Map<string, Diagnostic[]>;
   };
   private events: TextDocumentEvents;
   private connection: IConnection;
@@ -51,16 +55,24 @@ export class DiagnosticsProvider {
     this.elmMakeDiagnostics = container.resolve<ElmMakeDiagnostics>(
       ElmMakeDiagnostics,
     );
+    this.typeInferenceDiagnostics = container.resolve<TypeInferenceDiagnostics>(
+      TypeInferenceDiagnostics,
+    );
+    this.settings = container.resolve("Settings");
     this.connection = container.resolve<IConnection>("Connection");
     this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((doc) =>
       URI.parse(doc.uri),
     );
+
+    const astProvider = container.resolve<ASTProvider>(ASTProvider);
+
     this.currentDiagnostics = {
-      elmAnalyse: new Map<string, Diagnostic[]>(),
-      elmMake: new Map<string, Diagnostic[]>(),
-      elmTest: new Map<string, Diagnostic[]>(),
+      elmAnalyse: new Map(),
+      elmMake: new Map(),
+      elmTest: new Map(),
+      typeInference: new Map(),
     };
     // register onChange listener if settings are not on-save only
     void this.settings.getClientSettings().then(({ elmAnalyseTrigger }) => {
@@ -78,6 +90,7 @@ export class DiagnosticsProvider {
           this.currentDiagnostics.elmAnalyse.delete(uri);
           this.currentDiagnostics.elmMake.delete(uri);
           this.currentDiagnostics.elmTest.delete(uri);
+          this.currentDiagnostics.typeInference.delete(uri);
         });
         this.sendDiagnostics();
       });
@@ -92,6 +105,28 @@ export class DiagnosticsProvider {
           this.getDiagnostics(d, false, elmAnalyseTrigger),
         );
       }
+
+      astProvider.onTreeChange(({ uri, tree }) => {
+        let workspace;
+        try {
+          workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor({ uri });
+        } catch (error) {
+          if (error instanceof NoWorkspaceContainsError) {
+            this.connection.console.info(error.message);
+            return; // ignore file that doesn't correspond to a workspace
+          }
+
+          throw error;
+        }
+
+        this.currentDiagnostics.typeInference = this.typeInferenceDiagnostics.createDiagnostics(
+          tree,
+          uri,
+          workspace,
+        );
+
+        this.sendDiagnostics();
+      });
     });
   }
 
@@ -110,6 +145,13 @@ export class DiagnosticsProvider {
     }
 
     for (const [uri, diagnostics] of this.currentDiagnostics.elmTest) {
+      const currentDiagnostics = allDiagnostics.get(uri) ?? [];
+      if (currentDiagnostics.length === 0) {
+        allDiagnostics.set(uri, diagnostics);
+      }
+    }
+
+    for (const [uri, diagnostics] of this.currentDiagnostics.typeInference) {
       const currentDiagnostics = allDiagnostics.get(uri) ?? [];
       if (currentDiagnostics.length === 0) {
         allDiagnostics.set(uri, diagnostics);
@@ -140,8 +182,9 @@ export class DiagnosticsProvider {
     );
 
     const uri = URI.parse(document.uri);
+    let workspace;
     try {
-      this.elmWorkspaceMatcher.getElmWorkspaceFor(document);
+      workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(document);
     } catch (error) {
       if (error instanceof NoWorkspaceContainsError) {
         this.connection.console.info(error.message);

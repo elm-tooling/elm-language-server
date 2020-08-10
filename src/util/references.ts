@@ -443,6 +443,25 @@ export class References {
     return references;
   }
 
+  public static findOperatorInfixDeclaration(
+    node: SyntaxNode,
+  ): SyntaxNode | undefined {
+    const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(node);
+
+    if (functionNameNode) {
+      const infixRef = this.findFunctionCalls(
+        node.tree.rootNode,
+        functionNameNode.text,
+      )?.find(
+        (ref) => ref.parent?.parent?.parent?.type === "infix_declaration",
+      );
+
+      if (infixRef?.parent?.parent?.parent) {
+        return infixRef.parent.parent.parent;
+      }
+    }
+  }
+
   private static findFunctionCalls(
     node: SyntaxNode,
     functionName: string,

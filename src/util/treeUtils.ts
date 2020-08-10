@@ -31,7 +31,7 @@ export interface IExposing {
   }[];
 }
 
-function flatMap<T, U>(
+export function flatMap<T, U>(
   array: T[],
   callback: (value: T, index: number, array: T[]) => U[],
 ): U[] {
@@ -926,6 +926,21 @@ export class TreeUtils {
             uri: definitionFromOtherFile.fromUri,
           };
         }
+
+        definitionFromOtherFile = this.findImportFromImportList(
+          uri,
+          TreeUtils.findImportNameNode(tree, upperCaseQid.text)?.text ??
+            upperCaseQid.text,
+          "Module",
+          imports,
+        );
+        if (definitionFromOtherFile) {
+          return {
+            node: definitionFromOtherFile.node,
+            nodeType: "Module",
+            uri: definitionFromOtherFile.fromUri,
+          };
+        }
       }
       if (definitionNode) {
         return {
@@ -1201,7 +1216,8 @@ export class TreeUtils {
       TreeUtils.findParentOfType("type_alias_declaration", nodeAtPosition);
 
     if (parentType?.type === "type_annotation") {
-      const ancestorDeclarations = TreeUtils.getAllAncestorValueDeclarations(
+      const ancestorDeclarations = TreeUtils.getAllAncestorsOfType(
+        "value_declaration",
         parentType,
       );
 
@@ -1984,16 +2000,17 @@ export class TreeUtils {
   }
 
   /**
-   * This gets a list of all ancestor value declarations
+   * This gets a list of all ancestors of a type
    * in order from the closest declaration up to the top level declaration
    */
-  public static getAllAncestorValueDeclarations(
+  public static getAllAncestorsOfType(
+    type: string,
     node: SyntaxNode,
   ): SyntaxNode[] {
     const declarations = [];
 
     while (node.type !== "file") {
-      if (node.type === "value_declaration") {
+      if (node.type === type) {
         declarations.push(node);
       }
 
