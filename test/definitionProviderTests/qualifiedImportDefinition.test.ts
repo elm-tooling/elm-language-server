@@ -1,4 +1,10 @@
+import { container } from "tsyringe";
+import { Forest } from "../../src/forest";
 import { DefinitionProviderTestBase } from "./definitionProviderTestBase";
+
+afterEach(() => {
+  container.registerSingleton("Forest", Forest);
+});
 
 describe("qualifiedImportDefinition", () => {
   const testBase = new DefinitionProviderTestBase();

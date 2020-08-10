@@ -37,7 +37,7 @@ container.register<IConnection>("Connection", {
 container.registerSingleton<Parser>("Parser", Parser);
 
 container.registerSingleton("DocumentEvents", DocumentEvents);
-container.registerSingleton("Forest", Forest);
+container.registerSingleton("Forest", Forest); // TODO Is this correct, doesn't every elmWorkspace have it's own forest?
 container.register(TextDocumentEvents, {
   useValue: new TextDocumentEvents(),
 });

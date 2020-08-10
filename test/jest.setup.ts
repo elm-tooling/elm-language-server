@@ -6,4 +6,4 @@ import { Forest } from "../src/forest";
 
 container.register("Connection", { useValue: mockDeep<IConnection>() });
 container.register("ElmWorkspaces", { useValue: [] });
-container.register("Forest", Forest);
+container.registerSingleton("Forest", Forest);

@@ -1,3 +1,4 @@
+import { container } from "tsyringe";
 import { isDeepStrictEqual } from "util";
 import {
   CompletionContext,
@@ -8,6 +9,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { IElmWorkspace } from "../src/elmWorkspace";
+import { Forest } from "../src/forest";
 import { CompletionProvider, CompletionResult } from "../src/providers";
 import { baseUri } from "./utils/mockElmWorkspace";
 import { getCaretPositionFromSource } from "./utils/sourceParser";
@@ -24,6 +26,10 @@ class MockCompletionProvider extends CompletionProvider {
 
 type exactCompletions = "exactMatch" | "partialMatch";
 type dotCompletions = "triggeredByDot" | "normal";
+
+afterEach(() => {
+  container.registerSingleton("Forest", Forest);
+});
 
 describe("CompletionProvider", () => {
   const completionProvider = new MockCompletionProvider();

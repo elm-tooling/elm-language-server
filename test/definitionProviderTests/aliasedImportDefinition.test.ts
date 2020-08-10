@@ -1,4 +1,10 @@
+import { container } from "tsyringe";
+import { Forest } from "../../src/forest";
 import { DefinitionProviderTestBase } from "./definitionProviderTestBase";
+
+beforeEach(() => {
+  container.registerSingleton("Forest", Forest);
+});
 
 describe("aliasedImportDefinition", () => {
   const testBase = new DefinitionProviderTestBase();
@@ -82,7 +88,7 @@ bar = 42
     await testBase.testDefinition(source);
   });
 
-  it(`test an import with an alias still provides a ref for the original module name`, async () => {
+  it.only(`test an import with an alias still provides a ref for the original module name`, async () => {
     const source = `
 --@ main.elm
 import Foo as F

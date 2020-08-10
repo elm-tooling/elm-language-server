@@ -43,7 +43,7 @@ export class Imports implements IImports {
       importList = this.imports[uri];
     }
 
-    if (!importList) {
+    if (!importList || importList.length === 0) {
       this.updateImports(uri, this.forest.getTree(uri)!);
     }
 
