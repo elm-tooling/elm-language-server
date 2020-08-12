@@ -65,6 +65,30 @@ export class DefinitionProviderTestBase {
           expect((definition as Location).uri).toContain(
             determinedTestType.targetFile,
           );
+
+          if (determinedTestType.targetPosition) {
+            const rootNode = this.treeParser
+              .getWorkspace(determinedTestType.sources)
+              .getForest()
+              .treeIndex.find((a) => a.uri === targetUri)!.tree.rootNode;
+            const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
+              rootNode,
+              determinedTestType.targetPosition,
+            );
+
+            expect((definition as Location).range).toEqual(
+              expect.objectContaining({
+                start: {
+                  line: determinedTestType.targetPosition.line,
+                  character: nodeAtPosition.startPosition.column,
+                },
+                end: {
+                  line: expect.any(Number),
+                  character: expect.any(Number),
+                },
+              }),
+            );
+          }
         }
         break;
 

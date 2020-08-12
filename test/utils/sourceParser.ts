@@ -59,6 +59,7 @@ interface IResolvesToDifferentFileTest {
   targetFile: string;
   sources: { [K: string]: string };
   fileWithTarget: string;
+  targetPosition?: Position;
 }
 
 export function getInvokeAndTargetPositionFromSource(source: string): TestType {
@@ -125,6 +126,7 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
       sources,
       targetFile,
       fileWithTarget,
+      targetPosition,
     };
   } else {
     if (!invokePosition || !targetPosition) {

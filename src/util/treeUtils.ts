@@ -856,19 +856,33 @@ export class TreeUtils {
 
       let definitionFromOtherFile;
       if (!definitionNode) {
-        definitionFromOtherFile = this.findImportFromImportList(
-          uri,
-          TreeUtils.findImportNameNode(tree, upperCaseQid.text)?.text ??
-            upperCaseQid.text,
-          "Module",
-          imports,
-        );
-        if (definitionFromOtherFile) {
-          return {
-            node: definitionFromOtherFile.node,
-            nodeType: "Module",
-            uri: definitionFromOtherFile.fromUri,
-          };
+        // Make sure the next node is a dot, or else it isn't a Module
+        if (TreeUtils.nextNode(nodeAtPosition)?.type === "dot") {
+          const endPos =
+            upperCaseQid.text.indexOf(nodeAtPosition.text) +
+            nodeAtPosition.text.length;
+
+          const moduleNameOrAlias = nodeAtPosition.parent.text.substring(
+            0,
+            endPos,
+          );
+          const moduleName =
+            TreeUtils.findImportNameNode(tree, moduleNameOrAlias)?.text ??
+            moduleNameOrAlias;
+
+          definitionFromOtherFile = this.findImportFromImportList(
+            uri,
+            moduleName,
+            "Module",
+            imports,
+          );
+          if (definitionFromOtherFile) {
+            return {
+              node: definitionFromOtherFile.node,
+              nodeType: "Module",
+              uri: definitionFromOtherFile.fromUri,
+            };
+          }
         }
 
         definitionFromOtherFile = this.findImportFromImportList(
@@ -1367,7 +1381,7 @@ export class TreeUtils {
     tree: Tree,
     moduleName: string,
   ): SyntaxNode | undefined {
-    const allImports = this.findAllImportNameNodes(tree);
+    const allImports = this.findAllImportClauseNodes(tree);
     if (allImports) {
       return allImports.find(
         (a) =>
@@ -1382,7 +1396,7 @@ export class TreeUtils {
     forest: IForest,
     tree: Tree,
   ): { module: string; value: string }[] {
-    const allImports = this.findAllImportNameNodes(tree);
+    const allImports = TreeUtils.findAllImportClauseNodes(tree);
 
     const allImportedValues: { module: string; value: string }[] = [];
 
@@ -1441,7 +1455,7 @@ export class TreeUtils {
     tree: Tree,
     moduleName: string,
   ): SyntaxNode | undefined {
-    const allImports = this.findAllImportNameNodes(tree);
+    const allImports = this.findAllImportClauseNodes(tree);
     if (allImports) {
       const match = allImports.find(
         (a) =>
@@ -1933,7 +1947,7 @@ export class TreeUtils {
   }
 
   public static getLastImportNode(tree: Tree): SyntaxNode | undefined {
-    const allImportNodes = this.findAllImportNameNodes(tree);
+    const allImportNodes = this.findAllImportClauseNodes(tree);
     if (allImportNodes?.length) {
       return allImportNodes[allImportNodes.length - 1];
     }
@@ -2029,7 +2043,7 @@ export class TreeUtils {
       );
   }
 
-  private static findAllImportNameNodes(tree: Tree): SyntaxNode[] | undefined {
+  public static findAllImportClauseNodes(tree: Tree): SyntaxNode[] | undefined {
     const result = tree.rootNode.children.filter(
       (a) => a.type === "import_clause",
     );
@@ -2049,5 +2063,23 @@ export class TreeUtils {
       node.parent?.firstNamedChild?.type === "import" ||
       node.parent?.parent?.firstNamedChild?.type === "import"
     );
+  }
+
+  public static nextNode(node: SyntaxNode): SyntaxNode | undefined {
+    // Move up until we have a sibling
+    while (!node.nextNamedSibling && node.parent) {
+      node = node.parent;
+    }
+
+    if (node.nextNamedSibling) {
+      node = node.nextNamedSibling;
+
+      // Move down the leftmost subtree
+      while (node.firstNamedChild) {
+        node = node.firstNamedChild;
+      }
+
+      return node;
+    }
   }
 }
