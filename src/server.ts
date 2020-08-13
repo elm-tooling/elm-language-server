@@ -132,6 +132,10 @@ export class Server implements ILanguageServer {
 
     const clientSettings = await settings.getClientSettings();
 
+    container.register("ClientSettings", {
+      useValue: clientSettings,
+    });
+
     container.register(ElmAnalyseDiagnostics, {
       useValue:
         clientSettings.elmAnalyseTrigger !== "never"

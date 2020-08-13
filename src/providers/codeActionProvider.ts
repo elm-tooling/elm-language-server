@@ -12,7 +12,7 @@ import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
-import { Settings } from "../util/settings";
+import { IClientSettings, Settings } from "../util/settings";
 import { TreeUtils } from "../util/treeUtils";
 import { ElmAnalyseDiagnostics } from "./diagnostics/elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
@@ -22,15 +22,19 @@ import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 export class CodeActionProvider {
   private connection: IConnection;
   private settings: Settings;
-  private elmAnalyse: ElmAnalyseDiagnostics | null;
+  private elmAnalyse: ElmAnalyseDiagnostics | null = null;
   private elmMake: ElmMakeDiagnostics;
+  private clientSettings: IClientSettings;
 
   constructor() {
-    this.elmAnalyse = container.resolve<ElmAnalyseDiagnostics | null>(
-      ElmAnalyseDiagnostics,
-    );
-    this.elmMake = container.resolve<ElmMakeDiagnostics>(ElmMakeDiagnostics);
     this.settings = container.resolve("Settings");
+    this.clientSettings = container.resolve("ClientSettings");
+    if (this.clientSettings.elmAnalyseTrigger !== "never") {
+      this.elmAnalyse = container.resolve<ElmAnalyseDiagnostics | null>(
+        ElmAnalyseDiagnostics,
+      );
+    }
+    this.elmMake = container.resolve<ElmMakeDiagnostics>(ElmMakeDiagnostics);
     this.connection = container.resolve<IConnection>("Connection");
 
     this.onCodeAction = this.onCodeAction.bind(this);

@@ -1,12 +1,13 @@
+import { IClientSettings, Settings } from "src/util/settings";
 import { container, injectable } from "tsyringe";
 import { Diagnostic, FileChangeType, IConnection } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
+import { ElmAnalyseDiagnostics } from "..";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { NoWorkspaceContainsError } from "../../util/noWorkspaceContainsError";
-import { ElmAnalyseTrigger, Settings } from "../../util/settings";
+import { ElmAnalyseTrigger } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
-import { ElmAnalyseDiagnostics } from "./elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 
 export interface IElmIssueRegion {
@@ -27,7 +28,7 @@ export interface IElmIssue {
 @injectable()
 export class DiagnosticsProvider {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
-  private elmAnalyseDiagnostics: ElmAnalyseDiagnostics | null;
+  private elmAnalyseDiagnostics: ElmAnalyseDiagnostics | null = null;
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<TextDocument>;
   private currentDiagnostics: {
     elmMake: Map<string, Diagnostic[]>;
@@ -37,28 +38,30 @@ export class DiagnosticsProvider {
   private events: TextDocumentEvents;
   private connection: IConnection;
   private settings: Settings;
+  private clientSettings: IClientSettings;
 
   constructor() {
-    this.elmAnalyseDiagnostics = container.resolve<ElmAnalyseDiagnostics | null>(
-      ElmAnalyseDiagnostics,
-    );
+    this.settings = container.resolve("Settings");
+    this.clientSettings = container.resolve("ClientSettings");
+    if (this.clientSettings.elmAnalyseTrigger !== "never") {
+      this.elmAnalyseDiagnostics = container.resolve<ElmAnalyseDiagnostics | null>(
+        ElmAnalyseDiagnostics,
+      );
+    }
     this.elmMakeDiagnostics = container.resolve<ElmMakeDiagnostics>(
       ElmMakeDiagnostics,
     );
-    this.settings = container.resolve("Settings");
     this.connection = container.resolve<IConnection>("Connection");
     this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((doc) =>
       URI.parse(doc.uri),
     );
-
     this.currentDiagnostics = {
-      elmAnalyse: new Map(),
-      elmMake: new Map(),
-      elmTest: new Map(),
+      elmAnalyse: new Map<string, Diagnostic[]>(),
+      elmMake: new Map<string, Diagnostic[]>(),
+      elmTest: new Map<string, Diagnostic[]>(),
     };
-
     // register onChange listener if settings are not on-save only
     void this.settings.getClientSettings().then(({ elmAnalyseTrigger }) => {
       this.events.on("open", (d) =>
@@ -67,12 +70,10 @@ export class DiagnosticsProvider {
       this.events.on("save", (d) =>
         this.getDiagnostics(d, true, elmAnalyseTrigger),
       );
-
       this.connection.onDidChangeWatchedFiles((event) => {
         const newDeleteEvents = event.changes
           .filter((a) => a.type === FileChangeType.Deleted)
           .map((a) => a.uri);
-
         newDeleteEvents.forEach((uri) => {
           this.currentDiagnostics.elmAnalyse.delete(uri);
           this.currentDiagnostics.elmMake.delete(uri);
@@ -80,7 +81,6 @@ export class DiagnosticsProvider {
         });
         this.sendDiagnostics();
       });
-
       if (this.elmAnalyseDiagnostics) {
         this.elmAnalyseDiagnostics.on(
           "new-diagnostics",
