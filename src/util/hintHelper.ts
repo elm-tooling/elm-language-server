@@ -101,6 +101,13 @@ export class HintHelper {
         } else if (declaration.previousNamedSibling.type === "block_comment") {
           comment = declaration.previousNamedSibling.text;
         }
+
+        if (
+          declaration.type === "value_declaration" &&
+          declaration.firstNamedChild?.type === "function_declaration_left"
+        ) {
+          code = declaration.firstNamedChild.text;
+        }
       }
       return this.formatHint(annotation, comment, code);
     }
