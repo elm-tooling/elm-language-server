@@ -52,6 +52,7 @@ export class DocumentSymbolProvider {
         traverse(childNode);
       }
     };
+
     if (tree) {
       traverse(tree.rootNode);
     }

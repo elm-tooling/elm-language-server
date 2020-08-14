@@ -135,12 +135,12 @@ export class Server implements ILanguageServer {
 
     new ASTProvider();
 
+    new DocumentSymbolProvider();
     new FoldingRangeProvider();
     new CompletionProvider();
     new HoverProvider();
     new DefinitionProvider();
     new ReferencesProvider();
-    new DocumentSymbolProvider();
     new WorkspaceSymbolProvider();
     new CodeLensProvider();
     new SelectionRangeProvider();

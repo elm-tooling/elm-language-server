@@ -70,19 +70,22 @@ export class Forest implements IForest {
   public getTree(uri: string): Tree | undefined {
     const result = this.treeIndex.find((tree) => tree.uri === uri);
 
-    this.fillTreeIfNeeded(result, uri);
+    const tree = this.fillTreeIfNeeded(result, uri);
 
-    return result?.parsed?.tree;
+    return tree ?? result?.parsed?.tree;
   }
 
-  private fillTreeIfNeeded(result?: ITreeContainer, uri?: string): void {
+  private fillTreeIfNeeded(
+    result?: ITreeContainer,
+    uri?: string,
+  ): Tree | undefined {
     if (uri && result && !result.parsed) {
       const upsertTreeAndImports = new ElmWorkspaceMatcher((uri: string) =>
         URI.parse(uri),
-      ).handlerForWorkspace((uri: string, elmWorkspace: IElmWorkspace): void =>
-        this.upsertTreeAndImports(elmWorkspace, null, uri),
-      );
-      upsertTreeAndImports(uri);
+      ).handlerForWorkspace((uri: string, elmWorkspace: IElmWorkspace):
+        | Tree
+        | undefined => this.upsertTreeAndImports(elmWorkspace, null, uri));
+      return upsertTreeAndImports(uri);
     }
   }
 
@@ -101,9 +104,9 @@ export class Forest implements IForest {
       (tree) => tree.moduleName === moduleName,
     );
 
-    this.fillTreeIfNeeded(result, result?.uri);
+    const tree = this.fillTreeIfNeeded(result, result?.uri);
 
-    return result?.parsed?.tree;
+    return tree ?? result?.parsed?.tree;
   }
 
   public getByModuleName(moduleName: string): ITreeContainer | undefined {
@@ -221,7 +224,7 @@ export class Forest implements IForest {
     elmWorkspace: IElmWorkspace,
     fileContent: string | null,
     uri: string,
-  ): void {
+  ): Tree | undefined {
     const imports = elmWorkspace.getImports();
     let tree: Tree | undefined = undefined;
     if (fileContent != null) {
@@ -246,6 +249,8 @@ export class Forest implements IForest {
       });
       // Refresh imports of the calling file
       imports.updateImports(uri, tree);
+
+      return tree;
     }
   }
 }
