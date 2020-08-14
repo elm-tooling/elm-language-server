@@ -25,7 +25,7 @@ export interface ITreeContainer {
 export interface IForest {
   treeIndex: ITreeContainer[];
   existsTree(uri: string): boolean;
-  getTree(uri: string): Tree | undefined;
+  getTree(uri: string, ifWritable?: boolean): Tree | undefined;
   getExposingByModuleName(moduleName: string): IExposing[] | undefined;
   getTreeByModuleName(moduleName: string): Tree | undefined;
   getByModuleName(moduleName: string): ITreeContainer | undefined;
@@ -53,6 +53,7 @@ export interface IForest {
     fileContent: string | null,
     uri: string,
   ): void;
+  getModuleNameByUri(uri: string): string | undefined;
 }
 
 export class Forest implements IForest {
@@ -67,8 +68,12 @@ export class Forest implements IForest {
     return this.treeIndex.some((tree) => tree.uri === uri);
   }
 
-  public getTree(uri: string): Tree | undefined {
+  public getTree(uri: string, ifWritable?: boolean): Tree | undefined {
     const result = this.treeIndex.find((tree) => tree.uri === uri);
+
+    if (ifWritable && !result?.writeable) {
+      return;
+    }
 
     const tree = this.fillTreeIfNeeded(result, uri);
 
@@ -125,6 +130,12 @@ export class Forest implements IForest {
     this.fillTreeIfNeeded(result, result?.uri);
 
     return result;
+  }
+
+  public getModuleNameByUri(uri: string): string | undefined {
+    const result = this.treeIndex.find((tree) => tree.uri === uri);
+
+    return result?.moduleName;
   }
 
   public setTree(

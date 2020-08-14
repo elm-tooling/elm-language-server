@@ -11,7 +11,8 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IForest, ITreeContainer } from "../../forest";
+import { Tree } from "web-tree-sitter";
+import { IForest } from "../../forest";
 import { IImports } from "../../imports";
 import * as utils from "../../util/elmUtils";
 import { execCmd } from "../../util/elmUtils";
@@ -109,12 +110,12 @@ export class ElmMakeDiagnostics {
 
     // Get all possible imports from the diagnostics for import all
     diagnostics.forEach((innerDiagnostics, uri) => {
-      const sourceTree = forest.getByUri(uri);
+      const sourceTree = forest.getTree(uri);
       this.neededImports.set(uri, []);
 
       innerDiagnostics.forEach((diagnostic) => {
         if (diagnostic.message.startsWith(NAMING_ERROR)) {
-          const valueNode = sourceTree?.parsed?.tree.rootNode.namedDescendantForPosition(
+          const valueNode = sourceTree?.rootNode.namedDescendantForPosition(
             {
               column: diagnostic.range.start.character,
               row: diagnostic.range.start.line,
@@ -187,11 +188,11 @@ export class ElmMakeDiagnostics {
       .getElmWorkspaceFor(URI.parse(uri))
       .getImports();
 
-    const sourceTree = forest.getByUri(uri);
+    const sourceTree = forest.getTree(uri);
 
     diagnostics.forEach((diagnostic) => {
       if (diagnostic.message.startsWith(NAMING_ERROR)) {
-        const valueNode = sourceTree?.parsed?.tree.rootNode.namedDescendantForPosition(
+        const valueNode = sourceTree?.rootNode.namedDescendantForPosition(
           {
             column: diagnostic.range.start.character,
             row: diagnostic.range.start.line,
@@ -350,14 +351,14 @@ export class ElmMakeDiagnostics {
   }
 
   private addCaseQuickfixes(
-    sourceTree: ITreeContainer | undefined,
+    sourceTree: Tree | undefined,
     diagnostic: Diagnostic,
     imports: IImports,
     uri: string,
     forest: IForest,
   ): CodeAction[] {
     const result = [];
-    const valueNode = sourceTree?.parsed?.tree.rootNode.namedDescendantForPosition(
+    const valueNode = sourceTree?.rootNode.namedDescendantForPosition(
       {
         column: diagnostic.range.start.character,
         row: diagnostic.range.start.line,
@@ -380,7 +381,7 @@ export class ElmMakeDiagnostics {
 
         const typeDeclarationNode = TreeUtils.getTypeAliasOfCase(
           valueNode.namedChildren[1].firstNamedChild!.firstNamedChild!,
-          sourceTree!.parsed!.tree,
+          sourceTree!,
           imports,
           uri,
           forest,

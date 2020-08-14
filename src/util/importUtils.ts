@@ -1,8 +1,8 @@
+import escapeStringRegexp from "escape-string-regexp";
+import { SyntaxNode } from "web-tree-sitter";
 import { IForest, ITreeContainer } from "../forest";
 import RANKING_LIST from "../providers/ranking";
-import { TreeUtils, NodeType } from "./treeUtils";
-import { SyntaxNode } from "web-tree-sitter";
-import escapeStringRegexp from "escape-string-regexp";
+import { NodeType, TreeUtils } from "./treeUtils";
 
 interface IPossibleImport {
   module: string;
@@ -89,7 +89,7 @@ export class ImportUtils {
     forest: IForest,
     uri: string,
   ): IPossibleImport[] {
-    const currentModule = forest.getByUri(uri)?.moduleName;
+    const currentModule = forest.getModuleNameByUri(uri);
 
     const exposedValues: IPossibleImport[] = [];
 
