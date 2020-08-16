@@ -6,6 +6,7 @@ This is the language server implementation for the Elm programming language.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Installation](#installation)
@@ -45,6 +46,12 @@ Then, you should be able to run the language server with the following command:
 
 ```sh
 elm-language-server
+```
+
+You might need to use this, if your using powershell:
+
+```powershell
+elm-language-server.cmd
 ```
 
 Follow the instructions below to integrate the language server into your editor.
