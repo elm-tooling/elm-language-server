@@ -119,13 +119,13 @@ export class DiagnosticsProvider {
           throw error;
         }
 
-        this.currentDiagnostics.typeInference = this.typeInferenceDiagnostics.createDiagnostics(
-          tree,
-          uri,
-          workspace,
-        );
+        // this.currentDiagnostics.typeInference = this.typeInferenceDiagnostics.createDiagnostics(
+        //   tree,
+        //   uri,
+        //   workspace,
+        // );
 
-        this.sendDiagnostics();
+        // this.sendDiagnostics();
       });
     });
   }

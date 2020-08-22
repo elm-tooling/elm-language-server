@@ -481,15 +481,18 @@ export class TreeUtils {
 
     let ret;
     if (functions) {
-      ret = functions.find((elmFunction) => {
-        const declaration = TreeUtils.findFirstNamedChildOfType(
-          "function_declaration_left",
-          elmFunction,
-        );
-        if (declaration && declaration.firstNamedChild) {
-          return functionName === declaration.firstNamedChild.text;
-        }
-      });
+      ret = functions
+        .map((elmFunction) =>
+          TreeUtils.findFirstNamedChildOfType(
+            "function_declaration_left",
+            elmFunction,
+          ),
+        )
+        .find((declaration) => {
+          if (declaration && declaration.firstNamedChild) {
+            return functionName === declaration.firstNamedChild.text;
+          }
+        });
 
       if (!ret) {
         functions.forEach((elmFunction) => {
@@ -1109,9 +1112,11 @@ export class TreeUtils {
 
         let variableDef: SyntaxNode | null | undefined =
           TreeUtils.getTypeOrTypeAliasOfFunctionParameter(variableRef?.node) ??
-          TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
-            variableRef?.node,
-          );
+          (variableRef?.node.parent
+            ? TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
+                variableRef.node.parent,
+              )
+            : undefined);
 
         if (!variableDef && variableRef?.node)
           variableDef = TreeUtils.findFirstNamedChildOfType(
@@ -1319,7 +1324,7 @@ export class TreeUtils {
         .find(
           (child) =>
             child.type === "pattern" && child.text === functionParameterName,
-        );
+        )?.firstNamedChild;
 
       if (match) {
         return match;
@@ -2053,7 +2058,7 @@ export class TreeUtils {
           return {
             exposedUnionConstructors: undefined,
             name: functionNode.text!,
-            syntaxNode: functionNode.node.parent!,
+            syntaxNode: functionNode.node,
             type: "Function",
           };
         },

@@ -6,6 +6,12 @@ import {
   InferenceResult,
   notUndefined,
   Diagnostic,
+  TUnit,
+  TUnknown,
+  TFunction,
+  TTuple,
+  TUnion,
+  TList,
 } from "./typeInference";
 import {
   Expression,
@@ -13,7 +19,7 @@ import {
   ETypeDeclaration,
   ETypeRef,
   ETypeVariable,
-  mapSyntaxNodeToTypeTree,
+  mapSyntaxNodeToExpression,
   ETypeAnnotation,
   findDefinition,
   EUnionVariant,
@@ -97,7 +103,7 @@ export class TypeExpression {
       uri,
       imports,
       false,
-    ).inferUnionVariant(e);
+    ).inferUnionConstructor(e);
 
     return {
       ...inferenceResult,
@@ -115,24 +121,22 @@ export class TypeExpression {
     return this.toResult(this.typeExpressionType(typeExpr));
   }
 
-  private inferUnionVariant(unionVariant: EUnionVariant): InferenceResult {
-    const declaration = mapSyntaxNodeToTypeTree(
+  private inferUnionConstructor(unionVariant: EUnionVariant): InferenceResult {
+    const declaration = mapSyntaxNodeToExpression(
       TreeUtils.findParentOfType("type_declaration", unionVariant),
     );
 
     const declarationType: Type =
       declaration && declaration.nodeType === "TypeDeclaration"
         ? this.typeDeclarationType(declaration)
-        : { nodeType: "Unknown" };
+        : TUnknown;
 
     const params = unionVariant.params.map((t) =>
       this.typeSignatureSegmentType(t),
     );
 
     const type: Type =
-      params.length > 0
-        ? { nodeType: "Function", params, return: declarationType }
-        : declarationType;
+      params.length > 0 ? TFunction(params, declarationType) : declarationType;
 
     return this.toResult(type);
   }
@@ -144,11 +148,12 @@ export class TypeExpression {
     if (segmentTypes.length === 1) {
       return segmentTypes[0];
     } else {
-      return uncurryFunction({
-        nodeType: "Function",
-        params: segmentTypes.slice(0, segmentTypes.length - 1),
-        return: segmentTypes[segmentTypes.length - 1],
-      });
+      return uncurryFunction(
+        TFunction(
+          segmentTypes.slice(0, segmentTypes.length - 1),
+          segmentTypes[segmentTypes.length - 1],
+        ),
+      );
     }
   }
 
@@ -168,13 +173,23 @@ export class TypeExpression {
         return this.typeVariableType(segment);
       case "TypeExpression":
         return this.typeExpressionType(segment);
+      case "TupleType":
+        return segment.unitExpr
+          ? TUnit
+          : TTuple(
+              segment.typeExpressions.map((t) => this.typeExpressionType(t)),
+            );
     }
 
-    return { nodeType: "Unknown" };
+    return TUnknown;
   }
 
   private typeVariableType(typeVariable: ETypeVariable): Type {
-    const definition = findDefinition(typeVariable, this.uri, this.imports);
+    const definition = findDefinition(
+      typeVariable.firstNamedChild,
+      this.uri,
+      this.imports,
+    );
 
     // The type variable doesn't reference anything
     if (!definition || (<any>definition.expr).id === (<any>typeVariable).id) {
@@ -189,7 +204,7 @@ export class TypeExpression {
       return cached;
     }
 
-    const annotation = mapSyntaxNodeToTypeTree(
+    const annotation = mapSyntaxNodeToExpression(
       TreeUtils.getAllAncestorsOfType("type_annotation", definition.expr)[0],
     );
 
@@ -208,14 +223,13 @@ export class TypeExpression {
 
     // If the definition is to a variable declared in a parent annotation,
     // use the type from that annotation's inference
-    const type = TypeExpression.typeAnnotationInference(
-      annotation as ETypeAnnotation,
-      definition.uri,
-      this.imports,
-      true,
-    )?.expressionTypes.get(definition.expr) ?? {
-      nodeType: "Unknown",
-    };
+    const type =
+      TypeExpression.typeAnnotationInference(
+        annotation as ETypeAnnotation,
+        definition.uri,
+        this.imports,
+        true,
+      )?.expressionTypes.get(definition.expr) ?? TUnknown;
 
     if (type.nodeType === "Var") {
       this.varsByExpression.set(definition.expr, type);
@@ -228,7 +242,7 @@ export class TypeExpression {
   private typeRefType(typeRef: ETypeRef): Type {
     const args =
       TreeUtils.findAllNamedChildrenOfType("type_variable", typeRef)
-        ?.map(mapSyntaxNodeToTypeTree)
+        ?.map(mapSyntaxNodeToExpression)
         .filter(notUndefined)
         .map((arg) => this.typeSignatureSegmentType(arg)) ?? [];
 
@@ -238,7 +252,7 @@ export class TypeExpression {
       this.imports,
     );
 
-    let declaredType: Type | undefined;
+    let declaredType: Type = TUnknown;
     if (definition) {
       switch (definition.expr.nodeType) {
         case "TypeDeclaration":
@@ -252,10 +266,10 @@ export class TypeExpression {
         default:
           throw new Error("Unexpected type reference");
       }
-    }
-
-    if (!declaredType) {
-      return { nodeType: "Unknown" };
+    } else {
+      if (typeRef.firstNamedChild?.firstNamedChild?.text === "List") {
+        declaredType = TList(TVar("a"));
+      }
     }
 
     const params = declaredType?.info
@@ -280,16 +294,11 @@ export class TypeExpression {
       this.getTypeVar(name),
     );
 
-    return {
-      nodeType: "Union",
-      module: typeDeclaration.moduleName,
-      name: typeDeclaration.name,
-      params,
-    };
+    return TUnion(typeDeclaration.moduleName, typeDeclaration.name, params);
   }
 
   private getTypeVar(e: Expression): TVar {
-    const tVar: TVar = { nodeType: "Var", name: e.text, rigid: this.rigidVars };
+    const tVar = TVar(e.text, this.rigidVars);
     this.varsByExpression.set(e, tVar);
     return tVar;
   }

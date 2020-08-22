@@ -4,7 +4,7 @@ import { IElmWorkspace } from "../../elmWorkspace";
 import { InferenceScope } from "../../util/types/typeInference";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { PositionUtil } from "../../positionUtil";
-import { mapSyntaxNodeToTypeTree } from "../../util/types/expressionTree";
+import { mapSyntaxNodeToExpression } from "../../util/types/expressionTree";
 
 export class TypeInferenceDiagnostics {
   public createDiagnostics = (
@@ -19,18 +19,17 @@ export class TypeInferenceDiagnostics {
       tree.rootNode.children
         .filter((n) => n.type === "value_declaration")
         .flatMap((node) => {
-          const mappedNode = mapSyntaxNodeToTypeTree(node);
-          if (mappedNode) {
-            return new InferenceScope(
+          const mappedNode = mapSyntaxNodeToExpression(node);
+
+          if (mappedNode && mappedNode.nodeType === "ValueDeclaration") {
+            return InferenceScope.valueDeclarationInference(
+              mappedNode,
               uri,
-              elmWorkspace.getForest(),
-              elmWorkspace.getImports(),
+              elmWorkspace,
               new Set(),
-            )
-              .inferDeclaration(mappedNode, true)
-              .diagnostics.map((d) => {
-                return { range: getNodeRange(d.node), message: d.message };
-              });
+            ).diagnostics.map((d) => {
+              return { range: getNodeRange(d.node), message: d.message };
+            });
           } else {
             return [];
           }

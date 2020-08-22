@@ -5,6 +5,7 @@ import {
   TFunction,
   uncurryFunction,
   TUnion,
+  TTuple,
 } from "./typeInference";
 
 export class TypeReplacement {
@@ -56,6 +57,10 @@ export class TypeReplacement {
         return this.replaceFunction(type);
       case "Union":
         return this.replaceUnion(type);
+      case "Tuple":
+        return this.replaceTuple(type);
+      case "Unit":
+        return type;
       case "Unknown":
         return {
           nodeType: "Unknown",
@@ -71,14 +76,22 @@ export class TypeReplacement {
     };
   }
 
+  private replaceTuple(type: TTuple): TTuple {
+    return TTuple(
+      type.types.map((t) => this.replace(t)),
+      type.info ? this.replaceInfo(type.info) : undefined,
+    );
+  }
+
   private replaceFunction(type: TFunction): TFunction {
     const params = type.params.map((param) => this.replace(param));
-    return uncurryFunction({
-      nodeType: "Function",
-      params,
-      return: this.replace(type.return),
-      info: type.info ? this.replaceInfo(type.info) : undefined,
-    });
+    return uncurryFunction(
+      TFunction(
+        params,
+        this.replace(type.return),
+        type.info ? this.replaceInfo(type.info) : undefined,
+      ),
+    );
   }
 
   private replaceUnion(type: TUnion): TUnion {
@@ -87,13 +100,12 @@ export class TypeReplacement {
     }
 
     const params = type.params.map((param) => this.replace(param));
-    return {
-      nodeType: "Union",
+    return TUnion(
+      type.module,
+      type.name,
       params,
-      module: type.module,
-      name: type.name,
-      info: type.info ? this.replaceInfo(type.info) : undefined,
-    };
+      type.info ? this.replaceInfo(type.info) : undefined,
+    );
   }
 
   private getReplacement(key: TVar): Type | undefined {
@@ -107,11 +119,7 @@ export class TypeReplacement {
         ) {
           return undefined;
         } else {
-          const newVar: TVar = {
-            nodeType: "Var",
-            name: key.name,
-            rigid: false,
-          };
+          const newVar = TVar(key.name);
           this.replacements.set(key, [true, newVar]);
           return newVar;
         }

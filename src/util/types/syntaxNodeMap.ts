@@ -2,7 +2,7 @@
 import { SyntaxNode } from "web-tree-sitter";
 
 export class SyntaxNodeMap<K extends SyntaxNode, V> {
-  private map: Map<K, V> = new Map<K, V>();
+  private map: Map<number, V> = new Map<number, V>();
 
   public set(key: K, value: V): void {
     if (!("id" in key)) {
@@ -32,5 +32,11 @@ export class SyntaxNodeMap<K extends SyntaxNode, V> {
     this.map.forEach((val, key) => {
       this.map.set(key, callback(val));
     });
+  }
+
+  public forEach(callback: (val: V, key: K) => void): void {
+    this.map.forEach((val, key) =>
+      callback(val, ({ id: key } as unknown) as K),
+    );
   }
 }

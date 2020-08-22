@@ -46,42 +46,42 @@ export class HoverProvider {
         params.position,
       );
 
-      try {
-        const typeString: string = typeToString(
-          findType(nodeAtPosition, params.textDocument.uri, elmWorkspace),
-        );
-
-        if (typeString && typeString !== "Unknown") {
-          return {
-            contents: typeString,
-          };
-        }
-      } catch (e) {
-        console.log(e);
-      }
-
-      // const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
-      //   nodeAtPosition,
-      //   params.textDocument.uri,
-      //   tree.tree,
-      //   elmWorkspace.getImports(),
-      // );
-
-      // if (definitionNode) {
-      //   return this.createMarkdownHoverFromDefinition(definitionNode);
-      // } else {
-      //   const specialMatch = getEmptyTypes().find(
-      //     (a) => a.name === nodeAtPosition.text,
+      // try {
+      //   const typeString: string = typeToString(
+      //     findType(nodeAtPosition, params.textDocument.uri, elmWorkspace),
       //   );
-      //   if (specialMatch) {
+
+      //   if (typeString && typeString !== "Unknown") {
       //     return {
-      //       contents: {
-      //         kind: MarkupKind.Markdown,
-      //         value: specialMatch.markdown,
-      //       },
+      //       contents: typeString,
       //     };
       //   }
+      // } catch (e) {
+      //   console.log(e);
       // }
+
+      const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
+        nodeAtPosition,
+        params.textDocument.uri,
+        tree.tree,
+        elmWorkspace.getImports(),
+      );
+
+      if (definitionNode) {
+        return this.createMarkdownHoverFromDefinition(definitionNode);
+      } else {
+        const specialMatch = getEmptyTypes().find(
+          (a) => a.name === nodeAtPosition.text,
+        );
+        if (specialMatch) {
+          return {
+            contents: {
+              kind: MarkupKind.Markdown,
+              value: specialMatch.markdown,
+            },
+          };
+        }
+      }
     }
   };
 

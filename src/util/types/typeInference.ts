@@ -1,9 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
-import { TreeUtils, flatMap } from "../treeUtils";
-import { IImports } from "src/imports";
+import { TreeUtils } from "../treeUtils";
 import { References } from "../references";
-import { IForest } from "src/forest";
 import {
   BinaryExprTree,
   IOperatorPrecedence,
@@ -20,12 +18,26 @@ import {
   EOperator,
   EFunctionDeclarationLeft,
   EPattern,
-  mapSyntaxNodeToTypeTree,
+  mapSyntaxNodeToExpression,
   findDefinition,
+  EIfElseExpr,
+  ELetInExpr,
+  ECaseOfExpr,
+  EAnonymousFunctionExpr,
+  ETuplePattern,
+  EListExpr,
+  EUnionPattern,
+  EListPattern,
 } from "./expressionTree";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { TypeExpression } from "./typeExpression";
 import { IElmWorkspace } from "src/elmWorkspace";
+import { doesNotMatch } from "assert";
+import { Sequence } from "../sequence";
+
+export function notUndefined<T>(x: T | undefined): x is T {
+  return x !== undefined;
+}
 
 export interface Info {
   module: string;
@@ -33,7 +45,7 @@ export interface Info {
   parameters: Type[];
 }
 
-export type Type = TVar | TFunction | TUnion | TUnknown;
+export type Type = TVar | TFunction | TTuple | TUnion | TUnit | TUnknown;
 export interface TVar {
   nodeType: "Var";
   name: string;
@@ -46,6 +58,11 @@ export interface TFunction {
   return: Type;
   info?: Info;
 }
+export interface TTuple {
+  nodeType: "Tuple";
+  types: Type[];
+  info?: Info;
+}
 export interface TUnion {
   nodeType: "Union";
   module: string;
@@ -53,27 +70,73 @@ export interface TUnion {
   params: Type[];
   info?: Info;
 }
-
+export interface TRecord {
+  fields: { [key: string]: Type };
+  baseType?: Type;
+  info?: Info;
+  fieldReferences?: any;
+}
+export interface TMutableRecord {
+  fields: { [key: string]: Type };
+  baseType?: Type;
+  fieldReferences?: any;
+}
+interface TUnit {
+  nodeType: "Unit";
+  info?: Info;
+}
 interface TUnknown {
   nodeType: "Unknown";
   info?: Info;
 }
 
-const TString: TUnion = {
-  nodeType: "Union",
-  name: "String",
-  module: "Basics",
-  params: [],
+export const TUnion = (
+  module: string,
+  name: string,
+  params: Type[],
+  info?: Info,
+): TUnion => {
+  return { nodeType: "Union", module, name, params, info };
 };
 
-const TFloat: TUnion = {
-  nodeType: "Union",
-  name: "Float",
-  module: "Basics",
-  params: [],
+export const TVar = (name: string, rigid = false): TVar => {
+  return { nodeType: "Var", name, rigid };
 };
 
-const TNumber: TVar = { nodeType: "Var", name: "number", rigid: false };
+export const TFunction = (
+  params: Type[],
+  ret: Type,
+  info?: Info,
+): TFunction => {
+  return { nodeType: "Function", params, return: ret, info };
+};
+
+export const TTuple = (types: Type[], info?: Info): TTuple => {
+  if (types.length === 0) {
+    throw new Error("Cannot create a TTuple with no types, use TUnit");
+  }
+
+  return { nodeType: "Tuple", types, info };
+};
+
+const TInt = TUnion("Basics", "Int", []);
+const TFloat = TUnion("Basics", "Float", []);
+const TBool = TUnion("Basics", "Bool", []);
+const TString = TUnion("String", "String", []);
+const TChar = TUnion("Char", "Char", []);
+
+export const TList = (elementType: Type): TUnion =>
+  TUnion("List", "List", [elementType]);
+
+const TNumber = TVar("number");
+
+export const TUnit: TUnit = {
+  nodeType: "Unit",
+};
+
+export const TUnknown: TUnknown = {
+  nodeType: "Unknown",
+};
 
 function allTypeVars(type: Type): TVar[] {
   switch (type.nodeType) {
@@ -83,7 +146,10 @@ function allTypeVars(type: Type): TVar[] {
       return type.params.flatMap(allTypeVars);
     case "Function":
       return allTypeVars(type.return).concat(type.params.flatMap(allTypeVars));
+    case "Tuple":
+      return type.types.flatMap(allTypeVars);
     case "Unknown":
+    case "Unit":
       return [];
   }
 }
@@ -149,10 +215,12 @@ export function uncurryFunction(func: TFunction): TFunction {
 function getParentPatternDeclaration(
   ref: Expression,
 ): EValueDeclaration | undefined {
-  const parentPattern = mapSyntaxNodeToTypeTree(ref.parent);
+  const parentPattern = mapSyntaxNodeToExpression(
+    TreeUtils.findParentOfType("value_declaration", ref),
+  );
 
   if (parentPattern?.nodeType !== "ValueDeclaration") {
-    throw new Error("Failed to get parent pattern declaration");
+    throw new Error(`Failed to get parent pattern declaration`);
   }
 
   return parentPattern.pattern ? parentPattern : undefined;
@@ -162,16 +230,20 @@ export function typeToString(t: Type): string {
   switch (t.nodeType) {
     case "Unknown":
       return "Unknown";
+    case "Unit":
+      return "()";
     case "Var":
       return t.name;
     case "Function":
-      return `${[...t.params, t.return]
-        .map((type) => {
-          return typeToString(type);
-        })
-        .join(" -> ")}`;
+      return `${[...t.params, t.return].map(typeToString).join(" -> ")}`;
+    case "Tuple":
+      return `(${t.types.map(typeToString).join(", ")})`;
     case "Union":
-      return `${t.name} ${t.params.map(typeToString).join(" ")}`;
+      if (t.params.length === 0) {
+        return t.name;
+      } else {
+        return `${t.name} ${t.params.map(typeToString).join(" ")}`;
+      }
   }
 }
 
@@ -179,11 +251,14 @@ function typeMismatchError(
   node: SyntaxNode,
   found: Type,
   expected: Type,
+  patternBinding = false,
 ): Diagnostic {
   const foundText = typeToString(found);
   const expectedText = typeToString(expected);
 
-  const message = `Type mismatch error\nExpected: ${expectedText}\nFound: ${foundText}`;
+  const message = patternBinding
+    ? `Invalid pattern error\nExpected: ${expectedText}\nFound: ${foundText}`
+    : `Type mismatch error\nExpected: ${expectedText}\nFound: ${foundText}`;
 
   return {
     node,
@@ -229,13 +304,34 @@ function argumentCountError(
   }
 }
 
+function redefinitionError(node: SyntaxNode): Diagnostic {
+  return {
+    node,
+    message: `A value named \`${node.text}\` is already defined`,
+  };
+}
+
+function badRecursionError(node: SyntaxNode): Diagnostic {
+  return {
+    node,
+    message: `Infinite recursion`,
+  };
+}
+
+function cyclicDefinitionError(node: SyntaxNode): Diagnostic {
+  return {
+    node,
+    message: `Value cannot be defined in terms of itself`,
+  };
+}
+
 export interface Diagnostic {
   node: SyntaxNode;
   message: string;
 }
 
 export interface InferenceResult {
-  expressionTypes: SyntaxNodeMap<SyntaxNode, Type>;
+  expressionTypes: SyntaxNodeMap<Expression, Type>;
   diagnostics: Diagnostic[];
   type: Type;
 }
@@ -252,41 +348,58 @@ export class InferenceScope {
 
   private annotationVars: TVar[] = [];
 
-  private ancestors: InferenceScope[];
+  public ancestors: Sequence<InferenceScope>;
 
   private resolvedDeclarations: SyntaxNodeMap<EValueDeclaration, Type>;
 
+  private childDeclarations = new Set<EValueDeclaration>();
+
   constructor(
     private uri: string,
-    private forest: IForest,
-    private imports: IImports,
+    private elmWorkspace: IElmWorkspace,
+    private shadowableNames: Set<string>,
     private activeScopes: Set<EValueDeclaration>,
-    parent?: InferenceScope,
+    private recursionAllowed: boolean,
+    private parent?: InferenceScope,
   ) {
     this.replacements = parent?.replacements ?? new DisjointSet();
-    this.ancestors = parent ? [this, parent] : [this];
+
     this.resolvedDeclarations =
       parent?.resolvedDeclarations ??
       new SyntaxNodeMap<EValueDeclaration, Type>();
+
+    this.ancestors = new Sequence(
+      this,
+      (scope: InferenceScope) => scope.parent,
+    );
   }
 
   private getBinding(e: Expression): Type | undefined {
-    return this.ancestors.map((a) => a.bindings.get(e.text))[0];
+    return this.ancestors.map((a) => a.bindings.get(e.text)).find(notUndefined);
   }
 
-  // TODO: param should only be ETypeDeclaration
-  public inferDeclaration(
-    declaration: Expression,
+  public static valueDeclarationInference(
+    declaration: EValueDeclaration,
+    uri: string,
+    elmWorkspace: IElmWorkspace,
+    activeScopes: Set<EValueDeclaration>,
+  ): InferenceResult {
+    // TODO: Need a good way to get all visible values
+    const shadowableNames = new Set<string>();
+
+    return new InferenceScope(
+      uri,
+      elmWorkspace,
+      shadowableNames,
+      activeScopes,
+      false,
+    ).inferDeclaration(declaration, true);
+  }
+
+  private inferDeclaration(
+    declaration: EValueDeclaration,
     replaceExpressionTypes: boolean,
   ): InferenceResult {
-    if (declaration.nodeType !== "ValueDeclaration") {
-      return {
-        expressionTypes: new SyntaxNodeMap<Expression, Type>(),
-        diagnostics: [],
-        type: { nodeType: "Unknown" },
-      };
-    }
-
     this.activeScopes.add(declaration);
 
     // Bind the parameters should the body can reference them
@@ -294,10 +407,10 @@ export class InferenceScope {
 
     // If there is a pattern, it gets infered in the parameter binding
     if (declaration.pattern) {
-      return this.toTopLevelResult({ nodeType: "Unknown" });
+      return this.toTopLevelResult(TUnknown);
     }
 
-    let bodyType: Type = { nodeType: "Unknown" };
+    let bodyType: Type = TUnknown;
     if (declaration.body) {
       bodyType = this.infer(declaration.body);
 
@@ -309,6 +422,8 @@ export class InferenceScope {
             ? curryFunction(bindingType, binding.count)
             : bindingType;
         this.isAssignable(declaration.body, bodyType, expected);
+      } else {
+        this.checkTopLevelCaseBranches(declaration.body, bodyType);
       }
     }
 
@@ -318,14 +433,37 @@ export class InferenceScope {
         : binding.bindingType === "Unannotated"
         ? binding.count === 0
           ? bodyType
-          : uncurryFunction({
-              nodeType: "Function",
-              params: (<Unannotated>binding).params,
-              return: bodyType,
-            })
+          : uncurryFunction(TFunction((<Unannotated>binding).params, bodyType))
         : bodyType;
 
     return this.toTopLevelResult(type, replaceExpressionTypes);
+  }
+
+  private checkTopLevelCaseBranches(expr: Expression, exprType: Type): void {
+    if (expr.nodeType === "CaseOfExpr") {
+      this.isBranchesAssignable(expr, exprType, TUnknown);
+    }
+  }
+
+  private checkRecursion(declaration: EValueDeclaration): boolean {
+    const isRecursive = this.activeScopes.has(declaration);
+
+    const functionDeclaration = mapSyntaxNodeToExpression(
+      TreeUtils.findFirstNamedChildOfType(
+        "function_declaration_left",
+        declaration,
+      ),
+    );
+    if (
+      isRecursive &&
+      !this.recursionAllowed &&
+      (functionDeclaration?.nodeType !== "FunctionDeclarationLeft" ||
+        !functionDeclaration.params[0])
+    ) {
+      this.diagnostics.push(badRecursionError(declaration));
+    }
+
+    return isRecursive;
   }
 
   private toTopLevelResult(
@@ -338,10 +476,12 @@ export class InferenceScope {
       );
     }
 
-    // Remove when Node 10 is dropped
-    const outerVars = (<any>this.ancestors.slice(1)).flatMap
-      ? this.ancestors.slice(1).flatMap((a) => a.annotationVars)
-      : flatMap(this.ancestors.slice(1), (a) => a.annotationVars);
+    const outerVars = this.ancestors
+      .toArray()
+      .map((a) => a.annotationVars)
+      .slice(1)
+      .flat();
+
     const ret = TypeReplacement.replace(
       type,
       this.replacements.toMap(),
@@ -356,38 +496,227 @@ export class InferenceScope {
   }
 
   private infer(e: Expression): Type {
+    let type: Type = TUnknown;
+
     switch (e.nodeType) {
-      case "ValueExpr":
-        return this.inferReferenceElement(e);
-      case "FunctionCallExpr":
-        return this.inferFunctionCallExpr(e);
+      case "AnonymousFunctionExpr":
+        type = this.inferLamba(e);
+        break;
       case "BinOpExpr":
-        return this.inferBinOpExpr(e);
-      case "OperatorAsFunctionExpr":
-        return this.inferOperatorAsFunction();
+        type = this.inferBinOpExpr(e);
+        break;
+      case "CaseOfExpr":
+        type = this.inferCase(e);
+        break;
+      case "FunctionCallExpr":
+        type = this.inferFunctionCallExpr(e);
+        break;
+      case "IfElseExpr":
+        type = this.inferIfElse(e);
+        break;
+      case "LetInExpr":
+        type = this.inferChild((inference) => inference.letInInference(e)).type;
+        break;
+      case "ListExpr":
+        type = this.inferList(e);
+        break;
       case "NumberConstant":
-        return e.isFloat ? TFloat : TNumber;
+        type = e.isFloat ? TFloat : TNumber;
+        break;
+      case "OperatorAsFunctionExpr":
+        type = this.inferOperatorAsFunction();
+        break;
       case "StringConstant":
-        return TString;
+        type = TString;
+        break;
+      case "TupleExpr":
+        type = TTuple(e.exprList.map((expr) => this.infer(expr)));
+        break;
+      case "UnitExpr":
+        type = TUnit;
+        break;
+      case "ValueExpr":
+        type = this.inferReferenceElement(e);
+        break;
+      default:
+        throw new Error("Unexpected Expression type");
     }
 
-    return { nodeType: "Unknown" };
+    this.expressionTypes.set(e, type);
+    return type;
+  }
+
+  private lambaInference(lamba: EAnonymousFunctionExpr): InferenceResult {
+    const paramVars = this.uniqueVars(lamba.params.length);
+    lamba.params.forEach((p, i) => this.bindPattern(p, paramVars[i], true));
+
+    const bodyType = this.infer(lamba.expr);
+    this.checkTopLevelCaseBranches(lamba.expr, bodyType);
+
+    return {
+      expressionTypes: this.expressionTypes,
+      diagnostics: this.diagnostics,
+      type: uncurryFunction(TFunction(paramVars, bodyType)),
+    };
+  }
+
+  private letInInference(letInExpr: ELetInExpr): InferenceResult {
+    const valueDeclarations = letInExpr.valueDeclarations;
+    valueDeclarations.forEach((v) => this.childDeclarations.add(v));
+
+    valueDeclarations.forEach((declaration) => {
+      if (!this.resolvedDeclarations.has(declaration)) {
+        this.inferChildDeclaration(declaration);
+      }
+    });
+
+    const bodyType = this.infer(letInExpr.body);
+    this.checkTopLevelCaseBranches(letInExpr.body, bodyType);
+
+    return {
+      expressionTypes: this.expressionTypes,
+      diagnostics: this.diagnostics,
+      type: bodyType,
+    };
+  }
+
+  private caseBranchInference(
+    pattern: EPattern,
+    caseType: Type,
+    branchExpr: Expression,
+  ): InferenceResult {
+    this.bindPattern(pattern, caseType, false);
+    const type = this.infer(branchExpr);
+    return {
+      expressionTypes: this.expressionTypes,
+      diagnostics: this.diagnostics,
+      type,
+    };
+  }
+
+  private inferChild(
+    callback: (inference: InferenceScope) => InferenceResult,
+    activeScopes = this.activeScopes,
+    recursionAllowed = this.recursionAllowed,
+  ): InferenceResult {
+    const result = callback(
+      new InferenceScope(
+        this.uri,
+        this.elmWorkspace,
+        this.shadowableNames,
+        activeScopes,
+        recursionAllowed,
+        this,
+      ),
+    );
+
+    this.diagnostics.push(...result.diagnostics);
+
+    result.expressionTypes.forEach((val, key) =>
+      this.expressionTypes.set(key, val),
+    );
+
+    return result;
+  }
+
+  private inferChildDeclaration(
+    declaration: EValueDeclaration,
+    activeScopes = this.activeScopes,
+  ): InferenceResult {
+    const result = this.inferChild(
+      (inference) => inference.inferDeclaration(declaration, false),
+      activeScopes,
+    );
+
+    this.diagnostics.push(...result.diagnostics);
+
+    result.expressionTypes.forEach((val, key) =>
+      this.expressionTypes.set(key, val),
+    );
+
+    const funcName = TreeUtils.getFunctionNameNodeFromDefinition(declaration)
+      ?.text;
+
+    if (funcName) {
+      this.shadowableNames.add(funcName);
+    } else {
+      const pattern = declaration.pattern;
+
+      if (pattern) {
+        const patterns = TreeUtils.findAllNamedChildrenOfType(
+          "lower_pattern",
+          pattern,
+        )
+          ?.map(mapSyntaxNodeToExpression)
+          .filter(notUndefined);
+
+        patterns?.forEach((pat) => {
+          const patType = result.expressionTypes.get(pat);
+          if (patType) {
+            this.setBinding(pat, patType);
+          }
+          this.shadowableNames.add(pat.text);
+        });
+      }
+    }
+
+    return result;
+  }
+
+  private inferList(expr: EListExpr): Type {
+    const exprTypes = expr.exprList.map((e) => this.infer(e));
+
+    for (let i = 1; i < expr.exprList.length; i++) {
+      if (this.isAssignable(expr.exprList[i], exprTypes[i], exprTypes[0])) {
+        this.expressionTypes.set(expr.exprList[i], exprTypes[0]);
+      } else {
+        break;
+      }
+    }
+
+    return TList(exprTypes[0] ?? TVar("a"));
+  }
+
+  private inferIfElse(ifElseExpr: EIfElseExpr): Type {
+    const exprList = ifElseExpr.exprList;
+
+    // Check for incomplete program
+    if (exprList.length < 3 || exprList.length % 2 == 0) {
+      return TUnknown;
+    }
+
+    const exprTypes = exprList.map((e) => this.infer(e));
+
+    // Check all conditions are type Bool
+    for (let i = 0; i < exprList.length - 1; i += 2) {
+      this.isAssignable(exprList[i], exprTypes[i], TBool);
+    }
+
+    // Check that all branches match the first one
+    for (let i = 0; i < exprList.length; i++) {
+      if (i != exprList.length - 1 && (i < 3 || i % 2 == 0)) {
+        continue;
+      }
+
+      if (!this.isAssignable(exprList[i], exprTypes[i], exprTypes[1])) {
+        break;
+      }
+    }
+
+    return exprTypes[1];
   }
 
   private inferReferenceElement(e: Expression): Type {
-    if (e.nodeType === "ValueDeclaration") {
-      // return [this.inferReferencedValueDeclaration(ctx, e), {}]; // TODO: Subst should be filled
-    }
-
     const definition = findDefinition(
-      e.firstNamedChild?.firstNamedChild,
+      e.firstNamedChild?.lastNamedChild,
       this.uri,
-      this.imports,
+      this.elmWorkspace.getImports(),
     );
 
     if (!definition) {
-      return { nodeType: "Unknown" };
+      return TUnknown;
     }
+
     const binding = this.getBinding(definition.expr);
 
     if (binding) {
@@ -395,11 +724,19 @@ export class InferenceScope {
     }
 
     switch (definition.expr.nodeType) {
-      case "ValueDeclaration":
+      case "FunctionDeclarationLeft": {
+        const valueDeclaration = mapSyntaxNodeToExpression(
+          TreeUtils.findParentOfType("value_declaration", definition.expr),
+        );
+
+        if (valueDeclaration?.nodeType !== "ValueDeclaration") {
+          throw new Error("Could not find parent value declaration");
+        }
         return this.inferReferencedValueDeclaration(
-          definition.expr,
+          valueDeclaration,
           definition?.uri,
         );
+      }
       case "LowerPattern": {
         const parentPattern = getParentPatternDeclaration(definition.expr);
         if (parentPattern) {
@@ -420,23 +757,24 @@ export class InferenceScope {
         return TypeExpression.unionVariantInference(
           definition.expr,
           this.uri,
-          this.imports,
+          this.elmWorkspace.getImports(),
         ).type;
       }
-    }
 
-    return { nodeType: "Unknown" };
+      default:
+        throw new Error("Unexpected reference type");
+    }
   }
 
   private inferReferencedValueDeclaration(
-    e: EValueDeclaration | undefined,
+    declaration: EValueDeclaration | undefined,
     referenceUri: string,
   ): Type {
-    if (!e) {
-      return { nodeType: "Unknown" };
+    if (!declaration) {
+      return TUnknown;
     }
 
-    const existing = this.resolvedDeclarations.get(e);
+    const existing = this.resolvedDeclarations.get(declaration);
 
     if (existing) {
       return TypeReplacement.freshenVars(existing);
@@ -444,26 +782,32 @@ export class InferenceScope {
 
     let type: Type | undefined;
     // Get the type annotation if there is one
-    if (e.typeAnnotation) {
+    if (declaration.typeAnnotation) {
       type = TypeExpression.typeAnnotationInference(
-        e.typeAnnotation,
+        declaration.typeAnnotation,
         referenceUri,
-        this.imports,
+        this.elmWorkspace.getImports(),
         false,
       )?.type;
     }
 
     if (!type) {
-      type = new InferenceScope(
-        referenceUri,
-        this.forest,
-        this.imports,
-        this.activeScopes,
-        this,
-      ).inferDeclaration(e, true).type;
+      const parentScope = this.ancestors.find((scope) =>
+        scope.childDeclarations.has(declaration),
+      );
+
+      type = !parentScope
+        ? InferenceScope.valueDeclarationInference(
+            declaration,
+            this.uri,
+            this.elmWorkspace,
+            this.activeScopes,
+          ).type
+        : parentScope.inferChildDeclaration(declaration, this.activeScopes)
+            .type;
     }
 
-    this.resolvedDeclarations.set(e, type);
+    this.resolvedDeclarations.set(declaration, type);
     return type;
   }
 
@@ -478,26 +822,22 @@ export class InferenceScope {
       expected: number,
     ): TUnknown => {
       this.diagnostics.push(argumentCountError(expr, actual, expected));
-      return { nodeType: "Unknown" };
+      return TUnknown;
     };
 
     if (targetType.nodeType === "Var") {
-      const type: TFunction = {
-        nodeType: "Function",
-        params: argTypes,
-        return: { nodeType: "Var", name: "a" },
-      };
+      const type = TFunction(argTypes, TVar("a"));
 
       if (this.isAssignable(e.target, targetType, type)) {
         return type.return;
       } else {
-        return { nodeType: "Unknown" };
+        return TUnknown;
       }
     }
 
-    // if (!isInferable(targetType)) {
-    //   return { nodeType: "Unknown" };
-    // }
+    if (targetType.nodeType === "Unknown") {
+      return TUnknown;
+    }
 
     if (targetType.nodeType !== "Function") {
       return argCountError(e, e, e.args.length, 0);
@@ -532,7 +872,7 @@ export class InferenceScope {
         }
 
         if (!this.isAssignable(e.args[i], argTypes[i], appliedType.params[0])) {
-          return { nodeType: "Unknown" };
+          return TUnknown;
         }
 
         appliedType = TypeReplacement.replace(
@@ -551,7 +891,7 @@ export class InferenceScope {
           this.replacements.toMap(),
           true,
         )
-      : { nodeType: "Unknown" };
+      : TUnknown;
 
     this.expressionTypes.set(e, resultType);
     return resultType;
@@ -570,7 +910,7 @@ export class InferenceScope {
       if (part.nodeType === "Operator") {
         const [type, precedence] = this.inferOperatorAndPrecedence(part);
         if (type.nodeType !== "Function" || type.params.length < 2) {
-          return { nodeType: "Unknown" };
+          return TUnknown;
         }
 
         if (
@@ -581,7 +921,7 @@ export class InferenceScope {
             node: e,
             message: "NonAssociativeOperatorError",
           });
-          return { nodeType: "Unknown" };
+          return TUnknown;
         }
 
         operatorPrecedences.set(part, precedence);
@@ -630,7 +970,7 @@ export class InferenceScope {
                   this.replacements.toMap(),
                   true,
                 )
-              : { nodeType: "Unknown" };
+              : TUnknown;
 
           return { start: left.start, end: right.end, type };
         }
@@ -658,31 +998,31 @@ export class InferenceScope {
     e: EOperator,
   ): [Type, IOperatorPrecedence] {
     // Find operator reference
-    const definition = TreeUtils.findDefinitionNodeByReferencingNode(
+
+    const definition = findDefinition(
       e,
       this.uri,
-      e.tree,
-      this.imports,
+      this.elmWorkspace.getImports(),
     );
 
-    const definitionExpr = mapSyntaxNodeToTypeTree(definition?.node);
+    const opDeclaration = mapSyntaxNodeToExpression(definition?.expr.parent);
 
-    const infixDeclarationExpr = mapSyntaxNodeToTypeTree(
-      definitionExpr
-        ? References.findOperatorInfixDeclaration(definitionExpr)
+    const infixDeclarationExpr = mapSyntaxNodeToExpression(
+      opDeclaration
+        ? References.findOperatorInfixDeclaration(opDeclaration)
         : undefined,
     );
 
     if (
-      definitionExpr?.nodeType !== "ValueDeclaration" ||
+      opDeclaration?.nodeType !== "ValueDeclaration" ||
       infixDeclarationExpr?.nodeType !== "InfixDeclaration" ||
       !definition
     ) {
-      return [{ nodeType: "Unknown" }, { precedence: 0, associativity: "NON" }];
+      return [TUnknown, { precedence: 0, associativity: "NON" }];
     }
 
     const type = this.inferReferencedValueDeclaration(
-      definitionExpr,
+      opDeclaration,
       definition.uri,
     );
 
@@ -700,11 +1040,46 @@ export class InferenceScope {
     // Find referenced type
     // Handle infix
     // Infer referenced value declaration
-    return { nodeType: "Unknown" };
+    return TUnknown;
+  }
+
+  private inferLamba(lambaExpr: EAnonymousFunctionExpr): Type {
+    return this.inferChild(
+      (inference) => inference.lambaInference(lambaExpr),
+      undefined,
+      true,
+    ).type;
+  }
+
+  private inferCase(caseOfExpr: ECaseOfExpr): Type {
+    const caseOfExprType = this.infer(caseOfExpr.expr);
+
+    let type: Type | undefined;
+
+    caseOfExpr.branches.forEach((branch) => {
+      const result = this.inferChild((inference) =>
+        inference.caseBranchInference(
+          branch.pattern,
+          caseOfExprType,
+          branch.expr,
+        ),
+      );
+
+      if (!type) {
+        type = result.type;
+      }
+    });
+
+    return type ?? TUnknown;
   }
 
   private setBinding(expr: Expression, type: Type): void {
-    // TODO: Handle redefinitions
+    const exprName = expr.text;
+    if (this.shadowableNames.has(exprName)) {
+      this.diagnostics.push(redefinitionError(expr));
+    }
+
+    this.shadowableNames.add(exprName);
 
     this.bindings.set(expr.text, type);
     this.expressionTypes.set(expr, type);
@@ -713,7 +1088,7 @@ export class InferenceScope {
   private bindParameters(
     valueDeclaration: EValueDeclaration,
   ): ParameterBindingResult {
-    const functionDeclarationLeft = mapSyntaxNodeToTypeTree(
+    const functionDeclarationLeft = mapSyntaxNodeToExpression(
       TreeUtils.findFirstNamedChildOfType(
         "function_declaration_left",
         valueDeclaration,
@@ -746,15 +1121,12 @@ export class InferenceScope {
       ? TypeExpression.typeAnnotationInference(
           valueDeclaration.typeAnnotation,
           this.uri,
-          this.imports,
+          this.elmWorkspace.getImports(),
           true,
         )?.type
       : undefined;
 
-    const patterns =
-      TreeUtils.findAllNamedChildrenOfType("lower_pattern", functionDeclaration)
-        ?.map(mapSyntaxNodeToTypeTree)
-        .filter(notUndefined) ?? [];
+    const patterns = functionDeclaration.params;
 
     if (!typeRefType) {
       const params = this.uniqueVars(patterns.length);
@@ -773,9 +1145,7 @@ export class InferenceScope {
       this.diagnostics.push(
         parameterCountError(functionDeclaration, patterns.length, maxParams),
       );
-      patterns.forEach((pat) =>
-        this.bindPattern(pat, { nodeType: "Unknown" }, true),
-      );
+      patterns.forEach((pat) => this.bindPattern(pat, TUnknown, true));
       return { count: maxParams } as Other;
     }
 
@@ -801,7 +1171,7 @@ export class InferenceScope {
     const declaredNames = pattern.descendantsOfType("lower_pattern");
     const bodyType: Type = valueDeclaration.body
       ? this.infer(valueDeclaration.body)
-      : { nodeType: "Unknown" };
+      : TUnknown;
     this.bindPattern(pattern, bodyType, false);
   }
 
@@ -810,15 +1180,174 @@ export class InferenceScope {
     type: Type,
     isParameter: boolean,
   ): void {
-    const ty = this.replacements.get(type);
+    const ty = this.replacements.get(type) ?? type;
     switch (pattern.nodeType) {
+      case "AnythingPattern":
+        break;
       case "Pattern":
-        //this.bindPattern(pattern.firstNamedChild, ty, isParamter);
-        //pattern.patternAs;
+        {
+          const child = mapSyntaxNodeToExpression(pattern.firstNamedChild);
+          if (!child) {
+            throw new Error("Missing pattern child");
+          }
+
+          this.bindPattern(child, ty, isParameter);
+          if (pattern.patternAs) {
+            this.bindPattern(pattern.patternAs, ty, isParameter);
+          }
+        }
         break;
       case "LowerPattern":
-        this.setBinding(pattern, type);
+        this.setBinding(pattern, ty);
         break;
+      case "ListPattern":
+        if (isParameter) {
+          this.bindListPattern(pattern, TUnknown);
+        } else {
+          this.bindListPattern(pattern, ty);
+        }
+        break;
+      case "TuplePattern":
+        this.bindTuplePattern(pattern, ty, isParameter);
+        break;
+      case "UnionPattern":
+        this.bindUnionPattern(pattern, type, isParameter);
+        break;
+      case "UnitExpr":
+        this.isAssignable(pattern, ty, TUnit, undefined, true);
+        break;
+      default:
+        throw new Error("Unexpected pattern type: " + pattern.nodeType);
+    }
+  }
+
+  private bindTuplePattern(
+    tuplePattern: ETuplePattern,
+    type: Type,
+    isParameter: boolean,
+  ): void {
+    const patterns = tuplePattern.patterns;
+    const ty = this.bindIfVar(
+      tuplePattern,
+      type,
+      TTuple(this.uniqueVars(patterns.length)),
+    );
+
+    if (ty.nodeType !== "Tuple" || ty.types.length !== patterns.length) {
+      patterns.forEach((pat) => this.bindPattern(pat, TUnknown, isParameter));
+
+      if (ty.nodeType !== "Unknown") {
+        const actualType = TTuple(this.uniqueVars(patterns.length));
+        this.diagnostics.push(
+          typeMismatchError(tuplePattern, actualType, ty, true),
+        );
+      }
+      return;
+    }
+
+    patterns.forEach((pat, i) => {
+      this.bindPattern(pat, ty.types[i], isParameter);
+    });
+  }
+
+  private bindUnionPattern(
+    unionPattern: EUnionPattern,
+    type: Type,
+    isParameter: boolean,
+  ): void {
+    const variant = findDefinition(
+      unionPattern.constructor.firstNamedChild,
+      this.uri,
+      this.elmWorkspace.getImports(),
+    );
+
+    if (variant?.expr.nodeType !== "UnionVariant") {
+      throw new Error("Could not find UnionVariant for " + unionPattern.text);
+    }
+
+    const variantType = TypeExpression.unionVariantInference(
+      variant.expr,
+      variant.uri,
+      this.elmWorkspace.getImports(),
+    ).type;
+
+    if (!variantType || variantType.nodeType === "Unknown") {
+      unionPattern.namedParams.forEach((p) => this.setBinding(p, TUnknown));
+      return;
+    }
+
+    const issueError = (actual: number, expected: number): void => {
+      this.diagnostics.push(
+        argumentCountError(unionPattern, actual, expected, true),
+      );
+      unionPattern.namedParams.forEach((p) => this.setBinding(p, TUnknown));
+    };
+
+    if (variantType.nodeType === "Function") {
+      const ty = this.bindIfVar(unionPattern, type, variantType.return);
+      if (this.isAssignable(unionPattern, ty, variantType.return)) {
+        if (unionPattern.argPatterns.length !== variantType.params.length) {
+          issueError(
+            unionPattern.argPatterns.length,
+            variantType.params.length,
+          );
+        } else {
+          unionPattern.argPatterns.forEach((p, i) => {
+            this.bindPattern(p, variantType.params[i], isParameter);
+          });
+        }
+      } else {
+        unionPattern.namedParams.forEach((p) => this.setBinding(p, TUnknown));
+      }
+    } else {
+      const ty = this.bindIfVar(unionPattern, type, variantType);
+      if (
+        this.isAssignable(unionPattern, ty, variantType) &&
+        unionPattern.argPatterns.length > 0
+      ) {
+        issueError(unionPattern.argPatterns.length, 0);
+      } else {
+        unionPattern.namedParams.forEach((p) => this.setBinding(p, TUnknown));
+      }
+    }
+  }
+
+  // private bindConsPattern(consPattern: EConsPattern, type: Type): void {
+  //   this.bindListPatternParts(consPattern, consPattern.parts, type, true);
+  // }
+
+  private bindListPattern(listPattern: EListPattern, type: Type): void {
+    this.bindListPatternParts(listPattern, listPattern.parts, type, true);
+  }
+
+  private bindListPatternParts(
+    listPattern: EListPattern,
+    parts: Expression[],
+    type: Type,
+    isCons: boolean,
+  ): void {
+    const ty = this.bindIfVar(listPattern, type, TList(TVar("a")));
+
+    if (ty.nodeType !== "Union" || ty.name !== "List") {
+      if (ty.nodeType !== "Unknown") {
+        this.diagnostics.push(
+          typeMismatchError(listPattern, TList(TVar("a")), ty, true),
+        );
+      }
+
+      parts.forEach((p) => this.bindPattern(p, TUnknown, false));
+      return;
+    }
+
+    const innerType = ty.params[0];
+
+    parts.slice(0, parts.length - 1).forEach((part) => {
+      const t = part.nodeType === "ListPattern" ? ty : innerType;
+      this.bindPattern(part, t, false);
+    });
+
+    if (parts.length > 0) {
+      this.bindPattern(parts[parts.length - 1], isCons ? ty : innerType, false);
     }
   }
 
@@ -831,6 +1360,10 @@ export class InferenceScope {
   ): boolean {
     let assignable: boolean;
 
+    if (expr.nodeType === "CaseOfExpr") {
+      return this.isBranchesAssignable(expr, type1, type2);
+    }
+
     try {
       assignable = this.assignable(type1, type2);
     } catch (e) {
@@ -841,10 +1374,29 @@ export class InferenceScope {
     if (!assignable) {
       const t1 = TypeReplacement.replace(type1, this.replacements.toMap());
       const t2 = TypeReplacement.replace(type2, this.replacements.toMap());
-      this.diagnostics.push(typeMismatchError(expr, t1, t2));
+
+      const errorExpr = expr.nodeType === "LetInExpr" ? expr.body : expr;
+      this.diagnostics.push(
+        typeMismatchError(errorExpr, t1, t2, patternBinding),
+      );
     }
 
     return assignable;
+  }
+
+  private isBranchesAssignable(
+    expr: ECaseOfExpr,
+    type1: Type,
+    type2: Type,
+  ): boolean {
+    // If type2 is not a concrete type, then every branch should match the first type
+    const t2 =
+      type2.nodeType !== "Unknown" && type2.nodeType !== "Var" ? type2 : type1;
+
+    return expr.branches.every((branch) => {
+      const t1 = this.expressionTypes.get(branch.expr);
+      return t1 ? this.isAssignable(branch.expr, t1, t2) : false;
+    });
   }
 
   private assignable(type1: Type, type2: Type): boolean {
@@ -882,6 +1434,14 @@ export class InferenceScope {
                 this.functionAssignable(ty1, ty2);
             }
             break;
+          case "Tuple":
+            {
+              result =
+                ty2?.nodeType === "Tuple" &&
+                ty1.types.length === ty2.types.length &&
+                this.allAssignable(ty1.types, ty2.types);
+            }
+            break;
           case "Unknown":
             result = true;
         }
@@ -911,11 +1471,10 @@ export class InferenceScope {
       if (types.length === 1) {
         return types[0];
       } else {
-        return {
-          nodeType: "Function",
-          params: types.slice(0, types.length - 2),
-          return: types[types.length - 1],
-        };
+        return TFunction(
+          types.slice(0, types.length - 2),
+          types[types.length - 1],
+        );
       }
     }
 
@@ -963,16 +1522,47 @@ export class InferenceScope {
   }
 
   private nonVarAssignableToVar(type: Type, typeVar: TVar): boolean {
+    const allAssignableTo = (types: Type[], typeClass: string): boolean => {
+      return types.every((t) => this.assignable(t, TVar(typeClass)));
+    };
+
     if (typeVar.name.startsWith("number")) {
       return (
         type.nodeType === "Union" &&
         (type.name === "Float" || type.name === "Int")
       );
+    } else if (typeVar.name.startsWith("appendable")) {
+      return (
+        type.nodeType === "Union" &&
+        (type.name === "String" || type.name === "List")
+      );
+    } else if (typeVar.name.startsWith("comparable")) {
+      if (type.nodeType === "Tuple") {
+        return allAssignableTo(type.types, "comparable");
+      } else if (type.nodeType === "Union") {
+        return (
+          type.name === "Float" ||
+          type.name === "Int" ||
+          type.name === "Char" ||
+          type.name === "String" ||
+          (type.name === "List" &&
+            (allAssignableTo(type.params, "comparable") ||
+              allAssignableTo(type.params, "number")))
+        );
+      } else {
+        return false;
+      }
+    } else if (typeVar.name.startsWith("compappend")) {
+      return (
+        type.nodeType === "Union" &&
+        (type.name === "String" ||
+          (type.name === "List" &&
+            (allAssignableTo(type.params, "comparable") ||
+              allAssignableTo(type.params, "compappend"))))
+      );
     }
 
     return !typeVar.rigid;
-
-    // TODO: Handle appendable, comparable, etc
   }
 
   private typeclassesCompatable(
@@ -1054,9 +1644,7 @@ export class InferenceScope {
         ) {
           assign(
             type1,
-            typeClass2 === "compappend"
-              ? type2
-              : { nodeType: "Var", name: "compappend", rigid: false },
+            typeClass2 === "compappend" ? type2 : TVar("compappend"),
           );
         } else if (
           !type1.rigid &&
@@ -1102,7 +1690,7 @@ export class InferenceScope {
 
   private uniqueVars(count: number): TVar[] {
     return getVarNames(count).map((val) => {
-      return { nodeType: "Var", name: val, rigid: false };
+      return TVar(val);
     });
   }
 }
@@ -1150,10 +1738,6 @@ interface Other extends ParameterBindingResult {
   bindingType: "Other";
 }
 
-export function notUndefined<T>(x: T | undefined): x is T {
-  return x !== undefined;
-}
-
 export function findType(
   node: SyntaxNode,
   uri: string,
@@ -1174,29 +1758,72 @@ export function findType(
     declaration?.type !== "value_declaration" ||
     declaration.parent?.type !== "file"
   ) {
-    return { nodeType: "Unknown" };
+    return TUnknown;
   }
 
-  const mappedDeclaration = mapSyntaxNodeToTypeTree(declaration);
+  const mappedDeclaration = mapSyntaxNodeToExpression(declaration);
 
-  if (mappedDeclaration) {
-    const inferenceResult = new InferenceScope(
+  if (mappedDeclaration && mappedDeclaration.nodeType === "ValueDeclaration") {
+    const inferenceResult = InferenceScope.valueDeclarationInference(
+      mappedDeclaration,
       uri,
-      workspace.getForest(),
-      workspace.getImports(),
-      new Set(),
-    ).inferDeclaration(mappedDeclaration, true);
+      workspace,
+      new Set<EValueDeclaration>(),
+    );
 
     if (node.parent?.type === "function_declaration_left") {
       return inferenceResult.type;
     }
 
-    return (
-      inferenceResult.expressionTypes.get(node) ?? {
-        nodeType: "Unknown",
+    const mappedNode = mapSyntaxNodeToExpression(node);
+
+    const findTypeOrParentType = (
+      expr: Expression | undefined,
+    ): Type | undefined => {
+      const found = expr
+        ? inferenceResult.expressionTypes.get(expr)
+        : undefined;
+
+      if (found) {
+        return found;
       }
-    );
+
+      // Check if the parent is the same text and position
+      if (
+        expr?.text === expr?.parent?.text &&
+        expr?.startIndex === expr?.parent?.startIndex &&
+        expr?.endIndex === expr?.parent?.endIndex
+      ) {
+        return findTypeOrParentType(mapSyntaxNodeToExpression(expr?.parent));
+      }
+    };
+
+    return findTypeOrParentType(mappedNode) ?? TUnknown;
   } else {
-    return { nodeType: "Unknown" };
+    return TUnknown;
   }
+}
+
+// Testing helper
+function printAllExpressionTypes(
+  rootNode: SyntaxNode,
+  expressionTypes: SyntaxNodeMap<Expression, Type>,
+): void {
+  function findNode(
+    node: SyntaxNode,
+    expr: Expression,
+  ): SyntaxNode | undefined {
+    if ((node as any).id === (expr as any).id) {
+      return node;
+    }
+
+    return node.namedChildren
+      .map((n) => findNode(n, expr))
+      .filter(notUndefined)[0];
+  }
+
+  expressionTypes.forEach((val, key) => {
+    const node = findNode(rootNode, key);
+    console.log(`${node?.text} - ${node?.type}: ${typeToString(val)}`);
+  });
 }
