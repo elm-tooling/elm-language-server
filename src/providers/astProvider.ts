@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import { container } from "tsyringe";
 import {
   DidChangeTextDocumentParams,
+  DidOpenTextDocumentParams,
   IConnection,
   VersionedTextDocumentIdentifier,
 } from "vscode-languageserver";
@@ -10,6 +11,7 @@ import Parser, { Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { IDocumentEvents } from "../util/documentEvents";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
+import { FileEventsHandler } from "./handlers/fileEventsHandler";
 
 export class ASTProvider {
   private connection: IConnection;
@@ -20,16 +22,25 @@ export class ASTProvider {
     this.connection = container.resolve<IConnection>("Connection");
     const documentEvents = container.resolve<IDocumentEvents>("DocumentEvents");
 
+    new FileEventsHandler();
+
     documentEvents.on(
       "change",
       new ElmWorkspaceMatcher((params: DidChangeTextDocumentParams) =>
         URI.parse(params.textDocument.uri),
       ).handlerForWorkspace(this.handleChangeTextDocument),
     );
+
+    documentEvents.on(
+      "open",
+      new ElmWorkspaceMatcher((params: DidOpenTextDocumentParams) =>
+        URI.parse(params.textDocument.uri),
+      ).handlerForWorkspace(this.handleChangeTextDocument),
+    );
   }
 
   protected handleChangeTextDocument = (
-    params: DidChangeTextDocumentParams,
+    params: DidChangeTextDocumentParams | DidOpenTextDocumentParams,
     elmWorkspace: IElmWorkspace,
   ): void => {
     this.connection.console.info(
@@ -48,9 +59,14 @@ export class ASTProvider {
       tree = this.parser.parse(fileContent);
     }
 
-    for (const changeEvent of params.contentChanges) {
-      tree = this.parser.parse(changeEvent.text);
+    if ("contentChanges" in params) {
+      for (const changeEvent of params.contentChanges) {
+        tree = this.parser.parse(changeEvent.text);
+      }
+    } else {
+      tree = this.parser.parse(params.textDocument.text);
     }
+
     if (tree) {
       forest.setTree(document.uri, true, true, tree, true);
 

@@ -50,6 +50,11 @@ export class MockElmWorkspace implements IElmWorkspace {
     return false;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getPath(uri: URI): string | undefined {
+    return;
+  }
+
   getForest(): Forest {
     return this.forest;
   }

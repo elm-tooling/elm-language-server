@@ -26,6 +26,7 @@ export interface IElmWorkspace {
   init(progressCallback: (percent: number) => void): void;
   hasDocument(uri: URI): boolean;
   hasPath(uri: URI): boolean;
+  getPath(uri: URI): string | undefined;
   getForest(): Forest;
   getImports(): Imports;
   getRootPath(): URI;
@@ -65,9 +66,13 @@ export class ElmWorkspace implements IElmWorkspace {
   }
 
   public hasPath(uri: URI): boolean {
+    return !!this.getPath(uri);
+  }
+
+  public getPath(uri: URI): string | undefined {
     return this.elmFolders
       .map((f) => f.uri)
-      .some((elmFolder) => uri.fsPath.startsWith(elmFolder));
+      .find((elmFolder) => uri.fsPath.startsWith(elmFolder));
   }
 
   public getForest(): Forest {

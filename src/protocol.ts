@@ -1,4 +1,5 @@
 import { CodeActionParams, RequestType } from "vscode-languageserver";
+import { URI } from "vscode-uri";
 
 export const GetMoveDestinationRequest = new RequestType<
   IMoveParams,
@@ -45,3 +46,25 @@ export const UnexposeRequest = new RequestType<
   void,
   void
 >("elm/unexpose");
+
+export interface IOnDidCreateFilesParams {
+  readonly files: ReadonlyArray<URI>;
+}
+
+export interface IOnDidRenameFilesParams {
+  readonly files: ReadonlyArray<{ oldUri: URI; newUri: URI }>;
+}
+
+export const OnDidCreateFilesRequest = new RequestType<
+  IOnDidCreateFilesParams,
+  void,
+  void,
+  void
+>("elm/ondidCreateFiles");
+
+export const OnDidRenameFilesRequest = new RequestType<
+  IOnDidRenameFilesParams,
+  void,
+  void,
+  void
+>("elm/ondidRenameFiles");
