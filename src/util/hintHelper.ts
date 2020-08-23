@@ -164,7 +164,7 @@ export class HintHelper {
     return newComment.trim();
   }
 
-  private static wrapCodeInMarkdown(code: string): string {
+  public static wrapCodeInMarkdown(code: string): string {
     return `\n\`\`\`elm\n${code}\n\`\`\`\n`;
   }
 }

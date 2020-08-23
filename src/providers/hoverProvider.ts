@@ -1,3 +1,4 @@
+import { ITreeContainer } from "src/forest";
 import { container } from "tsyringe";
 import {
   Hover,
@@ -6,14 +7,12 @@ import {
   TextDocumentPositionParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { SyntaxNode } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { getEmptyTypes } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
 import { NodeType, TreeUtils } from "../util/treeUtils";
-import { ITreeContainer } from "src/forest";
-import { typeToString, findType } from "../util/types/typeInference";
 
 type HoverResult = Hover | null | undefined;
 
@@ -53,7 +52,10 @@ export class HoverProvider {
 
       //   if (typeString && typeString !== "Unknown") {
       //     return {
-      //       contents: typeString,
+      //       contents: {
+      //         kind: MarkupKind.Markdown,
+      //         value: HintHelper.wrapCodeInMarkdown(typeString),
+      //       },
       //     };
       //   }
       // } catch (e) {
