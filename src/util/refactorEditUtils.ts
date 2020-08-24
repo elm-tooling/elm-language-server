@@ -1,3 +1,4 @@
+import { PositionUtil } from "src/positionUtil";
 import { Position, Range, TextEdit } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { TreeUtils } from "./treeUtils";
@@ -184,6 +185,35 @@ export class RefactorEditUtils {
       ),
       imports,
     );
+  }
+
+  public static addModuleDeclaration(moduleName: string): TextEdit {
+    return TextEdit.insert(
+      Position.create(0, 0),
+      `module ${moduleName} exposing (..)`,
+    );
+  }
+
+  public static renameModuleDeclaration(
+    tree: Tree,
+    newModuleName: string,
+  ): TextEdit | undefined {
+    const moduleNameNode = TreeUtils.getModuleNameNode(tree);
+    if (moduleNameNode) {
+      return TextEdit.replace(
+        Range.create(
+          Position.create(
+            moduleNameNode.startPosition.row,
+            moduleNameNode.startPosition.column,
+          ),
+          Position.create(
+            moduleNameNode.endPosition.row,
+            moduleNameNode.endPosition.column,
+          ),
+        ),
+        newModuleName,
+      );
+    }
   }
 
   private static removeValueFromExposingList(
