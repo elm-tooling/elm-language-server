@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "../treeUtils";
+import { flatMap, TreeUtils } from "../treeUtils";
 import { References } from "../references";
 import {
   BinaryExprTree,
@@ -28,16 +28,13 @@ import {
   EListExpr,
   EUnionPattern,
   EListPattern,
+  EConsPattern,
 } from "./expressionTree";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { TypeExpression } from "./typeExpression";
 import { IElmWorkspace } from "src/elmWorkspace";
-import { doesNotMatch } from "assert";
 import { Sequence } from "../sequence";
-
-export function notUndefined<T>(x: T | undefined): x is T {
-  return x !== undefined;
-}
+import { Utils } from "../utils";
 
 export interface Info {
   module: string;
@@ -45,7 +42,15 @@ export interface Info {
   parameters: Type[];
 }
 
-export type Type = TVar | TFunction | TTuple | TUnion | TUnit | TUnknown;
+export type Type =
+  | TVar
+  | TFunction
+  | TTuple
+  | TUnion
+  | TUnit
+  | TInProgressBinding
+  | TUnknown;
+
 export interface TVar {
   nodeType: "Var";
   name: string;
@@ -70,19 +75,24 @@ export interface TUnion {
   params: Type[];
   info?: Info;
 }
-export interface TRecord {
-  fields: { [key: string]: Type };
-  baseType?: Type;
-  info?: Info;
-  fieldReferences?: any;
-}
-export interface TMutableRecord {
-  fields: { [key: string]: Type };
-  baseType?: Type;
-  fieldReferences?: any;
-}
+// TODO: Record support
+// export interface TRecord {
+//   fields: { [key: string]: Type };
+//   baseType?: Type;
+//   info?: Info;
+//   fieldReferences?: any;
+// }
+// export interface TMutableRecord {
+//   fields: { [key: string]: Type };
+//   baseType?: Type;
+//   fieldReferences?: any;
+// }
 interface TUnit {
   nodeType: "Unit";
+  info?: Info;
+}
+interface TInProgressBinding {
+  nodeType: "InProgressBinding";
   info?: Info;
 }
 interface TUnknown {
@@ -119,11 +129,9 @@ export const TTuple = (types: Type[], info?: Info): TTuple => {
   return { nodeType: "Tuple", types, info };
 };
 
-const TInt = TUnion("Basics", "Int", []);
 const TFloat = TUnion("Basics", "Float", []);
 const TBool = TUnion("Basics", "Bool", []);
 const TString = TUnion("String", "String", []);
-const TChar = TUnion("Char", "Char", []);
 
 export const TList = (elementType: Type): TUnion =>
   TUnion("List", "List", [elementType]);
@@ -132,6 +140,10 @@ const TNumber = TVar("number");
 
 export const TUnit: TUnit = {
   nodeType: "Unit",
+};
+
+export const TInProgressBinding: TInProgressBinding = {
+  nodeType: "InProgressBinding",
 };
 
 export const TUnknown: TUnknown = {
@@ -150,6 +162,7 @@ function allTypeVars(type: Type): TVar[] {
       return type.types.flatMap(allTypeVars);
     case "Unknown":
     case "Unit":
+    case "InProgressBinding":
       return [];
   }
 }
@@ -230,6 +243,10 @@ export function typeToString(t: Type): string {
   switch (t.nodeType) {
     case "Unknown":
       return "Unknown";
+    case "InProgressBinding":
+      throw new Error(
+        "Should never try to convert an in progress binding type to a string",
+      );
     case "Unit":
       return "()";
     case "Var":
@@ -247,10 +264,36 @@ export function typeToString(t: Type): string {
   }
 }
 
+function getTypeclassName(type: TVar): string | undefined {
+  switch (type.name) {
+    case "number":
+    case "appendable":
+    case "comparable":
+    case "compappend":
+      return type.name;
+  }
+}
+
+const VAR_LETTERS = "abcdefghijklmnopqrstuvwxyz";
+
+function getVarNames(count: number): string[] {
+  const names = [];
+  for (let i = 0; i < count; i++) {
+    const letter = VAR_LETTERS[i % 26];
+    if (i < 26) {
+      names.push(letter);
+    } else {
+      names.push(`${letter}${i / 26}`);
+    }
+  }
+  return names;
+}
+
 function typeMismatchError(
   node: SyntaxNode,
   found: Type,
   expected: Type,
+  endNode?: SyntaxNode,
   patternBinding = false,
 ): Diagnostic {
   const foundText = typeToString(found);
@@ -262,12 +305,14 @@ function typeMismatchError(
 
   return {
     node,
+    endNode: endNode ?? node,
     message,
   };
 }
 
 function parameterCountError(
   node: SyntaxNode,
+  endNode: SyntaxNode,
   actual: number,
   expected: number,
   isType = false,
@@ -275,6 +320,7 @@ function parameterCountError(
   const name = node.firstNamedChild?.text ?? "";
   return {
     node,
+    endNode,
     message: `The ${
       isType ? "type" : "function"
     } \`${name}\` expects ${expected} argument${
@@ -285,6 +331,7 @@ function parameterCountError(
 
 function argumentCountError(
   node: SyntaxNode,
+  endNode: SyntaxNode,
   actual: number,
   expected: number,
   isType = false,
@@ -293,6 +340,7 @@ function argumentCountError(
     const name = node.firstNamedChild?.text;
     return {
       node,
+      endNode,
       message: `${
         name ? `\`${name}\`` : "This value"
       } is not a function, but it was given ${actual} argument${
@@ -300,13 +348,14 @@ function argumentCountError(
       }`,
     };
   } else {
-    return parameterCountError(node, actual, expected, isType);
+    return parameterCountError(node, endNode, actual, expected, isType);
   }
 }
 
 function redefinitionError(node: SyntaxNode): Diagnostic {
   return {
     node,
+    endNode: node,
     message: `A value named \`${node.text}\` is already defined`,
   };
 }
@@ -314,6 +363,7 @@ function redefinitionError(node: SyntaxNode): Diagnostic {
 function badRecursionError(node: SyntaxNode): Diagnostic {
   return {
     node,
+    endNode: node,
     message: `Infinite recursion`,
   };
 }
@@ -321,12 +371,22 @@ function badRecursionError(node: SyntaxNode): Diagnostic {
 function cyclicDefinitionError(node: SyntaxNode): Diagnostic {
   return {
     node,
+    endNode: node,
     message: `Value cannot be defined in terms of itself`,
+  };
+}
+
+function partialPatternError(node: SyntaxNode): Diagnostic {
+  return {
+    node,
+    endNode: node,
+    message: `Pattern does not cover all posiblities`,
   };
 }
 
 export interface Diagnostic {
   node: SyntaxNode;
+  endNode: SyntaxNode;
   message: string;
 }
 
@@ -375,7 +435,9 @@ export class InferenceScope {
   }
 
   private getBinding(e: Expression): Type | undefined {
-    return this.ancestors.map((a) => a.bindings.get(e.text)).find(notUndefined);
+    return this.ancestors
+      .map((a) => a.bindings.get(e.text))
+      .find(Utils.notUndefined.bind(this));
   }
 
   public static valueDeclarationInference(
@@ -402,10 +464,10 @@ export class InferenceScope {
   ): InferenceResult {
     this.activeScopes.add(declaration);
 
-    // Bind the parameters should the body can reference them
+    // Bind the parameters so the body can reference them
     const binding = this.bindParameters(declaration);
 
-    // If there is a pattern, it gets infered in the parameter binding
+    // If there is a pattern, it gets inferred in the parameter binding
     if (declaration.pattern) {
       return this.toTopLevelResult(TUnknown);
     }
@@ -476,11 +538,10 @@ export class InferenceScope {
       );
     }
 
-    const outerVars = this.ancestors
-      .toArray()
-      .map((a) => a.annotationVars)
-      .slice(1)
-      .flat();
+    const outerVars = flatMap(
+      this.ancestors.toArray().slice(1),
+      (a) => a.annotationVars,
+    );
 
     const ret = TypeReplacement.replace(
       type,
@@ -500,7 +561,7 @@ export class InferenceScope {
 
     switch (e.nodeType) {
       case "AnonymousFunctionExpr":
-        type = this.inferLamba(e);
+        type = this.inferLambda(e);
         break;
       case "BinOpExpr":
         type = this.inferBinOpExpr(e);
@@ -546,7 +607,7 @@ export class InferenceScope {
     return type;
   }
 
-  private lambaInference(lamba: EAnonymousFunctionExpr): InferenceResult {
+  private lambdaInference(lamba: EAnonymousFunctionExpr): InferenceResult {
     const paramVars = this.uniqueVars(lamba.params.length);
     lamba.params.forEach((p, i) => this.bindPattern(p, paramVars[i], true));
 
@@ -648,7 +709,7 @@ export class InferenceScope {
           pattern,
         )
           ?.map(mapSyntaxNodeToExpression)
-          .filter(notUndefined);
+          .filter(Utils.notUndefined.bind(this));
 
         patterns?.forEach((pat) => {
           const patType = result.expressionTypes.get(pat);
@@ -720,7 +781,12 @@ export class InferenceScope {
     const binding = this.getBinding(definition.expr);
 
     if (binding) {
-      return binding;
+      if (binding.nodeType === "InProgressBinding") {
+        this.diagnostics.push(cyclicDefinitionError(e));
+        return TUnknown;
+      } else {
+        return binding;
+      }
     }
 
     switch (definition.expr.nodeType) {
@@ -774,6 +840,8 @@ export class InferenceScope {
       return TUnknown;
     }
 
+    const recursive = this.checkRecursion(declaration);
+
     const existing = this.resolvedDeclarations.get(declaration);
 
     if (existing) {
@@ -792,6 +860,11 @@ export class InferenceScope {
     }
 
     if (!type) {
+      // Don't try to infer unannotated recursive functions
+      if (recursive) {
+        return TUnknown;
+      }
+
       const parentScope = this.ancestors.find((scope) =>
         scope.childDeclarations.has(declaration),
       );
@@ -821,7 +894,9 @@ export class InferenceScope {
       actual: number,
       expected: number,
     ): TUnknown => {
-      this.diagnostics.push(argumentCountError(expr, actual, expected));
+      this.diagnostics.push(
+        argumentCountError(expr, endExpr, actual, expected),
+      );
       return TUnknown;
     };
 
@@ -919,6 +994,7 @@ export class InferenceScope {
         ) {
           this.diagnostics.push({
             node: e,
+            endNode: e,
             message: "NonAssociativeOperatorError",
           });
           return TUnknown;
@@ -998,7 +1074,6 @@ export class InferenceScope {
     e: EOperator,
   ): [Type, IOperatorPrecedence] {
     // Find operator reference
-
     const definition = findDefinition(
       e,
       this.uri,
@@ -1008,9 +1083,7 @@ export class InferenceScope {
     const opDeclaration = mapSyntaxNodeToExpression(definition?.expr.parent);
 
     const infixDeclarationExpr = mapSyntaxNodeToExpression(
-      opDeclaration
-        ? References.findOperatorInfixDeclaration(opDeclaration)
-        : undefined,
+      opDeclaration ? References.findOperator(opDeclaration) : undefined,
     );
 
     if (
@@ -1043,9 +1116,9 @@ export class InferenceScope {
     return TUnknown;
   }
 
-  private inferLamba(lambaExpr: EAnonymousFunctionExpr): Type {
+  private inferLambda(lambaExpr: EAnonymousFunctionExpr): Type {
     return this.inferChild(
-      (inference) => inference.lambaInference(lambaExpr),
+      (inference) => inference.lambdaInference(lambaExpr),
       undefined,
       true,
     ).type;
@@ -1143,7 +1216,12 @@ export class InferenceScope {
 
     if (patterns.length > maxParams) {
       this.diagnostics.push(
-        parameterCountError(functionDeclaration, patterns.length, maxParams),
+        parameterCountError(
+          patterns[0],
+          patterns[patterns.length - 1],
+          patterns.length,
+          maxParams,
+        ),
       );
       patterns.forEach((pat) => this.bindPattern(pat, TUnknown, true));
       return { count: maxParams } as Other;
@@ -1168,11 +1246,26 @@ export class InferenceScope {
     valueDeclaration: EValueDeclaration,
     pattern: EPattern,
   ): void {
+    // Bind all patters to a InProgressBinding type
+    // so we can use them before we know the type
     const declaredNames = pattern.descendantsOfType("lower_pattern");
+    declaredNames.forEach((name) =>
+      this.bindings.set(name.text, TInProgressBinding),
+    );
+
     const bodyType: Type = valueDeclaration.body
       ? this.infer(valueDeclaration.body)
       : TUnknown;
     this.bindPattern(pattern, bodyType, false);
+
+    // Make sure there are none still in progress, or else there was a mistake
+    declaredNames.forEach((name) => {
+      if (
+        this.getBinding(name as Expression)?.nodeType === "InProgressBinding"
+      ) {
+        throw new Error(`Failed to bind parameter ${name.text}`);
+      }
+    });
   }
 
   private bindPattern(
@@ -1183,6 +1276,14 @@ export class InferenceScope {
     const ty = this.replacements.get(type) ?? type;
     switch (pattern.nodeType) {
       case "AnythingPattern":
+        break;
+      case "ConsPattern":
+        if (isParameter) {
+          this.diagnostics.push(partialPatternError(pattern));
+          this.bindConsPattern(pattern, TUnknown);
+        } else {
+          this.bindConsPattern(pattern, ty);
+        }
         break;
       case "Pattern":
         {
@@ -1239,7 +1340,7 @@ export class InferenceScope {
       if (ty.nodeType !== "Unknown") {
         const actualType = TTuple(this.uniqueVars(patterns.length));
         this.diagnostics.push(
-          typeMismatchError(tuplePattern, actualType, ty, true),
+          typeMismatchError(tuplePattern, actualType, ty, tuplePattern, true),
         );
       }
       return;
@@ -1278,7 +1379,7 @@ export class InferenceScope {
 
     const issueError = (actual: number, expected: number): void => {
       this.diagnostics.push(
-        argumentCountError(unionPattern, actual, expected, true),
+        argumentCountError(unionPattern, unionPattern, actual, expected, true),
       );
       unionPattern.namedParams.forEach((p) => this.setBinding(p, TUnknown));
     };
@@ -1312,16 +1413,16 @@ export class InferenceScope {
     }
   }
 
-  // private bindConsPattern(consPattern: EConsPattern, type: Type): void {
-  //   this.bindListPatternParts(consPattern, consPattern.parts, type, true);
-  // }
+  private bindConsPattern(consPattern: EConsPattern, type: Type): void {
+    this.bindListPatternParts(consPattern, consPattern.parts, type, true);
+  }
 
   private bindListPattern(listPattern: EListPattern, type: Type): void {
     this.bindListPatternParts(listPattern, listPattern.parts, type, true);
   }
 
   private bindListPatternParts(
-    listPattern: EListPattern,
+    listPattern: EListPattern | EConsPattern,
     parts: Expression[],
     type: Type,
     isCons: boolean,
@@ -1331,7 +1432,13 @@ export class InferenceScope {
     if (ty.nodeType !== "Union" || ty.name !== "List") {
       if (ty.nodeType !== "Unknown") {
         this.diagnostics.push(
-          typeMismatchError(listPattern, TList(TVar("a")), ty, true),
+          typeMismatchError(
+            listPattern,
+            TList(TVar("a")),
+            ty,
+            listPattern,
+            true,
+          ),
         );
       }
 
@@ -1355,7 +1462,7 @@ export class InferenceScope {
     expr: Expression,
     type1: Type,
     type2: Type,
-    endElement?: Expression,
+    endExpr?: Expression,
     patternBinding = false,
   ): boolean {
     let assignable: boolean;
@@ -1367,7 +1474,11 @@ export class InferenceScope {
     try {
       assignable = this.assignable(type1, type2);
     } catch (e) {
-      this.diagnostics.push({ node: expr, message: e });
+      this.diagnostics.push({
+        node: expr,
+        endNode: endExpr ?? expr,
+        message: e,
+      });
       return false;
     }
 
@@ -1377,7 +1488,7 @@ export class InferenceScope {
 
       const errorExpr = expr.nodeType === "LetInExpr" ? expr.body : expr;
       this.diagnostics.push(
-        typeMismatchError(errorExpr, t1, t2, patternBinding),
+        typeMismatchError(errorExpr, t1, t2, errorExpr, patternBinding),
       );
     }
 
@@ -1444,6 +1555,11 @@ export class InferenceScope {
             break;
           case "Unknown":
             result = true;
+            break;
+          case "InProgressBinding":
+            throw new Error(
+              `Should never try to assign an in progress binding`,
+            );
         }
       }
     }
@@ -1505,7 +1621,7 @@ export class InferenceScope {
       return true;
     } else if (!type1.rigid && typeClass1) {
       return (
-        this.typeclassesCompatable(typeClass1, typeClass2, !type2.rigid) ||
+        this.typeclassesCompatible(typeClass1, typeClass2, !type2.rigid) ||
         (!type2.rigid &&
           this.typeclassesConstrainToCompappend(typeClass1, typeClass2))
       );
@@ -1515,7 +1631,7 @@ export class InferenceScope {
       // If they are both rigid and we have a type class, they must be the same typeclass
       return typeClass1 === typeClass2;
     } else if (type1.rigid && typeClass1 && !type2.rigid) {
-      return this.typeclassesCompatable(typeClass1, typeClass2, !type2.rigid);
+      return this.typeclassesCompatible(typeClass1, typeClass2, !type2.rigid);
     } else {
       throw new Error("Impossible");
     }
@@ -1565,7 +1681,7 @@ export class InferenceScope {
     return !typeVar.rigid;
   }
 
-  private typeclassesCompatable(
+  private typeclassesCompatible(
     name1: string,
     name2?: string,
     unconstrainedAllowed = true,
@@ -1695,31 +1811,6 @@ export class InferenceScope {
   }
 }
 
-function getTypeclassName(type: TVar): string | undefined {
-  switch (type.name) {
-    case "number":
-    case "appendable":
-    case "comparable":
-    case "compappend":
-      return type.name;
-  }
-}
-
-function getVarNames(count: number): string[] {
-  const names = [];
-  for (let i = 0; i < count; i++) {
-    const letter = VAR_LETTERS[i % 26];
-    if (i < 26) {
-      names.push(letter);
-    } else {
-      names.push(`${letter}${i / 26}`);
-    }
-  }
-  return names;
-}
-
-const VAR_LETTERS = "abcdefghijklmnopqrstuvwxyz";
-
 type BindingType = "Annotated" | "Unannotated" | "Other";
 interface ParameterBindingResult {
   bindingType: BindingType;
@@ -1819,7 +1910,7 @@ function printAllExpressionTypes(
 
     return node.namedChildren
       .map((n) => findNode(n, expr))
-      .filter(notUndefined)[0];
+      .filter(Utils.notUndefined)[0];
   }
 
   expressionTypes.forEach((val, key) => {

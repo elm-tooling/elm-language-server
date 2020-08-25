@@ -60,6 +60,7 @@ export class TypeReplacement {
       case "Tuple":
         return this.replaceTuple(type);
       case "Unit":
+      case "InProgressBinding":
         return type;
       case "Unknown":
         return {

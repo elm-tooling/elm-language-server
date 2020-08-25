@@ -58,7 +58,6 @@ export class DiagnosticsProvider {
     this.typeInferenceDiagnostics = container.resolve<TypeInferenceDiagnostics>(
       TypeInferenceDiagnostics,
     );
-    this.settings = container.resolve("Settings");
     this.connection = container.resolve<IConnection>("Connection");
     this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
@@ -69,10 +68,10 @@ export class DiagnosticsProvider {
     const astProvider = container.resolve<ASTProvider>(ASTProvider);
 
     this.currentDiagnostics = {
-      elmAnalyse: new Map(),
-      elmMake: new Map(),
-      elmTest: new Map(),
-      typeInference: new Map(),
+      elmAnalyse: new Map<string, Diagnostic[]>(),
+      elmMake: new Map<string, Diagnostic[]>(),
+      elmTest: new Map<string, Diagnostic[]>(),
+      typeInference: new Map<string, Diagnostic[]>(),
     };
     // register onChange listener if settings are not on-save only
     void this.settings.getClientSettings().then(({ elmAnalyseTrigger }) => {
@@ -106,27 +105,28 @@ export class DiagnosticsProvider {
         );
       }
 
-      astProvider.onTreeChange(({ uri, tree }) => {
-        let workspace;
-        try {
-          workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor({ uri });
-        } catch (error) {
-          if (error instanceof NoWorkspaceContainsError) {
-            this.connection.console.info(error.message);
-            return; // ignore file that doesn't correspond to a workspace
-          }
+      // TODO: Enable type inference diagnostics
+      // astProvider.onTreeChange(({ uri, tree }) => {
+      //   let workspace;
+      //   try {
+      //     workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor({ uri });
+      //   } catch (error) {
+      //     if (error instanceof NoWorkspaceContainsError) {
+      //       this.connection.console.info(error.message);
+      //       return; // ignore file that doesn't correspond to a workspace
+      //     }
 
-          throw error;
-        }
+      //     throw error;
+      //   }
 
-        // this.currentDiagnostics.typeInference = this.typeInferenceDiagnostics.createDiagnostics(
-        //   tree,
-        //   uri,
-        //   workspace,
-        // );
+      //   this.currentDiagnostics.typeInference = this.typeInferenceDiagnostics.createDiagnostics(
+      //     tree,
+      //     uri,
+      //     workspace,
+      //   );
 
-        // this.sendDiagnostics();
-      });
+      //   this.sendDiagnostics();
+      // });
     });
   }
 

@@ -98,13 +98,3 @@ export class ASTProvider {
     }
   };
 }
-
-function printTree(node: SyntaxNode, level: number = 0): string {
-  const tab = Array.apply(0, Array(level))
-    .map(() => "\t")
-    .join("");
-  const s = `${node.type}: ${
-    node.text.length > 10 ? `${node.text.slice(0, 10)}...` : node.text
-  }`;
-  return `${tab}${s}\n${node.children.map((n) => printTree(n, level + 1))}`;
-}

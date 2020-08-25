@@ -443,9 +443,7 @@ export class References {
     return references;
   }
 
-  public static findOperatorInfixDeclaration(
-    node: SyntaxNode,
-  ): SyntaxNode | undefined {
+  public static findOperator(node: SyntaxNode): SyntaxNode | undefined {
     const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(node);
 
     if (functionNameNode) {

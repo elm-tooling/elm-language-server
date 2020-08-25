@@ -147,8 +147,6 @@ export function getTargetPositionFromSource(
 ): { position: Position; sources: { [K: string]: string } } | undefined {
   const sources = getSourceFiles(source);
 
-  console.log(sources);
-
   let position: Position | undefined;
 
   for (const fileName in sources) {
@@ -172,7 +170,7 @@ export function getTargetPositionFromSource(
   }
 }
 
-export function getSourceFiles(source: string): { [K: string]: string } {
+function getSourceFiles(source: string): { [K: string]: string } {
   const sources: { [K: string]: string } = {};
   let currentFile = "";
   const regex = /--@ ([a-zA-Z/]+.elm)/;

@@ -4,7 +4,6 @@ import {
   TVar,
   uncurryFunction,
   InferenceResult,
-  notUndefined,
   Diagnostic,
   TUnit,
   TUnknown,
@@ -27,6 +26,7 @@ import {
 import { TreeUtils } from "../treeUtils";
 import { TypeReplacement } from "./typeReplacement";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
+import { Utils } from "../utils";
 
 export class TypeExpression {
   // All the type variables we've seen
@@ -243,7 +243,7 @@ export class TypeExpression {
     const args =
       TreeUtils.findAllNamedChildrenOfType("type_variable", typeRef)
         ?.map(mapSyntaxNodeToExpression)
-        .filter(notUndefined)
+        .filter(Utils.notUndefined.bind(this))
         .map((arg) => this.typeSignatureSegmentType(arg)) ?? [];
 
     const definition = findDefinition(

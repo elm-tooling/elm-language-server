@@ -1,18 +1,14 @@
-import { SyntaxNode } from "web-tree-sitter";
-
 import { SourceTreeParser } from "./utils/sourceTreeParser";
-import {
-  getSourceFiles,
-  getTargetPositionFromSource,
-} from "./utils/sourceParser";
+import { getTargetPositionFromSource } from "./utils/sourceParser";
 import { baseUri } from "./utils/mockElmWorkspace";
 import { URI } from "vscode-uri";
 import { TreeUtils } from "../src/util/treeUtils";
 import { findType, typeToString } from "../src/util/types/typeInference";
 
+// TODO: Need a good way to get elm/core modules for testing
 const basicsSources = `
 --@ Basics.elm
-module Basics exposing (..)
+module Basics exposing (add, (+), Int, Float, Bool(..))
 
 infix left  6 (+)  = add
 
@@ -20,12 +16,14 @@ type Int = Int
 
 type Float = Float
 
+type Bool = True | False
+
 add : number -> number -> number
 add =
   Elm.Kernel.Basics.add
 
 `;
-xdescribe("test type inference", () => {
+describe("test type inference", () => {
   const treeParser = new SourceTreeParser();
 
   async function testTypeInference(source: string, expectedType: string) {
@@ -62,7 +60,7 @@ module Test exposing (..)
 func = 5 + 6
 --^
 `;
-    await testTypeInference(basicsSources + source, "Int");
+    await testTypeInference(basicsSources + source, "number");
   });
 
   test("simple function with params", async () => {
@@ -76,7 +74,10 @@ test c d = 1 + (add c d)
 --^
 `;
 
-    await testTypeInference(basicsSources + source, "Int -> Int -> Int");
+    await testTypeInference(
+      basicsSources + source,
+      "number -> number -> number",
+    );
   });
 
   test("simple int", async () => {
@@ -84,10 +85,10 @@ test c d = 1 + (add c d)
 --@ Test.elm
 module Test exposing (..)
 
-  0
+func = 0
 --^
 `;
-    await testTypeInference(basicsSources + source, "Int");
+    await testTypeInference(basicsSources + source, "number");
   });
 
   test("simple string", async () => {
@@ -95,8 +96,8 @@ module Test exposing (..)
 --@ Test.elm
 module Test exposing (..)
 
-"bla"
-  --^
+func = "bla"
+--^
   `;
     await testTypeInference(basicsSources + source, "String");
   });

@@ -1,4 +1,3 @@
-import { ITreeContainer } from "src/forest";
 import { container } from "tsyringe";
 import {
   Hover,
@@ -35,13 +34,11 @@ export class HoverProvider {
     this.connection.console.info(`A hover was requested`);
 
     const forest = elmWorkspace.getForest();
-    const tree: ITreeContainer | undefined = forest.getByUri(
-      params.textDocument.uri,
-    );
+    const tree = forest.getTree(params.textDocument.uri);
 
     if (tree) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        tree.tree.rootNode,
+        tree.rootNode,
         params.position,
       );
 
@@ -65,7 +62,7 @@ export class HoverProvider {
       const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
         nodeAtPosition,
         params.textDocument.uri,
-        tree.tree,
+        tree,
         elmWorkspace.getImports(),
       );
 
