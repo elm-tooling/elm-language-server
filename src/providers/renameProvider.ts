@@ -4,9 +4,12 @@ import {
   Position,
   PrepareRenameParams,
   Range,
+  RenameFile,
   RenameParams,
   ResponseError,
+  TextDocumentEdit,
   TextEdit,
+  VersionedTextDocumentIdentifier,
   WorkspaceEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -42,11 +45,43 @@ export class RenameProvider {
   ): WorkspaceEdit | null | undefined => {
     this.connection.console.info(`Renaming was requested`);
 
+    let newName = params.newName;
+
     const affectedNodes = this.getRenameAffectedNodes(
       elmWorkspace,
       params.textDocument.uri,
       params.position,
     );
+
+    const renameChanges: RenameFile[] = [];
+    if (
+      affectedNodes?.originalNode.parent?.parent?.type === "module_declaration"
+    ) {
+      const fullModuleName = affectedNodes?.originalNode.parent.text;
+      const modulePrefix = fullModuleName.substring(
+        0,
+        fullModuleName.lastIndexOf("."),
+      );
+
+      newName =
+        modulePrefix.length > 0
+          ? `${modulePrefix}.${params.newName}`
+          : params.newName;
+
+      const newUri = this.generateUriFromModuleName(
+        newName,
+        elmWorkspace,
+        URI.parse(params.textDocument.uri),
+      );
+
+      if (newUri) {
+        renameChanges.push({
+          kind: "rename",
+          oldUri: params.textDocument.uri,
+          newUri: newUri.toString(),
+        } as RenameFile);
+      }
+    }
 
     const map: { [uri: string]: TextEdit[] } = {};
     affectedNodes?.references.forEach((a) => {
@@ -63,14 +98,28 @@ export class RenameProvider {
             ),
             Position.create(a.node.endPosition.row, a.node.endPosition.column),
           ),
-          params.newName,
+          newName,
         ),
       );
     });
 
+    const textDocumentEdits = [];
+    for (const key in map) {
+      if (Object.prototype.hasOwnProperty.call(map, key)) {
+        const element = map[key];
+        textDocumentEdits.push(
+          TextDocumentEdit.create(
+            VersionedTextDocumentIdentifier.create(key, null),
+            element,
+          ),
+        );
+      }
+    }
+
     if (map) {
       return {
-        changes: map,
+        changes: map, // Fallback if the client doesn't implement documentChanges
+        documentChanges: [...textDocumentEdits, ...renameChanges], //Order seems to be important here
       };
     }
   };
@@ -97,6 +146,23 @@ export class RenameProvider {
 
     return null;
   };
+
+  private generateUriFromModuleName(
+    moduleName: string,
+    elmWorkspace: IElmWorkspace,
+    file: URI,
+  ): URI | undefined {
+    const sourceDir = elmWorkspace.getPath(file);
+
+    // The file is not in a source dir (shouldn't happen)
+    if (!sourceDir) {
+      return;
+    }
+
+    const newUri = `${sourceDir}/${moduleName.replace(".", "/")}.elm`;
+
+    return URI.parse(newUri);
+  }
 
   private getRenameAffectedNodes(
     elmWorkspace: IElmWorkspace,
