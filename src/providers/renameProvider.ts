@@ -6,20 +6,16 @@ import {
   Range,
   RenameFile,
   RenameParams,
-  ResponseError,
   TextDocumentEdit,
   TextEdit,
   VersionedTextDocumentIdentifier,
   WorkspaceEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { SyntaxNode } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
-import { Forest } from "../forest";
-import { IImports } from "../imports";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { References } from "../util/references";
-import { TreeUtils } from "../util/treeUtils";
+import { RenameUtils } from "../util/renameUtils";
 
 export class RenameProvider {
   private connection: IConnection;
@@ -47,40 +43,23 @@ export class RenameProvider {
 
     let newName = params.newName;
 
-    const affectedNodes = this.getRenameAffectedNodes(
+    const affectedNodes = RenameUtils.getRenameAffectedNodes(
       elmWorkspace,
       params.textDocument.uri,
       params.position,
     );
 
+    newName = this.uppercaseNewNameIfModuleDeclaration(newName, affectedNodes);
+
     const renameChanges: RenameFile[] = [];
-    if (
-      affectedNodes?.originalNode.parent?.parent?.type === "module_declaration"
-    ) {
-      const fullModuleName = affectedNodes?.originalNode.parent.text;
-      const modulePrefix = fullModuleName.substring(
-        0,
-        fullModuleName.lastIndexOf("."),
-      );
-
-      newName =
-        modulePrefix.length > 0
-          ? `${modulePrefix}.${params.newName}`
-          : params.newName;
-
-      const newUri = this.generateUriFromModuleName(
-        newName,
-        elmWorkspace,
-        URI.parse(params.textDocument.uri),
-      );
-
-      if (newUri) {
-        renameChanges.push({
-          kind: "rename",
-          oldUri: params.textDocument.uri,
-          newUri: newUri.toString(),
-        } as RenameFile);
-      }
+    const moduleDeclarationRenameChange = this.createModuleDeclarationRenameChange(
+      affectedNodes,
+      elmWorkspace,
+      params,
+      newName,
+    );
+    if (moduleDeclarationRenameChange) {
+      renameChanges.push(moduleDeclarationRenameChange);
     }
 
     const map: { [uri: string]: TextEdit[] } = {};
@@ -130,22 +109,89 @@ export class RenameProvider {
   ): Range | null => {
     this.connection.console.info(`Prepare rename was requested`);
 
-    const affectedNodes = this.getRenameAffectedNodes(
+    const affectedNodes = RenameUtils.getRenameAffectedNodes(
       elmWorkspace,
       params.textDocument.uri,
       params.position,
     );
 
     if (affectedNodes?.references.length) {
-      const node = affectedNodes.originalNode;
-      return Range.create(
-        Position.create(node.startPosition.row, node.startPosition.column),
-        Position.create(node.endPosition.row, node.endPosition.column),
-      );
+      //Select the whole module uppercase id `Component.Test` instead of just `Test`
+      if (
+        affectedNodes.originalNode.parent?.parent?.type === "module_declaration"
+      ) {
+        const node = affectedNodes.originalNode.parent;
+        if (node) {
+          return Range.create(
+            Position.create(node.startPosition.row, node.startPosition.column),
+            Position.create(node.endPosition.row, node.endPosition.column),
+          );
+        }
+      } else {
+        const node = affectedNodes.originalNode;
+        return Range.create(
+          Position.create(node.startPosition.row, node.startPosition.column),
+          Position.create(node.endPosition.row, node.endPosition.column),
+        );
+      }
     }
 
     return null;
   };
+
+  private createModuleDeclarationRenameChange(
+    affectedNodes:
+      | {
+          originalNode: SyntaxNode;
+          references: {
+            node: SyntaxNode;
+            uri: string;
+          }[];
+        }
+      | undefined,
+    elmWorkspace: IElmWorkspace,
+    params: RenameParams,
+    newName: string,
+  ): RenameFile | undefined {
+    if (
+      affectedNodes?.originalNode.parent?.parent?.type === "module_declaration"
+    ) {
+      const newUri = this.generateUriFromModuleName(
+        newName,
+        elmWorkspace,
+        URI.parse(params.textDocument.uri),
+      );
+
+      if (newUri) {
+        return {
+          kind: "rename",
+          oldUri: params.textDocument.uri,
+          newUri: newUri.toString(),
+        } as RenameFile;
+      }
+    }
+  }
+
+  uppercaseNewNameIfModuleDeclaration(
+    newName: string,
+    affectedNodes:
+      | {
+          originalNode: SyntaxNode;
+          references: { node: SyntaxNode; uri: string }[];
+        }
+      | undefined,
+  ): string {
+    if (
+      affectedNodes?.originalNode.parent?.parent?.type === "module_declaration"
+    ) {
+      return newName
+        .split(".")
+        .map((a) => a.charAt(0).toUpperCase() + a.slice(1))
+        .join(".");
+    } else {
+      return newName;
+    }
+  }
 
   private generateUriFromModuleName(
     moduleName: string,
@@ -159,56 +205,8 @@ export class RenameProvider {
       return;
     }
 
-    const newUri = `${sourceDir}/${moduleName.replace(".", "/")}.elm`;
+    const newUri = `${sourceDir}/${moduleName.replace(/\./g, "/")}.elm`;
 
-    return URI.parse(newUri);
-  }
-
-  private getRenameAffectedNodes(
-    elmWorkspace: IElmWorkspace,
-    uri: string,
-    position: Position,
-  ):
-    | {
-        originalNode: SyntaxNode;
-        references: {
-          node: SyntaxNode;
-          uri: string;
-        }[];
-      }
-    | undefined {
-    const imports: IImports = elmWorkspace.getImports();
-    const forest: Forest = elmWorkspace.getForest();
-    const tree: Tree | undefined = forest.getTree(uri);
-
-    if (tree) {
-      const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        tree.rootNode,
-        position,
-      );
-
-      const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
-        nodeAtPosition,
-        uri,
-        tree,
-        imports,
-      );
-
-      if (definitionNode) {
-        const refTree = forest.getByUri(definitionNode.uri);
-        if (refTree && refTree.writeable) {
-          return {
-            originalNode: nodeAtPosition,
-            references: References.find(definitionNode, forest, imports),
-          };
-        }
-        if (refTree && !refTree.writeable) {
-          throw new ResponseError(
-            1,
-            "Can not rename, due to source being outside of you project.",
-          );
-        }
-      }
-    }
+    return URI.file(newUri);
   }
 }
