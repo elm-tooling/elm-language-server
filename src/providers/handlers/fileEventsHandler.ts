@@ -9,6 +9,10 @@ import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { container } from "tsyringe";
 import { IConnection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import { RenameUtils } from "../../util/renameUtils";
+import { RenameProvider } from "../renameProvider";
+import { TreeUtils } from "../../util/treeUtils";
+import { PositionUtil } from "../../positionUtil";
 
 export class FileEventsHandler {
   private connection: IConnection;
@@ -59,20 +63,31 @@ export class FileEventsHandler {
       return;
     }
 
-    const moduleName = this.getModuleNameFromFile(newFile, elmWorkspace);
-
     const tree = elmWorkspace.getForest().getByUri(oldFile.toString())?.tree;
-    if (moduleName && tree) {
-      const renameModuleDefinitionEdit = RefactorEditUtils.renameModuleDeclaration(
-        tree,
+
+    const moduleName = this.getModuleNameFromFile(newFile, elmWorkspace);
+    const moduleNameNode = tree ? TreeUtils.getModuleNameNode(tree) : undefined;
+
+    if (moduleName && moduleNameNode && tree) {
+      const moduleNodePosition = PositionUtil.FROM_TS_POSITION(
+        moduleNameNode.endPosition,
+      ).toVSPosition();
+
+      const affectedNodes = RenameUtils.getRenameAffectedNodes(
+        elmWorkspace,
+        newFile.toString(),
+        moduleNodePosition,
+      );
+
+      const [edits, textDocumentEdits] = RenameProvider.getRenameEdits(
+        affectedNodes,
         moduleName,
       );
 
-      if (renameModuleDefinitionEdit) {
-        await this.connection.workspace.applyEdit({
-          changes: { [newFile.toString()]: [renameModuleDefinitionEdit] },
-        });
-      }
+      await this.connection.workspace.applyEdit({
+        changes: edits,
+        documentChanges: textDocumentEdits,
+      });
     }
   }
 
