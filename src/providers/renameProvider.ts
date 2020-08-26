@@ -62,45 +62,15 @@ export class RenameProvider {
       renameChanges.push(moduleDeclarationRenameChange);
     }
 
-    const map: { [uri: string]: TextEdit[] } = {};
-    affectedNodes?.references.forEach((a) => {
-      if (!map[a.uri]) {
-        map[a.uri] = [];
-      }
+    const [edits, textDocumentEdits] = RenameProvider.getRenameEdits(
+      affectedNodes,
+      newName,
+    );
 
-      map[a.uri].push(
-        TextEdit.replace(
-          Range.create(
-            Position.create(
-              a.node.startPosition.row,
-              a.node.startPosition.column,
-            ),
-            Position.create(a.node.endPosition.row, a.node.endPosition.column),
-          ),
-          newName,
-        ),
-      );
-    });
-
-    const textDocumentEdits = [];
-    for (const key in map) {
-      if (Object.prototype.hasOwnProperty.call(map, key)) {
-        const element = map[key];
-        textDocumentEdits.push(
-          TextDocumentEdit.create(
-            VersionedTextDocumentIdentifier.create(key, null),
-            element,
-          ),
-        );
-      }
-    }
-
-    if (map) {
-      return {
-        changes: map, // Fallback if the client doesn't implement documentChanges
-        documentChanges: [...textDocumentEdits, ...renameChanges], //Order seems to be important here
-      };
-    }
+    return {
+      changes: edits, // Fallback if the client doesn't implement documentChanges
+      documentChanges: [...textDocumentEdits, ...renameChanges], //Order seems to be important here
+    };
   };
 
   protected handlePrepareRenameRequest = (
@@ -138,6 +108,51 @@ export class RenameProvider {
 
     return null;
   };
+
+  public static getRenameEdits(
+    affectedNodes:
+      | {
+          originalNode: SyntaxNode;
+          references: { node: SyntaxNode; uri: string }[];
+        }
+      | undefined,
+    newName: string,
+  ): [{ [uri: string]: TextEdit[] }, TextDocumentEdit[]] {
+    const edits: { [uri: string]: TextEdit[] } = {};
+    affectedNodes?.references.forEach((a) => {
+      if (!edits[a.uri]) {
+        edits[a.uri] = [];
+      }
+
+      edits[a.uri].push(
+        TextEdit.replace(
+          Range.create(
+            Position.create(
+              a.node.startPosition.row,
+              a.node.startPosition.column,
+            ),
+            Position.create(a.node.endPosition.row, a.node.endPosition.column),
+          ),
+          newName,
+        ),
+      );
+    });
+
+    const textDocumentEdits = [];
+    for (const key in edits) {
+      if (Object.prototype.hasOwnProperty.call(edits, key)) {
+        const element = edits[key];
+        textDocumentEdits.push(
+          TextDocumentEdit.create(
+            VersionedTextDocumentIdentifier.create(key, null),
+            element,
+          ),
+        );
+      }
+    }
+
+    return [edits, textDocumentEdits];
+  }
 
   private createModuleDeclarationRenameChange(
     affectedNodes:
