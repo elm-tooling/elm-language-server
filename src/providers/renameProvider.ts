@@ -4,19 +4,18 @@ import {
   Position,
   PrepareRenameParams,
   Range,
+  RenameFile,
   RenameParams,
-  ResponseError,
+  TextDocumentEdit,
   TextEdit,
+  VersionedTextDocumentIdentifier,
   WorkspaceEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { SyntaxNode } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
-import { Forest } from "../forest";
-import { IImports } from "../imports";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { References } from "../util/references";
-import { TreeUtils } from "../util/treeUtils";
+import { RenameUtils } from "../util/renameUtils";
 
 export class RenameProvider {
   private connection: IConnection;
@@ -42,11 +41,26 @@ export class RenameProvider {
   ): WorkspaceEdit | null | undefined => {
     this.connection.console.info(`Renaming was requested`);
 
-    const affectedNodes = this.getRenameAffectedNodes(
+    let newName = params.newName;
+
+    const affectedNodes = RenameUtils.getRenameAffectedNodes(
       elmWorkspace,
       params.textDocument.uri,
       params.position,
     );
+
+    newName = this.uppercaseNewNameIfModuleDeclaration(newName, affectedNodes);
+
+    const renameChanges: RenameFile[] = [];
+    const moduleDeclarationRenameChange = this.createModuleDeclarationRenameChange(
+      affectedNodes,
+      elmWorkspace,
+      params,
+      newName,
+    );
+    if (moduleDeclarationRenameChange) {
+      renameChanges.push(moduleDeclarationRenameChange);
+    }
 
     const map: { [uri: string]: TextEdit[] } = {};
     affectedNodes?.references.forEach((a) => {
@@ -63,14 +77,28 @@ export class RenameProvider {
             ),
             Position.create(a.node.endPosition.row, a.node.endPosition.column),
           ),
-          params.newName,
+          newName,
         ),
       );
     });
 
+    const textDocumentEdits = [];
+    for (const key in map) {
+      if (Object.prototype.hasOwnProperty.call(map, key)) {
+        const element = map[key];
+        textDocumentEdits.push(
+          TextDocumentEdit.create(
+            VersionedTextDocumentIdentifier.create(key, null),
+            element,
+          ),
+        );
+      }
+    }
+
     if (map) {
       return {
-        changes: map,
+        changes: map, // Fallback if the client doesn't implement documentChanges
+        documentChanges: [...textDocumentEdits, ...renameChanges], //Order seems to be important here
       };
     }
   };
@@ -81,68 +109,104 @@ export class RenameProvider {
   ): Range | null => {
     this.connection.console.info(`Prepare rename was requested`);
 
-    const affectedNodes = this.getRenameAffectedNodes(
+    const affectedNodes = RenameUtils.getRenameAffectedNodes(
       elmWorkspace,
       params.textDocument.uri,
       params.position,
     );
 
     if (affectedNodes?.references.length) {
-      const node = affectedNodes.originalNode;
-      return Range.create(
-        Position.create(node.startPosition.row, node.startPosition.column),
-        Position.create(node.endPosition.row, node.endPosition.column),
-      );
+      //Select the whole module uppercase id `Component.Test` instead of just `Test`
+      if (
+        affectedNodes.originalNode.parent?.parent?.type === "module_declaration"
+      ) {
+        const node = affectedNodes.originalNode.parent;
+        if (node) {
+          return Range.create(
+            Position.create(node.startPosition.row, node.startPosition.column),
+            Position.create(node.endPosition.row, node.endPosition.column),
+          );
+        }
+      } else {
+        const node = affectedNodes.originalNode;
+        return Range.create(
+          Position.create(node.startPosition.row, node.startPosition.column),
+          Position.create(node.endPosition.row, node.endPosition.column),
+        );
+      }
     }
 
     return null;
   };
 
-  private getRenameAffectedNodes(
+  private createModuleDeclarationRenameChange(
+    affectedNodes:
+      | {
+          originalNode: SyntaxNode;
+          references: {
+            node: SyntaxNode;
+            uri: string;
+          }[];
+        }
+      | undefined,
     elmWorkspace: IElmWorkspace,
-    uri: string,
-    position: Position,
-  ):
-    | {
-        originalNode: SyntaxNode;
-        references: {
-          node: SyntaxNode;
-          uri: string;
-        }[];
-      }
-    | undefined {
-    const imports: IImports = elmWorkspace.getImports();
-    const forest: Forest = elmWorkspace.getForest();
-    const tree: Tree | undefined = forest.getTree(uri);
-
-    if (tree) {
-      const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        tree.rootNode,
-        position,
+    params: RenameParams,
+    newName: string,
+  ): RenameFile | undefined {
+    if (
+      affectedNodes?.originalNode.parent?.parent?.type === "module_declaration"
+    ) {
+      const newUri = this.generateUriFromModuleName(
+        newName,
+        elmWorkspace,
+        URI.parse(params.textDocument.uri),
       );
 
-      const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
-        nodeAtPosition,
-        uri,
-        tree,
-        imports,
-      );
-
-      if (definitionNode) {
-        const refTree = forest.getByUri(definitionNode.uri);
-        if (refTree && refTree.writeable) {
-          return {
-            originalNode: nodeAtPosition,
-            references: References.find(definitionNode, forest, imports),
-          };
-        }
-        if (refTree && !refTree.writeable) {
-          throw new ResponseError(
-            1,
-            "Can not rename, due to source being outside of you project.",
-          );
-        }
+      if (newUri) {
+        return {
+          kind: "rename",
+          oldUri: params.textDocument.uri,
+          newUri: newUri.toString(),
+        } as RenameFile;
       }
     }
+  }
+
+  uppercaseNewNameIfModuleDeclaration(
+    newName: string,
+    affectedNodes:
+      | {
+          originalNode: SyntaxNode;
+          references: { node: SyntaxNode; uri: string }[];
+        }
+      | undefined,
+  ): string {
+    if (
+      affectedNodes?.originalNode.parent?.parent?.type === "module_declaration"
+    ) {
+      return newName
+        .split(".")
+        .map((a) => a.charAt(0).toUpperCase() + a.slice(1))
+        .join(".");
+    } else {
+      return newName;
+    }
+  }
+
+  private generateUriFromModuleName(
+    moduleName: string,
+    elmWorkspace: IElmWorkspace,
+    file: URI,
+  ): URI | undefined {
+    const sourceDir = elmWorkspace.getPath(file);
+
+    // The file is not in a source dir (shouldn't happen)
+    if (!sourceDir) {
+      return;
+    }
+
+    const newUri = `${sourceDir}/${moduleName.replace(/\./g, "/")}.elm`;
+
+    return URI.file(newUri);
   }
 }
