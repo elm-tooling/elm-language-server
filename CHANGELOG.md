@@ -1,5 +1,14 @@
 # Change Log
 
+## 1.11.0
+
+- Improve definition for conflicting module/type names
+- Various completion sorting tweaks
+- Add parameter names to hovers/autocompletions for functions
+- Improve module renames to also rename the file
+- Add support renaming files in the vscode file explorer
+- Use dependency injection to resolve classes
+
 ## 1.10.0
 
 - Add value completions for non-imported modules
