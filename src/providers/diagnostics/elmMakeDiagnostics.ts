@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import { randomBytes } from "crypto";
+import * as fs from "fs";
 import * as path from "path";
 import { container } from "tsyringe";
+import util from "util";
 import {
   CodeAction,
   CodeActionKind,
@@ -29,6 +31,7 @@ const ELM_MAKE = "Elm";
 const NAMING_ERROR = "NAMING ERROR";
 const RANDOM_ID = randomBytes(16).toString("hex");
 export const CODE_ACTION_ELM_MAKE = `elmLS.elmMakeFixer-${RANDOM_ID}`;
+const readFile = util.promisify(fs.readFile);
 
 export interface IElmCompilerError {
   type: string;
@@ -569,11 +572,28 @@ export class ElmMakeDiagnostics {
   ): Promise<IElmIssue[]> {
     const settings = await this.settings.getClientSettings();
 
+    let relativePathToFile: string[] = [path.relative(cwd, filename)];
+    try {
+      const elmToolingJson: {
+        entrypoints: Array<string>;
+        binaries?: {
+          [name: string]: string;
+        };
+      } = await readFile(path.join(cwd, "elm-tooling.json"), {
+        encoding: "utf-8",
+      }).then(JSON.parse);
+
+      if (elmToolingJson && elmToolingJson["entrypoints"]) {
+        relativePathToFile = elmToolingJson["entrypoints"];
+      }
+    } catch (error) {
+      this.connection.console.info("Could not read elm-tooling.json");
+    }
+
     return new Promise(async (resolve) => {
-      const relativePathToFile = path.relative(cwd, filename);
       const argsMake = [
         "make",
-        relativePathToFile,
+        ...relativePathToFile,
         "--report",
         "json",
         "--output",
@@ -582,7 +602,7 @@ export class ElmMakeDiagnostics {
 
       const argsTest = [
         "make",
-        relativePathToFile,
+        ...relativePathToFile,
         "--report",
         "json",
         "--output",
@@ -645,7 +665,7 @@ export class ElmMakeDiagnostics {
                       ? path.isAbsolute(error.path)
                         ? path.relative(cwd, error.path)
                         : error.path
-                      : relativePathToFile,
+                      : relativePathToFile[0],
                     overview: problem.title,
                     region: problem.region,
                     subregion: "",
@@ -666,7 +686,7 @@ export class ElmMakeDiagnostics {
                 // elm-test might supply absolute paths to files
                 file: errorObject.path
                   ? path.relative(cwd, errorObject.path)
-                  : relativePathToFile,
+                  : relativePathToFile[0],
                 overview: errorObject.title,
                 region: {
                   end: {
