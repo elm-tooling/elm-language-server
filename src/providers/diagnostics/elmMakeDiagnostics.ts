@@ -641,7 +641,7 @@ export class ElmMakeDiagnostics {
         },
       );
     this.connection.console.info(
-      `Find entrypoints: ${message}. See https://TODO for more information.`,
+      `Find entrypoints: ${message}. See https://github.com/elm-tooling/elm-language-server#configuration for more information.`,
     );
 
     return new Promise(async (resolve) => {

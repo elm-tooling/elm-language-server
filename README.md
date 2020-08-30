@@ -12,6 +12,7 @@ This is the language server implementation for the Elm programming language.
   - [Alternative: Compile and install from source](#alternative-compile-and-install-from-source)
   - [Alternative: Install with Nix](#alternative-install-with-nix)
 - [Requirements](#requirements)
+- [Configuration](#configuration)
 - [Features](#features)
 - [Server Settings](#server-settings)
   - [Elm-Analyse Configuration](#elm-analyse-configuration)
@@ -84,6 +85,24 @@ npm install -g elm elm-test elm-format
 ```
 
 Or use local versions from your `node_modules` directory, if you want to do that you need to set the paths, via the settings (e.g. set `elmPath` to `./node_modules/.bin/elm`).
+
+## Configuration
+
+Create an [elm-tooling.json](https://github.com/lydell/elm-tooling.json) file next to your `elm.json` to configure the language server.
+
+Currently there’s just one thing that you can configure: entrypoints. The language server runs `elm make` to get type errors. By default `elm make` is run on the current file only. To get errors for the entire project you can specify your entrypoint files – basically, those with `main =` in them. Then the language server will run `elm make` on those instead.
+
+Example:
+
+```json
+{
+  "entrypoints": ["./src/Main.elm"]
+}
+```
+
+The entrypoints are relative to the directory where your `elm.json` and `elm-tooling.json` is and must start with `./`.
+
+Check out the [elm-tooling](https://github.com/lydell/elm-tooling.json/tree/master/cli) CLI for creating and validating your `elm-tooling.json`!
 
 ## Features
 
