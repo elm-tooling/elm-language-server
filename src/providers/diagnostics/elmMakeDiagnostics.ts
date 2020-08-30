@@ -634,7 +634,7 @@ export class ElmMakeDiagnostics {
               : error.code === "EISDIR"
               ? `Skipping ${elmToolingPath} because it is a directory, not a file.`
               : error instanceof SyntaxError
-              ? `Skipping ${elmToolingPath} because it contains invalid JSON:\n${error.message}.`
+              ? `Skipping ${elmToolingPath} because it contains invalid JSON: ${error.message}.`
               : `Skipping ${elmToolingPath} because: ${error.message}.`;
           const fullMessage = `Using default entrypoint: ${defaultRelativePathToFile}. ${innerMessage}`;
           return [[defaultRelativePathToFile], fullMessage];
