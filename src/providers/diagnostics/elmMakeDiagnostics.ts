@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import { randomBytes } from "crypto";
+import * as fs from "fs";
 import * as path from "path";
 import { container } from "tsyringe";
+import util from "util";
 import {
   CodeAction,
   CodeActionKind,
@@ -29,6 +31,7 @@ const ELM_MAKE = "Elm";
 const NAMING_ERROR = "NAMING ERROR";
 const RANDOM_ID = randomBytes(16).toString("hex");
 export const CODE_ACTION_ELM_MAKE = `elmLS.elmMakeFixer-${RANDOM_ID}`;
+const readFile = util.promisify(fs.readFile);
 
 export interface IElmCompilerError {
   type: string;
@@ -62,6 +65,41 @@ export interface IStyledString {
   underline: boolean;
   color: string;
   string: string;
+}
+
+type NonEmptyArray<T> = [T, ...T[]];
+
+function elmToolingEntrypointsDecoder(json: unknown): NonEmptyArray<string> {
+  if (typeof json === "object" && json !== null && !Array.isArray(json)) {
+    if ("entrypoints" in json) {
+      const { entrypoints } = json as { [key: string]: unknown };
+      if (Array.isArray(entrypoints) && entrypoints.length > 0) {
+        const result: Array<string> = [];
+        for (const [index, item] of entrypoints.entries()) {
+          if (typeof item === "string" && item.startsWith("./")) {
+            result.push(item);
+          } else {
+            throw new Error(
+              `Expected "entrypoints" to contain string paths starting with "./" but got: ${JSON.stringify(
+                item,
+              )} at index ${index}`,
+            );
+          }
+        }
+        return [result[0], ...result.slice(1)];
+      } else {
+        throw new Error(
+          `Expected "entrypoints" to be a non-empty array but got: ${JSON.stringify(
+            json,
+          )}`,
+        );
+      }
+    } else {
+      throw new Error(`There is no "entrypoints" field.`);
+    }
+  } else {
+    throw new Error(`Expected a JSON object but got: ${JSON.stringify(json)}`);
+  }
 }
 
 export class ElmMakeDiagnostics {
@@ -564,16 +602,52 @@ export class ElmMakeDiagnostics {
   }
 
   private async checkForErrors(
-    cwd: string,
-    filename: string,
+    workspaceRootPath: string,
+    filePath: string,
   ): Promise<IElmIssue[]> {
     const settings = await this.settings.getClientSettings();
 
+    const elmToolingPath = path.join(workspaceRootPath, "elm-tooling.json");
+    const defaultRelativePathToFile = path.relative(
+      workspaceRootPath,
+      filePath,
+    );
+    const [relativePathsToFiles, message]: [
+      NonEmptyArray<string>,
+      string,
+    ] = await readFile(elmToolingPath, {
+      encoding: "utf-8",
+    })
+      .then(JSON.parse)
+      .then(elmToolingEntrypointsDecoder)
+      .then(
+        (entrypoints) => [
+          entrypoints,
+          `Using entrypoints from ${elmToolingPath}: ${JSON.stringify(
+            entrypoints,
+          )}`,
+        ],
+        (error: Error & { code?: string }) => {
+          const innerMessage =
+            error.code === "ENOENT"
+              ? `No elm-tooling.json found in ${workspaceRootPath}.`
+              : error.code === "EISDIR"
+              ? `Skipping ${elmToolingPath} because it is a directory, not a file.`
+              : error instanceof SyntaxError
+              ? `Skipping ${elmToolingPath} because it contains invalid JSON: ${error.message}.`
+              : `Skipping ${elmToolingPath} because: ${error.message}.`;
+          const fullMessage = `Using default entrypoint: ${defaultRelativePathToFile}. ${innerMessage}`;
+          return [[defaultRelativePathToFile], fullMessage];
+        },
+      );
+    this.connection.console.info(
+      `Find entrypoints: ${message}. See https://github.com/elm-tooling/elm-language-server#configuration for more information.`,
+    );
+
     return new Promise(async (resolve) => {
-      const relativePathToFile = path.relative(cwd, filename);
       const argsMake = [
         "make",
-        relativePathToFile,
+        ...relativePathsToFiles,
         "--report",
         "json",
         "--output",
@@ -582,7 +656,7 @@ export class ElmMakeDiagnostics {
 
       const argsTest = [
         "make",
-        relativePathToFile,
+        ...relativePathsToFiles,
         "--report",
         "json",
         "--output",
@@ -591,7 +665,7 @@ export class ElmMakeDiagnostics {
 
       const makeCommand: string = settings.elmPath;
       const testCommand: string = settings.elmTestPath;
-      const isTestFile = utils.isTestFile(filename, cwd);
+      const isTestFile = utils.isTestFile(filePath, workspaceRootPath);
       const args = isTestFile ? argsTest : argsMake;
       const testOrMakeCommand = isTestFile ? testCommand : makeCommand;
       const testOrMakeCommandWithOmittedSettings = isTestFile
@@ -610,7 +684,7 @@ export class ElmMakeDiagnostics {
           testOrMakeCommand,
           testOrMakeCommandWithOmittedSettings,
           options,
-          cwd,
+          workspaceRootPath,
           this.connection,
         );
         resolve([]);
@@ -643,9 +717,9 @@ export class ElmMakeDiagnostics {
                       .join(""),
                     file: error.path
                       ? path.isAbsolute(error.path)
-                        ? path.relative(cwd, error.path)
+                        ? path.relative(workspaceRootPath, error.path)
                         : error.path
-                      : relativePathToFile,
+                      : relativePathsToFiles[0],
                     overview: problem.title,
                     region: problem.region,
                     subregion: "",
@@ -665,8 +739,8 @@ export class ElmMakeDiagnostics {
                   .join(""),
                 // elm-test might supply absolute paths to files
                 file: errorObject.path
-                  ? path.relative(cwd, errorObject.path)
-                  : relativePathToFile,
+                  ? path.relative(workspaceRootPath, errorObject.path)
+                  : relativePathsToFiles[0],
                 overview: errorObject.title,
                 region: {
                   end: {
