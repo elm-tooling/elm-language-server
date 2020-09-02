@@ -29,12 +29,18 @@ import {
   EUnionPattern,
   EListPattern,
   EConsPattern,
+  ERecordPattern,
+  EFieldAccessorFunctionExpr,
+  EOperatorAsFunctionExpr,
+  ERecordExpr,
+  EFieldAccessExpr,
 } from "./expressionTree";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { TypeExpression } from "./typeExpression";
 import { IElmWorkspace } from "src/elmWorkspace";
 import { Sequence } from "../sequence";
 import { Utils } from "../utils";
+import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
 
 export interface Info {
   module: string;
@@ -49,7 +55,9 @@ export type Type =
   | TUnion
   | TUnit
   | TInProgressBinding
-  | TUnknown;
+  | TUnknown
+  | TRecord
+  | TMutableRecord;
 
 export interface TVar {
   nodeType: "Var";
@@ -75,18 +83,20 @@ export interface TUnion {
   params: Type[];
   info?: Info;
 }
-// TODO: Record support
-// export interface TRecord {
-//   fields: { [key: string]: Type };
-//   baseType?: Type;
-//   info?: Info;
-//   fieldReferences?: any;
-// }
-// export interface TMutableRecord {
-//   fields: { [key: string]: Type };
-//   baseType?: Type;
-//   fieldReferences?: any;
-// }
+export interface TRecord {
+  nodeType: "Record";
+  fields: { [key: string]: Type };
+  baseType?: Type;
+  info?: Info;
+  fieldReferences: RecordFieldReferenceTable;
+}
+export interface TMutableRecord {
+  nodeType: "MutableRecord";
+  fields: { [key: string]: Type };
+  baseType?: Type;
+  info?: Info;
+  fieldReferences: RecordFieldReferenceTable;
+}
 interface TUnit {
   nodeType: "Unit";
   info?: Info;
@@ -129,6 +139,34 @@ export const TTuple = (types: Type[], info?: Info): TTuple => {
   return { nodeType: "Tuple", types, info };
 };
 
+export const TRecord = (
+  fields: { [key: string]: Type },
+  baseType?: Type,
+  info?: Info,
+  fieldReferences = new RecordFieldReferenceTable(),
+): TRecord => {
+  return {
+    nodeType: "Record",
+    fields,
+    baseType,
+    info,
+    fieldReferences,
+  };
+};
+
+export const TMutableRecord = (
+  fields: { [key: string]: Type },
+  baseType?: Type,
+  fieldReferences = new RecordFieldReferenceTable(),
+): TMutableRecord => {
+  return {
+    nodeType: "MutableRecord",
+    fields,
+    baseType,
+    fieldReferences,
+  };
+};
+
 const TFloat = TUnion("Basics", "Float", []);
 const TBool = TUnion("Basics", "Bool", []);
 const TString = TUnion("String", "String", []);
@@ -160,6 +198,13 @@ function allTypeVars(type: Type): TVar[] {
       return allTypeVars(type.return).concat(type.params.flatMap(allTypeVars));
     case "Tuple":
       return type.types.flatMap(allTypeVars);
+    case "Record":
+    case "MutableRecord": {
+      return [
+        ...Object.values(type.fields).flatMap(allTypeVars),
+        ...(type.baseType ? allTypeVars(type.baseType) : []),
+      ];
+    }
     case "Unknown":
     case "Unit":
     case "InProgressBinding":
@@ -180,6 +225,13 @@ function anyTypeVar(type: Type, predicate: (tvar: TVar) => boolean): boolean {
       result =
         anyTypeVar(type.return, predicate) ||
         type.params.some((param) => anyTypeVar(param, predicate));
+      break;
+    case "Record":
+    case "MutableRecord":
+      result =
+        Object.values(type.fields).some((field) =>
+          anyTypeVar(field, predicate),
+        ) || (type.baseType ? anyTypeVar(type.baseType, predicate) : false);
       break;
     case "Unknown":
       result = false;
@@ -261,6 +313,13 @@ export function typeToString(t: Type): string {
       } else {
         return `${t.name} ${t.params.map(typeToString).join(" ")}`;
       }
+    case "Record":
+    case "MutableRecord":
+      return `{ ${
+        t.baseType ? `${typeToString(t.baseType)} | ` : ""
+      }${Object.entries(t.fields)
+        .map(([field, type]) => `${field}: ${typeToString(type)}`)
+        .join(", ")} }`;
   }
 }
 
@@ -289,12 +348,17 @@ function getVarNames(count: number): string[] {
   return names;
 }
 
+function nthVarName(n: number): string {
+  return getVarNames(n)[n - 1];
+}
+
 function typeMismatchError(
   node: SyntaxNode,
   found: Type,
   expected: Type,
   endNode?: SyntaxNode,
   patternBinding = false,
+  recordDiff?: RecordDiff,
 ): Diagnostic {
   const foundText = typeToString(found);
   const expectedText = typeToString(expected);
@@ -360,7 +424,7 @@ function redefinitionError(node: SyntaxNode): Diagnostic {
   };
 }
 
-function badRecursionError(node: SyntaxNode): Diagnostic {
+export function badRecursionError(node: SyntaxNode): Diagnostic {
   return {
     node,
     endNode: node,
@@ -384,6 +448,64 @@ function partialPatternError(node: SyntaxNode): Diagnostic {
   };
 }
 
+export function typeArgumentCountError(
+  node: SyntaxNode,
+  actual: number,
+  expected: number,
+): Diagnostic {
+  return {
+    node,
+    endNode: node,
+    message: `The type expected ${expected} argument${
+      expected !== 1 ? "s" : ""
+    }, but got ${actual} instead`,
+  };
+}
+
+function recordFieldError(node: SyntaxNode, field: string): Diagnostic {
+  return {
+    node,
+    endNode: node,
+    message: `The record does not have a \`${field}\` field`,
+  };
+}
+
+function recordBaseIdError(node: SyntaxNode, type: Type): Diagnostic {
+  return {
+    node,
+    endNode: node,
+    message: ``,
+  };
+}
+
+function fieldAccessOnNonRecordError(node: SyntaxNode, type: Type): Diagnostic {
+  return {
+    node,
+    endNode: node,
+    message: ``,
+  };
+}
+
+interface RecordDiff {
+  extra: Map<string, Type>;
+  missing: Map<string, Type>;
+  mismatched: Map<string, [Type, Type]>;
+  isEmpty: boolean;
+}
+
+const RecordDiff = (
+  extra: Map<string, Type>,
+  missing: Map<string, Type>,
+  mismatched: Map<string, [Type, Type]>,
+): RecordDiff => {
+  return {
+    extra,
+    missing,
+    mismatched,
+    isEmpty: extra.size === 0 && missing.size === 0 && mismatched.size === 0,
+  };
+};
+
 export interface Diagnostic {
   node: SyntaxNode;
   endNode: SyntaxNode;
@@ -397,10 +519,10 @@ export interface InferenceResult {
 }
 
 export class InferenceScope {
-  private expressionTypes: SyntaxNodeMap<Expression, Type> = new SyntaxNodeMap<
+  private expressionTypes: SyntaxNodeMap<
     Expression,
     Type
-  >();
+  > = new SyntaxNodeMap();
   private diagnostics: Diagnostic[] = [];
 
   private bindings: Map<string, Type> = new Map<string, Type>();
@@ -413,6 +535,11 @@ export class InferenceScope {
   private resolvedDeclarations: SyntaxNodeMap<EValueDeclaration, Type>;
 
   private childDeclarations = new Set<EValueDeclaration>();
+
+  private recordDiffs: SyntaxNodeMap<
+    Expression,
+    RecordDiff
+  > = new SyntaxNodeMap();
 
   constructor(
     private uri: string,
@@ -533,9 +660,11 @@ export class InferenceScope {
     replaceExpressionTypes = true,
   ): InferenceResult {
     if (replaceExpressionTypes) {
-      this.expressionTypes.mapValues((val) =>
-        TypeReplacement.replace(val, this.replacements.toMap()),
-      );
+      this.expressionTypes.mapValues((val) => {
+        const result = TypeReplacement.replace(val, this.replacements.toMap());
+        TypeReplacement.freeze(result);
+        return result;
+      });
     }
 
     const outerVars = flatMap(
@@ -549,6 +678,11 @@ export class InferenceScope {
       false,
       outerVars,
     );
+
+    if (replaceExpressionTypes) {
+      TypeReplacement.freeze(ret);
+    }
+
     return {
       expressionTypes: this.expressionTypes,
       diagnostics: this.diagnostics,
@@ -569,6 +703,12 @@ export class InferenceScope {
       case "CaseOfExpr":
         type = this.inferCase(e);
         break;
+      case "FieldAccessExpr":
+        type = this.inferFieldAccess(e);
+        break;
+      case "FieldAccessorFunctionExpr":
+        type = this.inferFieldAccessorFunctionExpr(e);
+        break;
       case "FunctionCallExpr":
         type = this.inferFunctionCallExpr(e);
         break;
@@ -585,7 +725,10 @@ export class InferenceScope {
         type = e.isFloat ? TFloat : TNumber;
         break;
       case "OperatorAsFunctionExpr":
-        type = this.inferOperatorAsFunction();
+        type = this.inferOperatorAsFunctionExpr(e);
+        break;
+      case "RecordExpr":
+        type = this.inferRecord(e);
         break;
       case "StringConstant":
         type = TString;
@@ -768,11 +911,17 @@ export class InferenceScope {
   }
 
   private inferReferenceElement(e: Expression): Type {
-    const definition = findDefinition(
-      e.firstNamedChild?.lastNamedChild,
-      this.uri,
-      this.elmWorkspace.getImports(),
-    );
+    const definition =
+      findDefinition(
+        e.firstNamedChild?.lastNamedChild,
+        this.uri,
+        this.elmWorkspace.getImports(),
+      ) ??
+      findDefinition(
+        e.firstNamedChild,
+        this.uri,
+        this.elmWorkspace.getImports(),
+      );
 
     if (!definition) {
       return TUnknown;
@@ -825,6 +974,37 @@ export class InferenceScope {
           this.uri,
           this.elmWorkspace.getImports(),
         ).type;
+      }
+      case "TypeAliasDeclaration": {
+        const ty = TypeExpression.typeAliasDeclarationInference(
+          definition.expr,
+          this.uri,
+          this.elmWorkspace.getImports(),
+        ).type;
+        if (ty.nodeType === "Record" && Object.keys(ty.fields).length > 0) {
+          return TFunction(Object.values(ty.fields), ty);
+        } else {
+          return ty;
+        }
+      }
+      case "FieldType": {
+        const typeAlias = mapSyntaxNodeToExpression(
+          TreeUtils.findParentOfType("type_alias_declaration", definition.expr),
+        );
+
+        if (typeAlias && typeAlias.nodeType === "TypeAliasDeclaration") {
+          const fields = (TypeExpression.typeAliasDeclarationInference(
+            typeAlias,
+            this.uri,
+            this.elmWorkspace.getImports(),
+          ).type as TRecord)?.fields;
+
+          if (fields) {
+            return fields[definition.expr.text];
+          }
+        }
+
+        return TUnknown;
       }
 
       default:
@@ -1109,11 +1289,120 @@ export class InferenceScope {
     ];
   }
 
-  private inferOperatorAsFunction(): Type {
-    // Find referenced type
-    // Handle infix
-    // Infer referenced value declaration
-    return TUnknown;
+  private inferFieldAccessorFunctionExpr(
+    accessor: EFieldAccessorFunctionExpr,
+  ): Type {
+    const field =
+      TreeUtils.findFirstNamedChildOfType("lower_case_identifier", accessor)
+        ?.text ?? "";
+    const typeVar = TVar("b");
+    return TFunction(
+      [TMutableRecord({ [field]: typeVar }, TVar("a"))],
+      typeVar,
+    );
+  }
+
+  private inferOperatorAsFunctionExpr(operator: EOperatorAsFunctionExpr): Type {
+    // Find operator reference
+    const definition = findDefinition(
+      operator,
+      this.uri,
+      this.elmWorkspace.getImports(),
+    );
+
+    const opDeclaration = mapSyntaxNodeToExpression(definition?.expr.parent);
+
+    if (opDeclaration?.nodeType === "ValueDeclaration" && definition?.uri) {
+      return this.inferReferencedValueDeclaration(
+        opDeclaration,
+        definition.uri,
+      );
+    } else {
+      return TUnknown;
+    }
+  }
+
+  private inferFieldAccess(expr: EFieldAccessExpr): Type {
+    const targetType = this.inferFieldAccessTarget(expr.target);
+    const targetTy = this.replacements.get(targetType);
+    const fieldIdentifier = TreeUtils.findFirstNamedChildOfType(
+      "lower_case_identifier",
+      expr,
+    );
+
+    if (!fieldIdentifier) {
+      return TUnknown;
+    }
+
+    if (targetTy?.nodeType === "Var") {
+      if (targetTy.rigid) {
+        this.diagnostics.push(recordBaseIdError(expr.target, targetTy));
+        return TUnknown;
+      }
+
+      const type = TVar("b");
+      this.trackReplacement(
+        targetType,
+        TMutableRecord({ [fieldIdentifier.text]: type }, TVar("a")),
+      );
+      this.expressionTypes.set(expr, type);
+      return type;
+    }
+
+    if (targetTy?.nodeType === "MutableRecord") {
+      let type = targetTy.fields[fieldIdentifier.text];
+      if (!type) {
+        targetTy.fields[fieldIdentifier.text] = TVar(
+          nthVarName(Object.keys(targetTy.fields).length),
+        );
+        type = targetTy.fields[fieldIdentifier.text];
+      }
+
+      this.expressionTypes.set(expr, type);
+
+      return type;
+    }
+
+    if (targetTy?.nodeType !== "Record") {
+      if (targetTy?.nodeType !== "Unknown" && targetTy) {
+        this.diagnostics.push(
+          fieldAccessOnNonRecordError(expr.target, targetTy),
+        );
+      }
+      return TUnknown;
+    }
+
+    if (!Object.keys(targetTy.fields).includes(fieldIdentifier.text)) {
+      if (!targetTy.baseType) {
+        this.diagnostics.push(
+          recordFieldError(fieldIdentifier, fieldIdentifier.text),
+        );
+      }
+    }
+
+    const type = targetTy.fields[fieldIdentifier.text];
+    this.expressionTypes.set(expr, type);
+    return type;
+  }
+
+  private inferFieldAccessTarget(target: Expression): Type {
+    let type: Type = TUnknown;
+    switch (target.nodeType) {
+      case "ValueExpr":
+        type = this.inferReferenceElement(target);
+        break;
+      case "RecordExpr":
+        type = this.inferRecord(target);
+        break;
+      case "FieldAccessExpr":
+        type = this.inferFieldAccess(target);
+        break;
+      default:
+        throw new Error("Unexpected field access target expression");
+    }
+
+    this.expressionTypes.set(target, type);
+    return type;
   }
 
   private inferLambda(lambaExpr: EAnonymousFunctionExpr): Type {
@@ -1144,6 +1433,73 @@ export class InferenceScope {
     });
 
     return type ?? TUnknown;
+  }
+
+  private inferRecord(record: ERecordExpr): Type {
+    const fields = new Map(
+      record.fields.map((field) => [field.name, this.infer(field.expression)]),
+    );
+
+    const mappedFields: { [name: string]: Type } = {};
+    fields.forEach((type, field) => (mappedFields[field.text] = type));
+
+    const recordIdentifier = record.baseRecord as Expression;
+
+    if (!recordIdentifier) {
+      return TRecord(mappedFields);
+    }
+
+    const baseType = this.inferReferenceElement(recordIdentifier);
+
+    if (baseType.nodeType === "Unknown") {
+      return TUnknown;
+    }
+
+    if (baseType.nodeType === "Var") {
+      const extRecord = TRecord(mappedFields, TVar(baseType.name));
+      if (this.isAssignable(recordIdentifier, baseType, extRecord)) {
+        return extRecord;
+      } else {
+        return TUnknown;
+      }
+    }
+
+    let baseFields: { [name: string]: Type } = {};
+
+    if (
+      baseType.nodeType === "Record" ||
+      baseType.nodeType === "MutableRecord"
+    ) {
+      baseFields = baseType.fields;
+    } else {
+      this.diagnostics.push({
+        node: recordIdentifier,
+        endNode: recordIdentifier,
+        message: "RecordBaseIdError",
+      });
+      return TUnknown;
+    }
+
+    fields.forEach((type, field) => {
+      const expected = baseFields[field.text];
+      if (!expected) {
+        if (baseType.nodeType === "Record") {
+          if (!baseType.baseType) {
+            this.diagnostics.push(recordFieldError(field, field.text));
+            this.recordDiffs.set(
+              record,
+              this.calculateRecordDiff(TRecord(mappedFields), baseType),
+            );
+          }
+        } else if (baseType.nodeType === "MutableRecord") {
+          baseType.fields[field.text] = type;
+        }
+      } else {
+        this.isAssignable(field, type, expected);
+      }
+    });
+
+    return baseType;
   }
 
   private setBinding(expr: Expression, type: Type): void {
@@ -1285,6 +1641,16 @@ export class InferenceScope {
           this.bindConsPattern(pattern, ty);
         }
         break;
+      case "LowerPattern":
+        this.setBinding(pattern, ty);
+        break;
+      case "ListPattern":
+        if (isParameter) {
+          this.bindListPattern(pattern, TUnknown);
+        } else {
+          this.bindListPattern(pattern, ty);
+        }
+        break;
       case "Pattern":
         {
           const child = mapSyntaxNodeToExpression(pattern.firstNamedChild);
@@ -1298,21 +1664,14 @@ export class InferenceScope {
           }
         }
         break;
-      case "LowerPattern":
-        this.setBinding(pattern, ty);
-        break;
-      case "ListPattern":
-        if (isParameter) {
-          this.bindListPattern(pattern, TUnknown);
-        } else {
-          this.bindListPattern(pattern, ty);
-        }
+      case "RecordPattern":
+        this.bindRecordPattern(pattern, ty, isParameter);
         break;
       case "TuplePattern":
         this.bindTuplePattern(pattern, ty, isParameter);
         break;
       case "UnionPattern":
-        this.bindUnionPattern(pattern, type, isParameter);
+        this.bindUnionPattern(pattern, ty, isParameter);
         break;
       case "UnitExpr":
         this.isAssignable(pattern, ty, TUnit, undefined, true);
@@ -1458,6 +1817,65 @@ export class InferenceScope {
     }
   }
 
+  private bindRecordPattern(
+    pattern: ERecordPattern,
+    type: Type,
+    isParameter: boolean,
+  ): void {
+    const fields = pattern.patternList;
+
+    const ty = this.bindIfVar(pattern, type, TMutableRecord({}, TVar("a")));
+
+    const vars = this.uniqueVars(fields.length);
+    if (ty.nodeType === "MutableRecord") {
+      fields.forEach((field, i) => {
+        const existing = ty.fields[field.text];
+
+        if (!existing) {
+          ty.fields[field.text] = vars[i];
+        }
+      });
+    } else if (
+      ty.nodeType !== "Record" ||
+      fields.some((field) => !Object.keys(ty.fields).includes(field.text))
+    ) {
+      if (ty.nodeType !== "Unknown") {
+        const actualTyParams = Object.fromEntries(
+          fields.map((field, i) => [field.text, vars[i]] as [string, Type]),
+        );
+        const actualTy = TRecord(actualTyParams);
+        const recordDiff: RecordDiff | undefined =
+          ty.nodeType === "Record"
+            ? {
+                ...this.calculateRecordDiff(actualTy, ty),
+                missing: new Map<string, Type>(),
+              }
+            : undefined;
+
+        this.diagnostics.push(
+          typeMismatchError(pattern, actualTy, ty, undefined, true, recordDiff),
+        );
+
+        if (recordDiff) {
+          this.recordDiffs.set(pattern, recordDiff);
+        }
+      }
+
+      fields.forEach((field) => {
+        this.bindPattern(field, TUnknown, isParameter);
+      });
+
+      return;
+    }
+
+    const tyFields = (ty as TMutableRecord)?.fields ?? (ty as TRecord).fields;
+    fields.forEach((field) => {
+      this.bindPattern(field, tyFields[field.text], isParameter);
+    });
+
+    this.expressionTypes.set(pattern, type);
+  }
+
   private isAssignable(
     expr: Expression,
     type1: Type,
@@ -1486,10 +1904,19 @@ export class InferenceScope {
       const t1 = TypeReplacement.replace(type1, this.replacements.toMap());
       const t2 = TypeReplacement.replace(type2, this.replacements.toMap());
 
+      const diff =
+        t1.nodeType === "Record" && t2.nodeType === "Record"
+          ? this.calculateRecordDiff(t1, t2)
+          : undefined;
+
       const errorExpr = expr.nodeType === "LetInExpr" ? expr.body : expr;
       this.diagnostics.push(
         typeMismatchError(errorExpr, t1, t2, errorExpr, patternBinding),
       );
+
+      if (diff && expr.nodeType === "RecordExpr") {
+        this.recordDiffs.set(expr, diff);
+      }
     }
 
     return assignable;
@@ -1553,6 +1980,24 @@ export class InferenceScope {
                 this.allAssignable(ty1.types, ty2.types);
             }
             break;
+          case "Record":
+            {
+              result =
+                (ty2?.nodeType === "Record" &&
+                  this.recordAssignable(ty1, ty2)) ||
+                (ty2?.nodeType === "MutableRecord" &&
+                  this.mutableRecordAssignable(ty2, ty1));
+            }
+            break;
+          case "MutableRecord":
+            {
+              result =
+                (ty2?.nodeType === "Record" &&
+                  this.mutableRecordAssignable(ty1, ty2)) ||
+                (ty2?.nodeType === "MutableRecord" &&
+                  this.mutableRecordAssignable(ty1, ty2));
+            }
+            break;
           case "Unknown":
             result = true;
             break;
@@ -1568,6 +2013,72 @@ export class InferenceScope {
       this.trackReplacement(ty1, ty2);
     }
     return result;
+  }
+
+  private mutableRecordAssignable(
+    type1: TMutableRecord,
+    type2: TRecord | TMutableRecord,
+  ): boolean {
+    if (!this.recordAssignable(type1, type2)) {
+      return false;
+    }
+
+    type1.fields = { ...type1.fields, ...type2.fields };
+    return true;
+  }
+
+  private recordAssignable(
+    type1: TRecord | TMutableRecord,
+    type2: TRecord | TMutableRecord,
+  ): boolean {
+    const result = this.calculateRecordDiff(type1, type2).isEmpty;
+    if (result) {
+      if (!type1.baseType && type2.baseType?.nodeType === "Var") {
+        this.trackReplacement(type1, type2.baseType);
+      }
+      if (!type2.baseType && type1.baseType?.nodeType === "Var") {
+        this.trackReplacement(type1.baseType, type2);
+      }
+
+      type1.fieldReferences.addAll(type2.fieldReferences);
+      type2.fieldReferences.addAll(type1.fieldReferences);
+    }
+
+    return result;
+  }
+
+  private calculateRecordDiff(
+    actual: TRecord | TMutableRecord,
+    expected: TRecord | TMutableRecord,
+  ): RecordDiff {
+    const actualEntries = Object.entries(actual.fields);
+    const actualKeys = Object.keys(actual.fields);
+    const expectedEntries = Object.entries(expected.fields);
+    const expectedKeys = Object.keys(expected.fields);
+
+    return RecordDiff(
+      expected.baseType
+        ? new Map<string, Type>()
+        : new Map(
+            actualEntries.filter(([field]) => !expectedKeys.includes(field)),
+          ),
+      actual.baseType
+        ? new Map()
+        : new Map(
+            expectedEntries.filter(([field]) => !actualKeys.includes(field)),
+          ),
+      new Map(
+        actualEntries
+          .map(([k, v]) => {
+            if (!this.assignable(v, expected.fields[k])) {
+              return [k, [v, expected.fields[k]]] as [string, [Type, Type]];
+            }
+
+            return undefined;
+          })
+          .filter(Utils.notUndefined.bind(this)),
+      ),
+    );
   }
 
   private allAssignable(type1: Type[], type2: Type[]): boolean {
@@ -1837,7 +2348,6 @@ export function findType(
   let declaration: SyntaxNode | null = node;
   while (
     declaration &&
-    declaration.type !== "file" &&
     declaration.type !== "value_declaration" &&
     declaration.parent?.type !== "file"
   ) {
@@ -1866,13 +2376,11 @@ export function findType(
       return inferenceResult.type;
     }
 
-    const mappedNode = mapSyntaxNodeToExpression(node);
-
     const findTypeOrParentType = (
-      expr: Expression | undefined,
+      expr: SyntaxNode | undefined,
     ): Type | undefined => {
       const found = expr
-        ? inferenceResult.expressionTypes.get(expr)
+        ? inferenceResult.expressionTypes.get(expr as Expression)
         : undefined;
 
       if (found) {
@@ -1881,15 +2389,16 @@ export function findType(
 
       // Check if the parent is the same text and position
       if (
-        expr?.text === expr?.parent?.text &&
-        expr?.startIndex === expr?.parent?.startIndex &&
-        expr?.endIndex === expr?.parent?.endIndex
+        expr &&
+        expr.text === expr.parent?.text &&
+        expr.startIndex === expr.parent?.startIndex &&
+        expr.endIndex === expr.parent?.endIndex
       ) {
-        return findTypeOrParentType(mapSyntaxNodeToExpression(expr?.parent));
+        return findTypeOrParentType(mapSyntaxNodeToExpression(expr.parent));
       }
     };
 
-    return findTypeOrParentType(mappedNode) ?? TUnknown;
+    return findTypeOrParentType(node) ?? TUnknown;
   } else {
     return TUnknown;
   }

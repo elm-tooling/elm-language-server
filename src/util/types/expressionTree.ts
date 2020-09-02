@@ -12,6 +12,10 @@ export type Expression =
   | ECaseOfBranch
   | ECaseOfExpr
   | EConsPattern
+  | EField
+  | EFieldAccessExpr
+  | EFieldAccessorFunctionExpr
+  | EFieldType
   | EFunctionCallExpr
   | EFunctionDeclarationLeft
   | EIfElseExpr
@@ -25,10 +29,14 @@ export type Expression =
   | EOperator
   | EOperatorAsFunctionExpr
   | EPattern
+  | ERecordExpr
+  | ERecordType
+  | ERecordPattern
   | EStringConstant
   | ETupleExpr
   | ETuplePattern
   | ETupleType
+  | ETypeAliasDeclaration
   | ETypeAnnotation
   | ETypeDeclaration
   | ETypeExpression
@@ -181,6 +189,43 @@ export interface EConsPattern extends SyntaxNode {
   nodeType: "ConsPattern";
   parts: Expression[];
 }
+export interface EFieldType extends SyntaxNode {
+  nodeType: "FieldType";
+  name: string;
+  typeExpression: ETypeExpression;
+}
+export interface ERecordType extends SyntaxNode {
+  nodeType: "RecordType";
+  baseType: Expression;
+  fieldTypes: EFieldType[];
+}
+export interface ETypeAliasDeclaration extends SyntaxNode {
+  nodeType: "TypeAliasDeclaration";
+  name: SyntaxNode;
+  typeVariables: Expression[];
+  typeExpression: ETypeExpression;
+}
+export interface EField extends SyntaxNode {
+  nodeType: "Field";
+  name: Expression;
+  expression: Expression;
+}
+export interface EFieldAccessExpr extends SyntaxNode {
+  nodeType: "FieldAccessExpr";
+  target: Expression;
+}
+export interface EFieldAccessorFunctionExpr extends SyntaxNode {
+  nodeType: "FieldAccessorFunctionExpr";
+}
+export interface ERecordPattern extends SyntaxNode {
+  nodeType: "RecordPattern";
+  patternList: ELowerPattern[];
+}
+export interface ERecordExpr extends SyntaxNode {
+  nodeType: "RecordExpr";
+  baseRecord: SyntaxNode;
+  fields: EField[];
+}
 
 export function mapSyntaxNodeToExpression(
   node: SyntaxNode | null | undefined,
@@ -188,6 +233,8 @@ export function mapSyntaxNodeToExpression(
   if (!node) return;
 
   switch (node.type) {
+    case "lower_case_identifier":
+      return node as Expression;
     case "value_declaration":
       {
         const body = mapSyntaxNodeToExpression(
@@ -492,6 +539,74 @@ export function mapSyntaxNodeToExpression(
           .map(mapSyntaxNodeToExpression)
           .filter(Utils.notUndefined),
       } as EConsPattern);
+    case "record_type":
+      return Object.assign(node, {
+        nodeType: "RecordType",
+        baseType: mapSyntaxNodeToExpression(
+          TreeUtils.findFirstNamedChildOfType("record_base_identifier", node),
+        ),
+        fieldTypes: TreeUtils.findAllNamedChildrenOfType("field_type", node)
+          ?.map(mapSyntaxNodeToExpression)
+          .filter(Utils.notUndefined),
+      } as ERecordType);
+    case "field_type":
+      return Object.assign(node, {
+        nodeType: "FieldType",
+        name:
+          TreeUtils.findFirstNamedChildOfType("lower_case_identifier", node)
+            ?.text ?? "",
+        typeExpression: mapSyntaxNodeToExpression(
+          TreeUtils.findFirstNamedChildOfType("type_expression", node),
+        ),
+      } as EFieldType);
+    case "type_alias_declaration":
+      return Object.assign(node, {
+        nodeType: "TypeAliasDeclaration",
+        name: TreeUtils.findFirstNamedChildOfType(
+          "upper_case_identifier",
+          node,
+        ),
+        typeVariables:
+          TreeUtils.findAllNamedChildrenOfType("lower_type_name", node)
+            ?.map(mapSyntaxNodeToExpression)
+            .filter(Utils.notUndefined) ?? [],
+        typeExpression: mapSyntaxNodeToExpression(
+          TreeUtils.findFirstNamedChildOfType("type_expression", node),
+        ),
+      } as ETypeAliasDeclaration);
+    case "field":
+      return Object.assign(node, {
+        nodeType: "Field",
+        name: node.firstNamedChild,
+        expression: mapSyntaxNodeToExpression(node.lastNamedChild),
+      } as EField);
+    case "field_access_expr":
+      return Object.assign(node, {
+        nodeType: "FieldAccessExpr",
+        target: mapSyntaxNodeToExpression(node.firstNamedChild),
+      } as EFieldAccessExpr);
+    case "field_accessor_function_expr":
+      return Object.assign(node, {
+        nodeType: "FieldAccessorFunctionExpr",
+      } as EFieldAccessorFunctionExpr);
+    case "record_pattern":
+      return Object.assign(node, {
+        nodeType: "RecordPattern",
+        patternList: TreeUtils.findAllNamedChildrenOfType("lower_pattern", node)
+          ?.map(mapSyntaxNodeToExpression)
+          .filter(Utils.notUndefined),
+      } as ERecordPattern);
+    case "record_expr":
+      return Object.assign(node, {
+        nodeType: "RecordExpr",
+        baseRecord: TreeUtils.findFirstNamedChildOfType(
+          "record_base_identifier",
+          node,
+        ),
+        fields: TreeUtils.findAllNamedChildrenOfType("field", node)
+          ?.map(mapSyntaxNodeToExpression)
+          .filter(Utils.notUndefined),
+      } as ERecordExpr);
     default:
       return mapSyntaxNodeToExpression(node.firstNamedChild);
   }

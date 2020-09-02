@@ -11,6 +11,9 @@ import {
   TTuple,
   TUnion,
   TList,
+  TRecord,
+  Info,
+  typeArgumentCountError,
 } from "./typeInference";
 import {
   Expression,
@@ -22,11 +25,14 @@ import {
   ETypeAnnotation,
   findDefinition,
   EUnionVariant,
+  ERecordType,
+  ETypeAliasDeclaration,
 } from "./expressionTree";
 import { TreeUtils } from "../treeUtils";
 import { TypeReplacement } from "./typeReplacement";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { Utils } from "../utils";
+import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
 
 export class TypeExpression {
   // All the type variables we've seen
@@ -47,6 +53,7 @@ export class TypeExpression {
     private uri: string,
     private imports: IImports,
     private rigidVars: boolean,
+    private activeAliases: Set<ETypeAliasDeclaration> = new Set(),
   ) {}
 
   public static typeDeclarationInference(
@@ -60,6 +67,29 @@ export class TypeExpression {
       imports,
       false,
     ).inferTypeDeclaration(e);
+
+    TypeReplacement.freeze(inferenceResult.type);
+
+    return {
+      ...inferenceResult,
+      type: TypeReplacement.freshenVars(inferenceResult.type),
+    };
+  }
+  public static typeAliasDeclarationInference(
+    e: ETypeAliasDeclaration,
+    uri: string,
+    imports: IImports,
+    activeAliases = new Set<ETypeAliasDeclaration>(),
+  ): InferenceResult {
+    const inferenceResult = new TypeExpression(
+      e,
+      uri,
+      imports,
+      false,
+      activeAliases,
+    ).inferTypeAliasDeclaration(e);
+
+    TypeReplacement.freeze(inferenceResult.type);
 
     return {
       ...inferenceResult,
@@ -85,6 +115,7 @@ export class TypeExpression {
     ).inferTypeExpression(e.typeExpression);
 
     let type = TypeReplacement.replace(inferenceResult.type, new Map());
+    TypeReplacement.freeze(inferenceResult.type);
 
     if (!rigid) {
       type = TypeReplacement.flexify(type);
@@ -141,6 +172,35 @@ export class TypeExpression {
     return this.toResult(type);
   }
 
+  private inferTypeAliasDeclaration(
+    declaration: ETypeAliasDeclaration,
+  ): InferenceResult {
+    if (this.activeAliases.has(declaration)) {
+      this.diagnostics.push({
+        node: declaration,
+        endNode: declaration,
+        message: "BadRecursionError",
+      });
+      return this.toResult(TUnknown);
+    }
+
+    this.activeAliases.add(declaration);
+
+    const type = declaration.typeExpression
+      ? this.typeExpressionType(declaration.typeExpression)
+      : TUnknown;
+
+    const params = declaration.typeVariables.map(this.getTypeVar.bind(this));
+    const moduleName =
+      TreeUtils.getModuleNameNode(declaration.tree)?.text ?? "";
+    const info: Info = {
+      module: moduleName,
+      name: declaration.name.text,
+      parameters: params,
+    };
+    return this.toResult({ ...type, info });
+  }
+
   private typeExpressionType(typeExpr: ETypeExpression): Type {
     const segmentTypes = typeExpr.segments.map((s) =>
       this.typeSignatureSegmentType(s),
@@ -179,6 +239,8 @@ export class TypeExpression {
           : TTuple(
               segment.typeExpressions.map((t) => this.typeExpressionType(t)),
             );
+      case "RecordType":
+        return this.recordTypeDeclarationType(segment);
     }
 
     return TUnknown;
@@ -239,15 +301,48 @@ export class TypeExpression {
     return type;
   }
 
+  private recordTypeDeclarationType(record: ERecordType): TRecord {
+    const fieldExpressions = record.fieldTypes;
+    if (fieldExpressions.length === 0) {
+      return TRecord({});
+    }
+
+    const fieldTypes: { [key: string]: Type } = {};
+    fieldExpressions.forEach((field) => {
+      fieldTypes[field.name] = this.typeExpressionType(field.typeExpression);
+    });
+
+    const fieldRefs = RecordFieldReferenceTable.fromExpressions(
+      fieldExpressions,
+    );
+
+    const baseTypeDefinition = findDefinition(
+      record.baseType,
+      this.uri,
+      this.imports,
+    )?.expr;
+
+    const baseType = baseTypeDefinition
+      ? this.getTypeVar(baseTypeDefinition)
+      : record.baseType
+      ? TVar(record.baseType.text)
+      : undefined;
+
+    return TRecord(fieldTypes, baseType, undefined, fieldRefs);
+  }
+
   private typeRefType(typeRef: ETypeRef): Type {
     const args =
-      TreeUtils.findAllNamedChildrenOfType("type_variable", typeRef)
+      TreeUtils.findAllNamedChildrenOfType(
+        ["type_variable", "type_ref"],
+        typeRef,
+      )
         ?.map(mapSyntaxNodeToExpression)
         .filter(Utils.notUndefined.bind(this))
         .map((arg) => this.typeSignatureSegmentType(arg)) ?? [];
 
     const definition = findDefinition(
-      typeRef.firstNamedChild?.firstNamedChild,
+      typeRef.firstNamedChild?.lastNamedChild,
       this.uri,
       this.imports,
     );
@@ -262,7 +357,14 @@ export class TypeExpression {
             this.imports,
           ).type;
           break;
-
+        case "TypeAliasDeclaration":
+          declaredType = TypeExpression.typeAliasDeclarationInference(
+            definition.expr,
+            definition.uri,
+            this.imports,
+            this.activeAliases,
+          ).type;
+          break;
         default:
           throw new Error("Unexpected type reference");
       }
@@ -278,6 +380,13 @@ export class TypeExpression {
       ? declaredType.params
       : [];
 
+    if (declaredType.nodeType !== "Unknown" && params.length !== args.length) {
+      this.diagnostics.push(
+        typeArgumentCountError(typeRef, args.length, params.length),
+      );
+      return TUnknown;
+    }
+
     if (params.length === 0) {
       return declaredType;
     }
@@ -285,7 +394,11 @@ export class TypeExpression {
     // The param types are always TVars
     return TypeReplacement.replace(
       declaredType,
-      new Map(params.map((p, i) => [<TVar>p, args[i]])),
+      new Map(
+        params
+          .map<[TVar, Type]>((p, i) => [<TVar>p, args[i]])
+          .filter(([, type]) => !!type),
+      ),
     );
   }
 

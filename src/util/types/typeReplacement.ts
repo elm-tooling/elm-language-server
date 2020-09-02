@@ -1,3 +1,4 @@
+import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
 import {
   TVar,
   Type,
@@ -6,6 +7,8 @@ import {
   uncurryFunction,
   TUnion,
   TTuple,
+  TRecord,
+  TMutableRecord,
 } from "./typeInference";
 
 export class TypeReplacement {
@@ -36,7 +39,7 @@ export class TypeReplacement {
     return new TypeReplacement(
       replacements,
       false,
-      false,
+      keepRecordsMutable,
       varsToRemainRigid,
     ).replace(type);
   }
@@ -49,6 +52,31 @@ export class TypeReplacement {
     return new TypeReplacement(new Map(), false, false, []).replace(type);
   }
 
+  public static freeze(type: Type): void {
+    switch (type.nodeType) {
+      case "Tuple":
+        type.types.forEach(this.freeze.bind(this));
+        break;
+      case "Record":
+      case "MutableRecord":
+        (type.baseType as TRecord)?.fieldReferences?.freeze();
+        for (const field in type.fields) {
+          this.freeze(type.fields[field]);
+        }
+        type.fieldReferences.freeze();
+        break;
+      case "Union":
+        type.params.forEach(this.freeze.bind(this));
+        break;
+      case "Function":
+        this.freeze(type.return);
+        type.params.forEach(this.freeze.bind(this));
+        break;
+    }
+
+    type.info?.parameters.forEach(this.freeze.bind(this));
+  }
+
   private replace(type: Type): Type {
     switch (type.nodeType) {
       case "Var":
@@ -59,6 +87,21 @@ export class TypeReplacement {
         return this.replaceUnion(type);
       case "Tuple":
         return this.replaceTuple(type);
+      case "Record":
+        return this.replaceRecord(
+          type.fields,
+          type.fieldReferences,
+          false,
+          type.baseType,
+          type.info,
+        );
+      case "MutableRecord":
+        return this.replaceRecord(
+          type.fields,
+          type.fieldReferences,
+          true,
+          type.baseType,
+        );
       case "Unit":
       case "InProgressBinding":
         return type;
@@ -107,6 +150,66 @@ export class TypeReplacement {
       params,
       type.info ? this.replaceInfo(type.info) : undefined,
     );
+  }
+
+  private replaceRecord(
+    fields: { [key: string]: Type },
+    fieldReferences: RecordFieldReferenceTable,
+    wasMutable: boolean,
+    baseType?: Type,
+    info?: Info,
+  ): Type {
+    const oldBase =
+      !baseType || baseType.nodeType !== "Var"
+        ? undefined
+        : this.getReplacement(baseType);
+
+    let newBase = oldBase;
+
+    if (oldBase?.nodeType === "Record") {
+      newBase = oldBase.baseType;
+    } else if (!oldBase) {
+      if (baseType?.nodeType === "MutableRecord" && !this.keepRecordsMutable) {
+        newBase = this.replace(baseType);
+      } else {
+        newBase = baseType;
+      }
+    }
+
+    const baseFields = (oldBase as TRecord)?.fields ?? [];
+    const baseFieldRefs = (oldBase as TRecord)?.fieldReferences;
+
+    const newFields: { [key: string]: Type } = {};
+
+    for (const field in baseFields) {
+      newFields[field] = baseFields[field];
+    }
+
+    for (const field in fields) {
+      newFields[field] = this.replace(fields[field]);
+    }
+
+    let newFieldReferences: RecordFieldReferenceTable;
+
+    if (!baseFieldRefs || baseFieldRefs.isEmpty()) {
+      newFieldReferences = fieldReferences;
+    } else if (fieldReferences.frozen) {
+      newFieldReferences = fieldReferences.plus(baseFieldRefs);
+    } else {
+      fieldReferences.addAll(baseFieldRefs);
+      newFieldReferences = fieldReferences;
+    }
+
+    if (wasMutable && this.keepRecordsMutable) {
+      return TMutableRecord(newFields, newBase, newFieldReferences);
+    } else {
+      return TRecord(
+        newFields,
+        newBase,
+        info ? this.replaceInfo(info) : undefined,
+        newFieldReferences,
+      );
+    }
   }
 
   private getReplacement(key: TVar): Type | undefined {

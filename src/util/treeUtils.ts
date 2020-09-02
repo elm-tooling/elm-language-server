@@ -664,7 +664,11 @@ export class TreeUtils {
     nodeAtPosition: SyntaxNode,
   ): { node: SyntaxNode; nodeType: NodeType } | undefined {
     let definitionNode = this.findTypeDeclaration(tree, nodeAtPosition.text);
-    if (definitionNode) {
+    if (
+      definitionNode &&
+      nodeAtPosition.parent?.type !== "value_expr" &&
+      nodeAtPosition.parent?.type !== "union_pattern"
+    ) {
       return { node: definitionNode, nodeType: "Type" };
     }
     definitionNode = this.findTypeAliasDeclaration(tree, nodeAtPosition.text);
@@ -1002,6 +1006,19 @@ export class TreeUtils {
         };
       }
 
+      const typeVariable = TreeUtils.findTypeAliasTypeVariable(
+        nodeAtPosition,
+        nodeAtPositionText,
+      );
+
+      if (typeVariable) {
+        return {
+          node: typeVariable,
+          nodeType: "TypeVariable",
+          uri,
+        };
+      }
+
       const letDefinitionNode = this.findLetFunctionNodeDefinition(
         nodeAtPosition,
         nodeAtPositionText,
@@ -1275,6 +1292,25 @@ export class TreeUtils {
     }
   }
 
+  public static findTypeAliasTypeVariable(
+    nodeAtPosition: SyntaxNode,
+    nodeAtPositionText: string,
+  ): SyntaxNode | undefined {
+    const parentTypeAlias = this.findParentOfType(
+      "type_alias_declaration",
+      nodeAtPosition,
+    );
+
+    if (parentTypeAlias) {
+      const lowerTypeNames = TreeUtils.findAllNamedChildrenOfType(
+        "lower_type_name",
+        parentTypeAlias,
+      );
+
+      return lowerTypeNames?.find((t) => t.text === nodeAtPositionText);
+    }
+  }
+
   public static findFunctionParameterDefinition(
     node: SyntaxNode,
     functionParameterName: string,
@@ -1290,7 +1326,7 @@ export class TreeUtils {
           const match = this.descendantsOfType(
             node.parent.firstChild,
             "lower_pattern",
-          ).find((a) => a.text === functionParameterName);
+          ).find((a) => a.text === functionParameterName)?.firstNamedChild;
           if (match) {
             return match;
           } else {
