@@ -304,21 +304,32 @@ export function typeToString(t: Type): string {
     case "Var":
       return t.name;
     case "Function":
-      return `${[...t.params, t.return].map(typeToString).join(" -> ")}`;
+      return `${[...t.params, t.return]
+        .map((p) =>
+          p.nodeType === "Function" ? `(${typeToString(p)})` : typeToString(p),
+        )
+        .join(" -> ")}`;
     case "Tuple":
       return `(${t.types.map(typeToString).join(", ")})`;
     case "Union":
       if (t.params.length === 0) {
         return t.name;
       } else {
-        return `${t.name} ${t.params.map(typeToString).join(" ")}`;
+        return `${t.name} ${t.params
+          .map((p) =>
+            p.nodeType === "Function" ||
+            (p.nodeType === "Union" && p.params.length > 0)
+              ? `(${typeToString(p)})`
+              : typeToString(p),
+          )
+          .join(" ")}`;
       }
     case "Record":
     case "MutableRecord":
       return `{ ${
         t.baseType ? `${typeToString(t.baseType)} | ` : ""
       }${Object.entries(t.fields)
-        .map(([field, type]) => `${field}: ${typeToString(type)}`)
+        .map(([field, type]) => `${field} : ${typeToString(type)}`)
         .join(", ")} }`;
   }
 }
@@ -800,7 +811,7 @@ export class InferenceScope {
 
   private inferChild(
     callback: (inference: InferenceScope) => InferenceResult,
-    activeScopes = this.activeScopes,
+    activeScopes = new Set(this.activeScopes.values()),
     recursionAllowed = this.recursionAllowed,
   ): InferenceResult {
     const result = callback(
@@ -825,7 +836,7 @@ export class InferenceScope {
 
   private inferChildDeclaration(
     declaration: EValueDeclaration,
-    activeScopes = this.activeScopes,
+    activeScopes = new Set(this.activeScopes.values()),
   ): InferenceResult {
     const result = this.inferChild(
       (inference) => inference.inferDeclaration(declaration, false),
@@ -1045,8 +1056,11 @@ export class InferenceScope {
         return TUnknown;
       }
 
-      const parentScope = this.ancestors.find((scope) =>
-        scope.childDeclarations.has(declaration),
+      const parentScope = this.ancestors.find(
+        (scope) =>
+          !!Array.from(scope.childDeclarations.values()).find(
+            (child) => (<any>child).id === (<any>declaration).id,
+          ),
       );
 
       type = !parentScope
@@ -1653,7 +1667,9 @@ export class InferenceScope {
         break;
       case "Pattern":
         {
-          const child = mapSyntaxNodeToExpression(pattern.firstNamedChild);
+          const child = mapSyntaxNodeToExpression(
+            pattern.namedChildren.find((c) => c.type.endsWith("pattern")),
+          );
           if (!child) {
             throw new Error("Missing pattern child");
           }

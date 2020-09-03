@@ -226,24 +226,35 @@ export class TypeExpression {
   }
 
   private typeSignatureSegmentType(segment: Expression): Type {
+    let type: Type = TUnknown;
+
     switch (segment.nodeType) {
       case "TypeRef":
-        return this.typeRefType(segment);
+        type = this.typeRefType(segment);
+        break;
       case "TypeVariable":
-        return this.typeVariableType(segment);
+        type = this.typeVariableType(segment);
+        break;
       case "TypeExpression":
-        return this.typeExpressionType(segment);
+        type = this.typeExpressionType(segment);
+        break;
       case "TupleType":
-        return segment.unitExpr
+        type = segment.unitExpr
           ? TUnit
           : TTuple(
               segment.typeExpressions.map((t) => this.typeExpressionType(t)),
             );
+        break;
       case "RecordType":
-        return this.recordTypeDeclarationType(segment);
+        type = this.recordTypeDeclarationType(segment);
+        break;
     }
 
-    return TUnknown;
+    if (type.nodeType === "Unknown") {
+      throw new Error("Unknown type expression segment type: " + segment.text);
+    }
+
+    return type;
   }
 
   private typeVariableType(typeVariable: ETypeVariable): Type {
@@ -276,7 +287,7 @@ export class TypeExpression {
 
     // If the definition is not in a type annotation or it is to a
     // variable in the same annotation, use the type of the reference
-    if (!annotation || !expr || (<any>expr).id === (<any>this.root).id) {
+    if (!annotation || !expr || (<any>annotation).id === (<any>this.root).id) {
       const type = this.getTypeVar(definition.expr);
       this.varsByExpression.set(typeVariable, type);
       this.expressionTypes.set(typeVariable, type);
@@ -303,7 +314,7 @@ export class TypeExpression {
 
   private recordTypeDeclarationType(record: ERecordType): TRecord {
     const fieldExpressions = record.fieldTypes;
-    if (fieldExpressions.length === 0) {
+    if (!fieldExpressions || fieldExpressions.length === 0) {
       return TRecord({});
     }
 
@@ -334,7 +345,13 @@ export class TypeExpression {
   private typeRefType(typeRef: ETypeRef): Type {
     const args =
       TreeUtils.findAllNamedChildrenOfType(
-        ["type_variable", "type_ref"],
+        [
+          "type_variable",
+          "type_ref",
+          "tuple_type",
+          "record_type",
+          "type_expression",
+        ],
         typeRef,
       )
         ?.map(mapSyntaxNodeToExpression)
@@ -362,7 +379,7 @@ export class TypeExpression {
             definition.expr,
             definition.uri,
             this.imports,
-            this.activeAliases,
+            new Set(this.activeAliases.values()),
           ).type;
           break;
         default:
@@ -385,6 +402,10 @@ export class TypeExpression {
         typeArgumentCountError(typeRef, args.length, params.length),
       );
       return TUnknown;
+    }
+
+    if (declaredType.nodeType === "Unknown") {
+      throw new Error("Type ref declared type is unknown");
     }
 
     if (params.length === 0) {

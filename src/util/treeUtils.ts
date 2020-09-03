@@ -676,7 +676,7 @@ export class TreeUtils {
       return { node: definitionNode, nodeType: "TypeAlias" };
     }
     definitionNode = this.findUnionConstructor(tree, nodeAtPosition.text);
-    if (definitionNode) {
+    if (definitionNode && nodeAtPosition.parent?.type !== "") {
       return { node: definitionNode, nodeType: "UnionConstructor" };
     }
   }
@@ -1120,25 +1120,26 @@ export class TreeUtils {
           (varNode) => varNode.text === nodeAtPosition.text,
         );
 
-        const variableRef = TreeUtils.findDefinitionNodeByReferencingNode(
-          variableNodes[indexOfNode > 0 ? indexOfNode - 1 : 0],
-          uri,
-          tree,
-          imports,
-        );
+        const variableRef =
+          TreeUtils.findDefinitionNodeByReferencingNode(
+            variableNodes[indexOfNode > 0 ? indexOfNode - 1 : 0],
+            uri,
+            tree,
+            imports,
+          )?.node.parent ?? undefined;
 
         let variableDef: SyntaxNode | null | undefined =
-          TreeUtils.getTypeOrTypeAliasOfFunctionParameter(variableRef?.node) ??
-          (variableRef?.node.parent
+          TreeUtils.getTypeOrTypeAliasOfFunctionParameter(variableRef) ??
+          (variableRef?.parent
             ? TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
-                variableRef.node.parent,
+                variableRef.parent,
               )
             : undefined);
 
-        if (!variableDef && variableRef?.node)
+        if (!variableDef && variableRef)
           variableDef = TreeUtils.findFirstNamedChildOfType(
             "type_expression",
-            variableRef.node,
+            variableRef,
           )?.firstNamedChild;
 
         if (variableDef) {
