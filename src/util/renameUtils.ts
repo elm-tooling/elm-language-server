@@ -2,7 +2,7 @@ import { IElmWorkspace } from "src/elmWorkspace";
 import { Forest } from "src/forest";
 import { IImports } from "src/imports";
 import { Position, ResponseError } from "vscode-languageserver";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { SyntaxNode, Tree } from "tree-sitter-elm";
 import { References } from "./references";
 import { TreeUtils } from "./treeUtils";
 

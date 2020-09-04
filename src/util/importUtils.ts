@@ -1,7 +1,7 @@
 import { IForest, ITreeContainer } from "../forest";
 import RANKING_LIST from "../providers/ranking";
 import { TreeUtils, NodeType } from "./treeUtils";
-import { SyntaxNode } from "web-tree-sitter";
+import { SyntaxNode, SyntaxType } from "tree-sitter-elm";
 import escapeStringRegexp from "escape-string-regexp";
 
 interface IPossibleImport {
@@ -171,7 +171,7 @@ export class ImportUtils {
         exposed.exposedUnionConstructors?.forEach((exp) => {
           if (exp.syntaxNode.parent) {
             const value = TreeUtils.findFirstNamedChildOfType(
-              "upper_case_identifier",
+              SyntaxType.UpperCaseIdentifier,
               exp.syntaxNode.parent,
             )?.text;
 

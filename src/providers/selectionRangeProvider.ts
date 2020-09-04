@@ -7,7 +7,7 @@ import {
   SelectionRangeParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { SyntaxNode, Tree } from "tree-sitter-elm";
 import { IElmWorkspace } from "../elmWorkspace";
 import { PositionUtil } from "../positionUtil";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";

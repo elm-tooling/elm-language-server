@@ -1,4 +1,4 @@
-import { SyntaxNode } from "web-tree-sitter";
+import { SyntaxNode, SyntaxType } from "tree-sitter-elm";
 import { TreeUtils } from "./treeUtils";
 
 export class HintHelper {
@@ -71,14 +71,16 @@ export class HintHelper {
         code = declaration.text;
       }
       if (declaration.type === "union_variant") {
+        // TODO: Fix once block_comment is in the typings
         if (
-          declaration.parent?.previousNamedSibling?.type !== "block_comment"
+          (declaration.parent?.previousNamedSibling?.type as unknown) !==
+          "block_comment"
         ) {
           code = declaration.text;
 
           if (declaration.parent) {
             const typeName = TreeUtils.findFirstNamedChildOfType(
-              "upper_case_identifier",
+              SyntaxType.UpperCaseIdentifier,
               declaration.parent,
             )?.text;
             comment = `A variant on the union type \`${typeName}\`` || "";
@@ -90,15 +92,18 @@ export class HintHelper {
       if (declaration.previousNamedSibling) {
         if (declaration.previousNamedSibling.type === "type_annotation") {
           annotation = declaration.previousNamedSibling.text;
+          // TODO: Fix once block_comment is in the typings
           if (
             declaration.previousNamedSibling.previousNamedSibling &&
-            declaration.previousNamedSibling.previousNamedSibling.type ===
-              "block_comment"
+            (declaration.previousNamedSibling.previousNamedSibling
+              .type as unknown) === "block_comment"
           ) {
             comment =
               declaration.previousNamedSibling.previousNamedSibling.text;
           }
-        } else if (declaration.previousNamedSibling.type === "block_comment") {
+        } else if (
+          (declaration.previousNamedSibling.type as unknown) === "block_comment"
+        ) {
           comment = declaration.previousNamedSibling.text;
         }
 
@@ -118,9 +123,10 @@ export class HintHelper {
   ): string | undefined {
     if (moduleNode) {
       let comment = "";
+      // TODO: Fix once block_comment is in the typings
       if (
         moduleNode.nextNamedSibling &&
-        moduleNode.nextNamedSibling.type === "block_comment"
+        (moduleNode.nextNamedSibling.type as unknown) === "block_comment"
       ) {
         comment = moduleNode.nextNamedSibling.text;
       }

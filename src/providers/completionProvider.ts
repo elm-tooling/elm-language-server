@@ -12,7 +12,7 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { SyntaxNode, SyntaxType, Tree } from "tree-sitter-elm";
 import { IElmWorkspace } from "../elmWorkspace";
 import { IForest, ITreeContainer } from "../forest";
 import { IImports } from "../imports";
@@ -134,7 +134,7 @@ export class CompletionProvider {
         return [];
       } else if (
         isAtStartOfLine &&
-        nodeAtLineBefore.type === "lower_case_identifier" &&
+        nodeAtLineBefore.type === SyntaxType.LowerCaseIdentifier &&
         nodeAtLineBefore.parent &&
         nodeAtLineBefore.parent.type === "type_annotation"
       ) {
@@ -148,7 +148,7 @@ export class CompletionProvider {
         ];
       } else if (
         isAtStartOfLine &&
-        nodeAtLineAfter.type === "lower_case_identifier" &&
+        nodeAtLineAfter.type === SyntaxType.LowerCaseIdentifier &&
         nodeAtLineAfter.parent &&
         (nodeAtLineAfter.parent.type === "value_qid" ||
           nodeAtLineAfter.parent.type === "function_declaration_left" ||
@@ -167,15 +167,12 @@ export class CompletionProvider {
           tree,
         );
 
-        const exposedValues = TreeUtils.descendantsOfType(
-          tree.rootNode,
-          "exposed_value",
+        const exposedValues = tree.rootNode.descendantsOfType(
+          SyntaxType.ExposedValue,
         );
 
-        const possibleMissingImplementations = TreeUtils.descendantsOfType(
-          tree.rootNode,
-          "function_call_expr",
-        )
+        const possibleMissingImplementations = tree.rootNode
+          .descendantsOfType(SyntaxType.FunctionCallExpr)
           .filter((a) => a.firstChild && !a.firstChild.text.includes("."))
           .filter(
             (a) =>
@@ -291,7 +288,7 @@ export class CompletionProvider {
           if (parent?.type === "value_qid") {
             // Qualified submodule and value access
             targetNode = contextNode.previousNamedSibling;
-          } else if (parent?.type === "field_access_segment") {
+          } else if (parent?.type === SyntaxType.FieldAccessExpr) {
             // Record field access
             targetNode =
               parent?.previousNamedSibling?.lastNamedChild?.lastNamedChild ??
@@ -635,7 +632,8 @@ export class CompletionProvider {
           a.firstNamedChild !== null &&
           a.firstNamedChild.type === "function_declaration_left" &&
           a.firstNamedChild.firstNamedChild !== null &&
-          a.firstNamedChild.firstNamedChild.type === "lower_case_identifier",
+          a.firstNamedChild.firstNamedChild.type ===
+            SyntaxType.LowerCaseIdentifier,
       );
       for (const declaration of declarations) {
         const markdownDocumentation = HintHelper.createHint(declaration);
@@ -655,7 +653,7 @@ export class CompletionProvider {
       for (const declaration of typeDeclarations) {
         const markdownDocumentation = HintHelper.createHint(declaration);
         const name = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
+          SyntaxType.UpperCaseIdentifier,
           declaration,
         );
         if (name) {
@@ -679,13 +677,12 @@ export class CompletionProvider {
           }
         }
         // Add types constructors
-        const unionVariants = TreeUtils.descendantsOfType(
-          declaration,
-          "union_variant",
+        const unionVariants = declaration.descendantsOfType(
+          SyntaxType.UnionVariant,
         );
         for (const unionVariant of unionVariants) {
           const unionVariantName = TreeUtils.findFirstNamedChildOfType(
-            "upper_case_identifier",
+            SyntaxType.UpperCaseIdentifier,
             unionVariant,
           );
           if (unionVariantName) {
@@ -706,7 +703,7 @@ export class CompletionProvider {
       for (const declaration of typeAliasDeclarations) {
         const markdownDocumentation = HintHelper.createHint(declaration);
         const name = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
+          SyntaxType.UpperCaseIdentifier,
           declaration,
         );
         if (name) {
@@ -766,7 +763,7 @@ export class CompletionProvider {
 
       const typeName =
         TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
+          SyntaxType.UpperCaseIdentifier,
           typeDeclarationNode,
         )?.text ?? "";
 
@@ -882,46 +879,39 @@ export class CompletionProvider {
     const result: CompletionItem[] = [];
     const sortPrefix = "a";
     if (node.parent) {
-      if (node.parent.type === "let_in_expr") {
-        const letNode = TreeUtils.findFirstNamedChildOfType("let", node.parent);
-        if (letNode) {
-          letNode.children.forEach((nodeToProcess) => {
-            if (
-              nodeToProcess &&
-              nodeToProcess.type === "value_declaration" &&
-              nodeToProcess.firstNamedChild !== null &&
-              nodeToProcess.firstNamedChild.type ===
-                "function_declaration_left" &&
-              nodeToProcess.firstNamedChild.firstNamedChild !== null &&
-              nodeToProcess.firstNamedChild.firstNamedChild.type ===
-                "lower_case_identifier"
-            ) {
-              const markdownDocumentation = HintHelper.createHintFromDefinitionInLet(
-                nodeToProcess,
-              );
-              result.push(
-                this.createFunctionCompletion({
-                  markdownDocumentation,
-                  label: nodeToProcess.firstNamedChild.firstNamedChild.text,
-                  range,
-                  sortPrefix,
-                }),
-              );
-            }
-          });
-        }
+      if (node.parent.type === SyntaxType.LetInExpr) {
+        node.parent.valueDeclarationNodes.forEach((nodeToProcess) => {
+          if (
+            nodeToProcess.functionDeclarationLeftNode &&
+            nodeToProcess.functionDeclarationLeftNode.firstNamedChild !==
+              null &&
+            nodeToProcess.functionDeclarationLeftNode.firstNamedChild.type ===
+              SyntaxType.LowerCaseIdentifier
+          ) {
+            const markdownDocumentation = HintHelper.createHintFromDefinitionInLet(
+              nodeToProcess,
+            );
+            result.push(
+              this.createFunctionCompletion({
+                markdownDocumentation,
+                label:
+                  nodeToProcess.functionDeclarationLeftNode.firstNamedChild
+                    .text,
+                range,
+                sortPrefix,
+              }),
+            );
+          }
+        });
       }
       if (
-        node.parent.type === "case_of_branch" &&
-        node.parent.firstNamedChild &&
-        node.parent.firstNamedChild.type === "pattern" &&
-        node.parent.firstNamedChild.firstNamedChild &&
-        node.parent.firstNamedChild.firstNamedChild.type === "union_pattern" &&
-        node.parent.firstNamedChild.firstNamedChild.childCount > 1 // Ignore cases of case branches with no params
+        node.parent.type === SyntaxType.CaseOfBranch &&
+        node.parent.patternNode.childNode.type === SyntaxType.UnionPattern &&
+        node.parent.patternNode.childNode.childCount > 1 // Ignore cases of case branches with no params
       ) {
         const caseBranchVariableNodes = TreeUtils.findAllNamedChildrenOfType(
-          "lower_pattern",
-          node.parent.firstNamedChild.firstNamedChild,
+          SyntaxType.LowerPattern,
+          node.parent.patternNode.childNode,
         );
         if (caseBranchVariableNodes) {
           caseBranchVariableNodes.forEach((a) => {

@@ -8,7 +8,7 @@ import {
   IConnection,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { SyntaxNode, SyntaxType, Tree } from "tree-sitter-elm";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
@@ -169,7 +169,7 @@ export class CodeActionProvider {
     const codeActions: CodeAction[] = [];
 
     if (
-      nodeAtPosition.type === "upper_case_identifier" &&
+      nodeAtPosition.type === SyntaxType.UpperCaseIdentifier &&
       (nodeAtPosition.parent?.type === "type_alias_declaration" ||
         nodeAtPosition.parent?.type === "type_declaration")
     ) {

@@ -7,7 +7,7 @@ import {
   VersionedTextDocumentIdentifier,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import Parser, { Tree } from "web-tree-sitter";
+import { Parser, Tree } from "tree-sitter-elm";
 import { IElmWorkspace } from "../elmWorkspace";
 import { IDocumentEvents } from "../util/documentEvents";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";

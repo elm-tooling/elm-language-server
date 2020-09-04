@@ -7,7 +7,7 @@ import {
   ReferenceParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { Tree } from "web-tree-sitter";
+import { Tree } from "tree-sitter-elm";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";

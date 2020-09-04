@@ -1,6 +1,6 @@
 import * as Path from "path";
 import { URI } from "vscode-uri";
-import Parser, { Tree } from "web-tree-sitter";
+import Parser, { Tree } from "tree-sitter-elm";
 import { IElmWorkspace } from "../../src/elmWorkspace";
 import { Forest, IForest } from "../../src/forest";
 import { Imports } from "../../src/imports";

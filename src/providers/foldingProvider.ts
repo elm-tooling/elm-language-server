@@ -6,7 +6,7 @@ import {
   IConnection,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { SyntaxNode, Tree } from "tree-sitter-elm";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 
@@ -75,7 +75,10 @@ export class FoldingRangeProvider {
               startLine: node.startPosition.row,
             });
           }
-        } else if (this.REGION_CONSTRUCTS.has(node.type)) {
+        } else if (
+          this.REGION_CONSTRUCTS.has(node.type) ||
+          this.REGION_CONSTRUCTS.has(node.text)
+        ) {
           folds.push({
             endCharacter: node.endPosition.column,
             endLine: node.endPosition.row,
@@ -83,7 +86,8 @@ export class FoldingRangeProvider {
             startCharacter: node.startPosition.column,
             startLine: node.startPosition.row,
           });
-        } else if ("block_comment" === node.type) {
+          // TODO: Fix once block_comment is in the typings
+        } else if ("block_comment" === (node.type as unknown)) {
           folds.push({
             endCharacter: node.endPosition.column,
             endLine: node.endPosition.row,

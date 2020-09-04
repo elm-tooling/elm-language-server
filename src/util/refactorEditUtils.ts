@@ -1,6 +1,6 @@
 import { PositionUtil } from "src/positionUtil";
 import { Position, Range, TextEdit } from "vscode-languageserver";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { SyntaxNode, SyntaxType, Tree } from "tree-sitter-elm";
 import { TreeUtils } from "./treeUtils";
 
 export class RefactorEditUtils {
@@ -47,9 +47,8 @@ export class RefactorEditUtils {
     const importClause = TreeUtils.findImportClauseByName(tree, moduleName);
 
     if (importClause) {
-      const exposedValues = TreeUtils.descendantsOfType(
-        importClause,
-        "exposed_value",
+      const exposedValues = importClause.descendantsOfType(
+        SyntaxType.ExposedValue,
       );
 
       if (exposedValues.length === 1 && exposedValues[0].text === valueName) {
@@ -100,7 +99,7 @@ export class RefactorEditUtils {
   ): TextEdit | undefined {
     if (node.parent && node.parent.type === "value_qid") {
       const moduleNode = TreeUtils.findFirstNamedChildOfType(
-        "upper_case_identifier",
+        SyntaxType.UpperCaseIdentifier,
         node.parent,
       );
 
@@ -127,7 +126,7 @@ export class RefactorEditUtils {
   ): TextEdit | undefined {
     if (node.parent && node.parent.type === "value_qid") {
       const moduleNode = TreeUtils.findFirstNamedChildOfType(
-        "upper_case_identifier",
+        SyntaxType.UpperCaseIdentifier,
         node.parent,
       );
 

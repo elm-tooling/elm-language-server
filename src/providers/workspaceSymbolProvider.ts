@@ -4,7 +4,7 @@ import {
   SymbolInformation,
   WorkspaceSymbolParams,
 } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { SyntaxNode } from "tree-sitter-elm";
 import { IElmWorkspace } from "../elmWorkspace";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 

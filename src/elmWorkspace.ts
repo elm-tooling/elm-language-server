@@ -6,7 +6,7 @@ import { container } from "tsyringe";
 import util from "util";
 import { IConnection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import Parser, { Tree } from "web-tree-sitter";
+import { Parser, Tree } from "tree-sitter-elm";
 import { Forest } from "./forest";
 import { Imports } from "./imports";
 import * as utils from "./util/elmUtils";

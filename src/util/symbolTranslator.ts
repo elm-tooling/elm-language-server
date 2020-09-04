@@ -4,7 +4,7 @@ import {
   SymbolInformation,
   SymbolKind,
 } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { SyntaxNode, SyntaxType } from "tree-sitter-elm";
 import { TreeUtils } from "./treeUtils";
 
 export class SymbolInformationTranslator {
@@ -39,7 +39,7 @@ export class SymbolInformationTranslator {
         }
       case "type_declaration":
         const nameNodeTypeDec = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
+          SyntaxType.UpperCaseIdentifier,
           node,
         );
         if (nameNodeTypeDec) {
@@ -54,7 +54,7 @@ export class SymbolInformationTranslator {
         }
       case "type_alias_declaration":
         const nameNodeAliasDec = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
+          SyntaxType.UpperCaseIdentifier,
           node,
         );
         if (nameNodeAliasDec) {

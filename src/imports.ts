@@ -1,4 +1,4 @@
-import Parser, { SyntaxNode, Tree } from "web-tree-sitter";
+import { Parser, SyntaxNode, SyntaxType, Tree } from "tree-sitter-elm";
 import { IForest, ITreeContainer } from "./forest";
 import { IExposing, NodeType, TreeUtils } from "./util/treeUtils";
 import { container } from "tsyringe";
@@ -92,9 +92,8 @@ export class Imports implements IImports {
                       ),
                     );
                   } else {
-                    const exposedOperators = TreeUtils.descendantsOfType(
-                      exposingList,
-                      "operator_identifier",
+                    const exposedOperators = exposingList.descendantsOfType(
+                      SyntaxType.OperatorIdentifier,
                     );
                     if (exposedOperators.length > 0) {
                       const exposedNodes = exposedFromRemoteModule.filter(
@@ -143,7 +142,7 @@ export class Imports implements IImports {
                         (element) => {
                           return exposedType.find((a) => {
                             const typeName = TreeUtils.findFirstNamedChildOfType(
-                              "upper_case_identifier",
+                              SyntaxType.UpperCaseIdentifier,
                               a,
                             );
                             if (typeName) {
@@ -280,7 +279,7 @@ import Platform.Sub as Sub exposing ( Sub )
     );
     if (asClause) {
       const newName = TreeUtils.findFirstNamedChildOfType(
-        "upper_case_identifier",
+        SyntaxType.UpperCaseIdentifier,
         asClause,
       );
       if (newName) {
@@ -311,11 +310,11 @@ import Platform.Sub as Sub exposing ( Sub )
   private exposedNodesToImports(
     exposedNodes: {
       name: string;
-      syntaxNode: Parser.SyntaxNode;
+      syntaxNode: SyntaxNode;
       type: NodeType;
       exposedUnionConstructors?: {
         name: string;
-        syntaxNode: Parser.SyntaxNode;
+        syntaxNode: SyntaxNode;
       }[];
     }[],
     moduleNameNode: SyntaxNode,

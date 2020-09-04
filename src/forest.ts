@@ -1,4 +1,4 @@
-import { Tree } from "web-tree-sitter";
+import { Tree } from "tree-sitter-elm";
 import { IExposing, TreeUtils } from "./util/treeUtils";
 
 export interface ITreeContainer {

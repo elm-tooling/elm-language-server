@@ -1,4 +1,4 @@
-import { SyntaxNode } from "web-tree-sitter";
+import { SyntaxNode, SyntaxType } from "tree-sitter-elm";
 import { IForest } from "../forest";
 import { IImports } from "../imports";
 import { IReferenceNode } from "./referenceNode";
@@ -42,10 +42,10 @@ export class References {
 
               const localFunctions =
                 definitionNode.node.parent &&
-                definitionNode.node.parent.type === "let" &&
-                definitionNode.node.parent.nextNamedSibling
+                definitionNode.node.parent.type === SyntaxType.LetInExpr &&
+                definitionNode.node.parent.bodyNode
                   ? this.findFunctionCalls(
-                      definitionNode.node.parent.nextNamedSibling,
+                      definitionNode.node.parent.bodyNode,
                       functionNameNode.text,
                     )
                   : this.findFunctionCalls(
@@ -457,12 +457,10 @@ export class References {
   private static findAllFunctionCallsAndParameters(
     node: SyntaxNode,
   ): SyntaxNode[] {
-    let functions = TreeUtils.descendantsOfType(node, "value_expr");
-    if (functions.length > 0) {
-      functions = functions
-        .filter((a) => a.firstChild && a.firstChild.type === "value_qid")
-        .map((a) => a.firstChild!);
-    }
+    const functions = node
+      .descendantsOfType(SyntaxType.ValueExpr)
+      .filter((a) => a.firstChild && a.firstChild.type === SyntaxType.ValueQid)
+      .map((a) => a.firstChild!);
 
     return functions;
   }
@@ -480,7 +478,7 @@ export class References {
   }
 
   private static findAllRecordBaseIdentifiers(node: SyntaxNode): SyntaxNode[] {
-    return TreeUtils.descendantsOfType(node, "record_base_identifier");
+    return node.descendantsOfType(SyntaxType.RecordBaseIdentifier);
   }
 
   private static getFunctionAnnotationNameNodeFromDefinition(
@@ -490,7 +488,8 @@ export class References {
       node.previousNamedSibling &&
       node.previousNamedSibling.type === "type_annotation" &&
       node.previousNamedSibling.firstChild &&
-      node.previousNamedSibling.firstChild.type === "lower_case_identifier"
+      node.previousNamedSibling.firstChild.type ===
+        SyntaxType.LowerCaseIdentifier
     ) {
       return node.previousNamedSibling.firstChild;
     }

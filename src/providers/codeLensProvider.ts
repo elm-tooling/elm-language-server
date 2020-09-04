@@ -9,7 +9,7 @@ import {
   Range,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { SyntaxNode, SyntaxType, Tree } from "tree-sitter-elm";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
@@ -225,7 +225,7 @@ export class CodeLensProvider {
         node.type === "type_alias_declaration"
       ) {
         const typeNode = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
+          SyntaxType.UpperCaseIdentifier,
           node,
         );
 
@@ -247,7 +247,7 @@ export class CodeLensProvider {
         node.type === "type_alias_declaration"
       ) {
         const typeNode = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
+          SyntaxType.UpperCaseIdentifier,
           node,
         );
 
@@ -257,8 +257,9 @@ export class CodeLensProvider {
       }
     });
 
-    TreeUtils.descendantsOfType(tree.rootNode, "value_declaration").forEach(
-      (node) => {
+    tree.rootNode
+      .descendantsOfType(SyntaxType.ValueDeclaration)
+      .forEach((node) => {
         const functionName = TreeUtils.getFunctionNameNodeFromDefinition(node);
 
         if (functionName) {
@@ -273,8 +274,7 @@ export class CodeLensProvider {
             codeLens.push(this.createReferenceCodeLens(node, uri));
           }
         }
-      },
-    );
+      });
 
     const moduleNameNode = TreeUtils.getModuleNameNode(tree);
     if (moduleNameNode && moduleNameNode.lastChild) {

@@ -1,4 +1,4 @@
-import { SyntaxNode } from "web-tree-sitter";
+import { SyntaxNode } from "tree-sitter-elm";
 import { NodeType } from "./treeUtils";
 
 export interface IReferenceNode {

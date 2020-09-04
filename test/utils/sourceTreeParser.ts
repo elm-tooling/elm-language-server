@@ -1,5 +1,5 @@
 import * as Path from "path";
-import Parser from "web-tree-sitter";
+import Parser from "tree-sitter-elm";
 import { IElmWorkspace } from "../../src/elmWorkspace";
 import { MockElmWorkspace } from "./mockElmWorkspace";
 import { container } from "tsyringe";

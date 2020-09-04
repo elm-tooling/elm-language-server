@@ -99,11 +99,13 @@ export class MoveRefactoringHandler {
         ? nodeAtPosition.parent?.nextNamedSibling
         : undefined;
 
+      // TODO: Fix once block_comment is in the typings
       const commentNode =
-        typeNode?.previousNamedSibling?.type === "block_comment"
-          ? typeNode.previousNamedSibling
-          : declarationNode?.previousNamedSibling?.type === "block_comment"
-          ? declarationNode.previousNamedSibling
+        (typeNode?.previousNamedSibling?.type as unknown) === "block_comment"
+          ? typeNode?.previousNamedSibling
+          : (declarationNode?.previousNamedSibling?.type as unknown) ===
+            "block_comment"
+          ? declarationNode?.previousNamedSibling
           : undefined;
 
       const functionName = nodeAtPosition.text;

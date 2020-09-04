@@ -12,7 +12,7 @@ import {
   WorkspaceEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode } from "web-tree-sitter";
+import { SyntaxNode } from "tree-sitter-elm";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { RenameUtils } from "../util/renameUtils";
