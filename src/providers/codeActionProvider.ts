@@ -161,6 +161,11 @@ export class CodeActionProvider {
       codeActions.push(
         ...this.getFunctionCodeActions(params, tree, nodeAtPosition),
         ...this.getTypeAliasCodeActions(params, tree, nodeAtPosition),
+        ...this.getMakeDeclarationFromUsageCodeActions(
+          params,
+          tree,
+          nodeAtPosition,
+        ),
       );
     }
 
@@ -275,6 +280,53 @@ export class CodeActionProvider {
               },
             },
             kind: CodeActionKind.Refactor,
+          });
+        }
+      }
+    }
+
+    return codeActions;
+  }
+
+  private getMakeDeclarationFromUsageCodeActions(
+    params: CodeActionParams,
+    tree: Tree,
+    nodeAtPosition: SyntaxNode,
+  ): CodeAction[] {
+    const codeActions: CodeAction[] = [];
+
+    if (
+      nodeAtPosition.type === "lower_case_identifier" &&
+      nodeAtPosition.parent?.parent?.type === "value_expr" &&
+      nodeAtPosition.parent?.parent?.parent &&
+      nodeAtPosition.previousSibling?.type !== "dot"
+    ) {
+      const funcName = nodeAtPosition.text;
+
+      if (
+        !TreeUtils.findAllTopLevelFunctionDeclarations(tree)?.some(
+          (a) => a.firstChild?.text == funcName,
+        )
+      ) {
+        const insertLineNumber = RefactorEditUtils.findLineNumberAfterCurrentFunction(
+          nodeAtPosition,
+        );
+
+        const edit = RefactorEditUtils.createTopLevelFunction(
+          insertLineNumber ?? tree.rootNode.endPosition.row,
+          funcName,
+          nodeAtPosition.parent?.parent?.parent,
+        );
+
+        if (edit) {
+          codeActions.push({
+            title: `Create local function`,
+            edit: {
+              changes: {
+                [params.textDocument.uri]: [edit],
+              },
+            },
+            kind: CodeActionKind.QuickFix,
           });
         }
       }

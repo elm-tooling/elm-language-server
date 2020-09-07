@@ -1,9 +1,21 @@
-import { PositionUtil } from "src/positionUtil";
 import { Position, Range, TextEdit } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { TreeUtils } from "./treeUtils";
 
 export class RefactorEditUtils {
+  public static findLineNumberAfterCurrentFunction(
+    nodeAtPosition: SyntaxNode,
+  ): number | undefined {
+    if (!nodeAtPosition.parent) {
+      return undefined;
+    }
+
+    if (nodeAtPosition.parent?.type === "file") {
+      return nodeAtPosition.endPosition.row + 1;
+    }
+
+    return this.findLineNumberAfterCurrentFunction(nodeAtPosition.parent);
+  }
   public static unexposedValueInModule(
     tree: Tree,
     valueName: string,
@@ -16,6 +28,32 @@ export class RefactorEditUtils {
     } else {
       return this.removeValueFromExposingList(exposedNodes, valueName);
     }
+  }
+
+  public static createTopLevelFunction(
+    insertLineNumber: number,
+    valueName: string,
+    valueExpression: SyntaxNode,
+  ): TextEdit | undefined {
+    const arity = valueExpression.namedChildCount - 1;
+    const hasArity0 = arity == 0;
+    const argList: string = this.argListFromArity(arity);
+
+    if (hasArity0) {
+      return TextEdit.insert(
+        Position.create(insertLineNumber, 0),
+        `\n\n${valueName} =\n    Debug.todo "TODO"\n`,
+      );
+    } else {
+      return TextEdit.insert(
+        Position.create(insertLineNumber, 0),
+        `\n\n${valueName} ${argList} =\n    Debug.todo "TODO"\n`,
+      );
+    }
+  }
+
+  private static argListFromArity(arity: number): string {
+    return [...Array(arity).keys()].map((a) => `arg${a + 1}`).join(" ");
   }
 
   public static exposeValueInModule(
