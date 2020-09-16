@@ -407,22 +407,17 @@ export function mapSyntaxNodeToExpression(
     case "if_else_expr":
       return Object.assign(node, {
         nodeType: "IfElseExpr",
-        exprList: node.namedChildren.map((n) =>
-          mapSyntaxNodeToExpression(n.firstNamedChild),
-        ),
+        exprList: node.namedChildren.map((n) => mapSyntaxNodeToExpression(n)),
       } as EIfElseExpr);
 
     case "let_in_expr":
       return Object.assign(node, {
         nodeType: "LetInExpr",
         valueDeclarations:
-          node.firstNamedChild?.type === "let"
-            ? TreeUtils.findAllNamedChildrenOfType(
-                "value_declaration",
-                node.firstNamedChild,
-              )?.map(mapSyntaxNodeToExpression)
-            : [],
-        body: mapSyntaxNodeToExpression(node.lastNamedChild?.firstNamedChild),
+          TreeUtils.findAllNamedChildrenOfType("value_declaration", node)?.map(
+            mapSyntaxNodeToExpression,
+          ) ?? [],
+        body: mapSyntaxNodeToExpression(node.lastNamedChild),
       } as ELetInExpr);
 
     case "case_of_expr":

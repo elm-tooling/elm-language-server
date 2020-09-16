@@ -883,33 +883,30 @@ export class CompletionProvider {
     const sortPrefix = "a";
     if (node.parent) {
       if (node.parent.type === "let_in_expr") {
-        const letNode = TreeUtils.findFirstNamedChildOfType("let", node.parent);
-        if (letNode) {
-          letNode.children.forEach((nodeToProcess) => {
-            if (
-              nodeToProcess &&
-              nodeToProcess.type === "value_declaration" &&
-              nodeToProcess.firstNamedChild !== null &&
-              nodeToProcess.firstNamedChild.type ===
-                "function_declaration_left" &&
-              nodeToProcess.firstNamedChild.firstNamedChild !== null &&
-              nodeToProcess.firstNamedChild.firstNamedChild.type ===
-                "lower_case_identifier"
-            ) {
-              const markdownDocumentation = HintHelper.createHintFromDefinitionInLet(
-                nodeToProcess,
-              );
-              result.push(
-                this.createFunctionCompletion({
-                  markdownDocumentation,
-                  label: nodeToProcess.firstNamedChild.firstNamedChild.text,
-                  range,
-                  sortPrefix,
-                }),
-              );
-            }
-          });
-        }
+        node.parent.children.forEach((nodeToProcess) => {
+          if (
+            nodeToProcess &&
+            nodeToProcess.type === "value_declaration" &&
+            nodeToProcess.firstNamedChild !== null &&
+            nodeToProcess.firstNamedChild.type ===
+              "function_declaration_left" &&
+            nodeToProcess.firstNamedChild.firstNamedChild !== null &&
+            nodeToProcess.firstNamedChild.firstNamedChild.type ===
+              "lower_case_identifier"
+          ) {
+            const markdownDocumentation = HintHelper.createHintFromDefinitionInLet(
+              nodeToProcess,
+            );
+            result.push(
+              this.createFunctionCompletion({
+                markdownDocumentation,
+                label: nodeToProcess.firstNamedChild.firstNamedChild.text,
+                range,
+                sortPrefix,
+              }),
+            );
+          }
+        });
       }
       if (
         node.parent.type === "case_of_branch" &&

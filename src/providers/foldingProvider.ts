@@ -18,11 +18,6 @@ export class FoldingRangeProvider {
     "type_declaration",
     "record_expr",
     "case_of_branch",
-    "let",
-    "in",
-    "if",
-    "then",
-    "else",
   ]);
   private connection: IConnection;
   constructor() {
@@ -75,6 +70,44 @@ export class FoldingRangeProvider {
               startLine: node.startPosition.row,
             });
           }
+        } else if (node.type === "let_in_expr") {
+          // Use fields in the future
+          const valueDeclarations = node.namedChildren.filter(
+            (n) => n.type === "value_declaration",
+          );
+          const lastValueDeclaration =
+            valueDeclarations[valueDeclarations.length - 1];
+          const letBody = node.lastNamedChild;
+
+          if (lastValueDeclaration) {
+            folds.push({
+              endCharacter: lastValueDeclaration.endPosition.column,
+              endLine: lastValueDeclaration.endPosition.row,
+              kind: FoldingRangeKind.Region,
+              startCharacter: node.startPosition.column,
+              startLine: node.startPosition.row,
+            });
+          }
+
+          if (letBody) {
+            folds.push({
+              endCharacter: node.endPosition.column,
+              endLine: node.endPosition.row,
+              kind: FoldingRangeKind.Region,
+              startCharacter: letBody.startPosition.column,
+              startLine: letBody.startPosition.row - 1,
+            });
+          }
+        } else if (node.type === "if_else_expr") {
+          node.namedChildren.slice(1).forEach((child) => {
+            folds.push({
+              endCharacter: child.endPosition.column,
+              endLine: child.endPosition.row,
+              kind: FoldingRangeKind.Region,
+              startCharacter: child.startPosition.column,
+              startLine: child.startPosition.row - 1,
+            });
+          });
         } else if (this.REGION_CONSTRUCTS.has(node.type)) {
           folds.push({
             endCharacter: node.endPosition.column,

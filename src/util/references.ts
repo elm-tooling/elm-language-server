@@ -19,118 +19,120 @@ export class References {
         const moduleNameNode = TreeUtils.getModuleNameNode(refSourceTree.tree);
         switch (definitionNode.nodeType) {
           case "Function":
-            const annotationNameNode = this.getFunctionAnnotationNameNodeFromDefinition(
-              definitionNode.node,
-            );
-            if (annotationNameNode && refSourceTree.writeable) {
-              references.push({
-                node: annotationNameNode,
-                uri: definitionNode.uri,
-              });
-            }
-
-            const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(
-              definitionNode.node,
-            );
-            if (functionNameNode) {
-              if (refSourceTree.writeable) {
+            {
+              const annotationNameNode = this.getFunctionAnnotationNameNodeFromDefinition(
+                definitionNode.node,
+              );
+              if (annotationNameNode && refSourceTree.writeable) {
                 references.push({
-                  node: functionNameNode,
+                  node: annotationNameNode,
                   uri: definitionNode.uri,
                 });
               }
 
-              const localFunctions =
-                definitionNode.node.parent &&
-                definitionNode.node.parent.type === "let" &&
-                definitionNode.node.parent.nextNamedSibling
-                  ? this.findFunctionCalls(
-                      definitionNode.node.parent.nextNamedSibling,
-                      functionNameNode.text,
-                    )
-                  : this.findFunctionCalls(
-                      refSourceTree.tree.rootNode,
+              const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(
+                definitionNode.node,
+              );
+              if (functionNameNode) {
+                if (refSourceTree.writeable) {
+                  references.push({
+                    node: functionNameNode,
+                    uri: definitionNode.uri,
+                  });
+                }
+
+                const localFunctions =
+                  definitionNode.node.parent &&
+                  definitionNode.node.parent.type === "let_in_expr" &&
+                  definitionNode.node.parent.lastNamedChild
+                    ? this.findFunctionCalls(
+                        definitionNode.node.parent.lastNamedChild,
+                        functionNameNode.text,
+                      )
+                    : this.findFunctionCalls(
+                        refSourceTree.tree.rootNode,
+                        functionNameNode.text,
+                      );
+
+                if (localFunctions && refSourceTree.writeable) {
+                  references.push(
+                    ...localFunctions.map((node) => {
+                      return { node, uri: definitionNode.uri };
+                    }),
+                  );
+                }
+
+                if (
+                  TreeUtils.isExposedFunction(
+                    refSourceTree.tree,
+                    functionNameNode.text,
+                  )
+                ) {
+                  const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
+                    refSourceTree.tree,
+                  );
+                  if (moduleDeclarationNode) {
+                    const exposedNode = TreeUtils.findExposedFunctionNode(
+                      moduleDeclarationNode,
                       functionNameNode.text,
                     );
 
-              if (localFunctions && refSourceTree.writeable) {
-                references.push(
-                  ...localFunctions.map((node) => {
-                    return { node, uri: definitionNode.uri };
-                  }),
-                );
-              }
-
-              if (
-                TreeUtils.isExposedFunction(
-                  refSourceTree.tree,
-                  functionNameNode.text,
-                )
-              ) {
-                const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
-                  refSourceTree.tree,
-                );
-                if (moduleDeclarationNode) {
-                  const exposedNode = TreeUtils.findExposedFunctionNode(
-                    moduleDeclarationNode,
-                    functionNameNode.text,
-                  );
-
-                  if (exposedNode && refSourceTree.writeable) {
-                    references.push({
-                      node: exposedNode,
-                      uri: definitionNode.uri,
-                    });
+                    if (exposedNode && refSourceTree.writeable) {
+                      references.push({
+                        node: exposedNode,
+                        uri: definitionNode.uri,
+                      });
+                    }
                   }
-                }
 
-                if (moduleNameNode) {
-                  for (const uri in imports.imports) {
-                    if (imports.imports.hasOwnProperty(uri)) {
-                      const element = imports.imports[uri];
-                      const needsToBeChecked = element.filter(
-                        (a) =>
-                          uri !== definitionNode.uri &&
-                          a.fromModuleName === moduleNameNode.text &&
-                          a.type === "Function" &&
-                          (a.alias.endsWith(`.${functionNameNode.text}`) ||
-                            a.alias === functionNameNode.text),
-                      );
-                      if (needsToBeChecked.length > 0) {
-                        const treeToCheck = forest.getByUri(uri);
+                  if (moduleNameNode) {
+                    for (const uri in imports.imports) {
+                      if (imports.imports.hasOwnProperty(uri)) {
+                        const element = imports.imports[uri];
+                        const needsToBeChecked = element.filter(
+                          (a) =>
+                            uri !== definitionNode.uri &&
+                            a.fromModuleName === moduleNameNode.text &&
+                            a.type === "Function" &&
+                            (a.alias.endsWith(`.${functionNameNode.text}`) ||
+                              a.alias === functionNameNode.text),
+                        );
+                        if (needsToBeChecked.length > 0) {
+                          const treeToCheck = forest.getByUri(uri);
 
-                        if (treeToCheck && treeToCheck.writeable) {
-                          const importClauseNode = TreeUtils.findImportClauseByName(
-                            treeToCheck.tree,
-                            moduleNameNode.text,
-                          );
-                          if (importClauseNode) {
-                            const exposedNode = TreeUtils.findExposedFunctionNode(
-                              importClauseNode,
-                              functionNameNode.text,
+                          if (treeToCheck && treeToCheck.writeable) {
+                            const importClauseNode = TreeUtils.findImportClauseByName(
+                              treeToCheck.tree,
+                              moduleNameNode.text,
                             );
-
-                            if (exposedNode) {
-                              references.push({
-                                node: exposedNode,
-                                uri,
-                              });
-                            }
-                          }
-
-                          needsToBeChecked.forEach((a) => {
-                            const functions = this.findFunctionCalls(
-                              treeToCheck.tree.rootNode,
-                              a.alias,
-                            );
-                            if (functions) {
-                              references.push(
-                                ...functions.map((node) => {
-                                  return { node, uri };
-                                }),
+                            if (importClauseNode) {
+                              const exposedNode = TreeUtils.findExposedFunctionNode(
+                                importClauseNode,
+                                functionNameNode.text,
                               );
+
+                              if (exposedNode) {
+                                references.push({
+                                  node: exposedNode,
+                                  uri,
+                                });
+                              }
                             }
-                          });
+
+                            needsToBeChecked.forEach((a) => {
+                              const functions = this.findFunctionCalls(
+                                treeToCheck.tree.rootNode,
+                                a.alias,
+                              );
+                              if (functions) {
+                                references.push(
+                                  ...functions.map((node) => {
+                                    return { node, uri };
+                                  }),
+                                );
+                              }
+                            });
+                          }
                         }
                       }
                     }
@@ -142,102 +144,104 @@ export class References {
             break;
           case "Type":
           case "TypeAlias":
-            const typeOrTypeAliasNameNode = TreeUtils.getTypeOrTypeAliasNameNodeFromDefinition(
-              definitionNode.node,
-            );
-
-            if (typeOrTypeAliasNameNode) {
-              if (refSourceTree.writeable) {
-                references.push({
-                  node: typeOrTypeAliasNameNode,
-                  uri: definitionNode.uri,
-                });
-              }
-
-              const localFunctions = TreeUtils.findTypeOrTypeAliasCalls(
-                refSourceTree.tree,
-                typeOrTypeAliasNameNode.text,
+            {
+              const typeOrTypeAliasNameNode = TreeUtils.getTypeOrTypeAliasNameNodeFromDefinition(
+                definitionNode.node,
               );
-              if (localFunctions && refSourceTree.writeable) {
-                references.push(
-                  ...localFunctions.map((node) => {
-                    return { node, uri: definitionNode.uri };
-                  }),
-                );
-              }
 
-              if (
-                TreeUtils.isExposedTypeOrTypeAlias(
-                  refSourceTree.tree,
-                  typeOrTypeAliasNameNode.text,
-                )
-              ) {
-                const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
-                  refSourceTree.tree,
-                );
-                if (moduleDeclarationNode) {
-                  const exposedNode = TreeUtils.findExposedTypeOrTypeAliasNode(
-                    moduleDeclarationNode,
-                    typeOrTypeAliasNameNode.text,
-                  );
-
-                  if (exposedNode && refSourceTree.writeable) {
-                    references.push({
-                      node: exposedNode,
-                      uri: definitionNode.uri,
-                    });
-                  }
+              if (typeOrTypeAliasNameNode) {
+                if (refSourceTree.writeable) {
+                  references.push({
+                    node: typeOrTypeAliasNameNode,
+                    uri: definitionNode.uri,
+                  });
                 }
 
-                if (moduleNameNode) {
-                  for (const uri in imports.imports) {
-                    if (imports.imports.hasOwnProperty(uri)) {
-                      const element = imports.imports[uri];
-                      const needsToBeChecked = element.filter(
-                        (a) =>
-                          uri !== definitionNode.uri &&
-                          a.fromModuleName === moduleNameNode.text &&
-                          (a.type === "Type" || a.type === "TypeAlias") &&
-                          (a.alias.endsWith(
-                            `.${typeOrTypeAliasNameNode.text}`,
-                          ) ||
-                            a.alias === typeOrTypeAliasNameNode.text),
-                      );
-                      if (needsToBeChecked.length > 0) {
-                        const treeToCheck = forest.getByUri(uri);
+                const localFunctions = TreeUtils.findTypeOrTypeAliasCalls(
+                  refSourceTree.tree,
+                  typeOrTypeAliasNameNode.text,
+                );
+                if (localFunctions && refSourceTree.writeable) {
+                  references.push(
+                    ...localFunctions.map((node) => {
+                      return { node, uri: definitionNode.uri };
+                    }),
+                  );
+                }
 
-                        if (treeToCheck && treeToCheck.writeable) {
-                          const importClauseNode = TreeUtils.findImportClauseByName(
-                            treeToCheck.tree,
-                            moduleNameNode.text,
-                          );
-                          if (importClauseNode) {
-                            const exposedNode = TreeUtils.findExposedTypeOrTypeAliasNode(
-                              importClauseNode,
-                              typeOrTypeAliasNameNode.text,
-                            );
+                if (
+                  TreeUtils.isExposedTypeOrTypeAlias(
+                    refSourceTree.tree,
+                    typeOrTypeAliasNameNode.text,
+                  )
+                ) {
+                  const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
+                    refSourceTree.tree,
+                  );
+                  if (moduleDeclarationNode) {
+                    const exposedNode = TreeUtils.findExposedTypeOrTypeAliasNode(
+                      moduleDeclarationNode,
+                      typeOrTypeAliasNameNode.text,
+                    );
 
-                            if (exposedNode) {
-                              references.push({
-                                node: exposedNode,
-                                uri,
-                              });
-                            }
-                          }
+                    if (exposedNode && refSourceTree.writeable) {
+                      references.push({
+                        node: exposedNode,
+                        uri: definitionNode.uri,
+                      });
+                    }
+                  }
 
-                          needsToBeChecked.forEach((a) => {
-                            const typeOrTypeAliasCalls = TreeUtils.findTypeOrTypeAliasCalls(
+                  if (moduleNameNode) {
+                    for (const uri in imports.imports) {
+                      if (imports.imports.hasOwnProperty(uri)) {
+                        const element = imports.imports[uri];
+                        const needsToBeChecked = element.filter(
+                          (a) =>
+                            uri !== definitionNode.uri &&
+                            a.fromModuleName === moduleNameNode.text &&
+                            (a.type === "Type" || a.type === "TypeAlias") &&
+                            (a.alias.endsWith(
+                              `.${typeOrTypeAliasNameNode.text}`,
+                            ) ||
+                              a.alias === typeOrTypeAliasNameNode.text),
+                        );
+                        if (needsToBeChecked.length > 0) {
+                          const treeToCheck = forest.getByUri(uri);
+
+                          if (treeToCheck && treeToCheck.writeable) {
+                            const importClauseNode = TreeUtils.findImportClauseByName(
                               treeToCheck.tree,
-                              a.alias,
+                              moduleNameNode.text,
                             );
-                            if (typeOrTypeAliasCalls) {
-                              references.push(
-                                ...typeOrTypeAliasCalls.map((node) => {
-                                  return { node, uri };
-                                }),
+                            if (importClauseNode) {
+                              const exposedNode = TreeUtils.findExposedTypeOrTypeAliasNode(
+                                importClauseNode,
+                                typeOrTypeAliasNameNode.text,
                               );
+
+                              if (exposedNode) {
+                                references.push({
+                                  node: exposedNode,
+                                  uri,
+                                });
+                              }
                             }
-                          });
+
+                            needsToBeChecked.forEach((a) => {
+                              const typeOrTypeAliasCalls = TreeUtils.findTypeOrTypeAliasCalls(
+                                treeToCheck.tree,
+                                a.alias,
+                              );
+                              if (typeOrTypeAliasCalls) {
+                                references.push(
+                                  ...typeOrTypeAliasCalls.map((node) => {
+                                    return { node, uri };
+                                  }),
+                                );
+                              }
+                            });
+                          }
                         }
                       }
                     }

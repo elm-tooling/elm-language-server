@@ -444,9 +444,9 @@ export class TreeUtils {
     syntaxNode: SyntaxNode,
     functionName: string,
   ): SyntaxNode | undefined {
-    if (syntaxNode.previousNamedSibling?.type === "let") {
+    if (syntaxNode.parent?.type === "let_in_expr") {
       const foundFunction = this.findFunction(
-        syntaxNode.previousNamedSibling,
+        syntaxNode.parent,
         functionName,
         false,
       );
@@ -455,13 +455,7 @@ export class TreeUtils {
         return foundFunction;
       }
     }
-    if (syntaxNode.parent && syntaxNode.parent.type === "let") {
-      const foundFunction = this.findFunction(syntaxNode, functionName, false);
 
-      if (foundFunction) {
-        return foundFunction;
-      }
-    }
     if (syntaxNode.parent) {
       return this.findLetFunctionNodeDefinition(
         syntaxNode.parent,
@@ -730,7 +724,7 @@ export class TreeUtils {
       const definitionNode =
         nodeAtPosition.parent.parent &&
         nodeAtPosition.parent.parent.parent &&
-        nodeAtPosition.parent.parent.parent.type === "let"
+        nodeAtPosition.parent.parent.parent.type === "let_in_expr"
           ? this.findFunction(
               nodeAtPosition.parent.parent.parent,
               nodeAtPosition.text,
@@ -862,7 +856,11 @@ export class TreeUtils {
       const definitionNode = TreeUtils.findUppercaseQidNode(tree, upperCaseQid);
 
       let definitionFromOtherFile;
-      if (!definitionNode) {
+      if (
+        !definitionNode ||
+        (definitionNode.nodeType === "UnionConstructor" &&
+          upperCaseQid.parent?.type === "type_ref")
+      ) {
         // Make sure the next node is a dot, or else it isn't a Module
         if (TreeUtils.nextNode(nodeAtPosition)?.type === "dot") {
           const endPos =

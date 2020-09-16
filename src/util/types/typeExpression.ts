@@ -250,10 +250,6 @@ export class TypeExpression {
         break;
     }
 
-    if (type.nodeType === "Unknown") {
-      throw new Error("Unknown type expression segment type: " + segment.text);
-    }
-
     return type;
   }
 
@@ -402,10 +398,6 @@ export class TypeExpression {
         typeArgumentCountError(typeRef, args.length, params.length),
       );
       return TUnknown;
-    }
-
-    if (declaredType.nodeType === "Unknown") {
-      throw new Error("Type ref declared type is unknown");
     }
 
     if (params.length === 0) {
