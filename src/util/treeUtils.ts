@@ -1127,11 +1127,7 @@ export class TreeUtils {
           )?.node ?? undefined;
 
         let variableDef: SyntaxNode | null | undefined =
-          (variableRef?.parent
-            ? TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
-                variableRef?.parent,
-              )
-            : undefined) ??
+          TreeUtils.getTypeOrTypeAliasOfFunctionParameter(variableRef) ??
           (variableRef?.parent
             ? TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
                 variableRef.parent,
@@ -1540,13 +1536,15 @@ export class TreeUtils {
       node &&
       node.parent &&
       node.parent.parent &&
-      node.parent.parent.previousNamedSibling &&
-      node.parent.parent.previousNamedSibling.type === "type_annotation" &&
-      node.parent.parent.previousNamedSibling.lastNamedChild
+      node.parent.parent.parent &&
+      node.parent.parent.parent.previousNamedSibling &&
+      node.parent.parent.parent.previousNamedSibling.type ===
+        "type_annotation" &&
+      node.parent.parent.parent.previousNamedSibling.lastNamedChild
     ) {
       const functionParameterNodes = TreeUtils.findAllNamedChildrenOfType(
         ["pattern", "lower_pattern"],
-        node.parent,
+        node.parent.parent,
       );
       if (functionParameterNodes) {
         const matchIndex = functionParameterNodes.findIndex(
@@ -1555,7 +1553,7 @@ export class TreeUtils {
 
         const typeAnnotationNodes = TreeUtils.findAllNamedChildrenOfType(
           ["type_ref", "type_expression"],
-          node.parent.parent.previousNamedSibling.lastNamedChild,
+          node.parent.parent.parent.previousNamedSibling.lastNamedChild,
         );
         if (typeAnnotationNodes) {
           return typeAnnotationNodes[matchIndex];
