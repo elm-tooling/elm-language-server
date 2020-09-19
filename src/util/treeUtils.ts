@@ -1108,9 +1108,9 @@ export class TreeUtils {
       if (definitionNode) {
         return { node: definitionNode, uri, nodeType: "Operator" };
       }
-    } else if (nodeAtPosition.parent?.parent?.type === "field_access_expr") {
+    } else if (nodeAtPosition.parent?.type === "field_access_expr") {
       const variableNodes = this.descendantsOfType(
-        nodeAtPosition.parent.parent,
+        nodeAtPosition.parent,
         "lower_case_identifier",
       );
       if (variableNodes.length > 0) {
@@ -1124,21 +1124,26 @@ export class TreeUtils {
             uri,
             tree,
             imports,
-          )?.node.parent ?? undefined;
+          )?.node ?? undefined;
 
         let variableDef: SyntaxNode | null | undefined =
-          TreeUtils.getTypeOrTypeAliasOfFunctionParameter(variableRef) ??
+          (variableRef?.parent
+            ? TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
+                variableRef?.parent,
+              )
+            : undefined) ??
           (variableRef?.parent
             ? TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
                 variableRef.parent,
               )
             : undefined);
 
-        if (!variableDef && variableRef)
+        if (!variableDef && variableRef) {
           variableDef = TreeUtils.findFirstNamedChildOfType(
             "type_expression",
             variableRef,
           )?.firstNamedChild;
+        }
 
         if (variableDef) {
           const variableType = TreeUtils.findDefinitionNodeByReferencingNode(

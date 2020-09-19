@@ -291,11 +291,12 @@ export class CompletionProvider {
           if (parent?.type === "value_qid") {
             // Qualified submodule and value access
             targetNode = contextNode.previousNamedSibling;
-          } else if (parent?.type === "field_access_segment") {
+          } else if (parent?.type === "field_access_expr") {
             // Record field access
             targetNode =
-              parent?.previousNamedSibling?.lastNamedChild?.lastNamedChild ??
-              parent.previousNamedSibling?.lastNamedChild;
+              contextNode?.previousNamedSibling?.lastNamedChild
+                ?.lastNamedChild ??
+              contextNode.previousNamedSibling?.lastNamedChild;
           } else if (parent?.type === "upper_case_qid") {
             // Imports
             targetNode = contextNode.previousNamedSibling;
