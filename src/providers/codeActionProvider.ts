@@ -16,6 +16,7 @@ import { IClientSettings, Settings } from "../util/settings";
 import { TreeUtils } from "../util/treeUtils";
 import { ElmAnalyseDiagnostics } from "./diagnostics/elmAnalyseDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
+import { TypeInferenceDiagnostics } from "./diagnostics/typeInferenceDiagnostics";
 import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 
@@ -24,6 +25,7 @@ export class CodeActionProvider {
   private settings: Settings;
   private elmAnalyse: ElmAnalyseDiagnostics | null = null;
   private elmMake: ElmMakeDiagnostics;
+  private functionTypeAnnotationDiagnostics: TypeInferenceDiagnostics;
   private clientSettings: IClientSettings;
 
   constructor() {
@@ -35,6 +37,9 @@ export class CodeActionProvider {
       );
     }
     this.elmMake = container.resolve<ElmMakeDiagnostics>(ElmMakeDiagnostics);
+    this.functionTypeAnnotationDiagnostics = container.resolve<
+      TypeInferenceDiagnostics
+    >(TypeInferenceDiagnostics);
     this.connection = container.resolve<IConnection>("Connection");
 
     this.onCodeAction = this.onCodeAction.bind(this);
@@ -61,9 +66,13 @@ export class CodeActionProvider {
     const analyse =
       (this.elmAnalyse && this.elmAnalyse.onCodeAction(params)) ?? [];
     const make = this.elmMake.onCodeAction(params);
+    const typeAnnotation = this.functionTypeAnnotationDiagnostics.onCodeAction(
+      params,
+    );
     return [
       ...analyse,
       ...make,
+      ...typeAnnotation,
       ...this.getRefactorCodeActions(params, elmWorkspace),
     ];
   }

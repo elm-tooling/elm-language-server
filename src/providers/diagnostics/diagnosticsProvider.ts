@@ -105,28 +105,27 @@ export class DiagnosticsProvider {
         );
       }
 
-      // TODO: Enable type inference diagnostics
-      // astProvider.onTreeChange(({ uri, tree }) => {
-      //   let workspace;
-      //   try {
-      //     workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor({ uri });
-      //   } catch (error) {
-      //     if (error instanceof NoWorkspaceContainsError) {
-      //       this.connection.console.info(error.message);
-      //       return; // ignore file that doesn't correspond to a workspace
-      //     }
+      astProvider.onTreeChange(({ uri, tree }) => {
+        let workspace;
+        try {
+          workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor({ uri });
+        } catch (error) {
+          if (error instanceof NoWorkspaceContainsError) {
+            this.connection.console.info(error.message);
+            return; // ignore file that doesn't correspond to a workspace
+          }
 
-      //     throw error;
-      //   }
+          throw error;
+        }
 
-      //   this.currentDiagnostics.typeInference = this.typeInferenceDiagnostics.createDiagnostics(
-      //     tree,
-      //     uri,
-      //     workspace,
-      //   );
+        this.currentDiagnostics.typeInference = this.typeInferenceDiagnostics.createDiagnostics(
+          tree,
+          uri,
+          workspace,
+        );
 
-      //   this.sendDiagnostics();
-      // });
+        this.sendDiagnostics();
+      });
     });
   }
 
@@ -137,33 +136,52 @@ export class DiagnosticsProvider {
     this.sendDiagnostics();
   }
 
+  private addOrMergeDiagnostics(
+    map1: Map<string, Diagnostic[]>,
+    map2: Map<string, Diagnostic[]>,
+  ): Map<string, Diagnostic[]> {
+    const result = new Map<string, Diagnostic[]>(map1);
+
+    for (const key of map2.keys()) {
+      const value = map2.get(key);
+
+      if (value) {
+        if (map1.has(key)) {
+          const value1 = map1.get(key);
+          if (value1) {
+            result.set(key, [...value, ...value1]);
+          }
+        } else {
+          result.set(key, value);
+        }
+      }
+    }
+
+    return result;
+  }
+
   private sendDiagnostics(): void {
-    const allDiagnostics = new Map<string, Diagnostic[]>();
+    let allDiagnostics = new Map<string, Diagnostic[]>();
 
-    for (const [uri, diagnostics] of this.currentDiagnostics.elmMake) {
-      allDiagnostics.set(uri, diagnostics);
-    }
+    allDiagnostics = this.addOrMergeDiagnostics(
+      allDiagnostics,
+      this.currentDiagnostics.elmMake,
+    );
 
-    for (const [uri, diagnostics] of this.currentDiagnostics.elmTest) {
-      const currentDiagnostics = allDiagnostics.get(uri) ?? [];
-      if (currentDiagnostics.length === 0) {
-        allDiagnostics.set(uri, diagnostics);
-      }
-    }
+    allDiagnostics = this.addOrMergeDiagnostics(
+      allDiagnostics,
+      this.currentDiagnostics.elmTest,
+    );
 
-    for (const [uri, diagnostics] of this.currentDiagnostics.typeInference) {
-      const currentDiagnostics = allDiagnostics.get(uri) ?? [];
-      if (currentDiagnostics.length === 0) {
-        allDiagnostics.set(uri, diagnostics);
-      }
-    }
+    allDiagnostics = this.addOrMergeDiagnostics(
+      allDiagnostics,
+      this.currentDiagnostics.elmAnalyse,
+    );
 
-    for (const [uri, diagnostics] of this.currentDiagnostics.elmAnalyse) {
-      const currentDiagnostics = allDiagnostics.get(uri) ?? [];
-      if (currentDiagnostics.length === 0) {
-        allDiagnostics.set(uri, diagnostics);
-      }
-    }
+    allDiagnostics = this.addOrMergeDiagnostics(
+      allDiagnostics,
+      this.currentDiagnostics.typeInference,
+    );
 
     for (const [uri, diagnostics] of allDiagnostics) {
       this.connection.sendDiagnostics({ uri, diagnostics });

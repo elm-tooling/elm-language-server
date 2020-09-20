@@ -585,6 +585,17 @@ export class TreeUtils {
     return result.length === 0 ? undefined : result;
   }
 
+  public static findAllTopLevelFunctionDeclarationsWithoutTypeAnnotation(
+    tree: Tree,
+  ): SyntaxNode[] | undefined {
+    const result = tree.rootNode.children.filter(
+      (a) =>
+        a.type === "value_declaration" &&
+        a.previousNamedSibling?.type !== "type_annotation",
+    );
+    return result.length === 0 ? undefined : result;
+  }
+
   public static findAllTypeOrTypeAliasCalls(
     tree: Tree,
   ): SyntaxNode[] | undefined {
