@@ -508,12 +508,14 @@ export class References {
     node: SyntaxNode,
   ): SyntaxNode | undefined {
     if (
-      node.previousNamedSibling &&
-      node.previousNamedSibling.type === "type_annotation" &&
-      node.previousNamedSibling.firstChild &&
-      node.previousNamedSibling.firstChild.type === "lower_case_identifier"
+      node.parent &&
+      node.parent.previousNamedSibling &&
+      node.parent.previousNamedSibling.type === "type_annotation" &&
+      node.parent.previousNamedSibling.firstChild &&
+      node.parent.previousNamedSibling.firstChild.type ===
+        "lower_case_identifier"
     ) {
-      return node.previousNamedSibling.firstChild;
+      return node.parent.previousNamedSibling.firstChild;
     }
   }
 }

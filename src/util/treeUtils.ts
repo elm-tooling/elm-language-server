@@ -611,10 +611,13 @@ export class TreeUtils {
     if (node.type === "lower_case_identifier") {
       return node;
     }
-    const declaration = TreeUtils.findFirstNamedChildOfType(
-      "function_declaration_left",
-      node,
-    );
+    const declaration =
+      node.type == "function_declaration_left"
+        ? node
+        : TreeUtils.findFirstNamedChildOfType(
+            "function_declaration_left",
+            node,
+          );
     if (declaration && declaration.firstNamedChild) {
       return declaration.firstNamedChild;
     }
