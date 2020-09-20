@@ -42,11 +42,11 @@ export class References {
                 }
 
                 const localFunctions =
-                  definitionNode.node.parent &&
-                  definitionNode.node.parent.type === "let_in_expr" &&
-                  definitionNode.node.parent.lastNamedChild
+                  definitionNode.node.parent?.parent &&
+                  definitionNode.node.parent?.parent.type === "let_in_expr" &&
+                  definitionNode.node.parent?.parent.lastNamedChild
                     ? this.findFunctionCalls(
-                        definitionNode.node.parent.lastNamedChild,
+                        definitionNode.node.parent.parent.lastNamedChild,
                         functionNameNode.text,
                       )
                     : this.findFunctionCalls(
