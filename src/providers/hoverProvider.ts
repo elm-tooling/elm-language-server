@@ -42,23 +42,6 @@ export class HoverProvider {
         params.position,
       );
 
-      // try {
-      //   const typeString: string = typeToString(
-      //     findType(nodeAtPosition, params.textDocument.uri, elmWorkspace),
-      //   );
-
-      //   if (typeString && typeString !== "Unknown") {
-      //     return {
-      //       contents: {
-      //         kind: MarkupKind.Markdown,
-      //         value: HintHelper.wrapCodeInMarkdown(typeString),
-      //       },
-      //     };
-      //   }
-      // } catch (e) {
-      //   console.log(e);
-      // }
-
       const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
         nodeAtPosition,
         params.textDocument.uri,
