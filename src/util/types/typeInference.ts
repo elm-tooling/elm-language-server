@@ -42,7 +42,7 @@ import { Sequence } from "../sequence";
 import { Utils } from "../utils";
 import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
 
-export interface Info {
+export interface Alias {
   module: string;
   name: string;
   parameters: Type[];
@@ -63,60 +63,60 @@ export interface TVar {
   nodeType: "Var";
   name: string;
   rigid?: boolean;
-  info?: Info;
+  alias?: Alias;
 }
 export interface TFunction {
   nodeType: "Function";
   params: Type[];
   return: Type;
-  info?: Info;
+  alias?: Alias;
 }
 export interface TTuple {
   nodeType: "Tuple";
   types: Type[];
-  info?: Info;
+  alias?: Alias;
 }
 export interface TUnion {
   nodeType: "Union";
   module: string;
   name: string;
   params: Type[];
-  info?: Info;
+  alias?: Alias;
 }
 export interface TRecord {
   nodeType: "Record";
   fields: { [key: string]: Type };
   baseType?: Type;
-  info?: Info;
+  alias?: Alias;
   fieldReferences: RecordFieldReferenceTable;
 }
 export interface TMutableRecord {
   nodeType: "MutableRecord";
   fields: { [key: string]: Type };
   baseType?: Type;
-  info?: Info;
+  alias?: Alias;
   fieldReferences: RecordFieldReferenceTable;
 }
 interface TUnit {
   nodeType: "Unit";
-  info?: Info;
+  alias?: Alias;
 }
 interface TInProgressBinding {
   nodeType: "InProgressBinding";
-  info?: Info;
+  alias?: Alias;
 }
 interface TUnknown {
   nodeType: "Unknown";
-  info?: Info;
+  alias?: Alias;
 }
 
 export const TUnion = (
   module: string,
   name: string,
   params: Type[],
-  info?: Info,
+  alias?: Alias,
 ): TUnion => {
-  return { nodeType: "Union", module, name, params, info };
+  return { nodeType: "Union", module, name, params, alias };
 };
 
 export const TVar = (name: string, rigid = false): TVar => {
@@ -126,30 +126,30 @@ export const TVar = (name: string, rigid = false): TVar => {
 export const TFunction = (
   params: Type[],
   ret: Type,
-  info?: Info,
+  alias?: Alias,
 ): TFunction => {
-  return { nodeType: "Function", params, return: ret, info };
+  return { nodeType: "Function", params, return: ret, alias };
 };
 
-export const TTuple = (types: Type[], info?: Info): TTuple => {
+export const TTuple = (types: Type[], alias?: Alias): TTuple => {
   if (types.length === 0) {
     throw new Error("Cannot create a TTuple with no types, use TUnit");
   }
 
-  return { nodeType: "Tuple", types, info };
+  return { nodeType: "Tuple", types, alias };
 };
 
 export const TRecord = (
   fields: { [key: string]: Type },
   baseType?: Type,
-  info?: Info,
+  alias?: Alias,
   fieldReferences = new RecordFieldReferenceTable(),
 ): TRecord => {
   return {
     nodeType: "Record",
     fields,
     baseType,
-    info,
+    alias,
     fieldReferences,
   };
 };
@@ -240,7 +240,8 @@ function anyTypeVar(type: Type, predicate: (tvar: TVar) => boolean): boolean {
 
   return (
     result ||
-    type.info?.parameters.some((param) => anyTypeVar(param, predicate)) === true
+    type.alias?.parameters.some((param) => anyTypeVar(param, predicate)) ===
+      true
   );
 }
 
@@ -291,7 +292,29 @@ function getParentPatternDeclaration(
   return parentPattern.pattern ? parentPattern : undefined;
 }
 
+function renderUnion(t: TUnion): string {
+  if (t.params.length === 0) {
+    return t.name;
+  } else {
+    return `${t.name} ${t.params
+      .map((p) =>
+        p.nodeType === "Function" ||
+        (p.nodeType === "Union" && p.params.length > 0) ||
+        (p.alias?.parameters.length ?? 0 > 0)
+          ? `(${typeToString(p)})`
+          : typeToString(p),
+      )
+      .join(" ")}`;
+  }
+}
+
 export function typeToString(t: Type): string {
+  if (t.alias) {
+    return renderUnion(
+      TUnion(t.alias.module, t.alias.name, t.alias.parameters),
+    );
+  }
+
   switch (t.nodeType) {
     case "Unknown":
       return "Unknown";
@@ -312,18 +335,7 @@ export function typeToString(t: Type): string {
     case "Tuple":
       return `(${t.types.map(typeToString).join(", ")})`;
     case "Union":
-      if (t.params.length === 0) {
-        return t.name;
-      } else {
-        return `${t.name} ${t.params
-          .map((p) =>
-            p.nodeType === "Function" ||
-            (p.nodeType === "Union" && p.params.length > 0)
-              ? `(${typeToString(p)})`
-              : typeToString(p),
-          )
-          .join(" ")}`;
-      }
+      return renderUnion(t);
     case "Record":
     case "MutableRecord":
       return `{ ${
@@ -378,10 +390,35 @@ function typeMismatchError(
     ? `Invalid pattern error\nExpected: ${expectedText}\nFound: ${foundText}`
     : `Type mismatch error\nExpected: ${expectedText}\nFound: ${foundText}`;
 
+  const recordDiffText = (diff: RecordDiff): string => {
+    let s = "";
+
+    if (diff.extra.size > 0) {
+      s += `\nExtra fields: ${typeToString(
+        TRecord(Object.fromEntries(diff.extra.entries())),
+      )}`;
+    }
+    if (diff.missing.size > 0) {
+      s += `\nMissing fields: ${typeToString(
+        TRecord(Object.fromEntries(diff.missing.entries())),
+      )}`;
+    }
+    if (diff.mismatched.size > 0) {
+      s += `\nMismatched fields: `;
+      diff.mismatched.forEach(([expected, found], field) => {
+        s += `\n Field ${field} expected ${typeToString(
+          expected,
+        )}, found ${typeToString(found)}`;
+      });
+    }
+
+    return s;
+  };
+
   return {
     node,
     endNode: endNode ?? node,
-    message,
+    message: message + (recordDiff ? recordDiffText(recordDiff) : ""),
   };
 }
 
@@ -485,7 +522,7 @@ function recordBaseIdError(node: SyntaxNode, type: Type): Diagnostic {
   return {
     node,
     endNode: node,
-    message: ``,
+    message: `Type must be a record, instead found: ${typeToString(type)}`,
   };
 }
 
@@ -493,7 +530,7 @@ function fieldAccessOnNonRecordError(node: SyntaxNode, type: Type): Diagnostic {
   return {
     node,
     endNode: node,
-    message: ``,
+    message: `Cannot access fields on non-record type: ${typeToString(type)}`,
   };
 }
 
@@ -1016,6 +1053,14 @@ export class InferenceScope {
         }
 
         return TUnknown;
+      }
+
+      case "PortAnnotation": {
+        return TypeExpression.portAnnotationInference(
+          definition.expr,
+          this.uri,
+          this.elmWorkspace.getImports(),
+        ).type;
       }
 
       default:
@@ -2086,7 +2131,7 @@ export class InferenceScope {
       new Map(
         actualEntries
           .map(([k, v]) => {
-            if (!this.assignable(v, expected.fields[k])) {
+            if (expected.fields[k] && !this.assignable(v, expected.fields[k])) {
               return [k, [v, expected.fields[k]]] as [string, [Type, Type]];
             }
 

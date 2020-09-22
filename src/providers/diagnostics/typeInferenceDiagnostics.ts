@@ -30,8 +30,8 @@ export class TypeInferenceDiagnostics {
     tree: Tree,
     uri: string,
     elmWorkspace: IElmWorkspace,
-  ): Map<string, Diagnostic[]> => {
-    const diagnostics = new Map<string, Diagnostic[]>();
+  ): Diagnostic[] => {
+    let diagnostics: Diagnostic[] = [];
 
     const allTopLevelFunctions = TreeUtils.findAllTopLevelFunctionDeclarationsWithoutTypeAnnotation(
       tree,
@@ -51,7 +51,7 @@ export class TypeInferenceDiagnostics {
             if (typeString && typeString !== "Unknown" && node) {
               return {
                 range: this.getNodeRange(node),
-                message: `Missing type annotation: ${typeString}`,
+                message: `Missing type annotation: \`${typeString}\``,
                 severity: DiagnosticSeverity.Information,
                 source: this.TYPE_INFERENCE,
               };
@@ -60,9 +60,9 @@ export class TypeInferenceDiagnostics {
             console.log(e);
           }
         })
-        .filter(Utils.notUndefined);
+        .filter(Utils.notUndefined.bind(this));
 
-      diagnostics.set(uri, inferencedTypes ?? []);
+      diagnostics = inferencedTypes ?? [];
     }
 
     return diagnostics;

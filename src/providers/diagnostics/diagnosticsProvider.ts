@@ -11,6 +11,7 @@ import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 import { TypeInferenceDiagnostics } from "./typeInferenceDiagnostics";
 import { ASTProvider } from "../astProvider";
+import { IElmWorkspace } from "src/elmWorkspace";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -43,6 +44,7 @@ export class DiagnosticsProvider {
   private connection: IConnection;
   private settings: Settings;
   private clientSettings: IClientSettings;
+  private workspaces: IElmWorkspace[];
 
   constructor() {
     this.settings = container.resolve("Settings");
@@ -64,6 +66,7 @@ export class DiagnosticsProvider {
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((doc) =>
       URI.parse(doc.uri),
     );
+    this.workspaces = container.resolve("ElmWorkspaces");
 
     const astProvider = container.resolve<ASTProvider>(ASTProvider);
 
@@ -105,6 +108,25 @@ export class DiagnosticsProvider {
         );
       }
 
+      this.workspaces.forEach((workspace) => {
+        workspace.getForest().treeIndex.forEach((treeContainer) => {
+          if (treeContainer.writeable) {
+            const treeDiagnostics = this.typeInferenceDiagnostics.createDiagnostics(
+              treeContainer.tree,
+              treeContainer.uri,
+              workspace,
+            );
+
+            this.currentDiagnostics.typeInference.set(
+              treeContainer.uri,
+              treeDiagnostics,
+            );
+          }
+        });
+      });
+
+      this.sendDiagnostics();
+
       astProvider.onTreeChange(({ uri, tree }) => {
         let workspace;
         try {
@@ -118,10 +140,9 @@ export class DiagnosticsProvider {
           throw error;
         }
 
-        this.currentDiagnostics.typeInference = this.typeInferenceDiagnostics.createDiagnostics(
-          tree,
+        this.currentDiagnostics.typeInference.set(
           uri,
-          workspace,
+          this.typeInferenceDiagnostics.createDiagnostics(tree, uri, workspace),
         );
 
         this.sendDiagnostics();

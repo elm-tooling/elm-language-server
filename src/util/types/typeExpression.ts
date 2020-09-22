@@ -12,7 +12,7 @@ import {
   TUnion,
   TList,
   TRecord,
-  Info,
+  Alias,
   typeArgumentCountError,
 } from "./typeInference";
 import {
@@ -27,6 +27,7 @@ import {
   EUnionVariant,
   ERecordType,
   ETypeAliasDeclaration,
+  EPortAnnotation,
 } from "./expressionTree";
 import { TreeUtils } from "../treeUtils";
 import { TypeReplacement } from "./typeReplacement";
@@ -135,6 +136,26 @@ export class TypeExpression {
       imports,
       false,
     ).inferUnionConstructor(e);
+    TypeReplacement.freeze(inferenceResult.type);
+
+    return {
+      ...inferenceResult,
+      type: TypeReplacement.freshenVars(inferenceResult.type),
+    };
+  }
+
+  public static portAnnotationInference(
+    e: EPortAnnotation,
+    uri: string,
+    imports: IImports,
+  ): InferenceResult {
+    const inferenceResult = new TypeExpression(
+      e,
+      uri,
+      imports,
+      false,
+    ).inferPortAnnotation(e);
+    TypeReplacement.freeze(inferenceResult.type);
 
     return {
       ...inferenceResult,
@@ -172,6 +193,15 @@ export class TypeExpression {
     return this.toResult(type);
   }
 
+  private inferPortAnnotation(
+    portAnnotation: EPortAnnotation,
+  ): InferenceResult {
+    const type = this.typeExpressionType
+      ? this.typeExpressionType(portAnnotation.typeExpression)
+      : TUnknown;
+    return this.toResult(type);
+  }
+
   private inferTypeAliasDeclaration(
     declaration: ETypeAliasDeclaration,
   ): InferenceResult {
@@ -193,12 +223,12 @@ export class TypeExpression {
     const params = declaration.typeVariables.map(this.getTypeVar.bind(this));
     const moduleName =
       TreeUtils.getModuleNameNode(declaration.tree)?.text ?? "";
-    const info: Info = {
+    const alias: Alias = {
       module: moduleName,
       name: declaration.name.text,
       parameters: params,
     };
-    return this.toResult({ ...type, info });
+    return this.toResult({ ...type, alias: alias });
   }
 
   private typeExpressionType(typeExpr: ETypeExpression): Type {
@@ -387,8 +417,8 @@ export class TypeExpression {
       }
     }
 
-    const params = declaredType?.info
-      ? declaredType.info.parameters
+    const params = declaredType?.alias
+      ? declaredType.alias.parameters
       : declaredType?.nodeType === "Union"
       ? declaredType.params
       : [];

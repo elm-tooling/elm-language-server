@@ -29,6 +29,7 @@ export type Expression =
   | EOperator
   | EOperatorAsFunctionExpr
   | EPattern
+  | EPortAnnotation
   | ERecordExpr
   | ERecordType
   | ERecordPattern
@@ -225,6 +226,11 @@ export interface ERecordExpr extends SyntaxNode {
   nodeType: "RecordExpr";
   baseRecord: SyntaxNode;
   fields: EField[];
+}
+export interface EPortAnnotation extends SyntaxNode {
+  nodeType: "PortAnnotation";
+  name: string;
+  typeExpression: ETypeExpression;
 }
 
 export function mapSyntaxNodeToExpression(
@@ -602,6 +608,14 @@ export function mapSyntaxNodeToExpression(
           ?.map(mapSyntaxNodeToExpression)
           .filter(Utils.notUndefined),
       } as ERecordExpr);
+    case "port_annotation":
+      return Object.assign(node, {
+        nodeType: "PortAnnotation",
+        name: node.children[1]?.text ?? "",
+        typeExpression: mapSyntaxNodeToExpression(
+          TreeUtils.findFirstNamedChildOfType("type_expression", node),
+        ),
+      } as EPortAnnotation);
     default:
       return mapSyntaxNodeToExpression(node.firstNamedChild);
   }

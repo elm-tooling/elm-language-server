@@ -16,7 +16,8 @@ export type NodeType =
   | "AnonymousFunctionParameter"
   | "UnionConstructor"
   | "FieldType"
-  | "TypeVariable";
+  | "TypeVariable"
+  | "Port";
 
 const functionNameRegex = new RegExp("[a-zA-Z0-9_]+");
 
@@ -91,84 +92,87 @@ export class TreeUtils {
         const exposed: IExposing[] = [];
         if (TreeUtils.findFirstNamedChildOfType("double_dot", exposingList)) {
           if (moduleName) {
-            const functions = TreeUtils.descendantsOfType(
+            TreeUtils.descendantsOfType(
               tree.rootNode,
               "value_declaration",
-            );
-            if (functions) {
-              functions.forEach((elmFunction) => {
-                const declaration = TreeUtils.findFirstNamedChildOfType(
-                  "function_declaration_left",
-                  elmFunction,
-                );
-                if (declaration && declaration.firstNamedChild) {
-                  const functionName = declaration.firstNamedChild.text;
-                  exposed.push({
-                    exposedUnionConstructors: undefined,
-                    name: functionName,
-                    syntaxNode: declaration,
-                    type: "Function",
-                  });
-                }
-              });
-            }
+            )?.forEach((elmFunction) => {
+              const declaration = TreeUtils.findFirstNamedChildOfType(
+                "function_declaration_left",
+                elmFunction,
+              );
+              if (declaration && declaration.firstNamedChild) {
+                const functionName = declaration.firstNamedChild.text;
+                exposed.push({
+                  name: functionName,
+                  syntaxNode: declaration,
+                  type: "Function",
+                });
+              }
+            });
 
-            const typeAliases = this.findAllTypeAliasDeclarations(tree);
-            if (typeAliases) {
-              typeAliases.forEach((typeAlias) => {
+            TreeUtils.findAllNamedChildrenOfType(
+              "port_annotation",
+              tree.rootNode,
+            )?.forEach((elmPort) => {
+              if (elmPort.children[1].text) {
+                exposed.push({
+                  name: elmPort.children[1].text,
+                  syntaxNode: elmPort,
+                  type: "Port",
+                });
+              }
+            });
+
+            this.findAllTypeAliasDeclarations(tree)?.forEach((typeAlias) => {
+              const name = TreeUtils.findFirstNamedChildOfType(
+                "upper_case_identifier",
+                typeAlias,
+              );
+              if (name) {
+                exposed.push({
+                  exposedUnionConstructors: undefined,
+                  name: name.text,
+                  syntaxNode: typeAlias,
+                  type: "TypeAlias",
+                });
+              }
+            });
+
+            this.findAllTypeDeclarations(tree)?.forEach((typeDeclaration) => {
+              const unionConstructors: {
+                name: string;
+                syntaxNode: SyntaxNode;
+                accessibleWithoutPrefix: boolean;
+              }[] = [];
+              TreeUtils.descendantsOfType(
+                typeDeclaration,
+                "union_variant",
+              ).forEach((variant) => {
                 const name = TreeUtils.findFirstNamedChildOfType(
                   "upper_case_identifier",
-                  typeAlias,
+                  variant,
                 );
-                if (name) {
-                  exposed.push({
-                    exposedUnionConstructors: undefined,
+                if (name && name.parent) {
+                  unionConstructors.push({
+                    accessibleWithoutPrefix: false,
                     name: name.text,
-                    syntaxNode: typeAlias,
-                    type: "TypeAlias",
+                    syntaxNode: name.parent,
                   });
                 }
               });
-            }
-
-            const typeDeclarations = this.findAllTypeDeclarations(tree);
-            if (typeDeclarations) {
-              typeDeclarations.forEach((typeDeclaration) => {
-                const unionConstructors: {
-                  name: string;
-                  syntaxNode: SyntaxNode;
-                  accessibleWithoutPrefix: boolean;
-                }[] = [];
-                TreeUtils.descendantsOfType(
-                  typeDeclaration,
-                  "union_variant",
-                ).forEach((variant) => {
-                  const name = TreeUtils.findFirstNamedChildOfType(
-                    "upper_case_identifier",
-                    variant,
-                  );
-                  if (name && name.parent) {
-                    unionConstructors.push({
-                      accessibleWithoutPrefix: false,
-                      name: name.text,
-                      syntaxNode: name.parent,
-                    });
-                  }
+              const typeDeclarationName = TreeUtils.findFirstNamedChildOfType(
+                "upper_case_identifier",
+                typeDeclaration,
+              );
+              if (typeDeclarationName) {
+                exposed.push({
+                  exposedUnionConstructors: unionConstructors,
+                  name: typeDeclarationName.text,
+                  syntaxNode: typeDeclaration,
+                  type: "Type",
                 });
-                const typeDeclarationName = TreeUtils.findFirstNamedChildOfType(
-                  "upper_case_identifier",
-                  typeDeclaration,
-                );
-                if (typeDeclarationName) {
-                  exposed.push({
-                    exposedUnionConstructors: unionConstructors,
-                    name: typeDeclarationName.text,
-                    syntaxNode: typeDeclaration,
-                    type: "Type",
-                  });
-                }
-              });
-            }
+              }
+            });
 
             return { moduleName: moduleName.text, exposing: exposed };
           }
@@ -196,11 +200,14 @@ export class TreeUtils {
             "exposed_value",
           );
 
+          const exposedValuesText = exposedValues.map((a) => a.text);
+
           exposed.push(
-            ...this.findExposedTopLevelFunctions(
-              tree,
-              exposedValues.map((a) => a.text),
-            ),
+            ...this.findExposedTopLevelFunctions(tree, exposedValuesText),
+          );
+
+          exposed.push(
+            ...this.findExposedTopLevelPorts(tree, exposedValuesText),
           );
 
           const exposedTypes = TreeUtils.descendantsOfType(
@@ -508,6 +515,18 @@ export class TreeUtils {
       }
       return ret;
     }
+  }
+
+  public static findPort(tree: Tree, portName: string): SyntaxNode | undefined {
+    return TreeUtils.findAllNamedChildrenOfType(
+      "port_annotation",
+      tree.rootNode,
+    )?.find(
+      (node) =>
+        node.children.length > 1 &&
+        node.children[1].type === "lower_case_identifier" &&
+        node.children[1].text === portName,
+    );
   }
 
   public static findOperator(
@@ -1031,7 +1050,7 @@ export class TreeUtils {
         };
       }
 
-      const letDefinitionNode = this.findLetFunctionNodeDefinition(
+      const letDefinitionNode = TreeUtils.findLetFunctionNodeDefinition(
         nodeAtPosition,
         nodeAtPositionText,
       );
@@ -1040,6 +1059,16 @@ export class TreeUtils {
         return {
           node: letDefinitionNode,
           nodeType: "Function",
+          uri,
+        };
+      }
+
+      const portDefinitionNode = TreeUtils.findPort(tree, nodeAtPositionText);
+
+      if (portDefinitionNode) {
+        return {
+          node: portDefinitionNode,
+          nodeType: "Port",
           uri,
         };
       }
@@ -1077,7 +1106,22 @@ export class TreeUtils {
           };
         }
 
-        const functionDefinitionFromOtherFile = this.findImportFromImportList(
+        const portDefinitionFromOtherFile = TreeUtils.findImportFromImportList(
+          uri,
+          nodeAtPosition.parent.text,
+          "Port",
+          imports,
+        );
+
+        if (portDefinitionFromOtherFile) {
+          return {
+            node: portDefinitionFromOtherFile.node,
+            nodeType: "Port",
+            uri: portDefinitionFromOtherFile.fromUri,
+          };
+        }
+
+        const functionDefinitionFromOtherFile = TreeUtils.findImportFromImportList(
           uri,
           nodeAtPosition.parent.text,
           "Function",
@@ -2115,6 +2159,27 @@ export class TreeUtils {
           };
         },
       );
+  }
+
+  private static findExposedTopLevelPorts(
+    tree: Tree,
+    functionNamesToFind: string[],
+  ): IExposing[] {
+    return tree.rootNode.children
+      .filter(
+        (node) =>
+          node.type === "port_annotation" &&
+          node.children.length > 1 &&
+          functionNamesToFind.includes(node.children[1].text),
+      )
+      .map((portNode) => {
+        return {
+          exposedUnionConstructors: undefined,
+          name: portNode.children[1].text,
+          syntaxNode: portNode,
+          type: "Port",
+        };
+      });
   }
 
   public static findAllImportClauseNodes(tree: Tree): SyntaxNode[] | undefined {

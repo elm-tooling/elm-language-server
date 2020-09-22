@@ -2,7 +2,7 @@ import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
 import {
   TVar,
   Type,
-  Info,
+  Alias,
   TFunction,
   uncurryFunction,
   TUnion,
@@ -74,7 +74,7 @@ export class TypeReplacement {
         break;
     }
 
-    type.info?.parameters.forEach(this.freeze.bind(this));
+    type.alias?.parameters.forEach(this.freeze.bind(this));
   }
 
   private replace(type: Type): Type {
@@ -93,7 +93,7 @@ export class TypeReplacement {
           type.fieldReferences,
           false,
           type.baseType,
-          type.info,
+          type.alias,
         );
       case "MutableRecord":
         return this.replaceRecord(
@@ -108,22 +108,22 @@ export class TypeReplacement {
       case "Unknown":
         return {
           nodeType: "Unknown",
-          info: type.info ? this.replaceInfo(type.info) : undefined,
+          alias: type.alias ? this.replaceAlias(type.alias) : undefined,
         };
     }
   }
 
-  private replaceInfo(info: Info): Info {
+  private replaceAlias(alias: Alias): Alias {
     return {
-      ...info,
-      parameters: info.parameters.map((param) => this.replace(param)),
+      ...alias,
+      parameters: alias.parameters.map((param) => this.replace(param)),
     };
   }
 
   private replaceTuple(type: TTuple): TTuple {
     return TTuple(
       type.types.map((t) => this.replace(t)),
-      type.info ? this.replaceInfo(type.info) : undefined,
+      type.alias ? this.replaceAlias(type.alias) : undefined,
     );
   }
 
@@ -133,13 +133,13 @@ export class TypeReplacement {
       TFunction(
         params,
         this.replace(type.return),
-        type.info ? this.replaceInfo(type.info) : undefined,
+        type.alias ? this.replaceAlias(type.alias) : undefined,
       ),
     );
   }
 
   private replaceUnion(type: TUnion): TUnion {
-    if (type.params.length === 0 && !type.info) {
+    if (type.params.length === 0 && !type.alias) {
       return type;
     }
 
@@ -148,7 +148,7 @@ export class TypeReplacement {
       type.module,
       type.name,
       params,
-      type.info ? this.replaceInfo(type.info) : undefined,
+      type.alias ? this.replaceAlias(type.alias) : undefined,
     );
   }
 
@@ -157,7 +157,7 @@ export class TypeReplacement {
     fieldReferences: RecordFieldReferenceTable,
     wasMutable: boolean,
     baseType?: Type,
-    info?: Info,
+    alias?: Alias,
   ): Type {
     const oldBase =
       !baseType || baseType.nodeType !== "Var"
@@ -206,7 +206,7 @@ export class TypeReplacement {
       return TRecord(
         newFields,
         newBase,
-        info ? this.replaceInfo(info) : undefined,
+        alias ? this.replaceAlias(alias) : undefined,
         newFieldReferences,
       );
     }
