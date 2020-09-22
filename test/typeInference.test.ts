@@ -5,7 +5,6 @@ import { URI } from "vscode-uri";
 import { TreeUtils } from "../src/util/treeUtils";
 import { findType, typeToString } from "../src/util/types/typeInference";
 
-// TODO: Need a good way to get elm/core modules for testing
 const basicsSources = `
 --@ Basics.elm
 module Basics exposing (add, (+), Int, Float, Bool(..))
@@ -111,5 +110,39 @@ func = True
 --^
 `;
     await testTypeInference(basicsSources + source, "Bool");
+  });
+
+  test("complex function", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type Maybe a = Just a | Nothing
+
+add a b = a + b
+
+func a b c =
+--^
+  let
+    result = a + 1
+
+  in
+    (add result b.first.second) +
+      (if a == 1 then
+        0
+      else
+        1) +
+      (case c of
+        Just value ->
+          value
+
+        Nothing ->
+          0)
+
+`;
+    await testTypeInference(
+      basicsSources + source,
+      "number -> { a | first : { a | second : number } } -> Maybe number -> number",
+    );
   });
 });
