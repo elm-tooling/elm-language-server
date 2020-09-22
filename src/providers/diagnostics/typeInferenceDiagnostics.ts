@@ -150,7 +150,7 @@ export class TypeInferenceDiagnostics {
       start: PositionUtil.FROM_TS_POSITION(node.startPosition).toVSPosition(),
       end: {
         ...end,
-        character: end.character + 1,
+        character: end.character,
       },
     };
   }
