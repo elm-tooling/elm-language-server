@@ -41,6 +41,7 @@ import { IElmWorkspace } from "src/elmWorkspace";
 import { Sequence } from "../sequence";
 import { Utils } from "../utils";
 import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
+import { TypeRenderer } from "./typeRenderer";
 
 export interface Alias {
   module: string;
@@ -292,61 +293,7 @@ function getParentPatternDeclaration(
   return parentPattern.pattern ? parentPattern : undefined;
 }
 
-function renderUnion(t: TUnion): string {
-  if (t.params.length === 0) {
-    return t.name;
-  } else {
-    return `${t.name} ${t.params
-      .map((p) =>
-        p.nodeType === "Function" ||
-        (p.nodeType === "Union" && p.params.length > 0) ||
-        (p.alias?.parameters.length ?? 0 > 0)
-          ? `(${typeToString(p)})`
-          : typeToString(p),
-      )
-      .join(" ")}`;
-  }
-}
-
-export function typeToString(t: Type): string {
-  if (t.alias) {
-    return renderUnion(
-      TUnion(t.alias.module, t.alias.name, t.alias.parameters),
-    );
-  }
-
-  switch (t.nodeType) {
-    case "Unknown":
-      return "Unknown";
-    case "InProgressBinding":
-      throw new Error(
-        "Should never try to convert an in progress binding type to a string",
-      );
-    case "Unit":
-      return "()";
-    case "Var":
-      return t.name;
-    case "Function":
-      return `${[...t.params, t.return]
-        .map((p) =>
-          p.nodeType === "Function" ? `(${typeToString(p)})` : typeToString(p),
-        )
-        .join(" -> ")}`;
-    case "Tuple":
-      return `(${t.types.map(typeToString).join(", ")})`;
-    case "Union":
-      return renderUnion(t);
-    case "Record":
-    case "MutableRecord":
-      return `{ ${
-        t.baseType ? `${typeToString(t.baseType)} | ` : ""
-      }${Object.entries(t.fields)
-        .map(([field, type]) => `${field} : ${typeToString(type)}`)
-        .join(", ")} }`;
-  }
-}
-
-function getTypeclassName(type: TVar): string | undefined {
+export function getTypeclassName(type: TVar): string | undefined {
   switch (type.name) {
     case "number":
     case "appendable":
@@ -371,7 +318,7 @@ function getVarNames(count: number): string[] {
   return names;
 }
 
-function nthVarName(n: number): string {
+export function nthVarName(n: number): string {
   return getVarNames(n)[n - 1];
 }
 
@@ -383,8 +330,8 @@ function typeMismatchError(
   patternBinding = false,
   recordDiff?: RecordDiff,
 ): Diagnostic {
-  const foundText = typeToString(found);
-  const expectedText = typeToString(expected);
+  const foundText = TypeRenderer.typeToString(found, node.tree);
+  const expectedText = TypeRenderer.typeToString(expected, node.tree);
 
   const message = patternBinding
     ? `Invalid pattern error\nExpected: ${expectedText}\nFound: ${foundText}`
@@ -394,21 +341,24 @@ function typeMismatchError(
     let s = "";
 
     if (diff.extra.size > 0) {
-      s += `\nExtra fields: ${typeToString(
+      s += `\nExtra fields: ${TypeRenderer.typeToString(
         TRecord(Object.fromEntries(diff.extra.entries())),
+        node.tree,
       )}`;
     }
     if (diff.missing.size > 0) {
-      s += `\nMissing fields: ${typeToString(
+      s += `\nMissing fields: ${TypeRenderer.typeToString(
         TRecord(Object.fromEntries(diff.missing.entries())),
+        node.tree,
       )}`;
     }
     if (diff.mismatched.size > 0) {
       s += `\nMismatched fields: `;
       diff.mismatched.forEach(([expected, found], field) => {
-        s += `\n Field ${field} expected ${typeToString(
+        s += `\n Field ${field} expected ${TypeRenderer.typeToString(
           expected,
-        )}, found ${typeToString(found)}`;
+          node.tree,
+        )}, found ${TypeRenderer.typeToString(found, node.tree)}`;
       });
     }
 
@@ -522,7 +472,10 @@ function recordBaseIdError(node: SyntaxNode, type: Type): Diagnostic {
   return {
     node,
     endNode: node,
-    message: `Type must be a record, instead found: ${typeToString(type)}`,
+    message: `Type must be a record, instead found: ${TypeRenderer.typeToString(
+      type,
+      node.tree,
+    )}`,
   };
 }
 
@@ -530,7 +483,10 @@ function fieldAccessOnNonRecordError(node: SyntaxNode, type: Type): Diagnostic {
   return {
     node,
     endNode: node,
-    message: `Cannot access fields on non-record type: ${typeToString(type)}`,
+    message: `Cannot access fields on non-record type: ${TypeRenderer.typeToString(
+      type,
+      node.tree,
+    )}`,
   };
 }
 
@@ -592,7 +548,7 @@ export class InferenceScope {
   constructor(
     private uri: string,
     private elmWorkspace: IElmWorkspace,
-    private shadowableNames: Set<string>,
+    private nonShadowableNames: Set<string>,
     private activeScopes: Set<EValueDeclaration>,
     private recursionAllowed: boolean,
     private parent?: InferenceScope,
@@ -855,7 +811,7 @@ export class InferenceScope {
       new InferenceScope(
         this.uri,
         this.elmWorkspace,
-        this.shadowableNames,
+        this.nonShadowableNames,
         activeScopes,
         recursionAllowed,
         this,
@@ -890,15 +846,13 @@ export class InferenceScope {
       ?.text;
 
     if (funcName) {
-      this.shadowableNames.add(funcName);
+      this.nonShadowableNames.add(funcName);
     } else {
       const pattern = declaration.pattern;
 
       if (pattern) {
-        const patterns = TreeUtils.findAllNamedChildrenOfType(
-          "lower_pattern",
-          pattern,
-        )
+        const patterns = pattern
+          .descendantsOfType("lower_pattern")
           ?.map(mapSyntaxNodeToExpression)
           .filter(Utils.notUndefined.bind(this));
 
@@ -907,7 +861,7 @@ export class InferenceScope {
           if (patType) {
             this.setBinding(pat, patType);
           }
-          this.shadowableNames.add(pat.text);
+          this.nonShadowableNames.add(pat.text);
         });
       }
     }
@@ -1003,7 +957,7 @@ export class InferenceScope {
       case "LowerPattern": {
         const parentPattern = getParentPatternDeclaration(definition.expr);
         if (parentPattern) {
-          this.inferReferencedValueDeclaration(parentPattern, definition?.uri);
+          this.inferReferencedValueDeclaration(parentPattern, definition.uri);
 
           const binding = this.getBinding(definition.expr);
 
@@ -1054,7 +1008,6 @@ export class InferenceScope {
 
         return TUnknown;
       }
-
       case "PortAnnotation": {
         return TypeExpression.portAnnotationInference(
           definition.expr,
@@ -1062,7 +1015,6 @@ export class InferenceScope {
           this.elmWorkspace.getImports(),
         ).type;
       }
-
       default:
         throw new Error("Unexpected reference type");
     }
@@ -1111,7 +1063,7 @@ export class InferenceScope {
       type = !parentScope
         ? InferenceScope.valueDeclarationInference(
             declaration,
-            this.uri,
+            referenceUri,
             this.elmWorkspace,
             this.activeScopes,
           ).type
@@ -1563,11 +1515,11 @@ export class InferenceScope {
 
   private setBinding(expr: Expression, type: Type): void {
     const exprName = expr.text;
-    if (this.shadowableNames.has(exprName)) {
+    if (this.nonShadowableNames.has(exprName)) {
       this.diagnostics.push(redefinitionError(expr));
     }
 
-    this.shadowableNames.add(exprName);
+    this.nonShadowableNames.add(exprName);
 
     this.bindings.set(expr.text, type);
     this.expressionTypes.set(expr, type);
@@ -1777,7 +1729,7 @@ export class InferenceScope {
     isParameter: boolean,
   ): void {
     const variant = findDefinition(
-      unionPattern.constructor.firstNamedChild,
+      unionPattern.constructor.lastNamedChild,
       this.uri,
       this.elmWorkspace.getImports(),
     );
@@ -2366,10 +2318,8 @@ export class InferenceScope {
   }
 
   private bindIfVar(e: Expression, type: Type, defaultType: Type): Type {
-    if (
-      type.nodeType === "Var" &&
-      this.isAssignable(e, type, defaultType, undefined, true)
-    ) {
+    if (type.nodeType === "Var") {
+      this.isAssignable(e, type, defaultType, undefined, true);
       return defaultType;
     } else {
       return type;
@@ -2463,28 +2413,4 @@ export function findType(
   } else {
     return TUnknown;
   }
-}
-
-// Testing helper
-function printAllExpressionTypes(
-  rootNode: SyntaxNode,
-  expressionTypes: SyntaxNodeMap<Expression, Type>,
-): void {
-  function findNode(
-    node: SyntaxNode,
-    expr: Expression,
-  ): SyntaxNode | undefined {
-    if ((node as any).id === (expr as any).id) {
-      return node;
-    }
-
-    return node.namedChildren
-      .map((n) => findNode(n, expr))
-      .filter(Utils.notUndefined)[0];
-  }
-
-  expressionTypes.forEach((val, key) => {
-    const node = findNode(rootNode, key);
-    console.log(`${node?.text} - ${node?.type}: ${typeToString(val)}`);
-  });
 }

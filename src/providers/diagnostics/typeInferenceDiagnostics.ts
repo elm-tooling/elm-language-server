@@ -9,13 +9,14 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { IElmWorkspace } from "../../elmWorkspace";
-import { findType, typeToString } from "../../util/types/typeInference";
+import { findType } from "../../util/types/typeInference";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { PositionUtil } from "../../positionUtil";
 import { TreeUtils } from "../../util/treeUtils";
 import { Utils } from "../../util/utils";
 import { URI } from "vscode-uri";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
+import { TypeRenderer } from "../../util/types/typeRenderer";
 
 export class TypeInferenceDiagnostics {
   TYPE_INFERENCE = "Type Inference";
@@ -44,8 +45,9 @@ export class TypeInferenceDiagnostics {
         .filter(Utils.notUndefinedOrNull)
         .flatMap((node) => {
           try {
-            const typeString: string = typeToString(
+            const typeString: string = TypeRenderer.typeToString(
               findType(node, uri, elmWorkspace),
+              node.tree,
             );
 
             if (typeString && typeString !== "Unknown" && node) {
@@ -106,8 +108,9 @@ export class TypeInferenceDiagnostics {
           diagnostic.range.start,
         );
 
-        const typeString: string = typeToString(
+        const typeString: string = TypeRenderer.typeToString(
           findType(nodeAtPosition, uri, elmWorkspace),
+          nodeAtPosition.tree,
         );
 
         result.push(

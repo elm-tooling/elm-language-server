@@ -76,6 +76,7 @@ export class TypeExpression {
       type: TypeReplacement.freshenVars(inferenceResult.type),
     };
   }
+
   public static typeAliasDeclarationInference(
     e: ETypeAliasDeclaration,
     uri: string,

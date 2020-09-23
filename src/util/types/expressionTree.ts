@@ -260,6 +260,9 @@ export function mapSyntaxNodeToExpression(
             params,
             body,
             typeAnnotation,
+            pattern: mapSyntaxNodeToExpression(
+              node.childForFieldName("pattern"),
+            ),
           } as EValueDeclaration);
         }
       }
