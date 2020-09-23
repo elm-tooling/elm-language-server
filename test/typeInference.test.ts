@@ -1,9 +1,10 @@
-import { SourceTreeParser } from "./utils/sourceTreeParser";
-import { getTargetPositionFromSource } from "./utils/sourceParser";
-import { baseUri } from "./utils/mockElmWorkspace";
 import { URI } from "vscode-uri";
 import { TreeUtils } from "../src/util/treeUtils";
-import { findType, typeToString } from "../src/util/types/typeInference";
+import { findType } from "../src/util/types/typeInference";
+import { TypeRenderer } from "../src/util/types/typeRenderer";
+import { baseUri } from "./utils/mockElmWorkspace";
+import { getTargetPositionFromSource } from "./utils/sourceParser";
+import { SourceTreeParser } from "./utils/sourceTreeParser";
 
 const basicsSources = `
 --@ Basics.elm
@@ -48,7 +49,7 @@ describe("test type inference", () => {
 
     const nodeType = findType(nodeAtPosition, testUri, workspace);
 
-    expect(typeToString(nodeType)).toEqual(expectedType);
+    expect(TypeRenderer.typeToString(nodeType, tree)).toEqual(expectedType);
   }
 
   test("simple function", async () => {
@@ -142,7 +143,7 @@ func a b c =
 `;
     await testTypeInference(
       basicsSources + source,
-      "number -> { a | first : { a | second : number } } -> Maybe number -> number",
+      "number -> { a | first : { c | second : number } } -> Maybe number -> number",
     );
   });
 });
