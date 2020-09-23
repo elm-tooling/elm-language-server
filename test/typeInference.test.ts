@@ -143,7 +143,7 @@ func a b c =
 `;
     await testTypeInference(
       basicsSources + source,
-      "number -> { a | first : { c | second : number } } -> Maybe number -> number",
+      "number -> { a | first : { b | second : number } } -> Maybe number -> number",
     );
   });
 });
