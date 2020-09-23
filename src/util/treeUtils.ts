@@ -2125,6 +2125,38 @@ export class TreeUtils {
     return declarations;
   }
 
+  public static getQualifierForName(
+    tree: Tree,
+    uri: string,
+    module: string,
+    name: string,
+    imports: IImports,
+  ): string | undefined {
+    if (imports.imports) {
+      const moduleImport = TreeUtils.findImportClauseByName(tree, module);
+
+      if (!moduleImport) {
+        return;
+      }
+
+      if (
+        imports.imports[uri]
+          .filter(
+            (imp) =>
+              imp.fromModuleName === module &&
+              (imp.type === "Type" ||
+                imp.type === "TypeAlias" ||
+                imp.type === "UnionConstructor"),
+          )
+          .some((imp) => imp.alias === name)
+      ) {
+        return "";
+      } else {
+        return `${module}.`;
+      }
+    }
+  }
+
   private static findExposedTopLevelFunctions(
     tree: Tree,
     functionNamesToFind: string[],

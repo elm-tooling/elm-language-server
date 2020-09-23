@@ -305,7 +305,7 @@ export function getTypeclassName(type: TVar): string | undefined {
 
 const VAR_LETTERS = "abcdefghijklmnopqrstuvwxyz";
 
-function getVarNames(count: number): string[] {
+export function getVarNames(count: number): string[] {
   const names = [];
   for (let i = 0; i < count; i++) {
     const letter = VAR_LETTERS[i % 26];
@@ -330,8 +330,8 @@ function typeMismatchError(
   patternBinding = false,
   recordDiff?: RecordDiff,
 ): Diagnostic {
-  const foundText = TypeRenderer.typeToString(found, node.tree);
-  const expectedText = TypeRenderer.typeToString(expected, node.tree);
+  const foundText = TypeRenderer.typeToString(found);
+  const expectedText = TypeRenderer.typeToString(expected);
 
   const message = patternBinding
     ? `Invalid pattern error\nExpected: ${expectedText}\nFound: ${foundText}`
@@ -343,13 +343,11 @@ function typeMismatchError(
     if (diff.extra.size > 0) {
       s += `\nExtra fields: ${TypeRenderer.typeToString(
         TRecord(Object.fromEntries(diff.extra.entries())),
-        node.tree,
       )}`;
     }
     if (diff.missing.size > 0) {
       s += `\nMissing fields: ${TypeRenderer.typeToString(
         TRecord(Object.fromEntries(diff.missing.entries())),
-        node.tree,
       )}`;
     }
     if (diff.mismatched.size > 0) {
@@ -357,8 +355,7 @@ function typeMismatchError(
       diff.mismatched.forEach(([expected, found], field) => {
         s += `\n Field ${field} expected ${TypeRenderer.typeToString(
           expected,
-          node.tree,
-        )}, found ${TypeRenderer.typeToString(found, node.tree)}`;
+        )}, found ${TypeRenderer.typeToString(found)}`;
       });
     }
 
@@ -474,7 +471,6 @@ function recordBaseIdError(node: SyntaxNode, type: Type): Diagnostic {
     endNode: node,
     message: `Type must be a record, instead found: ${TypeRenderer.typeToString(
       type,
-      node.tree,
     )}`,
   };
 }
@@ -485,7 +481,6 @@ function fieldAccessOnNonRecordError(node: SyntaxNode, type: Type): Diagnostic {
     endNode: node,
     message: `Cannot access fields on non-record type: ${TypeRenderer.typeToString(
       type,
-      node.tree,
     )}`,
   };
 }

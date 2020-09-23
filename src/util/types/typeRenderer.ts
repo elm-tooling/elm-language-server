@@ -1,7 +1,9 @@
+import { IImports } from "src/imports";
 import { Tree } from "web-tree-sitter";
+import { TreeUtils } from "../treeUtils";
 import {
   getTypeclassName,
-  nthVarName,
+  getVarNames,
   TUnion,
   TVar,
   Type,
@@ -10,10 +12,19 @@ import {
 export class TypeRenderer {
   private usedVarNames = new Map<TVar, string>();
 
-  constructor(private tree: Tree) {}
+  constructor(
+    private tree?: Tree,
+    private uri?: string,
+    private imports?: IImports,
+  ) {}
 
-  public static typeToString(t: Type, tree: Tree): string {
-    return new TypeRenderer(tree).render(t);
+  public static typeToString(
+    t: Type,
+    tree?: Tree,
+    uri?: string,
+    imports?: IImports,
+  ): string {
+    return new TypeRenderer(tree, uri, imports).render(t);
   }
 
   private render(t: Type): string {
@@ -55,10 +66,11 @@ export class TypeRenderer {
   }
 
   private renderUnion(t: TUnion): string {
+    let type;
     if (t.params.length === 0) {
-      return t.name;
+      type = t.name;
     } else {
-      return `${t.name} ${t.params
+      type = `${t.name} ${t.params
         .map((p) =>
           p.nodeType === "Function" ||
           (p.nodeType === "Union" && p.params.length > 0) ||
@@ -67,6 +79,20 @@ export class TypeRenderer {
             : this.render(p),
         )
         .join(" ")}`;
+    }
+
+    if (this.tree && this.uri && this.imports) {
+      return `${
+        TreeUtils.getQualifierForName(
+          this.tree,
+          this.uri,
+          t.module,
+          t.name,
+          this.imports,
+        ) ?? ""
+      }${type}`;
+    } else {
+      return type;
     }
   }
 
@@ -78,7 +104,10 @@ export class TypeRenderer {
     const takenNames = Array.from(this.usedVarNames.values());
 
     if (!getTypeclassName(t) && takenNames.includes(t.name)) {
-      const displayName = nthVarName(takenNames.length + 1);
+      const displayName =
+        getVarNames(takenNames.length + 1).find(
+          (name) => !takenNames.includes(name),
+        ) ?? "";
       this.usedVarNames.set(t, displayName);
       return displayName;
     }

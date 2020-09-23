@@ -48,6 +48,8 @@ export class TypeInferenceDiagnostics {
             const typeString: string = TypeRenderer.typeToString(
               findType(node, uri, elmWorkspace),
               node.tree,
+              uri,
+              elmWorkspace.getImports(),
             );
 
             if (typeString && typeString !== "Unknown" && node) {
@@ -111,6 +113,8 @@ export class TypeInferenceDiagnostics {
         const typeString: string = TypeRenderer.typeToString(
           findType(nodeAtPosition, uri, elmWorkspace),
           nodeAtPosition.tree,
+          uri,
+          elmWorkspace.getImports(),
         );
 
         result.push(
