@@ -1090,7 +1090,7 @@ export class CompletionProvider {
       alreadyImported = false;
     }
 
-    if (moduleTree) {
+    if (moduleTree && moduleTree.isExposed) {
       // Get exposed values
       const imports = ImportUtils.getPossibleImportsOfTree(moduleTree);
       imports.forEach((value) => {
