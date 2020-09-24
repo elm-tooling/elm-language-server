@@ -253,11 +253,7 @@ function anyTypeVar(type: Type, predicate: (tvar: TVar) => boolean): boolean {
  */
 export function curryFunction(func: TFunction, count: number): Type {
   if (count < func.params.length) {
-    return {
-      ...func,
-      params: func.params.slice(1),
-      return: func.return,
-    };
+    return TFunction(func.params.slice(count), func.return);
   } else {
     return func.return;
   }
@@ -269,11 +265,10 @@ export function curryFunction(func: TFunction, count: number): Type {
  */
 export function uncurryFunction(func: TFunction): TFunction {
   if (func.return.nodeType === "Function") {
-    return {
-      ...func,
-      params: [...func.params, ...func.return.params],
-      return: func.return.return,
-    };
+    return TFunction(
+      [...func.params, ...func.return.params],
+      func.return.return,
+    );
   } else {
     return func;
   }
@@ -2005,6 +2000,9 @@ export class InferenceScope {
                 (ty2?.nodeType === "MutableRecord" &&
                   this.mutableRecordAssignable(ty1, ty2));
             }
+            break;
+          case "Unit":
+            result = ty2?.nodeType === "Unit";
             break;
           case "Unknown":
             result = true;

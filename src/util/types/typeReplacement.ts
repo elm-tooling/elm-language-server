@@ -74,7 +74,7 @@ export class TypeReplacement {
         break;
     }
 
-    type.alias?.parameters.forEach(this.freeze.bind(this));
+    type.alias?.parameters.forEach(TypeReplacement.freeze.bind(this));
   }
 
   private replace(type: Type): Type {
@@ -108,22 +108,24 @@ export class TypeReplacement {
       case "Unknown":
         return {
           nodeType: "Unknown",
-          alias: type.alias ? this.replaceAlias(type.alias) : undefined,
+          alias: this.replaceAlias(type.alias),
         };
     }
   }
 
-  private replaceAlias(alias: Alias): Alias {
-    return {
-      ...alias,
-      parameters: alias.parameters.map((param) => this.replace(param)),
-    };
+  private replaceAlias(alias?: Alias): Alias | undefined {
+    if (alias) {
+      return {
+        ...alias,
+        parameters: alias.parameters.map((param) => this.replace(param)),
+      };
+    }
   }
 
   private replaceTuple(type: TTuple): TTuple {
     return TTuple(
       type.types.map((t) => this.replace(t)),
-      type.alias ? this.replaceAlias(type.alias) : undefined,
+      this.replaceAlias(type.alias),
     );
   }
 
@@ -133,7 +135,7 @@ export class TypeReplacement {
       TFunction(
         params,
         this.replace(type.return),
-        type.alias ? this.replaceAlias(type.alias) : undefined,
+        this.replaceAlias(type.alias),
       ),
     );
   }
@@ -148,7 +150,7 @@ export class TypeReplacement {
       type.module,
       type.name,
       params,
-      type.alias ? this.replaceAlias(type.alias) : undefined,
+      this.replaceAlias(type.alias),
     );
   }
 
@@ -206,7 +208,7 @@ export class TypeReplacement {
       return TRecord(
         newFields,
         newBase,
-        alias ? this.replaceAlias(alias) : undefined,
+        this.replaceAlias(alias),
         newFieldReferences,
       );
     }

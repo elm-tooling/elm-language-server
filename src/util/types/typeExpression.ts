@@ -455,6 +455,13 @@ export class TypeExpression {
   }
 
   private getTypeVar(e: Expression): TVar {
+    if (this.varsByExpression.has(e)) {
+      const tVar = this.varsByExpression.get(e);
+      if (tVar) {
+        return tVar;
+      }
+    }
+
     const tVar = TVar(e.text, this.rigidVars);
     this.varsByExpression.set(e, tVar);
     return tVar;

@@ -703,7 +703,7 @@ export class TreeUtils {
       return { node: definitionNode, nodeType: "TypeAlias" };
     }
     definitionNode = this.findUnionConstructor(tree, nodeAtPosition.text);
-    if (definitionNode && nodeAtPosition.parent?.type !== "") {
+    if (definitionNode) {
       return { node: definitionNode, nodeType: "UnionConstructor" };
     }
   }
