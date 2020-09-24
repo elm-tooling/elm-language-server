@@ -836,6 +836,20 @@ export class TreeUtils {
           uri: definitionFromOtherFile.fromUri,
         };
       }
+      const portFromOtherFile = this.findImportFromImportList(
+        uri,
+        nodeAtPosition.text,
+        "Port",
+        imports,
+      );
+
+      if (portFromOtherFile) {
+        return {
+          node: portFromOtherFile.node.namedChildren[1],
+          nodeType: "Port",
+          uri: portFromOtherFile.fromUri,
+        };
+      }
     } else if (
       nodeAtPosition.parent &&
       nodeAtPosition.parent.type === "exposed_type" &&
@@ -1067,7 +1081,7 @@ export class TreeUtils {
 
       if (portDefinitionNode) {
         return {
-          node: portDefinitionNode,
+          node: portDefinitionNode.namedChildren[1],
           nodeType: "Port",
           uri,
         };

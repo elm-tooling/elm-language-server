@@ -191,6 +191,7 @@ export class Imports implements IImports {
     exposed.forEach((element) => {
       switch (element.type) {
         case "Function":
+        case "Port":
         case "TypeAlias":
           result.push({
             alias: `${importPrefix}.${element.name}`,
