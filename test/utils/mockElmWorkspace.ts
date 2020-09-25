@@ -5,6 +5,7 @@ import { IElmWorkspace } from "../../src/elmWorkspace";
 import { Forest, IForest } from "../../src/forest";
 import { Imports } from "../../src/imports";
 import { container } from "tsyringe";
+import { TypeCache } from "../../src/util/types/typeCache";
 
 export const baseUri = Path.join(__dirname, "../sources/src/");
 
@@ -12,6 +13,7 @@ export class MockElmWorkspace implements IElmWorkspace {
   private imports: Imports;
   private forest: IForest = new Forest();
   private parser: Parser;
+  private typeCache = new TypeCache();
 
   constructor(sources: { [K: string]: string }) {
     this.parser = container.resolve("Parser");
@@ -65,6 +67,10 @@ export class MockElmWorkspace implements IElmWorkspace {
 
   getRootPath(): URI {
     return URI.file(Path.join(__dirname, "sources"));
+  }
+
+  getTypeCache(): TypeCache {
+    return this.typeCache;
   }
 
   private parseAndAddToForest(fileName: string, source: string): void {
