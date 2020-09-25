@@ -106,7 +106,7 @@ f = \((x,y) as point) -> point
     const source = `
 port module Ports exposing (..)
 port foo : String -> Cmd msg
-     --X
+--X
 update msg model = (model, foo "blah")
                            --^
 `;

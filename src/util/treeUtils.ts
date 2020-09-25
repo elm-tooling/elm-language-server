@@ -1081,7 +1081,7 @@ export class TreeUtils {
 
       if (portDefinitionNode) {
         return {
-          node: portDefinitionNode.namedChildren[1],
+          node: portDefinitionNode,
           nodeType: "Port",
           uri,
         };

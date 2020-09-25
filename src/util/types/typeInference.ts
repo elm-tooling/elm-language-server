@@ -171,6 +171,7 @@ export const TMutableRecord = (
 const TFloat = TUnion("Basics", "Float", []);
 const TBool = TUnion("Basics", "Bool", []);
 const TString = TUnion("String", "String", []);
+const TChar = TUnion("Char", "Char", []);
 
 export const TList = (elementType: Type): TUnion =>
   TUnion("List", "List", [elementType]);
@@ -696,6 +697,9 @@ export class InferenceScope {
         break;
       case "CaseOfExpr":
         type = this.inferCase(e);
+        break;
+      case "CharConstant":
+        type = TChar;
         break;
       case "FieldAccessExpr":
         type = this.inferFieldAccess(e);
@@ -1655,7 +1659,12 @@ export class InferenceScope {
       case "Pattern":
         {
           const child = mapSyntaxNodeToExpression(
-            pattern.namedChildren.find((c) => c.type.endsWith("pattern")),
+            pattern.namedChildren.find(
+              (c) =>
+                c.type.endsWith("pattern") ||
+                c.type.includes("constant") ||
+                c.type === "unit_expr",
+            ),
           );
           if (!child) {
             throw new Error("Missing pattern child");
@@ -1678,6 +1687,13 @@ export class InferenceScope {
         break;
       case "UnitExpr":
         this.isAssignable(pattern, ty, TUnit, undefined, true);
+        break;
+      case "StringConstant":
+      case "NumberConstant":
+      case "CharConstant":
+        if (isParameter) {
+          this.diagnostics.push(partialPatternError(pattern));
+        }
         break;
       default:
         throw new Error("Unexpected pattern type: " + pattern.nodeType);

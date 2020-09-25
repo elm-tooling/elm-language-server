@@ -11,6 +11,7 @@ export type Expression =
   | EBinOpExpr
   | ECaseOfBranch
   | ECaseOfExpr
+  | ECharConstant
   | EConsPattern
   | EField
   | EFieldAccessExpr
@@ -231,6 +232,9 @@ export interface EPortAnnotation extends SyntaxNode {
   nodeType: "PortAnnotation";
   name: string;
   typeExpression: ETypeExpression;
+}
+export interface ECharConstant extends SyntaxNode {
+  nodeType: "CharConstant";
 }
 
 export function mapSyntaxNodeToExpression(
@@ -619,6 +623,10 @@ export function mapSyntaxNodeToExpression(
           TreeUtils.findFirstNamedChildOfType("type_expression", node),
         ),
       } as EPortAnnotation);
+    case "char_constant":
+      return Object.assign(node, {
+        nodeType: "CharConstant",
+      } as ECharConstant);
     default:
       return mapSyntaxNodeToExpression(node.firstNamedChild);
   }
