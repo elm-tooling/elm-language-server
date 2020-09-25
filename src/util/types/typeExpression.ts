@@ -1,4 +1,3 @@
-import { IImports } from "src/imports";
 import {
   Type,
   TVar,
@@ -34,6 +33,7 @@ import { TypeReplacement } from "./typeReplacement";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { Utils } from "../utils";
 import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
+import { IElmWorkspace } from "src/elmWorkspace";
 
 export class TypeExpression {
   // All the type variables we've seen
@@ -52,7 +52,7 @@ export class TypeExpression {
   constructor(
     private root: Expression,
     private uri: string,
-    private imports: IImports,
+    private workspace: IElmWorkspace,
     private rigidVars: boolean,
     private activeAliases: Set<ETypeAliasDeclaration> = new Set(),
   ) {}
@@ -60,81 +60,111 @@ export class TypeExpression {
   public static typeDeclarationInference(
     e: ETypeDeclaration,
     uri: string,
-    imports: IImports,
+    workspace: IElmWorkspace,
   ): InferenceResult {
-    const inferenceResult = new TypeExpression(
-      e,
-      uri,
-      imports,
-      false,
-    ).inferTypeDeclaration(e);
+    const setter = (): InferenceResult => {
+      const inferenceResult = new TypeExpression(
+        e,
+        uri,
+        workspace,
+        false,
+      ).inferTypeDeclaration(e);
 
-    TypeReplacement.freeze(inferenceResult.type);
+      TypeReplacement.freeze(inferenceResult.type);
 
-    return {
-      ...inferenceResult,
-      type: TypeReplacement.freshenVars(inferenceResult.type),
+      return {
+        ...inferenceResult,
+        type: TypeReplacement.freshenVars(inferenceResult.type),
+      };
     };
+
+    if (!workspace.getForest().getByUri(uri)?.writeable) {
+      return workspace
+        .getTypeCache()
+        .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter);
+    } else {
+      return setter();
+    }
   }
 
   public static typeAliasDeclarationInference(
     e: ETypeAliasDeclaration,
     uri: string,
-    imports: IImports,
+    workspace: IElmWorkspace,
     activeAliases = new Set<ETypeAliasDeclaration>(),
   ): InferenceResult {
-    const inferenceResult = new TypeExpression(
-      e,
-      uri,
-      imports,
-      false,
-      activeAliases,
-    ).inferTypeAliasDeclaration(e);
+    const setter = (): InferenceResult => {
+      const inferenceResult = new TypeExpression(
+        e,
+        uri,
+        workspace,
+        false,
+        activeAliases,
+      ).inferTypeAliasDeclaration(e);
 
-    TypeReplacement.freeze(inferenceResult.type);
+      TypeReplacement.freeze(inferenceResult.type);
 
-    return {
-      ...inferenceResult,
-      type: TypeReplacement.freshenVars(inferenceResult.type),
+      return {
+        ...inferenceResult,
+        type: TypeReplacement.freshenVars(inferenceResult.type),
+      };
     };
+
+    if (!workspace.getForest().getByUri(uri)?.writeable) {
+      return workspace
+        .getTypeCache()
+        .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter);
+    } else {
+      return setter();
+    }
   }
 
   public static typeAnnotationInference(
     e: ETypeAnnotation,
     uri: string,
-    imports: IImports,
+    workspace: IElmWorkspace,
     rigid = true,
   ): InferenceResult | undefined {
     if (!e.typeExpression) {
       return;
     }
 
-    const inferenceResult = new TypeExpression(
-      e,
-      uri,
-      imports,
-      true,
-    ).inferTypeExpression(e.typeExpression);
+    const setter = (): InferenceResult => {
+      const inferenceResult = new TypeExpression(
+        e,
+        uri,
+        workspace,
+        true,
+      ).inferTypeExpression(e.typeExpression!);
 
-    let type = TypeReplacement.replace(inferenceResult.type, new Map());
-    TypeReplacement.freeze(inferenceResult.type);
+      let type = TypeReplacement.replace(inferenceResult.type, new Map());
+      TypeReplacement.freeze(inferenceResult.type);
 
-    if (!rigid) {
-      type = TypeReplacement.flexify(type);
+      if (!rigid) {
+        type = TypeReplacement.flexify(type);
+      }
+
+      return { ...inferenceResult, type };
+    };
+
+    if (!workspace.getForest().getByUri(uri)?.writeable) {
+      return workspace
+        .getTypeCache()
+        .getOrSet("PACKAGE_TYPE_ANNOTATION", e.typeExpression, setter);
+    } else {
+      return setter();
     }
-
-    return { ...inferenceResult, type };
   }
 
   public static unionVariantInference(
     e: EUnionVariant,
     uri: string,
-    imports: IImports,
+    workspace: IElmWorkspace,
   ): InferenceResult {
     const inferenceResult = new TypeExpression(
       e,
       uri,
-      imports,
+      workspace,
       false,
     ).inferUnionConstructor(e);
     TypeReplacement.freeze(inferenceResult.type);
@@ -148,12 +178,12 @@ export class TypeExpression {
   public static portAnnotationInference(
     e: EPortAnnotation,
     uri: string,
-    imports: IImports,
+    workspace: IElmWorkspace,
   ): InferenceResult {
     const inferenceResult = new TypeExpression(
       e,
       uri,
-      imports,
+      workspace,
       false,
     ).inferPortAnnotation(e);
     TypeReplacement.freeze(inferenceResult.type);
@@ -288,7 +318,7 @@ export class TypeExpression {
     const definition = findDefinition(
       typeVariable.firstNamedChild,
       this.uri,
-      this.imports,
+      this.workspace.getImports(),
     );
 
     // The type variable doesn't reference anything
@@ -327,7 +357,7 @@ export class TypeExpression {
       TypeExpression.typeAnnotationInference(
         annotation as ETypeAnnotation,
         definition.uri,
-        this.imports,
+        this.workspace,
         true,
       )?.expressionTypes.get(definition.expr) ?? TUnknown;
 
@@ -357,7 +387,7 @@ export class TypeExpression {
     const baseTypeDefinition = findDefinition(
       record.baseType,
       this.uri,
-      this.imports,
+      this.workspace.getImports(),
     )?.expr;
 
     const baseType = baseTypeDefinition
@@ -388,7 +418,7 @@ export class TypeExpression {
     const definition = findDefinition(
       typeRef.firstNamedChild?.lastNamedChild,
       this.uri,
-      this.imports,
+      this.workspace.getImports(),
     );
 
     let declaredType: Type = TUnknown;
@@ -398,14 +428,14 @@ export class TypeExpression {
           declaredType = TypeExpression.typeDeclarationInference(
             definition.expr,
             definition.uri,
-            this.imports,
+            this.workspace,
           ).type;
           break;
         case "TypeAliasDeclaration":
           declaredType = TypeExpression.typeAliasDeclarationInference(
             definition.expr,
             definition.uri,
-            this.imports,
+            this.workspace,
             new Set(this.activeAliases.values()),
           ).type;
           break;

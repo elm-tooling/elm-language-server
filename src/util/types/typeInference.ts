@@ -571,13 +571,22 @@ export class InferenceScope {
     // TODO: Need a good way to get all visible values
     const shadowableNames = new Set<string>();
 
-    return new InferenceScope(
-      uri,
-      elmWorkspace,
-      shadowableNames,
-      activeScopes,
-      false,
-    ).inferDeclaration(declaration, true);
+    const setter = (): InferenceResult =>
+      new InferenceScope(
+        uri,
+        elmWorkspace,
+        shadowableNames,
+        activeScopes,
+        false,
+      ).inferDeclaration(declaration, true);
+
+    if (!elmWorkspace.getForest().getByUri(uri)?.writeable) {
+      return elmWorkspace
+        .getTypeCache()
+        .getOrSet("PACKAGE_VALUE", declaration, setter);
+    } else {
+      return setter();
+    }
   }
 
   private inferDeclaration(
@@ -968,14 +977,14 @@ export class InferenceScope {
         return TypeExpression.unionVariantInference(
           definition.expr,
           this.uri,
-          this.elmWorkspace.getImports(),
+          this.elmWorkspace,
         ).type;
       }
       case "TypeAliasDeclaration": {
         const ty = TypeExpression.typeAliasDeclarationInference(
           definition.expr,
           this.uri,
-          this.elmWorkspace.getImports(),
+          this.elmWorkspace,
         ).type;
         if (ty.nodeType === "Record" && Object.keys(ty.fields).length > 0) {
           return TFunction(Object.values(ty.fields), ty);
@@ -992,7 +1001,7 @@ export class InferenceScope {
           const fields = (TypeExpression.typeAliasDeclarationInference(
             typeAlias,
             this.uri,
-            this.elmWorkspace.getImports(),
+            this.elmWorkspace,
           ).type as TRecord)?.fields;
 
           if (fields) {
@@ -1006,7 +1015,7 @@ export class InferenceScope {
         return TypeExpression.portAnnotationInference(
           definition.expr,
           this.uri,
-          this.elmWorkspace.getImports(),
+          this.elmWorkspace,
         ).type;
       }
       default:
@@ -1036,7 +1045,7 @@ export class InferenceScope {
       type = TypeExpression.typeAnnotationInference(
         declaration.typeAnnotation,
         referenceUri,
-        this.elmWorkspace.getImports(),
+        this.elmWorkspace,
         false,
       )?.type;
     }
@@ -1555,7 +1564,7 @@ export class InferenceScope {
       ? TypeExpression.typeAnnotationInference(
           valueDeclaration.typeAnnotation,
           this.uri,
-          this.elmWorkspace.getImports(),
+          this.elmWorkspace,
           true,
         )?.type
       : undefined;
@@ -1747,7 +1756,7 @@ export class InferenceScope {
     const variantType = TypeExpression.unionVariantInference(
       variant.expr,
       variant.uri,
-      this.elmWorkspace.getImports(),
+      this.elmWorkspace,
     ).type;
 
     if (!variantType || variantType.nodeType === "Unknown") {

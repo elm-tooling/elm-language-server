@@ -20,6 +20,19 @@ export class SyntaxNodeMap<K extends SyntaxNode, V> {
     return this.map.get((<any>key).id);
   }
 
+  public getOrSet(key: K, setter: () => V): V {
+    const existing = this.get(key);
+
+    if (existing) {
+      return existing;
+    }
+
+    const result = setter();
+
+    this.set(key, result);
+    return result;
+  }
+
   public has(key: K): boolean {
     if (!("id" in key)) {
       throw new Error("SyntaxNodeMap key must have an `id` property");
