@@ -27,7 +27,7 @@ f x =
     await testBase.testDefinition(source);
   });
 
-  xit(`test case-of pattern union type constructor with constructor parameter`, async () => {
+  it(`test case-of pattern union type constructor with constructor parameter`, async () => {
     const source = `
 type Foo = Foo
            --X

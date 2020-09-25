@@ -22,6 +22,7 @@ import {
   ElmAnalyseDiagnostics,
   ElmMakeDiagnostics,
   FoldingRangeProvider,
+  TypeInferenceDiagnostics,
   HoverProvider,
   ReferencesProvider,
   RenameProvider,
@@ -130,6 +131,10 @@ export class Server implements ILanguageServer {
       useValue: new ElmMakeDiagnostics(),
     });
 
+    container.register(TypeInferenceDiagnostics, {
+      useValue: new TypeInferenceDiagnostics(),
+    });
+
     const clientSettings = await settings.getClientSettings();
 
     container.register("ClientSettings", {
@@ -143,11 +148,13 @@ export class Server implements ILanguageServer {
           : null,
     });
 
+    container.register(ASTProvider, {
+      useValue: new ASTProvider(),
+    });
+
     new DiagnosticsProvider();
 
     new CodeActionProvider();
-
-    new ASTProvider();
 
     new FoldingRangeProvider();
     new CompletionProvider();

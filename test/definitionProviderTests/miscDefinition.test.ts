@@ -102,11 +102,11 @@ f = \((x,y) as point) -> point
 
   // PORTS
 
-  xit(`test port ref`, async () => {
+  it(`test port ref`, async () => {
     const source = `
 port module Ports exposing (..)
 port foo : String -> Cmd msg
-     --X
+--X
 update msg model = (model, foo "blah")
                            --^
 `;

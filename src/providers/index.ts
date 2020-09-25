@@ -6,6 +6,7 @@ export * from "./definitionProvider";
 export * from "./diagnostics/diagnosticsProvider";
 export * from "./diagnostics/elmAnalyseDiagnostics";
 export * from "./diagnostics/elmMakeDiagnostics";
+export * from "./diagnostics/typeInferenceDiagnostics";
 export * from "./documentFormatingProvider";
 export * from "./documentSymbolProvider";
 export * from "./selectionRangeProvider";

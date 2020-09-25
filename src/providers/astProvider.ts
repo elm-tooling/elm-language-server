@@ -5,9 +5,11 @@ import {
   DidOpenTextDocumentParams,
   IConnection,
   VersionedTextDocumentIdentifier,
+  Event,
+  Emitter,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import Parser, { Tree } from "web-tree-sitter";
+import Parser, { Tree, SyntaxNode } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { IDocumentEvents } from "../util/documentEvents";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
@@ -16,6 +18,10 @@ import { FileEventsHandler } from "./handlers/fileEventsHandler";
 export class ASTProvider {
   private connection: IConnection;
   private parser: Parser;
+
+  private treeChangeEvent = new Emitter<{ uri: string; tree: Tree }>();
+  readonly onTreeChange: Event<{ uri: string; tree: Tree }> = this
+    .treeChangeEvent.event;
 
   constructor() {
     this.parser = container.resolve("Parser");
@@ -87,6 +93,8 @@ export class ASTProvider {
 
       // Refresh imports of the calling file
       imports.updateImports(document.uri, tree, forest);
+
+      this.treeChangeEvent.fire({ uri: document.uri, tree });
     }
   };
 }

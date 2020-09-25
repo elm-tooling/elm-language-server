@@ -291,11 +291,12 @@ export class CompletionProvider {
           if (parent?.type === "value_qid") {
             // Qualified submodule and value access
             targetNode = contextNode.previousNamedSibling;
-          } else if (parent?.type === "field_access_segment") {
+          } else if (parent?.type === "field_access_expr") {
             // Record field access
             targetNode =
-              parent?.previousNamedSibling?.lastNamedChild?.lastNamedChild ??
-              parent.previousNamedSibling?.lastNamedChild;
+              contextNode?.previousNamedSibling?.lastNamedChild
+                ?.lastNamedChild ??
+              contextNode.previousNamedSibling?.lastNamedChild;
           } else if (parent?.type === "upper_case_qid") {
             // Imports
             targetNode = contextNode.previousNamedSibling;
@@ -883,33 +884,30 @@ export class CompletionProvider {
     const sortPrefix = "a";
     if (node.parent) {
       if (node.parent.type === "let_in_expr") {
-        const letNode = TreeUtils.findFirstNamedChildOfType("let", node.parent);
-        if (letNode) {
-          letNode.children.forEach((nodeToProcess) => {
-            if (
-              nodeToProcess &&
-              nodeToProcess.type === "value_declaration" &&
-              nodeToProcess.firstNamedChild !== null &&
-              nodeToProcess.firstNamedChild.type ===
-                "function_declaration_left" &&
-              nodeToProcess.firstNamedChild.firstNamedChild !== null &&
-              nodeToProcess.firstNamedChild.firstNamedChild.type ===
-                "lower_case_identifier"
-            ) {
-              const markdownDocumentation = HintHelper.createHintFromDefinitionInLet(
-                nodeToProcess,
-              );
-              result.push(
-                this.createFunctionCompletion({
-                  markdownDocumentation,
-                  label: nodeToProcess.firstNamedChild.firstNamedChild.text,
-                  range,
-                  sortPrefix,
-                }),
-              );
-            }
-          });
-        }
+        node.parent.children.forEach((nodeToProcess) => {
+          if (
+            nodeToProcess &&
+            nodeToProcess.type === "value_declaration" &&
+            nodeToProcess.firstNamedChild !== null &&
+            nodeToProcess.firstNamedChild.type ===
+              "function_declaration_left" &&
+            nodeToProcess.firstNamedChild.firstNamedChild !== null &&
+            nodeToProcess.firstNamedChild.firstNamedChild.type ===
+              "lower_case_identifier"
+          ) {
+            const markdownDocumentation = HintHelper.createHintFromDefinitionInLet(
+              nodeToProcess,
+            );
+            result.push(
+              this.createFunctionCompletion({
+                markdownDocumentation,
+                label: nodeToProcess.firstNamedChild.firstNamedChild.text,
+                range,
+                sortPrefix,
+              }),
+            );
+          }
+        });
       }
       if (
         node.parent.type === "case_of_branch" &&
@@ -1092,7 +1090,7 @@ export class CompletionProvider {
       alreadyImported = false;
     }
 
-    if (moduleTree) {
+    if (moduleTree && moduleTree.isExposed) {
       // Get exposed values
       const imports = ImportUtils.getPossibleImportsOfTree(moduleTree);
       imports.forEach((value) => {

@@ -11,6 +11,7 @@ import { Forest } from "./forest";
 import { Imports } from "./imports";
 import * as utils from "./util/elmUtils";
 import { Settings } from "./util/settings";
+import { TypeCache } from "./util/types/typeCache";
 
 const readFile = util.promisify(fs.readFile);
 const readdir = util.promisify(fs.readdir);
@@ -30,6 +31,7 @@ export interface IElmWorkspace {
   getForest(): Forest;
   getImports(): Imports;
   getRootPath(): URI;
+  getTypeCache(): TypeCache;
 }
 
 export class ElmWorkspace implements IElmWorkspace {
@@ -43,6 +45,7 @@ export class ElmWorkspace implements IElmWorkspace {
   private parser: Parser;
   private connection: IConnection;
   private settings: Settings;
+  private typeCache: TypeCache;
 
   constructor(private rootPath: URI) {
     this.settings = container.resolve("Settings");
@@ -53,6 +56,7 @@ export class ElmWorkspace implements IElmWorkspace {
     );
 
     this.imports = new Imports();
+    this.typeCache = new TypeCache();
   }
 
   public async init(
@@ -85,6 +89,10 @@ export class ElmWorkspace implements IElmWorkspace {
 
   public getRootPath(): URI {
     return this.rootPath;
+  }
+
+  public getTypeCache(): TypeCache {
+    return this.typeCache;
   }
 
   private async initWorkspace(

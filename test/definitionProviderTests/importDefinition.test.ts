@@ -389,7 +389,7 @@ module Data.User exposing (..)
     await testBase.testDefinition(source);
   });
 
-  xit(`test port ref`, async () => {
+  it(`test port ref`, async () => {
     const source = `
 --@ main.elm
 import Ports exposing (foo)

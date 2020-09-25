@@ -96,7 +96,7 @@ type alias Person = { name : String, age: Int }
     await testBase.testDefinition(source);
   });
 
-  xit(`test qualified port ref`, async () => {
+  it(`test qualified port ref`, async () => {
     const source = `
 --@ main.elm
 import Ports

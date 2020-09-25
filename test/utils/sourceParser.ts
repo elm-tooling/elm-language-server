@@ -142,6 +142,34 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
   }
 }
 
+export function getTargetPositionFromSource(
+  source: string,
+): { position: Position; sources: { [K: string]: string } } | undefined {
+  const sources = getSourceFiles(source);
+
+  let position: Position | undefined;
+
+  for (const fileName in sources) {
+    sources[fileName].split("\n").forEach((s, line) => {
+      const invokeCharacter = s.search(/--(\^)/);
+
+      if (invokeCharacter >= 0) {
+        position = {
+          line: line - 1,
+          character: invokeCharacter + 2,
+        };
+      }
+    });
+  }
+
+  if (position) {
+    return {
+      position,
+      sources,
+    };
+  }
+}
+
 function getSourceFiles(source: string): { [K: string]: string } {
   const sources: { [K: string]: string } = {};
   let currentFile = "";

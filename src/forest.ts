@@ -40,9 +40,11 @@ export class Forest implements IForest {
   }
 
   public getExposingByModuleName(moduleName: string): IExposing[] | undefined {
-    const result = this.treeIndex.find(
-      (tree) => tree.moduleName === moduleName && tree.isExposed,
-    );
+    const result = this.treeIndex
+      .filter((tree) => tree.moduleName === moduleName)
+      .sort((x, y) => {
+        return x.isExposed === y.isExposed ? 0 : x.isExposed ? -1 : 1;
+      })[0];
     return result && result.exposing;
   }
 
@@ -55,9 +57,11 @@ export class Forest implements IForest {
   }
 
   public getByModuleName(moduleName: string): ITreeContainer | undefined {
-    return this.treeIndex.find(
-      (tree) => tree.moduleName === moduleName && tree.isExposed,
-    );
+    return this.treeIndex
+      .filter((tree) => tree.moduleName === moduleName)
+      .sort((x, y) => {
+        return x.isExposed === y.isExposed ? 0 : x.isExposed ? -1 : 1;
+      })[0];
   }
 
   public getByUri(uri: string): ITreeContainer | undefined {

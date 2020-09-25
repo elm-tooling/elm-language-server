@@ -6,7 +6,7 @@ import {
   TextDocumentPositionParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { SyntaxNode } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { getEmptyTypes } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
@@ -34,7 +34,7 @@ export class HoverProvider {
     this.connection.console.info(`A hover was requested`);
 
     const forest = elmWorkspace.getForest();
-    const tree: Tree | undefined = forest.getTree(params.textDocument.uri);
+    const tree = forest.getTree(params.textDocument.uri);
 
     if (tree) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
