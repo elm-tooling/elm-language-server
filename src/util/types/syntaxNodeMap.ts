@@ -1,23 +1,14 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
 import { SyntaxNode } from "web-tree-sitter";
 
 export class SyntaxNodeMap<K extends SyntaxNode, V> {
   private map: Map<number, V> = new Map<number, V>();
 
   public set(key: K, value: V): void {
-    if (!("id" in key)) {
-      throw new Error("SyntaxNodeMap key must have an `id` property");
-    }
-
-    this.map.set((<any>key).id, value);
+    this.map.set(key.id, value);
   }
 
   public get(key: K): V | undefined {
-    if (!("id" in key)) {
-      throw new Error("SyntaxNodeMap key must have an `id` property");
-    }
-
-    return this.map.get((<any>key).id);
+    return this.map.get(key.id);
   }
 
   public getOrSet(key: K, setter: () => V): V {
@@ -34,11 +25,7 @@ export class SyntaxNodeMap<K extends SyntaxNode, V> {
   }
 
   public has(key: K): boolean {
-    if (!("id" in key)) {
-      throw new Error("SyntaxNodeMap key must have an `id` property");
-    }
-
-    return this.map.has((<any>key).id);
+    return this.map.has(key.id);
   }
 
   public mapValues(callback: (value: V) => V): void {
