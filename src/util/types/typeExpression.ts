@@ -322,7 +322,7 @@ export class TypeExpression {
     );
 
     // The type variable doesn't reference anything
-    if (!definition || (<any>definition.expr).id === (<any>typeVariable).id) {
+    if (!definition || definition.expr.id === typeVariable.id) {
       const type = this.getTypeVar(typeVariable);
       this.expressionTypes.set(typeVariable, type);
       return type;
@@ -344,7 +344,7 @@ export class TypeExpression {
 
     // If the definition is not in a type annotation or it is to a
     // variable in the same annotation, use the type of the reference
-    if (!annotation || !expr || (<any>annotation).id === (<any>this.root).id) {
+    if (!annotation || !expr || annotation.id === this.root.id) {
       const type = this.getTypeVar(definition.expr);
       this.varsByExpression.set(typeVariable, type);
       this.expressionTypes.set(typeVariable, type);

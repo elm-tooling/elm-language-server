@@ -1059,7 +1059,7 @@ export class InferenceScope {
       const parentScope = this.ancestors.find(
         (scope) =>
           !!Array.from(scope.childDeclarations.values()).find(
-            (child) => (<any>child).id === (<any>declaration).id,
+            (child) => child.id === declaration.id,
           ),
       );
 
