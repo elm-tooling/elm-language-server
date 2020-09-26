@@ -6,6 +6,7 @@ This is the language server implementation for the Elm programming language.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Installation](#installation)
@@ -131,7 +132,7 @@ This server contributes the following settings:
 - `elmLS.elmPath`: The path to your `elm` executable. Should be empty by default, in that case it will assume the name and try to first get it from a local npm installation or a global one. If you set it manually it will not try to load from the npm folder.
 - `elmLS.elmFormatPath`: The path to your `elm-format` executable. Should be empty by default, in that case it will assume the name and try to first get it from a local npm installation or a global one. If you set it manually it will not try to load from the npm folder.
 - `elmLS.elmTestPath`: The path to your `elm-test` executable. Should be empty by default, in that case it will assume the name and try to first get it from a local npm installation or a global one. If you set it manually it will not try to load from the npm folder.
-- `elmLS.elmAnalyseTrigger`: `elm-analyse` executed on `'change'`, `'save'` or `'never'` (default: `'change'`)
+- `elmLS.elmAnalyseTrigger`: `elm-analyse` executed on `'change'`, `'save'` or `'never'` (default: `'never'`)
 
 Settings may need a restart to be applied.
 
@@ -176,7 +177,7 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format` with the 
       "filetypes": ["elm"],
       "rootPatterns": ["elm.json"],
       "initializationOptions": {
-        "elmAnalyseTrigger": "change"
+        "elmAnalyseTrigger": "never"
       }
     }
   },
@@ -269,7 +270,7 @@ roots = ["elm.json"]
 command = "elm-language-server"
 
 [language.elm.initialization_options]
-elmAnalyseTrigger = "change"
+elmAnalyseTrigger = "never"
 ```
 
 ### Emacs

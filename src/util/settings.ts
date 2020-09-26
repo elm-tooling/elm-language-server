@@ -20,7 +20,7 @@ export type ElmAnalyseTrigger = "change" | "save" | "never";
 @injectable()
 export class Settings {
   private clientSettings: IClientSettings = {
-    elmAnalyseTrigger: "change",
+    elmAnalyseTrigger: "never",
     elmFormatPath: "",
     elmPath: "",
     elmTestPath: "",
