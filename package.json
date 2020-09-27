@@ -26,7 +26,7 @@
     "vscode-languageserver": "^6.1.1",
     "vscode-languageserver-textdocument": "1.0.1",
     "vscode-uri": "^2.1.2",
-    "web-tree-sitter": "^0.17.0"
+    "web-tree-sitter": "^0.17.1"
   },
   "devDependencies": {
     "@types/jest": "^26.0.14",
@@ -35,13 +35,13 @@
     "@typescript-eslint/parser": "^4.2.0",
     "copyfiles": "^2.3.0",
     "doctoc": "^1.4.0",
-    "eslint": "^7.9.0",
-    "eslint-config-prettier": "^6.11.0",
+    "eslint": "^7.10.0",
+    "eslint-config-prettier": "^6.12.0",
     "eslint-plugin-prettier": "^3.1.4",
     "jest": "^26.4.2",
     "jest-mock-extended": "^1.0.10",
     "prettier": "^2.1.2",
-    "tree-sitter-cli": "^0.17.0",
+    "tree-sitter-cli": "^0.17.1",
     "tree-sitter-elm": "^4.1.0",
     "ts-jest": "^26.4.0",
     "typescript": "4.0.3"
