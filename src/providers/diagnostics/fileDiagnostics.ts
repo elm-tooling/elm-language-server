@@ -6,6 +6,7 @@ export const enum DiagnosticKind {
   ElmAnalyse,
   ElmTest,
   TypeInference,
+  Elm,
 }
 
 export function diagnosticsEquals(a: Diagnostic, b: Diagnostic): boolean {

@@ -93,22 +93,29 @@ export class RefactorEditUtils {
       const exposedValues = TreeUtils.descendantsOfType(
         importClause,
         "exposed_value",
-      );
+      ).concat(TreeUtils.descendantsOfType(importClause, "exposed_type"));
 
       if (exposedValues.length === 1 && exposedValues[0].text === valueName) {
-        // Remove the entire import if it was the only one
-        return TextEdit.del(
-          Range.create(
-            Position.create(
-              importClause.startPosition.row,
-              importClause.startPosition.column,
-            ),
-            Position.create(
-              importClause.endPosition.row,
-              importClause.endPosition.column,
-            ),
-          ),
+        // Remove the entire exposing list if it was the only one
+        const exposingList = TreeUtils.findFirstNamedChildOfType(
+          "exposing_list",
+          importClause,
         );
+
+        if (exposingList) {
+          return TextEdit.del(
+            Range.create(
+              Position.create(
+                exposingList.startPosition.row,
+                exposingList.startPosition.column,
+              ),
+              Position.create(
+                exposingList.endPosition.row,
+                exposingList.endPosition.column,
+              ),
+            ),
+          );
+        }
       } else {
         return this.removeValueFromExposingList(exposedValues, valueName);
       }

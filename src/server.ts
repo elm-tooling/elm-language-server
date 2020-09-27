@@ -29,6 +29,7 @@ import {
   SelectionRangeProvider,
   WorkspaceSymbolProvider,
 } from "./providers";
+import { ElmDiagnostics } from "./providers/diagnostics/elmDiagnostics";
 import { Settings } from "./util/settings";
 
 export interface ILanguageServer {
@@ -133,6 +134,10 @@ export class Server implements ILanguageServer {
 
     container.register(TypeInferenceDiagnostics, {
       useValue: new TypeInferenceDiagnostics(),
+    });
+
+    container.register(ElmDiagnostics, {
+      useValue: new ElmDiagnostics(),
     });
 
     const clientSettings = await settings.getClientSettings();

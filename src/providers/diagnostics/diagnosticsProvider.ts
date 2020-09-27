@@ -14,6 +14,7 @@ import { ASTProvider } from "../astProvider";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { debounce } from "ts-debounce";
 import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics";
+import { ElmDiagnostics } from "./elmDiagnostics";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -35,6 +36,7 @@ export class DiagnosticsProvider {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
   private elmAnalyseDiagnostics: ElmAnalyseDiagnostics | null = null;
   private typeInferenceDiagnostics: TypeInferenceDiagnostics;
+  private elmDiagnostics: ElmDiagnostics;
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<{ uri: string }>;
   private currentDiagnostics: Map<string, FileDiagnostics>;
   private events: TextDocumentEvents;
@@ -57,6 +59,7 @@ export class DiagnosticsProvider {
     this.typeInferenceDiagnostics = container.resolve<TypeInferenceDiagnostics>(
       TypeInferenceDiagnostics,
     );
+    this.elmDiagnostics = container.resolve<ElmDiagnostics>(ElmDiagnostics);
     this.connection = container.resolve<IConnection>("Connection");
     this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((doc) =>
@@ -109,6 +112,15 @@ export class DiagnosticsProvider {
               DiagnosticKind.TypeInference,
               treeDiagnostics,
             );
+
+            this.updateDiagnostics(
+              treeContainer.uri,
+              DiagnosticKind.Elm,
+              this.elmDiagnostics.createDiagnostics(
+                treeContainer.tree,
+                treeContainer.uri,
+              ),
+            );
           }
         });
       });
@@ -130,6 +142,12 @@ export class DiagnosticsProvider {
           uri,
           DiagnosticKind.TypeInference,
           this.typeInferenceDiagnostics.createDiagnostics(tree, uri, workspace),
+        );
+
+        this.updateDiagnostics(
+          uri,
+          DiagnosticKind.Elm,
+          this.elmDiagnostics.createDiagnostics(tree, uri),
         );
       });
     });
