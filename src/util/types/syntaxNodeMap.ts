@@ -39,4 +39,12 @@ export class SyntaxNodeMap<K extends SyntaxNode, V> {
       callback(val, ({ id: key } as unknown) as K),
     );
   }
+
+  public clear(): void {
+    this.map.clear();
+  }
+
+  public delete(key: K): void {
+    this.map.delete(key.id);
+  }
 }

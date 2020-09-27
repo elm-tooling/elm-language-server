@@ -1247,4 +1247,93 @@ encodeScope scope =
       "normal",
     );
   });
+
+  it("Record access in list expression", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Model = 
+  { prop1: String
+  , prop2: Int
+  }
+
+map: (a -> b) -> List a -> List b
+map func list =
+  list
+
+func : List Model -> List a
+func model =
+    map (\\m -> m.{-caret-}) model
+`;
+
+    await testCompletions(source, ["prop1", "prop2"], "exactMatch");
+  });
+
+  it("Record access of a destructed union constructor", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type State
+    = State { field1 : String, field2 : String }
+
+
+func : State -> a
+func (State state) =
+    [ state.{-caret-} ]
+`;
+
+    await testCompletions(source, ["field1", "field2"], "exactMatch");
+  });
+
+  it("Record access inside Maybe case of branch", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Model = 
+  { prop1: String
+  , prop2: Int
+  }
+
+type Maybe a = Just a | Nothing
+
+func : Maybe Model -> a
+func model =
+    case model of
+        Just m ->
+            m.{-caret-}
+`;
+
+    await testCompletions(source, ["prop1", "prop2"], "exactMatch");
+  });
+
+  it("Record access destructured case branch", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Model = 
+  { prop1: Model2
+  , prop2: Int
+  }
+
+type alias Model2 = 
+  { field1: String 
+  , field2: Int }
+
+type Maybe a = Just a | Nothing
+
+func : Maybe Model -> a
+func model =
+    case model of
+        Just { prop1, prop2 } ->
+            prop1.{-caret-}
+
+        Nothing ->
+`;
+
+    await testCompletions(source, ["field1", "field2"], "exactMatch");
+  });
 });

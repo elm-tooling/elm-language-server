@@ -56,7 +56,7 @@ export class TextDocumentEvents extends EventEmitter {
 
       this._documents[td.uri] = document;
 
-      this.emit("change", Object.freeze({ document }));
+      this.emit("change", Object.freeze({ document, ...params }));
     });
 
     events.on("save", (params: DidSaveTextDocumentParams) => {

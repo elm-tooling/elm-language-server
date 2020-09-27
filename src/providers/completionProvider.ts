@@ -1,3 +1,5 @@
+import { findType } from "../util/types/typeInference";
+import { TypeRenderer } from "../util/types/typeRenderer";
 import { container } from "tsyringe";
 import {
   CompletionItem,
@@ -326,16 +328,29 @@ export class CompletionProvider {
           targetWord,
         );
 
-        return moduleCompletions.length > 0
-          ? moduleCompletions
-          : this.getRecordCompletions(
-              targetNode,
-              tree,
-              replaceRange,
-              elmWorkspace.getImports(),
-              params.textDocument.uri,
-              forest,
-            );
+        if (moduleCompletions.length > 0) {
+          return moduleCompletions;
+        }
+
+        const recordCompletions = this.getRecordCompletions(
+          targetNode,
+          tree,
+          replaceRange,
+          elmWorkspace.getImports(),
+          params.textDocument.uri,
+          forest,
+        );
+
+        if (recordCompletions.length > 0) {
+          return recordCompletions;
+        }
+
+        return this.getRecordCompletionsUsingInference(
+          targetNode,
+          replaceRange,
+          params.textDocument.uri,
+          elmWorkspace,
+        );
       }
 
       completions.push(
@@ -781,6 +796,32 @@ export class CompletionProvider {
           this.createFieldOrParameterCompletion(hint, element.field, range),
         );
       });
+    }
+
+    return result;
+  }
+
+  private getRecordCompletionsUsingInference(
+    targetNode: SyntaxNode,
+    replaceRange: Range,
+    uri: string,
+    elmWorkspace: IElmWorkspace,
+  ): CompletionItem[] {
+    const result = [];
+    const foundType = findType(targetNode, uri, elmWorkspace);
+
+    if (foundType.nodeType === "Record") {
+      for (const field in foundType.fields) {
+        const hint = HintHelper.createHintForTypeAliasReference(
+          TypeRenderer.typeToString(foundType.fields[field]),
+          field,
+          foundType.alias?.name ?? "",
+        );
+
+        result.push(
+          this.createFieldOrParameterCompletion(hint, field, replaceRange),
+        );
+      }
     }
 
     return result;
