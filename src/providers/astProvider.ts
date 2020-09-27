@@ -92,16 +92,15 @@ export class ASTProvider {
           : undefined,
       ])
       .forEach(([startNode, endNode]) => {
-        if (startNode || endNode) {
-          elmWorkspace
-            .getTypeCache()
-            .invalidateValueDeclaration(startNode ?? endNode!);
-
-          if (startNode && endNode) {
-            elmWorkspace.getTypeCache().invalidateValueDeclaration(endNode);
-          }
+        if (
+          startNode &&
+          endNode &&
+          startNode.id === endNode.id &&
+          TreeUtils.getTypeAnnotation(startNode)
+        ) {
+          elmWorkspace.getTypeCache().invalidateValueDeclaration(startNode);
         } else {
-          elmWorkspace.getTypeCache().invalidateAll();
+          elmWorkspace.getTypeCache().invalidateProject();
         }
       });
 

@@ -5,18 +5,18 @@ import { InferenceResult } from "./typeInference";
 type CacheKey =
   | "PACKAGE_TYPE_ANNOTATION"
   | "PACKAGE_TYPE_AND_TYPE_ALIAS"
-  | "PACKAGE_VALUE"
+  | "PACKAGE_VALUE_DECLARATION"
   | "PROJECT_TYPE_ANNOTATION"
   | "PROJECT_TYPE_AND_TYPE_ALIAS"
-  | "PROJECT_VALUE";
+  | "PROJECT_VALUE_DECLARATION";
 
 export class TypeCache {
   private packageTypeAnnotation: SyntaxNodeMap<SyntaxNode, InferenceResult>;
   private packageTypeAndTypeAlias: SyntaxNodeMap<SyntaxNode, InferenceResult>;
-  private packageValue: SyntaxNodeMap<SyntaxNode, InferenceResult>;
+  private packageValueDeclaration: SyntaxNodeMap<SyntaxNode, InferenceResult>;
   private projectTypeAnnotation: SyntaxNodeMap<SyntaxNode, InferenceResult>;
   private projectTypeAndTypeAlias: SyntaxNodeMap<SyntaxNode, InferenceResult>;
-  private projectValue: SyntaxNodeMap<SyntaxNode, InferenceResult>;
+  private projectValueDeclaration: SyntaxNodeMap<SyntaxNode, InferenceResult>;
 
   constructor() {
     this.packageTypeAnnotation = new SyntaxNodeMap<
@@ -27,7 +27,10 @@ export class TypeCache {
       SyntaxNode,
       InferenceResult
     >();
-    this.packageValue = new SyntaxNodeMap<SyntaxNode, InferenceResult>();
+    this.packageValueDeclaration = new SyntaxNodeMap<
+      SyntaxNode,
+      InferenceResult
+    >();
     this.projectTypeAnnotation = new SyntaxNodeMap<
       SyntaxNode,
       InferenceResult
@@ -36,7 +39,10 @@ export class TypeCache {
       SyntaxNode,
       InferenceResult
     >();
-    this.projectValue = new SyntaxNodeMap<SyntaxNode, InferenceResult>();
+    this.projectValueDeclaration = new SyntaxNodeMap<
+      SyntaxNode,
+      InferenceResult
+    >();
   }
 
   public getOrSet(
@@ -49,24 +55,24 @@ export class TypeCache {
         return this.packageTypeAnnotation.getOrSet(node, setter);
       case "PACKAGE_TYPE_AND_TYPE_ALIAS":
         return this.packageTypeAndTypeAlias.getOrSet(node, setter);
-      case "PACKAGE_VALUE":
-        return this.packageValue.getOrSet(node, setter);
+      case "PACKAGE_VALUE_DECLARATION":
+        return this.packageValueDeclaration.getOrSet(node, setter);
       case "PROJECT_TYPE_ANNOTATION":
         return this.projectTypeAnnotation.getOrSet(node, setter);
       case "PROJECT_TYPE_AND_TYPE_ALIAS":
         return this.projectTypeAndTypeAlias.getOrSet(node, setter);
-      case "PROJECT_VALUE":
-        return this.projectValue.getOrSet(node, setter);
+      case "PROJECT_VALUE_DECLARATION":
+        return this.projectValueDeclaration.getOrSet(node, setter);
     }
   }
 
-  public invalidateAll(): void {
+  public invalidateProject(): void {
     this.projectTypeAnnotation.clear();
     this.projectTypeAndTypeAlias.clear();
-    this.projectValue.clear();
+    this.projectValueDeclaration.clear();
   }
 
   public invalidateValueDeclaration(node: SyntaxNode): void {
-    this.projectValue.delete(node);
+    this.projectValueDeclaration.delete(node);
   }
 }

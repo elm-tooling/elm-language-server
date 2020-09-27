@@ -45,10 +45,6 @@ export class SyntaxNodeMap<K extends SyntaxNode, V> {
   }
 
   public delete(key: K): void {
-    if (!("id" in key)) {
-      throw new Error("SyntaxNodeMap key must have an `id` property");
-    }
-
-    this.map.delete((<any>key).id);
+    this.map.delete(key.id);
   }
 }

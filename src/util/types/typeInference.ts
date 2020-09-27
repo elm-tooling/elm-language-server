@@ -195,15 +195,25 @@ function allTypeVars(type: Type): TVar[] {
     case "Var":
       return [type];
     case "Union":
-      return type.params.flatMap(allTypeVars);
+      return Array.prototype.flatMap !== undefined
+        ? type.params.flatMap(allTypeVars)
+        : flatMap(type.params, allTypeVars);
     case "Function":
-      return allTypeVars(type.return).concat(type.params.flatMap(allTypeVars));
+      return allTypeVars(type.return).concat(
+        Array.prototype.flatMap !== undefined
+          ? type.params.flatMap(allTypeVars)
+          : flatMap(type.params, allTypeVars),
+      );
     case "Tuple":
-      return type.types.flatMap(allTypeVars);
+      return Array.prototype.flatMap !== undefined
+        ? type.types.flatMap(allTypeVars)
+        : flatMap(type.types, allTypeVars);
     case "Record":
     case "MutableRecord": {
       return [
-        ...Object.values(type.fields).flatMap(allTypeVars),
+        ...(Array.prototype.flatMap !== undefined
+          ? Object.values(type.fields).flatMap(allTypeVars)
+          : flatMap(Object.values(type.fields), allTypeVars)),
         ...(type.baseType ? allTypeVars(type.baseType) : []),
       ];
     }
@@ -583,11 +593,11 @@ export class InferenceScope {
     if (!elmWorkspace.getForest().getByUri(uri)?.writeable) {
       return elmWorkspace
         .getTypeCache()
-        .getOrSet("PACKAGE_VALUE", declaration, setter);
+        .getOrSet("PACKAGE_VALUE_DECLARATION", declaration, setter);
     } else {
       return elmWorkspace
         .getTypeCache()
-        .getOrSet("PROJECT_VALUE", declaration, setter);
+        .getOrSet("PROJECT_VALUE_DECLARATION", declaration, setter);
     }
   }
 
