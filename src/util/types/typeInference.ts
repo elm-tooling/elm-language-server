@@ -2146,7 +2146,7 @@ export class InferenceScope {
         return types[0];
       } else {
         return TFunction(
-          types.slice(0, types.length - 2),
+          types.slice(0, types.length - 1),
           types[types.length - 1],
         );
       }
