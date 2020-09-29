@@ -19,6 +19,7 @@ export type Expression =
   | EFieldType
   | EFunctionCallExpr
   | EFunctionDeclarationLeft
+  | EGlslCodeExpr
   | EIfElseExpr
   | EInfixDeclaration
   | ELetInExpr
@@ -235,6 +236,10 @@ export interface EPortAnnotation extends SyntaxNode {
 }
 export interface ECharConstant extends SyntaxNode {
   nodeType: "CharConstant";
+}
+export interface EGlslCodeExpr extends SyntaxNode {
+  nodeType: "GlslCodeExpr";
+  content: SyntaxNode;
 }
 
 export function mapSyntaxNodeToExpression(
@@ -627,6 +632,11 @@ export function mapSyntaxNodeToExpression(
       return Object.assign(node, {
         nodeType: "CharConstant",
       } as ECharConstant);
+    case "glsl_code_expr":
+      return Object.assign(node, {
+        nodeType: "GlslCodeExpr",
+        content: TreeUtils.findFirstNamedChildOfType("glsl_content", node),
+      } as EGlslCodeExpr);
     default:
       return mapSyntaxNodeToExpression(node.firstNamedChild);
   }
