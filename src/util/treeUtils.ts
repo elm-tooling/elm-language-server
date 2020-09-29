@@ -1421,11 +1421,14 @@ export class TreeUtils {
     node: SyntaxNode,
     functionParameterName: string,
   ): SyntaxNode | undefined {
-    if (node && node.type === "parenthesized_expr") {
-      const anonymousFunctionExprNodes = this.descendantsOfType(
-        node,
-        "anonymous_function_expr",
-      );
+    if (
+      node.type === "parenthesized_expr" ||
+      node.type === "anonymous_function_expr"
+    ) {
+      const anonymousFunctionExprNodes =
+        node.type === "anonymous_function_expr"
+          ? [node]
+          : this.descendantsOfType(node, "anonymous_function_expr");
       const match = anonymousFunctionExprNodes
         .map((a) => a.children)
         .reduce((a, b) => a.concat(b), [])

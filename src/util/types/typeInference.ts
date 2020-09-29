@@ -651,7 +651,9 @@ export class InferenceScope {
   }
 
   private checkRecursion(declaration: EValueDeclaration): boolean {
-    const isRecursive = this.activeScopes.has(declaration);
+    const isRecursive = !!Array.from(this.activeScopes.values()).find(
+      (d) => d.id === declaration.id,
+    );
 
     const functionDeclaration = mapSyntaxNodeToExpression(
       TreeUtils.findFirstNamedChildOfType(
