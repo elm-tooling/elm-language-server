@@ -90,12 +90,15 @@ export class RefactorEditUtils {
     const importClause = TreeUtils.findImportClauseByName(tree, moduleName);
 
     if (importClause) {
-      const exposedValues = TreeUtils.descendantsOfType(
-        importClause,
-        "exposed_value",
-      ).concat(TreeUtils.descendantsOfType(importClause, "exposed_type"));
+      const exposedValuesAndTypes = [
+        ...TreeUtils.descendantsOfType(importClause, "exposed_value"),
+        ...TreeUtils.descendantsOfType(importClause, "exposed_type"),
+      ];
 
-      if (exposedValues.length === 1 && exposedValues[0].text === valueName) {
+      if (
+        exposedValuesAndTypes.length === 1 &&
+        exposedValuesAndTypes[0].text === valueName
+      ) {
         // Remove the entire exposing list if it was the only one
         const exposingList = TreeUtils.findFirstNamedChildOfType(
           "exposing_list",
@@ -117,7 +120,10 @@ export class RefactorEditUtils {
           );
         }
       } else {
-        return this.removeValueFromExposingList(exposedValues, valueName);
+        return this.removeValueFromExposingList(
+          exposedValuesAndTypes,
+          valueName,
+        );
       }
     }
   }
@@ -264,6 +270,29 @@ export class RefactorEditUtils {
         newModuleName,
       );
     }
+  }
+
+  public static removeRecordPatternValue(pattern: SyntaxNode): TextEdit {
+    let startPosition = pattern.startPosition;
+    let endPosition = pattern.endPosition;
+
+    if (pattern.previousNamedSibling?.text === ",") {
+      startPosition = pattern.previousNamedSibling.startPosition;
+    }
+
+    if (
+      pattern.previousNamedSibling?.text !== "," &&
+      pattern.nextNamedSibling?.text === ","
+    ) {
+      endPosition = pattern.nextNamedSibling.endPosition;
+    }
+
+    return TextEdit.del(
+      Range.create(
+        Position.create(startPosition.row, startPosition.column),
+        Position.create(endPosition.row, endPosition.column),
+      ),
+    );
   }
 
   private static removeValueFromExposingList(

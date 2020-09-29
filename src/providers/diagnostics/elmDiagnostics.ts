@@ -33,6 +33,7 @@ export class ElmDiagnostics {
     return [
       ...this.getUnusedValueAndTypeDiagnostics(tree),
       ...this.getUnusedAliasDiagnostics(tree),
+      ...this.getUnusedPatternVariableDiagnostics(tree),
     ];
   };
 
@@ -120,6 +121,27 @@ export class ElmDiagnostics {
             },
             kind: CodeActionKind.QuickFix,
             title: `Remove unused alias \`${node.text}\``,
+          });
+        }
+
+        if (diagnostic.code === "unused_pattern") {
+          const node = TreeUtils.getNamedDescendantForPosition(
+            treeContainer.tree.rootNode,
+            diagnostic.range.start,
+          );
+
+          const edit =
+            node.parent?.parent?.type === "record_pattern"
+              ? RefactorEditUtils.removeRecordPatternValue(node.parent)
+              : TextEdit.replace(diagnostic.range, "_");
+
+          result.push({
+            diagnostics: [diagnostic],
+            edit: {
+              changes: { [uri]: [edit] },
+            },
+            kind: CodeActionKind.QuickFix,
+            title: `Fix unused pattern \`${node.text}\``,
           });
         }
       });
@@ -230,6 +252,57 @@ export class ElmDiagnostics {
           tags: [DiagnosticTag.Unnecessary],
         });
       }
+    });
+
+    return diagnostics;
+  }
+
+  private getUnusedPatternVariableDiagnostics(tree: Tree): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+    const usedPatterns: number[] = [];
+
+    const patternMatches = tree.rootNode
+      .descendantsOfType(["function_declaration_left", "pattern"])
+      .map((fdlOrPattern) => {
+        return {
+          parent: fdlOrPattern.parent,
+          patterns: fdlOrPattern.descendantsOfType("lower_pattern"),
+        };
+      });
+
+    patternMatches.forEach(({ parent, patterns }) => {
+      if (!parent) {
+        return;
+      }
+
+      patterns.forEach((pattern) => {
+        if (usedPatterns.includes(pattern.id)) {
+          return;
+        }
+        usedPatterns.push(pattern.id);
+
+        const references = this.language
+          .query(
+            `
+          ((value_expr) @patternVariable.reference
+            (#eq? @patternVariable.reference "${pattern.text}")
+          )
+          `,
+          )
+          .matches(parent)
+          .filter(Utils.notUndefined.bind(this));
+
+        if (references.length === 0) {
+          diagnostics.push({
+            code: "unused_pattern",
+            range: this.getNodeRange(pattern),
+            message: `Unused pattern variable \`${pattern.text}\``,
+            severity: DiagnosticSeverity.Warning,
+            source: this.ELM,
+            tags: [DiagnosticTag.Unnecessary],
+          });
+        }
+      });
     });
 
     return diagnostics;
