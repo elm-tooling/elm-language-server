@@ -168,10 +168,16 @@ export const TMutableRecord = (
   };
 };
 
+export const TUnknown: TUnknown = {
+  nodeType: "Unknown",
+};
+
+const TInt = TUnion("Basics", "Int", []);
 const TFloat = TUnion("Basics", "Float", []);
 const TBool = TUnion("Basics", "Bool", []);
 const TString = TUnion("String", "String", []);
 const TChar = TUnion("Char", "Char", []);
+const TShader = TUnion("WebGL", "Shader", [TUnknown, TUnknown, TUnknown]);
 
 export const TList = (elementType: Type): TUnion =>
   TUnion("List", "List", [elementType]);
@@ -186,9 +192,18 @@ export const TInProgressBinding: TInProgressBinding = {
   nodeType: "InProgressBinding",
 };
 
-export const TUnknown: TUnknown = {
-  nodeType: "Unknown",
-};
+const typeIsList = (t: TUnion): boolean =>
+  t.module === "List" && t.name === "List";
+const typeIsInt = (t: TUnion): boolean =>
+  t.module === TInt.module && t.name === TInt.name;
+const typeIsFloat = (t: TUnion): boolean =>
+  t.module === TFloat.module && t.name === TFloat.name;
+const typeIsBool = (t: TUnion): boolean =>
+  t.module === TBool.module && t.name === TBool.name;
+const typeIsString = (t: TUnion): boolean =>
+  t.module === TString.module && t.name === TString.name;
+const typeIsChar = (t: TUnion): boolean =>
+  t.module === TChar.module && t.name === TChar.name;
 
 function allTypeVars(type: Type): TVar[] {
   switch (type.nodeType) {
@@ -732,6 +747,9 @@ export class InferenceScope {
         break;
       case "FunctionCallExpr":
         type = this.inferFunctionCallExpr(e);
+        break;
+      case "GlslCodeExpr":
+        type = TShader;
         break;
       case "IfElseExpr":
         type = this.inferIfElse(e);
@@ -1830,7 +1848,7 @@ export class InferenceScope {
   ): void {
     const ty = this.bindIfVar(listPattern, type, TList(TVar("a")));
 
-    if (ty.nodeType !== "Union" || ty.name !== "List") {
+    if (ty.nodeType !== "Union" || !typeIsList(ty)) {
       if (ty.nodeType !== "Unknown") {
         this.diagnostics.push(
           typeMismatchError(
@@ -2204,24 +2222,22 @@ export class InferenceScope {
 
     if (typeVar.name.startsWith("number")) {
       return (
-        type.nodeType === "Union" &&
-        (type.name === "Float" || type.name === "Int")
+        type.nodeType === "Union" && (typeIsFloat(type) || typeIsInt(type))
       );
     } else if (typeVar.name.startsWith("appendable")) {
       return (
-        type.nodeType === "Union" &&
-        (type.name === "String" || type.name === "List")
+        type.nodeType === "Union" && (typeIsString(type) || typeIsList(type))
       );
     } else if (typeVar.name.startsWith("comparable")) {
       if (type.nodeType === "Tuple") {
         return allAssignableTo(type.types, "comparable");
       } else if (type.nodeType === "Union") {
         return (
-          type.name === "Float" ||
-          type.name === "Int" ||
-          type.name === "Char" ||
-          type.name === "String" ||
-          (type.name === "List" &&
+          typeIsFloat(type) ||
+          typeIsInt(type) ||
+          typeIsChar(type) ||
+          typeIsString(type) ||
+          (typeIsList(type) &&
             (allAssignableTo(type.params, "comparable") ||
               allAssignableTo(type.params, "number")))
         );
@@ -2231,8 +2247,8 @@ export class InferenceScope {
     } else if (typeVar.name.startsWith("compappend")) {
       return (
         type.nodeType === "Union" &&
-        (type.name === "String" ||
-          (type.name === "List" &&
+        (typeIsString(type) ||
+          (typeIsList(type) &&
             (allAssignableTo(type.params, "comparable") ||
               allAssignableTo(type.params, "compappend"))))
       );
