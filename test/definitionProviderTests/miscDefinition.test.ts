@@ -52,7 +52,7 @@ foo =
 
   // LAMBDAS (ANONYMOUS FUNCTIONS)
 
-  xit(`test lambda parameter ref`, async () => {
+  it(`test lambda parameter ref`, async () => {
     const source = `
 f = \\x -> x
    --X  --^
@@ -60,9 +60,9 @@ f = \\x -> x
     await testBase.testDefinition(source);
   });
 
-  xit(`test lambda parameter nested`, async () => {
+  it(`test lambda parameter nested`, async () => {
     const source = `
-f = \\x -> (\() -> x)
+f = \\x -> (\\() -> x)
    --X          --^
 `;
     await testBase.testDefinition(source);
@@ -70,31 +70,31 @@ f = \\x -> (\() -> x)
 
   it(`test lambda parameter nested and should not resolve`, async () => {
     const source = `
-f = \() -> x (\\x -> ())
+f = \\() -> x (\\x -> ())
          --^unresolved
 `;
     await testBase.testDefinition(source);
   });
 
-  xit(`test lambda parameter destructured record field ref`, async () => {
+  it(`test lambda parameter destructured record field ref`, async () => {
     const source = `
-f = \{x} -> x
+f = \\{x} -> x
     --X   --^
 `;
     await testBase.testDefinition(source);
   });
 
-  xit(`test lambda parameter destructured tuple ref`, async () => {
+  it(`test lambda parameter destructured tuple ref`, async () => {
     const source = `
-f = \(x,y) -> x
+f = \\(x,y) -> x
     --X     --^
 `;
     await testBase.testDefinition(source);
   });
 
-  xit(`test lambda parameter destructured with alias`, async () => {
+  it(`test lambda parameter destructured with alias`, async () => {
     const source = `
-f = \((x,y) as point) -> point
+f = \\((x,y) as point) -> point
                --X       --^
 `;
     await testBase.testDefinition(source);

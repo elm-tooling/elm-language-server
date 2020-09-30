@@ -36,11 +36,8 @@ export class TypeRenderer {
 
     switch (t.nodeType) {
       case "Unknown":
-        return "Unknown";
       case "InProgressBinding":
-        throw new Error(
-          "Should never try to convert an in progress binding type to a string",
-        );
+        return "unknown";
       case "Unit":
         return "()";
       case "Var":
@@ -66,6 +63,10 @@ export class TypeRenderer {
   }
 
   private renderUnion(t: TUnion): string {
+    if (t.module === "WebGL" && t.name === "Shader") {
+      return "shader";
+    }
+
     let type;
     if (t.params.length === 0) {
       type = t.name;

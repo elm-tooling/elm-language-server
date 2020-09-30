@@ -1421,31 +1421,20 @@ export class TreeUtils {
     node: SyntaxNode,
     functionParameterName: string,
   ): SyntaxNode | undefined {
-    if (
-      node.type === "parenthesized_expr" ||
-      node.type === "anonymous_function_expr"
-    ) {
-      const anonymousFunctionExprNodes =
-        node.type === "anonymous_function_expr"
-          ? [node]
-          : this.descendantsOfType(node, "anonymous_function_expr");
-      const match = anonymousFunctionExprNodes
-        .map((a) => a.children)
-        .reduce((a, b) => a.concat(b), [])
-        .find(
-          (child) =>
-            child.type === "pattern" && child.text === functionParameterName,
-        )?.firstNamedChild;
+    const anonymousFunctionExprNodes = TreeUtils.getAllAncestorsOfType(
+      "anonymous_function_expr",
+      node,
+    );
 
-      if (match) {
-        return match;
-      }
-    }
-    if (node.parent) {
-      return this.findAnonymousFunctionParameterDefinition(
-        node.parent,
-        functionParameterName,
-      );
+    const match = anonymousFunctionExprNodes
+      .map((a) => TreeUtils.findAllNamedChildrenOfType("pattern", a) ?? [])
+      .reduce((a, b) => a.concat(b), [])
+      .map((pattern) => pattern.descendantsOfType("lower_pattern"))
+      .reduce((a, b) => a.concat(b), [])
+      .find((child) => child.text === functionParameterName);
+
+    if (match) {
+      return match;
     }
   }
 
@@ -2168,9 +2157,18 @@ export class TreeUtils {
           .some((imp) => imp.alias === name)
       ) {
         return "";
-      } else {
-        return `${module}.`;
       }
+
+      const asClause = TreeUtils.findFirstNamedChildOfType(
+        "as_clause",
+        moduleImport,
+      );
+
+      if (asClause) {
+        return `${asClause?.lastNamedChild?.text ?? module}.`;
+      }
+
+      return `${module}.`;
     }
   }
 

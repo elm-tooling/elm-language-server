@@ -1,3 +1,5 @@
+import { findType } from "../util/types/typeInference";
+import { TypeRenderer } from "../util/types/typeRenderer";
 import { container } from "tsyringe";
 import {
   ApplyWorkspaceEditResponse,
@@ -6,6 +8,7 @@ import {
   CodeActionParams,
   ExecuteCommandParams,
   IConnection,
+  TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
@@ -74,6 +77,7 @@ export class CodeActionProvider {
       ...make,
       ...typeAnnotation,
       ...this.getRefactorCodeActions(params, elmWorkspace),
+      ...this.getTypeAnnotationCodeActions(params, elmWorkspace),
     ];
   }
 
@@ -82,6 +86,61 @@ export class CodeActionProvider {
   ): Promise<ApplyWorkspaceEditResponse | null | undefined> {
     this.connection.console.info("A command execution was requested");
     return this.elmAnalyse && this.elmAnalyse.onExecuteCommand(params);
+  }
+
+  private getTypeAnnotationCodeActions(
+    params: CodeActionParams,
+    elmWorkspace: IElmWorkspace,
+  ): CodeAction[] {
+    // Top level annotation are handled by diagnostics
+
+    const codeActions: CodeAction[] = [];
+
+    const forest = elmWorkspace.getForest();
+    const tree = forest.getTree(params.textDocument.uri);
+
+    if (tree) {
+      const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
+        tree.rootNode,
+        params.range.start,
+      );
+
+      if (
+        nodeAtPosition.parent?.type === "function_declaration_left" &&
+        TreeUtils.findParentOfType("let_in_expr", nodeAtPosition) &&
+        nodeAtPosition.parent.parent &&
+        !TreeUtils.getTypeAnnotation(nodeAtPosition.parent.parent)
+      ) {
+        const typeString: string = TypeRenderer.typeToString(
+          findType(nodeAtPosition, params.textDocument.uri, elmWorkspace),
+          nodeAtPosition.tree,
+          params.textDocument.uri,
+          elmWorkspace.getImports(),
+        );
+
+        codeActions.push({
+          edit: {
+            changes: {
+              [params.textDocument.uri]: [
+                TextEdit.insert(
+                  {
+                    line: nodeAtPosition.startPosition.row,
+                    character: nodeAtPosition.startPosition.column,
+                  },
+                  `${nodeAtPosition.text} : ${typeString}\n${Array(
+                    nodeAtPosition.startPosition.column + 1,
+                  ).join(" ")}`,
+                ),
+              ],
+            },
+          },
+          kind: CodeActionKind.QuickFix,
+          title: "Add inferred annotation",
+        });
+      }
+    }
+
+    return codeActions;
   }
 
   private getRefactorCodeActions(
@@ -116,8 +175,9 @@ export class CodeActionProvider {
     const codeActions: CodeAction[] = [];
 
     if (
-      nodeAtPosition.parent?.type === "type_annotation" ||
-      nodeAtPosition.parent?.type === "function_declaration_left"
+      (nodeAtPosition.parent?.type === "type_annotation" ||
+        nodeAtPosition.parent?.type === "function_declaration_left") &&
+      !TreeUtils.findParentOfType("let_in_expr", nodeAtPosition)
     ) {
       const functionName = nodeAtPosition.text;
 
