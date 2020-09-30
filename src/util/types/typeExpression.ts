@@ -289,6 +289,7 @@ export class TypeExpression {
       type,
       expressionTypes: this.expressionTypes,
       diagnostics: this.diagnostics,
+      resolvedDeclarations: new SyntaxNodeMap(),
     };
   }
 

@@ -2145,11 +2145,6 @@ export class TreeUtils {
         return;
       }
 
-      const asClause = TreeUtils.findFirstNamedChildOfType(
-        "as_clause",
-        moduleImport,
-      );
-
       if (
         imports.imports[uri]
           .filter(
@@ -2162,11 +2157,18 @@ export class TreeUtils {
           .some((imp) => imp.alias === name)
       ) {
         return "";
-      } else if (asClause) {
-        return `${asClause?.lastNamedChild?.text ?? module}.`;
-      } else {
-        return `${module}.`;
       }
+
+      const asClause = TreeUtils.findFirstNamedChildOfType(
+        "as_clause",
+        moduleImport,
+      );
+
+      if (asClause) {
+        return `${asClause?.lastNamedChild?.text ?? module}.`;
+      }
+
+      return `${module}.`;
     }
   }
 

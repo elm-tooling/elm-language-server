@@ -536,6 +536,7 @@ export interface InferenceResult {
   expressionTypes: SyntaxNodeMap<Expression, Type>;
   diagnostics: Diagnostic[];
   type: Type;
+  resolvedDeclarations: SyntaxNodeMap<EValueDeclaration, Type>;
 }
 
 export class InferenceScope {
@@ -720,6 +721,7 @@ export class InferenceScope {
       expressionTypes: this.expressionTypes,
       diagnostics: this.diagnostics,
       type: ret,
+      resolvedDeclarations: this.resolvedDeclarations,
     };
   }
 
@@ -800,6 +802,7 @@ export class InferenceScope {
       expressionTypes: this.expressionTypes,
       diagnostics: this.diagnostics,
       type: uncurryFunction(TFunction(paramVars, bodyType)),
+      resolvedDeclarations: this.resolvedDeclarations,
     };
   }
 
@@ -820,6 +823,7 @@ export class InferenceScope {
       expressionTypes: this.expressionTypes,
       diagnostics: this.diagnostics,
       type: bodyType,
+      resolvedDeclarations: this.resolvedDeclarations,
     };
   }
 
@@ -834,6 +838,7 @@ export class InferenceScope {
       expressionTypes: this.expressionTypes,
       diagnostics: this.diagnostics,
       type,
+      resolvedDeclarations: this.resolvedDeclarations,
     };
   }
 
@@ -2411,8 +2416,8 @@ export function findType(
   let declaration: SyntaxNode | null = node;
   while (
     declaration &&
-    declaration.type !== "value_declaration" &&
-    declaration.parent?.type !== "file"
+    (declaration.type !== "value_declaration" ||
+      declaration.parent?.type !== "file")
   ) {
     declaration = declaration.parent;
   }
@@ -2436,7 +2441,17 @@ export function findType(
     );
 
     if (node.parent?.type === "function_declaration_left") {
-      return inferenceResult.type;
+      if (node.parent.parent?.parent?.type === "file") {
+        // Top level function
+        return inferenceResult.type;
+      } else {
+        // Let expr function
+        return (
+          inferenceResult.resolvedDeclarations.get(
+            node.parent.parent as EValueDeclaration,
+          ) ?? TUnknown
+        );
+      }
     }
 
     const findTypeOrParentType = (

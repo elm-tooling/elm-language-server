@@ -57,7 +57,6 @@ foo =
 f = \\x -> x
    --X  --^
 `;
-    console.log(source);
     await testBase.testDefinition(source);
   });
 
@@ -93,7 +92,7 @@ f = \\(x,y) -> x
     await testBase.testDefinition(source);
   });
 
-  xit(`test lambda parameter destructured with alias`, async () => {
+  it(`test lambda parameter destructured with alias`, async () => {
     const source = `
 f = \\((x,y) as point) -> point
                --X       --^
