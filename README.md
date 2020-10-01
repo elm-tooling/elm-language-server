@@ -102,7 +102,7 @@ Example:
 
 The entrypoints are relative to the directory where your `elm.json` and `elm-tooling.json` is and must start with `./`.
 
-Check out the [elm-tooling](https://github.com/lydell/elm-tooling.json/tree/master/cli) CLI for creating and validating your `elm-tooling.json`!
+Check out the [elm-tooling](https://github.com/lydell/elm-tooling.json/tree/main/cli#readme) CLI for creating and validating your `elm-tooling.json`!
 
 ## Features
 
