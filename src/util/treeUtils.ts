@@ -697,7 +697,11 @@ export class TreeUtils {
     if (definitionNode) {
       return { node: definitionNode, nodeType: "TypeAlias" };
     }
-    if (TreeUtils.findParentOfType("type_ref", nodeAtPosition)) {
+    if (
+      TreeUtils.findParentOfType("type_ref", nodeAtPosition) ||
+      nodeAtPosition.parent?.type === "type_declaration" ||
+      nodeAtPosition.parent?.type === "exposed_type"
+    ) {
       definitionNode = this.findTypeDeclaration(tree, nodeAtPosition.text);
       if (definitionNode) {
         return { node: definitionNode, nodeType: "Type" };
@@ -939,7 +943,10 @@ export class TreeUtils {
           }
         }
 
-        if (TreeUtils.findParentOfType("type_ref", upperCaseQid)) {
+        if (
+          TreeUtils.findParentOfType("type_ref", upperCaseQid) ||
+          upperCaseQid.parent?.type === "exposed_type"
+        ) {
           definitionFromOtherFile = this.findImportFromImportList(
             uri,
             upperCaseQid.text,
