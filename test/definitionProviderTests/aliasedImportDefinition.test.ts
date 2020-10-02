@@ -38,6 +38,7 @@ defaultPage = A.Home
 --@ App.elm
 module App exposing (Page(Home))
 type Page = Home
+           --X
 `;
     await testBase.testDefinition(source);
   });
@@ -51,6 +52,7 @@ type Entity = PersonEntity A.Person
 --@ App.elm
 module App exposing (Person)
 type alias Person = { name : String, age: Int }
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -64,6 +66,7 @@ defaultPerson = A.Person "George" 42
 --@ App.elm
 module App exposing (Person)
 type alias Person = { name : String, age: Int }
+--X
 `;
     await testBase.testDefinition(source);
   });

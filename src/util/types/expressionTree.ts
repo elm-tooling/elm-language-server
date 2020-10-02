@@ -425,7 +425,9 @@ export function mapSyntaxNodeToExpression(
     case "if_else_expr":
       return Object.assign(node, {
         nodeType: "IfElseExpr",
-        exprList: node.namedChildren.map((n) => mapSyntaxNodeToExpression(n)),
+        exprList: node.namedChildren
+          .map((n) => mapSyntaxNodeToExpression(n))
+          .filter(Utils.notUndefined),
       } as EIfElseExpr);
 
     case "let_in_expr":

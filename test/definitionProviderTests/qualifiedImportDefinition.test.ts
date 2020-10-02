@@ -108,4 +108,42 @@ port foo : String -> Cmd msg
 `;
     await testBase.testDefinition(source);
   });
+
+  xit(`test union constructor should not resolve to type declaration from other file`, async () => {
+    const source = `
+--@ main.elm
+import App
+
+func: App.User
+func =
+    App.User { data = "" }
+        --^App.elm
+
+--@ App.elm
+module App exposing (..)
+
+type User = User { data : String }
+           --X
+`;
+    await testBase.testDefinition(source);
+  });
+
+  it(`test type declaration should not resolve to union constructor from other file`, async () => {
+    const source = `
+--@ main.elm
+import App
+
+func: App.User
+         --^App.elm
+func =
+    App.User { data = "" }
+
+--@ App.elm
+module App exposing (..)
+
+type User = User { data : String }
+--X
+`;
+    await testBase.testDefinition(source);
+  });
 });

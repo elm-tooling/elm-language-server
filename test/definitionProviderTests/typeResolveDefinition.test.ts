@@ -3,10 +3,10 @@ import { DefinitionProviderTestBase } from "./definitionProviderTestBase";
 describe("typeResolveDefinition", () => {
   const testBase = new DefinitionProviderTestBase();
 
-  xit(`test union type ref`, async () => {
+  it(`test union type ref`, async () => {
     const source = `
 type Page = Home
-     --X
+--X
 title : Page -> String
         --^
 `;
@@ -65,40 +65,40 @@ type alias Person = { name : String, age: Int }
     await testBase.testDefinition(source);
   });
 
-  xit(`test type alias ref in type annotation`, async () => {
+  it(`test type alias ref in type annotation`, async () => {
     const source = `
 type alias Person = { name : String, age: Int }
-           --X
+--X
 personToString : Person -> String
                  --^
 `;
     await testBase.testDefinition(source);
   });
 
-  xit(`test type alias record constructor ref`, async () => {
+  it(`test type alias record constructor ref`, async () => {
     const source = `
 type alias Person = { name : String, age: Int }
-           --X
+--X
 defaultPerson = Person "George" 42
                 --^
 `;
     await testBase.testDefinition(source);
   });
 
-  xit(`test parametric union type ref `, async () => {
+  it(`test parametric union type ref `, async () => {
     const source = `
 type Page a = Home a
-     --X
+--X
 title : Page a -> String
         --^
 `;
     await testBase.testDefinition(source);
   });
 
-  xit(`test parametric type alias ref `, async () => {
+  it(`test parametric type alias ref `, async () => {
     const source = `
 type alias Person a = { name : String, extra : a }
-           --X
+--X
 title : Person a -> String
         --^
 `;
@@ -107,9 +107,10 @@ title : Person a -> String
 
   xit(`test union constructor ref should not resolve to a record constructor`, async () => {
     const source = `
-    type alias User = { name : String, age : Int }
-    foo user =
-    case user of
+type alias User = { name : String, age : Int }
+
+foo user =
+  case user of
     User -> "foo"
     --^unresolved
     `;
@@ -128,6 +129,31 @@ type Page a = Home a
     const source = `
 type alias User details = { name : String, extra : details }
                 --X                                --^
+`;
+    await testBase.testDefinition(source);
+  });
+
+  it(`test union constructor should not resolve to type declaration`, async () => {
+    const source = `
+type User = User { data : String }
+            --X
+func: User
+func =
+    User { data = "" }
+   --^
+`;
+    await testBase.testDefinition(source);
+  });
+
+  it(`test type declaration should not resolve to union constructor`, async () => {
+    const source = `
+type User = User { data : String }
+--X
+
+func: User
+     --^
+func =
+    User { data = "" }
 `;
     await testBase.testDefinition(source);
   });

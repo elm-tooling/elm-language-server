@@ -62,6 +62,7 @@ import Foo.Bar exposing (bar)
 --@ Foo/Bar.elm
 module Foo.Bar exposing (bar)
 bar = 42
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -113,6 +114,7 @@ import App exposing (Page)
 --@ App.elm
 module App exposing (Page)
 type Page = Home
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -126,6 +128,7 @@ type alias Model = Page
 --@ App.elm
 module App exposing (Page)
 type Page = Home
+--X
 `;
     await testBase.testDefinition(source);
   });

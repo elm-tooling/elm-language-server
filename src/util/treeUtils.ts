@@ -690,21 +690,23 @@ export class TreeUtils {
     tree: Tree,
     nodeAtPosition: SyntaxNode,
   ): { node: SyntaxNode; nodeType: NodeType } | undefined {
-    let definitionNode = this.findTypeDeclaration(tree, nodeAtPosition.text);
-    if (
-      definitionNode &&
-      nodeAtPosition.parent?.type !== "value_expr" &&
-      nodeAtPosition.parent?.type !== "union_pattern"
-    ) {
-      return { node: definitionNode, nodeType: "Type" };
-    }
-    definitionNode = this.findTypeAliasDeclaration(tree, nodeAtPosition.text);
+    let definitionNode = this.findTypeAliasDeclaration(
+      tree,
+      nodeAtPosition.text,
+    );
     if (definitionNode) {
       return { node: definitionNode, nodeType: "TypeAlias" };
     }
-    definitionNode = this.findUnionConstructor(tree, nodeAtPosition.text);
-    if (definitionNode) {
-      return { node: definitionNode, nodeType: "UnionConstructor" };
+    if (TreeUtils.findParentOfType("type_ref", nodeAtPosition)) {
+      definitionNode = this.findTypeDeclaration(tree, nodeAtPosition.text);
+      if (definitionNode) {
+        return { node: definitionNode, nodeType: "Type" };
+      }
+    } else {
+      definitionNode = this.findUnionConstructor(tree, nodeAtPosition.text);
+      if (definitionNode) {
+        return { node: definitionNode, nodeType: "UnionConstructor" };
+      }
     }
   }
 
@@ -937,18 +939,34 @@ export class TreeUtils {
           }
         }
 
-        definitionFromOtherFile = this.findImportFromImportList(
-          uri,
-          upperCaseQid.text,
-          "Type",
-          imports,
-        );
-        if (definitionFromOtherFile) {
-          return {
-            node: definitionFromOtherFile.node,
-            nodeType: "Type",
-            uri: definitionFromOtherFile.fromUri,
-          };
+        if (TreeUtils.findParentOfType("type_ref", upperCaseQid)) {
+          definitionFromOtherFile = this.findImportFromImportList(
+            uri,
+            upperCaseQid.text,
+            "Type",
+            imports,
+          );
+          if (definitionFromOtherFile) {
+            return {
+              node: definitionFromOtherFile.node,
+              nodeType: "Type",
+              uri: definitionFromOtherFile.fromUri,
+            };
+          }
+        } else {
+          definitionFromOtherFile = this.findImportFromImportList(
+            uri,
+            upperCaseQid.text,
+            "UnionConstructor",
+            imports,
+          );
+          if (definitionFromOtherFile) {
+            return {
+              node: definitionFromOtherFile.node,
+              nodeType: "UnionConstructor",
+              uri: definitionFromOtherFile.fromUri,
+            };
+          }
         }
 
         definitionFromOtherFile = this.findImportFromImportList(
@@ -961,20 +979,6 @@ export class TreeUtils {
           return {
             node: definitionFromOtherFile.node,
             nodeType: "TypeAlias",
-            uri: definitionFromOtherFile.fromUri,
-          };
-        }
-
-        definitionFromOtherFile = this.findImportFromImportList(
-          uri,
-          upperCaseQid.text,
-          "UnionConstructor",
-          imports,
-        );
-        if (definitionFromOtherFile) {
-          return {
-            node: definitionFromOtherFile.node,
-            nodeType: "UnionConstructor",
             uri: definitionFromOtherFile.fromUri,
           };
         }
@@ -2139,17 +2143,12 @@ export class TreeUtils {
     imports: IImports,
   ): string | undefined {
     if (imports.imports) {
-      const moduleImport = TreeUtils.findImportClauseByName(tree, module);
-
-      if (!moduleImport) {
-        return;
-      }
-
       if (
         imports.imports[uri]
           .filter(
             (imp) =>
               imp.fromModuleName === module &&
+              imp.explicitlyExposed &&
               (imp.type === "Type" ||
                 imp.type === "TypeAlias" ||
                 imp.type === "UnionConstructor"),
@@ -2157,6 +2156,12 @@ export class TreeUtils {
           .some((imp) => imp.alias === name)
       ) {
         return "";
+      }
+
+      const moduleImport = TreeUtils.findImportClauseByName(tree, module);
+
+      if (!moduleImport) {
+        return;
       }
 
       const asClause = TreeUtils.findFirstNamedChildOfType(
