@@ -506,6 +506,14 @@ function fieldAccessOnNonRecordError(node: SyntaxNode, type: Type): Diagnostic {
   };
 }
 
+function missingFunctionError(node: SyntaxNode): Diagnostic {
+  return {
+    node,
+    endNode: node,
+    message: `No function definition found for \`${node.text}\``,
+  };
+}
+
 interface RecordDiff {
   extra: Map<string, Type>;
   missing: Map<string, Type>;
@@ -1142,7 +1150,15 @@ export class InferenceScope {
     }
 
     if (targetType.nodeType === "Unknown") {
-      return TUnknown;
+      this.diagnostics.push(missingFunctionError(e.target));
+      const type = TFunction(argTypes, TVar("a"));
+
+      if (this.isAssignable(e.target, targetType, type)) {
+        this.expressionTypes.set(e.target, type);
+        return type.return;
+      } else {
+        return TUnknown;
+      }
     }
 
     if (targetType.nodeType !== "Function") {
