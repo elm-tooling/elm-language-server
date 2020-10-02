@@ -2155,7 +2155,6 @@ export class TreeUtils {
           .filter(
             (imp) =>
               imp.fromModuleName === module &&
-              imp.explicitlyExposed &&
               (imp.type === "Type" ||
                 imp.type === "TypeAlias" ||
                 imp.type === "UnionConstructor"),

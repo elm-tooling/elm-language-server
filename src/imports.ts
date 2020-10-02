@@ -227,22 +227,6 @@ export class Imports implements IImports {
                 };
               }),
             );
-
-            result.push(
-              ...element.exposedUnionConstructors
-                .filter((a) => a.accessibleWithoutPrefix)
-                .map((a) => {
-                  return {
-                    alias: `${a.name}`,
-                    fromModuleName: moduleNameNode.text,
-                    fromUri: uri,
-                    maintainerAndPackageName,
-                    node: a.syntaxNode,
-                    type: "UnionConstructor" as NodeType,
-                    explicitlyExposed: false,
-                  };
-                }),
-            );
           }
           break;
         // Do not handle operators, they are not valid if prefixed
@@ -296,17 +280,45 @@ import Platform.Sub as Sub exposing ( Sub )
     uri: string,
     maintainerAndPackageName?: string,
   ): IImport[] {
-    return exposed.map((element: IExposing) => {
-      return {
-        alias: element.name,
-        fromModuleName: moduleName,
-        fromUri: uri,
-        maintainerAndPackageName,
-        node: element.syntaxNode,
-        type: element.type,
-        explicitlyExposed: false,
-      };
-    });
+    const result: IImport[] = [];
+
+    // These need to be added additionally, as they are nested
+    exposed
+      .filter((it) => it.type === "Type")
+      .forEach((element) => {
+        if (element.exposedUnionConstructors) {
+          result.push(
+            ...element.exposedUnionConstructors
+              .filter((a) => a.accessibleWithoutPrefix)
+              .map((a) => {
+                return {
+                  alias: `${a.name}`,
+                  fromModuleName: moduleName,
+                  fromUri: uri,
+                  maintainerAndPackageName,
+                  node: a.syntaxNode,
+                  type: "UnionConstructor" as NodeType,
+                  explicitlyExposed: false,
+                };
+              }),
+          );
+        }
+      });
+
+    return [
+      ...result,
+      ...exposed.map((element: IExposing) => {
+        return {
+          alias: element.name,
+          fromModuleName: moduleName,
+          fromUri: uri,
+          maintainerAndPackageName,
+          node: element.syntaxNode,
+          type: element.type,
+          explicitlyExposed: false,
+        };
+      }),
+    ];
   }
 
   private exposedNodesToImports(

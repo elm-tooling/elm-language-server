@@ -204,7 +204,7 @@ type Page = Home
     await testBase.testDefinition(source);
   });
 
-  it(`test union constructor ref in expression via module exposing all constructors`, async () => {
+  xit(`test union constructor ref in expression via module exposing all constructors`, async () => {
     const source = `
 --@ main.elm
 import App exposing (Page(Home))
