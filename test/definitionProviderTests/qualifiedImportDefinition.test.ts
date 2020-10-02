@@ -12,6 +12,7 @@ main = Foo.bar
 --@ Foo.elm
 module Foo exposing (bar)
 bar = 42
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -24,6 +25,7 @@ main = Foo.bar
       --^Foo.elm
 --@ Foo.elm
 module Foo exposing (bar)
+--X
 bar = 42
 `;
     await testBase.testDefinition(source);
@@ -38,6 +40,7 @@ type alias Model = App.Page
 --@ App.elm
 module App exposing (Page)
 type Page = Home
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -51,6 +54,7 @@ defaultPage = App.Home
 --@ App.elm
 module App exposing (Page(Home))
 type Page = Home
+           --X
 `;
     await testBase.testDefinition(source);
   });
@@ -66,6 +70,7 @@ title page =
 --@ App.elm
 module App exposing (Page(Home))
 type Page = Home
+           --X
 `;
     await testBase.testDefinition(source);
   });
@@ -79,6 +84,7 @@ type Entity = PersonEntity App.Person
 --@ App.elm
 module App exposing (Person)
 type alias Person = { name : String, age: Int }
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -92,6 +98,7 @@ defaultPerson = App.Person "George" 42
 --@ App.elm
 module App exposing (Person)
 type alias Person = { name : String, age: Int }
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -105,6 +112,45 @@ update msg model = (model, Ports.foo "blah")
 --@ Ports.elm
 port module Ports exposing (foo)
 port foo : String -> Cmd msg
+--X
+`;
+    await testBase.testDefinition(source);
+  });
+
+  it(`test union constructor should not resolve to type declaration from other file`, async () => {
+    const source = `
+--@ main.elm
+import App
+
+func: App.User
+func =
+    App.User { data = "" }
+        --^App.elm
+
+--@ App.elm
+module App exposing (..)
+
+type User = User { data : String }
+           --X
+`;
+    await testBase.testDefinition(source);
+  });
+
+  it(`test type declaration should not resolve to union constructor from other file`, async () => {
+    const source = `
+--@ main.elm
+import App
+
+func: App.User
+         --^App.elm
+func =
+    App.User { data = "" }
+
+--@ App.elm
+module App exposing (..)
+
+type User = User { data : String }
+--X
 `;
     await testBase.testDefinition(source);
   });

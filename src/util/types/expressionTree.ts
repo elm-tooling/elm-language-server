@@ -11,7 +11,7 @@ export type Expression =
   | EBinOpExpr
   | ECaseOfBranch
   | ECaseOfExpr
-  | ECharConstant
+  | ECharConstantExpr
   | EConsPattern
   | EField
   | EFieldAccessExpr
@@ -234,8 +234,8 @@ export interface EPortAnnotation extends SyntaxNode {
   name: string;
   typeExpression: ETypeExpression;
 }
-export interface ECharConstant extends SyntaxNode {
-  nodeType: "CharConstant";
+export interface ECharConstantExpr extends SyntaxNode {
+  nodeType: "CharConstantExpr";
 }
 export interface EGlslCodeExpr extends SyntaxNode {
   nodeType: "GlslCodeExpr";
@@ -425,7 +425,9 @@ export function mapSyntaxNodeToExpression(
     case "if_else_expr":
       return Object.assign(node, {
         nodeType: "IfElseExpr",
-        exprList: node.namedChildren.map((n) => mapSyntaxNodeToExpression(n)),
+        exprList: node.namedChildren
+          .map((n) => mapSyntaxNodeToExpression(n))
+          .filter(Utils.notUndefined),
       } as EIfElseExpr);
 
     case "let_in_expr":
@@ -628,10 +630,10 @@ export function mapSyntaxNodeToExpression(
           TreeUtils.findFirstNamedChildOfType("type_expression", node),
         ),
       } as EPortAnnotation);
-    case "char_constant":
+    case "char_constant_expr":
       return Object.assign(node, {
-        nodeType: "CharConstant",
-      } as ECharConstant);
+        nodeType: "CharConstantExpr",
+      } as ECharConstantExpr);
     case "glsl_code_expr":
       return Object.assign(node, {
         nodeType: "GlslCodeExpr",

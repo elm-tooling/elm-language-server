@@ -11,6 +11,7 @@ import Foo exposing (bar)
 --@ Foo.elm
 module Foo exposing (bar)
 bar = 42
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -24,6 +25,7 @@ main = bar
 --@ Foo.elm
 module Foo exposing (bar)
 bar = 42
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -62,6 +64,7 @@ import Foo.Bar exposing (bar)
 --@ Foo/Bar.elm
 module Foo.Bar exposing (bar)
 bar = 42
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -75,6 +78,7 @@ f = bar
 --@ Foo.elm
 module Foo exposing (bar)
 bar = 42
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -88,6 +92,7 @@ f = bar
 --@ Foo.elm
 module Foo exposing (..)
 bar = 42
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -113,6 +118,7 @@ import App exposing (Page)
 --@ App.elm
 module App exposing (Page)
 type Page = Home
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -126,6 +132,7 @@ type alias Model = Page
 --@ App.elm
 module App exposing (Page)
 type Page = Home
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -164,6 +171,7 @@ import App exposing (Page(Home))
 --@ App.elm
 module App exposing (Page(Home))
 type Page = Home
+           --X
 `;
     await testBase.testDefinition(source);
   });
@@ -177,6 +185,7 @@ defaultPage = Home
 --@ App.elm
 module App exposing (Page(Home))
 type Page = Home
+           --X
 `;
     await testBase.testDefinition(source);
   });
@@ -190,6 +199,7 @@ defaultPage = Home
 --@ App.elm
 module App exposing (Page(Home))
 type Page = Home
+           --X
 `;
     await testBase.testDefinition(source);
   });
@@ -203,6 +213,7 @@ defaultPage = Home
 --@ App.elm
 module App exposing (Page(..))
 type Page = Home
+           --X
 `;
     await testBase.testDefinition(source);
   });
@@ -216,6 +227,7 @@ defaultPage = Home
 --@ App.elm
 module App exposing (..)
 type Page = Home
+           --X
 `;
     await testBase.testDefinition(source);
   });
@@ -243,6 +255,7 @@ defaultPage = Home
 --@ App.elmtest union constructor ref in
 module App exposing (Page(Home))
 type Page = Home
+           --X
 --@Foo.elm
 module Foo exposing(..)
 `;
@@ -260,6 +273,7 @@ title page =
 --@ App.elm
 module App exposing (Page(Home))
 type Page = Home
+           --X
 `;
     await testBase.testDefinition(source);
   });
@@ -272,6 +286,7 @@ import App exposing (Person)
 --@ App.elm
 module App exposing (Person)
 type alias Person = { name : String, age: Int }
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -285,6 +300,7 @@ type Entity = PersonEntity Person
 --@ App.elm
 module App exposing (Person)
 type alias Person = { name : String, age: Int }
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -298,6 +314,7 @@ type Entity = PersonEntity Person
 --@ App.elm
 module App exposing (..)
 type alias Person = { name : String, age: Int }
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -311,6 +328,7 @@ defaultPerson = Person "George" 42
 --@ App.elm
 module App exposing (Person)
 type alias Person = { name : String, age: Int }
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -324,6 +342,7 @@ defaultPerson = Person "George" 42
 --@ App.elm
 module App exposing (..)
 type alias Person = { name : String, age: Int }
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -337,6 +356,7 @@ type alias Model = Page
 --@ App.elm
 module App exposing (Page)
 type Page = Home
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -350,6 +370,7 @@ type alias Model = Page
 --@ App.elm
 module App exposing (..)
 type Page = Home
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -374,6 +395,7 @@ import App
        --^App.elm
 --@ App.elm
 module App exposing (..)
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -385,6 +407,7 @@ import Data.User
        --^Data/User.elm
 --@ Data/User.elm
 module Data.User exposing (..)
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -397,6 +420,7 @@ import Ports exposing (foo)
 --@ Ports.elm
 port module Ports exposing (foo)
 port foo : String -> Cmd msg
+    --X
 `;
     await testBase.testDefinition(source);
   });
@@ -412,6 +436,7 @@ import Math exposing ((**))
 module Math exposing ((**))
 infix left 5 (**) = power
 power a b = 42
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -426,6 +451,7 @@ f = 2 ** 3
 module Math exposing ((**))
 infix left 5 (**) = power
 power a b = 42
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -440,6 +466,7 @@ f = 2 ** 3
 module Math exposing ((**))
 infix left 5 (**) = power
 power a b = 42
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -454,6 +481,7 @@ f = (**) 2 3
 module Math exposing ((**))
 infix left 5 (**) = power
 power a b = 42
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -471,6 +499,7 @@ bar = 42
 --@ FooExtra.elm
 module FooExtra exposing (..)
 quux = 99
+--X
 `;
     await testBase.testDefinition(source);
   });

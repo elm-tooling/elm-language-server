@@ -12,6 +12,7 @@ main = F.bar
 --@ Foo.elm
 module Foo exposing (bar)
 bar = 42
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -25,6 +26,7 @@ type alias Model = A.Page
 --@ App.elm
 module App exposing (Page)
 type Page = Home
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -38,6 +40,7 @@ defaultPage = A.Home
 --@ App.elm
 module App exposing (Page(Home))
 type Page = Home
+           --X
 `;
     await testBase.testDefinition(source);
   });
@@ -51,6 +54,7 @@ type Entity = PersonEntity A.Person
 --@ App.elm
 module App exposing (Person)
 type alias Person = { name : String, age: Int }
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -64,6 +68,7 @@ defaultPerson = A.Person "George" 42
 --@ App.elm
 module App exposing (Person)
 type alias Person = { name : String, age: Int }
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -89,6 +94,7 @@ import Foo as F
        --^Foo.elm
 --@ Foo.elm
 module Foo exposing (bar)
+--X
 bar = 42
 `;
     await testBase.testDefinition(source);

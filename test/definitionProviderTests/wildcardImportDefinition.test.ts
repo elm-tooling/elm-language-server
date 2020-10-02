@@ -16,6 +16,7 @@ bar = 42
 --@ Bar.elm
 module Bar exposing (..)
 bar = 99
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -30,6 +31,7 @@ main = bar
 --@ Foo.elm
 module Foo exposing (..)
 bar = 42
+--X
 --@ Bar.elm
 module Bar exposing (..)
 bar = 99
