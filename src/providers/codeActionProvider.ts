@@ -73,11 +73,11 @@ export class CodeActionProvider {
       params,
     );
     return [
+      ...this.getRefactorCodeActions(params, elmWorkspace),
+      ...this.getTypeAnnotationCodeActions(params, elmWorkspace),
       ...analyse,
       ...make,
       ...typeAnnotation,
-      ...this.getRefactorCodeActions(params, elmWorkspace),
-      ...this.getTypeAnnotationCodeActions(params, elmWorkspace),
     ];
   }
 
@@ -308,7 +308,9 @@ export class CodeActionProvider {
       if (
         tree &&
         !TreeUtils.findAllTopLevelFunctionDeclarations(tree)?.some(
-          (a) => a.firstChild?.text == funcName,
+          (a) =>
+            a.firstChild?.text == funcName ||
+            a.firstChild?.firstChild?.text == funcName,
         )
       ) {
         const insertLineNumber = RefactorEditUtils.findLineNumberAfterCurrentFunction(
@@ -326,7 +328,7 @@ export class CodeActionProvider {
           insertLineNumber ?? tree.rootNode.endPosition.row,
           funcName,
           typeString,
-          nodeAtPosition.parent?.parent?.parent,
+          TreeUtils.findParentOfType("function_call_expr", nodeAtPosition),
         );
 
         if (edit) {

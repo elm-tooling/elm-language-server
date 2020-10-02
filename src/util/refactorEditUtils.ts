@@ -34,9 +34,9 @@ export class RefactorEditUtils {
     insertLineNumber: number,
     valueName: string,
     typeString: string | undefined,
-    valueExpression: SyntaxNode,
+    valueExpression: SyntaxNode | undefined,
   ): TextEdit | undefined {
-    const arity = valueExpression.namedChildCount - 1;
+    const arity = valueExpression ? valueExpression.namedChildCount - 1 : 0;
     const hasArity0 = arity == 0;
     const argList: string = this.argListFromArity(arity);
 
