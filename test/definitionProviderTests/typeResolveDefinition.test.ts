@@ -13,12 +13,12 @@ title : Page -> String
     await testBase.testDefinition(source);
   });
 
-  xit(`test union type ref from module exposing list`, async () => {
+  it(`test union type ref from module exposing list`, async () => {
     const source = `
 module Main exposing (Page)
                       --^
 type Page = Home
-     --X
+--X
 `;
     await testBase.testDefinition(source);
   });
