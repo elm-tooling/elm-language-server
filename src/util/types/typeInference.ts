@@ -738,7 +738,7 @@ export class InferenceScope {
       case "CaseOfExpr":
         type = this.inferCase(e);
         break;
-      case "CharConstant":
+      case "CharConstantExpr":
         type = TChar;
         break;
       case "FieldAccessExpr":
@@ -1736,7 +1736,7 @@ export class InferenceScope {
         break;
       case "StringConstant":
       case "NumberConstant":
-      case "CharConstant":
+      case "CharConstantExpr":
         if (isParameter) {
           this.diagnostics.push(partialPatternError(pattern));
         }
