@@ -55,12 +55,12 @@ type Page = Home
     await testBase.testDefinition(source);
   });
 
-  xit(`test type alias ref from module exposing list`, async () => {
+  it(`test type alias ref from module exposing list`, async () => {
     const source = `
 module Main exposing (Person)
                       --^
 type alias Person = { name : String, age: Int }
-           --X
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -151,9 +151,27 @@ type User = User { data : String }
 --X
 
 func: User
-     --^
+    --^
 func =
-    User { data = "" }
+User { data = "" }
+`;
+await testBase.testDefinition(source);
+});
+
+it(`test type declaration resolves to itself`, async () => {
+  const source = `
+  type UnitlessFloat
+  --X   --^
+    = UnitlessFloat
+`;
+    await testBase.testDefinition(source);
+  });
+
+it(`test union contructor resolves to itself`, async () => {
+  const source = `
+  type UnitlessFloat
+  = UnitlessFloat
+    --X   --^
 `;
     await testBase.testDefinition(source);
   });
