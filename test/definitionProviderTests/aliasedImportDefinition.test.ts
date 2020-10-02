@@ -12,6 +12,7 @@ main = F.bar
 --@ Foo.elm
 module Foo exposing (bar)
 bar = 42
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -25,6 +26,7 @@ type alias Model = A.Page
 --@ App.elm
 module App exposing (Page)
 type Page = Home
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -92,6 +94,7 @@ import Foo as F
        --^Foo.elm
 --@ Foo.elm
 module Foo exposing (bar)
+--X
 bar = 42
 `;
     await testBase.testDefinition(source);

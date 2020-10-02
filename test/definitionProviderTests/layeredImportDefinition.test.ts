@@ -18,6 +18,7 @@ main = F.bar
 --@ Foo.elm
 module Foo exposing (..)
 bar = 42
+--X
 --@ FooExtra.elm
 module FooExtra exposing (..)
 quux = 99
@@ -38,6 +39,7 @@ bar = 42
 --@ FooExtra.elm
 module FooExtra exposing (..)
 quux = 99
+--X
 `;
     await testBase.testDefinition(source);
   });

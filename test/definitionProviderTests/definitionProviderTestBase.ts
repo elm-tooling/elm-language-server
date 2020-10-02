@@ -28,8 +28,8 @@ export class DefinitionProviderTestBase {
     await this.treeParser.init();
 
     const determinedTestType = getInvokeAndTargetPositionFromSource(source);
-    const targetUri = URI.file(
-      baseUri + determinedTestType.fileWithTarget,
+    const invokeUri = URI.file(
+      baseUri + determinedTestType.invokeFile,
     ).toString();
 
     switch (determinedTestType.kind) {
@@ -38,7 +38,7 @@ export class DefinitionProviderTestBase {
           const definition = this.definitionProvider.handleDefinition(
             {
               textDocument: {
-                uri: targetUri,
+                uri: invokeUri,
               },
               position: determinedTestType.invokePosition,
             },
@@ -54,7 +54,7 @@ export class DefinitionProviderTestBase {
           const definition = this.definitionProvider.handleDefinition(
             {
               textDocument: {
-                uri: targetUri,
+                uri: invokeUri,
               },
               position: determinedTestType.invokePosition,
             },
@@ -67,6 +67,10 @@ export class DefinitionProviderTestBase {
           );
 
           if (determinedTestType.targetPosition) {
+            const targetUri = URI.file(
+              baseUri + determinedTestType.targetFile,
+            ).toString();
+
             const rootNode = this.treeParser
               .getWorkspace(determinedTestType.sources)
               .getForest()
@@ -97,7 +101,7 @@ export class DefinitionProviderTestBase {
           const definition = this.definitionProvider.handleDefinition(
             {
               textDocument: {
-                uri: targetUri,
+                uri: invokeUri,
               },
               position: determinedTestType.invokePosition,
             },
@@ -107,7 +111,7 @@ export class DefinitionProviderTestBase {
           const rootNode = this.treeParser
             .getWorkspace(determinedTestType.sources)
             .getForest()
-            .treeIndex.find((a) => a.uri === targetUri)!.tree.rootNode;
+            .treeIndex.find((a) => a.uri === invokeUri)!.tree.rootNode;
           const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
             rootNode,
             determinedTestType.targetPosition,
@@ -115,7 +119,7 @@ export class DefinitionProviderTestBase {
 
           expect(definition).toEqual(
             expect.objectContaining({
-              uri: targetUri,
+              uri: invokeUri,
               range: {
                 start: {
                   line: determinedTestType.targetPosition.line,

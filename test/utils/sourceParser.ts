@@ -44,21 +44,21 @@ interface IUnresolvedTest {
   kind: "unresolved";
   invokePosition: Position;
   sources: { [K: string]: string };
-  fileWithTarget: string;
+  invokeFile: string;
 }
 interface IResolvedTest {
   kind: "resolves";
   invokePosition: Position;
   targetPosition: Position;
   sources: { [K: string]: string };
-  fileWithTarget: string;
+  invokeFile: string;
 }
 interface IResolvesToDifferentFileTest {
   kind: "resolvesToDifferentFile";
   invokePosition: Position;
   targetFile: string;
   sources: { [K: string]: string };
-  fileWithTarget: string;
+  invokeFile: string;
   targetPosition?: Position;
 }
 
@@ -69,7 +69,7 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
   let invokePosition;
   let targetPosition;
   let targetFile;
-  let fileWithTarget = "";
+  let invokeFile = "";
 
   for (const fileName in sources) {
     sources[fileName].split("\n").forEach((s, line) => {
@@ -86,7 +86,7 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
         };
         unresolved = true;
 
-        fileWithTarget = fileName;
+        invokeFile = fileName;
       } else if (invokeFileCharacter >= 0) {
         targetFile = /--\^([A-Z][a-zA-Z0-9_/]*\.elm)/.exec(s)?.[1];
 
@@ -94,13 +94,13 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
           line: line - 1,
           character: invokeFileCharacter + 2,
         };
-        fileWithTarget = fileName;
+        invokeFile = fileName;
       } else if (invokeCharacter >= 0) {
         invokePosition = {
           line: line - 1,
           character: invokeCharacter + 2,
         };
-        fileWithTarget = fileName;
+        invokeFile = fileName;
       }
       if (targetCharacter >= 0) {
         targetPosition = {
@@ -115,7 +115,12 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
     if (!invokePosition) {
       fail();
     }
-    return { kind: "unresolved", invokePosition, sources, fileWithTarget };
+    return {
+      kind: "unresolved",
+      invokePosition,
+      sources,
+      invokeFile,
+    };
   } else if (targetFile) {
     if (!targetFile || !invokePosition) {
       fail();
@@ -125,7 +130,7 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
       invokePosition,
       sources,
       targetFile,
-      fileWithTarget,
+      invokeFile,
       targetPosition,
     };
   } else {
@@ -137,7 +142,7 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
       invokePosition,
       targetPosition,
       sources,
-      fileWithTarget,
+      invokeFile,
     };
   }
 }
