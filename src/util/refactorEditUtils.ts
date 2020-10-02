@@ -33,6 +33,7 @@ export class RefactorEditUtils {
   public static createTopLevelFunction(
     insertLineNumber: number,
     valueName: string,
+    typeString: string | undefined,
     valueExpression: SyntaxNode,
   ): TextEdit | undefined {
     const arity = valueExpression.namedChildCount - 1;
@@ -42,12 +43,16 @@ export class RefactorEditUtils {
     if (hasArity0) {
       return TextEdit.insert(
         Position.create(insertLineNumber, 0),
-        `\n\n${valueName} =\n    Debug.todo "TODO"\n`,
+        `\n\n${
+          typeString ? valueName + " : " + typeString + "\n" : ""
+        }${valueName} =\n    Debug.todo "TODO"\n`,
       );
     } else {
       return TextEdit.insert(
         Position.create(insertLineNumber, 0),
-        `\n\n${valueName} ${argList} =\n    Debug.todo "TODO"\n`,
+        `\n\n${
+          typeString ? valueName + " : " + typeString + "\n" : ""
+        }${valueName} ${argList} =\n    Debug.todo "TODO"\n`,
       );
     }
   }

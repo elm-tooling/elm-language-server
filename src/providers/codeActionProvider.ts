@@ -163,7 +163,7 @@ export class CodeActionProvider {
         ...this.getTypeAliasCodeActions(params, tree, nodeAtPosition),
         ...this.getMakeDeclarationFromUsageCodeActions(
           params,
-          tree,
+          elmWorkspace,
           nodeAtPosition,
         ),
       );
@@ -290,7 +290,7 @@ export class CodeActionProvider {
 
   private getMakeDeclarationFromUsageCodeActions(
     params: CodeActionParams,
-    tree: Tree,
+    elmWorkspace: IElmWorkspace,
     nodeAtPosition: SyntaxNode,
   ): CodeAction[] {
     const codeActions: CodeAction[] = [];
@@ -303,7 +303,10 @@ export class CodeActionProvider {
     ) {
       const funcName = nodeAtPosition.text;
 
+      const tree = elmWorkspace.getForest().getTree(params.textDocument.uri);
+
       if (
+        tree &&
         !TreeUtils.findAllTopLevelFunctionDeclarations(tree)?.some(
           (a) => a.firstChild?.text == funcName,
         )
@@ -312,9 +315,17 @@ export class CodeActionProvider {
           nodeAtPosition,
         );
 
+        const typeString: string = TypeRenderer.typeToString(
+          findType(nodeAtPosition, params.textDocument.uri, elmWorkspace),
+          nodeAtPosition.tree,
+          params.textDocument.uri,
+          elmWorkspace.getImports(),
+        );
+
         const edit = RefactorEditUtils.createTopLevelFunction(
           insertLineNumber ?? tree.rootNode.endPosition.row,
           funcName,
+          typeString,
           nodeAtPosition.parent?.parent?.parent,
         );
 
