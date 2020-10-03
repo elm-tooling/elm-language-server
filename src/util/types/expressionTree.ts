@@ -111,6 +111,7 @@ export interface EOperator extends SyntaxNode {
 }
 export interface EOperatorAsFunctionExpr extends SyntaxNode {
   nodeType: "OperatorAsFunctionExpr";
+  operator: EOperator;
 }
 export interface ENumberConstant extends SyntaxNode {
   nodeType: "NumberConstant";
@@ -639,6 +640,13 @@ export function mapSyntaxNodeToExpression(
         nodeType: "GlslCodeExpr",
         content: TreeUtils.findFirstNamedChildOfType("glsl_content", node),
       } as EGlslCodeExpr);
+    case "operator_as_function_expr":
+      return Object.assign(node, {
+        nodeType: "OperatorAsFunctionExpr",
+        operator: mapSyntaxNodeToExpression(
+          TreeUtils.findFirstNamedChildOfType("operator_identifier", node),
+        ),
+      } as EOperatorAsFunctionExpr);
     default:
       return mapSyntaxNodeToExpression(node.firstNamedChild);
   }

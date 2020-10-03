@@ -8,8 +8,10 @@ import { SourceTreeParser } from "./utils/sourceTreeParser";
 
 const basicsSources = `
 --@ Basics.elm
-module Basics exposing (add, (+), Int, Float, Bool(..))
+module Basics exposing ((+), (|>), (==), Int, Float, Bool(..))
 
+infix left  0 (|>) = apR
+infix non   4 (==) = eq
 infix left  6 (+)  = add
 
 type Int = Int
@@ -22,6 +24,13 @@ add : number -> number -> number
 add =
   Elm.Kernel.Basics.add
 
+apR : a -> (a -> b) -> b
+apR x f =
+  f x
+
+eq : a -> a -> Bool
+eq =
+  Elm.Kernel.Utils.equal
 `;
 describe("test type inference", () => {
   const treeParser = new SourceTreeParser();
@@ -49,7 +58,14 @@ describe("test type inference", () => {
 
     const nodeType = findType(nodeAtPosition, testUri, workspace);
 
-    expect(TypeRenderer.typeToString(nodeType, tree)).toEqual(expectedType);
+    expect(
+      TypeRenderer.typeToString(
+        nodeType,
+        tree,
+        testUri,
+        workspace.getImports(),
+      ),
+    ).toEqual(expectedType);
   }
 
   test("simple function", async () => {
@@ -144,6 +160,198 @@ func a b c =
     await testTypeInference(
       basicsSources + source,
       "number -> { a | first : { b | second : number } } -> Maybe number -> number",
+    );
+  });
+
+  test("function with imported types", async () => {
+    const source = `
+--@ App.elm
+module App exposing (..)
+
+type Maybe a = Just a | Nothing 
+
+plus : number -> number -> number
+plus a b = a + b
+
+--@ Test.elm
+module Test exposing (..)
+
+import App exposing (..)
+
+func a b c =
+--^
+  let
+    result = a + 1
+
+  in
+    (plus result b.first.second) +
+      (if a == 1 then
+        0
+      else
+        1) +
+      (case c of
+        Just value ->
+          value
+
+        Nothing ->
+          0)
+
+`;
+    await testTypeInference(
+      basicsSources + source,
+      "number -> { a | first : { b | second : number } } -> Maybe number -> number",
+    );
+  });
+
+  test("simple function with imported types", async () => {
+    const source = `
+--@ App.elm
+module App exposing (..)
+
+plus a b = a + b
+
+--@ Test.elm
+module Test exposing (..)
+
+import App exposing (..)
+
+func a b =
+--^
+  plus a b
+`;
+    await testTypeInference(
+      basicsSources + source,
+      "number -> number -> number",
+    );
+  });
+
+  test("functions with records", async () => {
+    const source = `
+--@ App.elm
+module App exposing (..)
+
+type alias Model = {
+  field : Int
+}
+
+access : Model -> Int
+access model =
+  model.field
+
+
+--@ Test.elm
+module Test exposing (..)
+
+import App
+
+func model =
+--^
+  App.access model
+`;
+    await testTypeInference(basicsSources + source, "App.Model -> Int");
+
+    const source2 = `
+--@ App.elm
+module App exposing (..)
+
+type alias Model = {
+  field : Int
+}
+
+access : Model -> Int
+access model =
+  model.field
+
+--@ Test.elm
+module Test exposing (..)
+
+import App exposing (..)
+
+func model =
+--^
+  access model
+`;
+    await testTypeInference(basicsSources + source2, "Model -> Int");
+  });
+
+  test("field accessor function", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func model =
+--^
+  model |> .field |> (+) 1
+`;
+    await testTypeInference(
+      basicsSources + source,
+      "{ a | field : number } -> number",
+    );
+  });
+
+  test("union constructor inference", async () => {
+    const source = `
+    --@ App.elm
+module App exposing (Result(..))
+
+type Result = Result { field : Int }
+
+--@ Test.elm
+module Test exposing (..)
+
+import App exposing (Result(..))
+
+func model =
+--^
+  model |> .field |> Result
+`;
+    await testTypeInference(
+      basicsSources + source,
+      "{ a | field : { field : Int } } -> Result",
+    );
+
+    const source2 = `
+    --@ App.elm
+module App exposing (..)
+
+type Result = Result { field : Int }
+
+--@ Test.elm
+module Test exposing (..)
+
+import App
+
+func model =
+--^
+  model |> .field |> App.Result
+`;
+    await testTypeInference(
+      basicsSources + source2,
+      "{ a | field : { field : Int } } -> App.Result",
+    );
+
+    const source3 = `
+    --@ App.elm
+module App exposing (Result(..), toResult)
+
+type Result = Result { field : Int }
+
+toResult : Int -> Result
+toResult a =
+  Result { field = a }
+
+--@ Test.elm
+module Test exposing (..)
+
+import App
+
+func model =
+--^
+  model |> .field |> App.toResult
+`;
+    await testTypeInference(
+      basicsSources + source3,
+      "{ a | field : Int } -> App.Result",
     );
   });
 });
