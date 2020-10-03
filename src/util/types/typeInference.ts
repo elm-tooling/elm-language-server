@@ -514,6 +514,14 @@ function missingFunctionError(node: SyntaxNode): Diagnostic {
   };
 }
 
+function missingValueError(node: SyntaxNode): Diagnostic {
+  return {
+    node,
+    endNode: node,
+    message: `No definition found for \`${node.text}\``,
+  };
+}
+
 interface RecordDiff {
   extra: Map<string, Type>;
   missing: Map<string, Type>;
@@ -974,7 +982,8 @@ export class InferenceScope {
       );
 
     if (!definition) {
-      return TUnknown;
+      this.diagnostics.push(missingValueError(e));
+      return TVar("a");
     }
 
     const binding = this.getBinding(definition.expr);
@@ -1369,10 +1378,12 @@ export class InferenceScope {
     );
   }
 
-  private inferOperatorAsFunctionExpr(operator: EOperatorAsFunctionExpr): Type {
+  private inferOperatorAsFunctionExpr(
+    operatorFunction: EOperatorAsFunctionExpr,
+  ): Type {
     // Find operator reference
     const definition = findDefinition(
-      operator,
+      operatorFunction.operator,
       this.uri,
       this.elmWorkspace.getImports(),
     );
