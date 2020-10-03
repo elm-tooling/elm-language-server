@@ -73,11 +73,11 @@ export class CodeActionProvider {
       params,
     );
     return [
+      ...this.getRefactorCodeActions(params, elmWorkspace),
+      ...this.getTypeAnnotationCodeActions(params, elmWorkspace),
       ...analyse,
       ...make,
       ...typeAnnotation,
-      ...this.getRefactorCodeActions(params, elmWorkspace),
-      ...this.getTypeAnnotationCodeActions(params, elmWorkspace),
     ];
   }
 
@@ -161,6 +161,11 @@ export class CodeActionProvider {
       codeActions.push(
         ...this.getFunctionCodeActions(params, tree, nodeAtPosition),
         ...this.getTypeAliasCodeActions(params, tree, nodeAtPosition),
+        ...this.getMakeDeclarationFromUsageCodeActions(
+          params,
+          elmWorkspace,
+          nodeAtPosition,
+        ),
       );
     }
 
@@ -275,6 +280,66 @@ export class CodeActionProvider {
               },
             },
             kind: CodeActionKind.Refactor,
+          });
+        }
+      }
+    }
+
+    return codeActions;
+  }
+
+  private getMakeDeclarationFromUsageCodeActions(
+    params: CodeActionParams,
+    elmWorkspace: IElmWorkspace,
+    nodeAtPosition: SyntaxNode,
+  ): CodeAction[] {
+    const codeActions: CodeAction[] = [];
+
+    if (
+      nodeAtPosition.type === "lower_case_identifier" &&
+      nodeAtPosition.parent?.parent?.type === "value_expr" &&
+      nodeAtPosition.parent?.parent?.parent &&
+      nodeAtPosition.previousSibling?.type !== "dot"
+    ) {
+      const funcName = nodeAtPosition.text;
+
+      const tree = elmWorkspace.getForest().getTree(params.textDocument.uri);
+
+      if (
+        tree &&
+        !TreeUtils.findAllTopLevelFunctionDeclarations(tree)?.some(
+          (a) =>
+            a.firstChild?.text == funcName ||
+            a.firstChild?.firstChild?.text == funcName,
+        )
+      ) {
+        const insertLineNumber = RefactorEditUtils.findLineNumberAfterCurrentFunction(
+          nodeAtPosition,
+        );
+
+        const typeString: string = TypeRenderer.typeToString(
+          findType(nodeAtPosition, params.textDocument.uri, elmWorkspace),
+          nodeAtPosition.tree,
+          params.textDocument.uri,
+          elmWorkspace.getImports(),
+        );
+
+        const edit = RefactorEditUtils.createTopLevelFunction(
+          insertLineNumber ?? tree.rootNode.endPosition.row,
+          funcName,
+          typeString,
+          TreeUtils.findParentOfType("function_call_expr", nodeAtPosition),
+        );
+
+        if (edit) {
+          codeActions.push({
+            title: `Create local function`,
+            edit: {
+              changes: {
+                [params.textDocument.uri]: [edit],
+              },
+            },
+            kind: CodeActionKind.QuickFix,
           });
         }
       }
