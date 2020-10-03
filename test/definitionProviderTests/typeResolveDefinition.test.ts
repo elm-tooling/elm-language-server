@@ -45,16 +45,6 @@ title page =
     await testBase.testDefinition(source);
   });
 
-  xit(`test union constructor ref from module exposing list`, async () => {
-    const source = `
-module Main exposing (Page(Home))
-                           --^
-type Page = Home
-            --X
-`;
-    await testBase.testDefinition(source);
-  });
-
   it(`test type alias ref from module exposing list`, async () => {
     const source = `
 module Main exposing (Person)
@@ -155,11 +145,11 @@ func: User
 func =
 User { data = "" }
 `;
-await testBase.testDefinition(source);
-});
+    await testBase.testDefinition(source);
+  });
 
-it(`test type declaration resolves to itself`, async () => {
-  const source = `
+  it(`test type declaration resolves to itself`, async () => {
+    const source = `
   type UnitlessFloat
   --X   --^
     = UnitlessFloat
@@ -167,8 +157,8 @@ it(`test type declaration resolves to itself`, async () => {
     await testBase.testDefinition(source);
   });
 
-it(`test union contructor resolves to itself`, async () => {
-  const source = `
+  it(`test union contructor resolves to itself`, async () => {
+    const source = `
   type UnitlessFloat
   = UnitlessFloat
     --X   --^

@@ -45,21 +45,21 @@ type Page = Home
     await testBase.testDefinition(source);
   });
 
-  xit(`test qualified union constructor ref`, async () => {
+  it(`test qualified union constructor ref`, async () => {
     const source = `
 --@ main.elm
 import App
 defaultPage = App.Home
                   --^App.elm
 --@ App.elm
-module App exposing (Page(Home))
+module App exposing (Page(..))
 type Page = Home
            --X
 `;
     await testBase.testDefinition(source);
   });
 
-  xit(`test qualified union constructor ref in pattern destructuring`, async () => {
+  it(`test qualified union constructor ref in pattern destructuring`, async () => {
     const source = `
 --@ main.elm
 import App
@@ -68,7 +68,7 @@ title page =
         App.Home -> "home"
             --^App.elm
 --@ App.elm
-module App exposing (Page(Home))
+module App exposing (Page(..))
 type Page = Home
            --X
 `;
