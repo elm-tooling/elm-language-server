@@ -1,5 +1,17 @@
 # Change Log
 
+## 1.12.0
+
+- Make entrypoints configurable via elm-tooling.json
+- Default elmAnalyseTrigger to never
+- Added type inference
+- Added type inference diagnostics for missing top level type annotations
+- Added codeActions to infer annotations for functions
+- Added goto definition and references for ports
+- Create function declaration from usage
+- More goto definition improvements
+- Tree sitter now parses the files incrementally after the initial scan
+
 ## 1.11.0
 
 - Improve definition for conflicting module/type names
