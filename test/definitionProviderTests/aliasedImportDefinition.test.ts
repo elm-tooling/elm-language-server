@@ -31,14 +31,14 @@ type Page = Home
     await testBase.testDefinition(source);
   });
 
-  xit(`test aliased, qualified union constructor ref`, async () => {
+  it(`test aliased, qualified union constructor ref`, async () => {
     const source = `
 --@ main.elm
 import App as A
 defaultPage = A.Home
                 --^App.elm
 --@ App.elm
-module App exposing (Page(Home))
+module App exposing (Page(..))
 type Page = Home
            --X
 `;

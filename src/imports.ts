@@ -288,19 +288,17 @@ import Platform.Sub as Sub exposing ( Sub )
       .forEach((element) => {
         if (element.exposedUnionConstructors) {
           result.push(
-            ...element.exposedUnionConstructors
-              .filter((a) => a.accessibleWithoutPrefix)
-              .map((a) => {
-                return {
-                  alias: `${a.name}`,
-                  fromModuleName: moduleName,
-                  fromUri: uri,
-                  maintainerAndPackageName,
-                  node: a.syntaxNode,
-                  type: "UnionConstructor" as NodeType,
-                  explicitlyExposed: false,
-                };
-              }),
+            ...element.exposedUnionConstructors.map((a) => {
+              return {
+                alias: `${a.name}`,
+                fromModuleName: moduleName,
+                fromUri: uri,
+                maintainerAndPackageName,
+                node: a.syntaxNode,
+                type: "UnionConstructor" as NodeType,
+                explicitlyExposed: false,
+              };
+            }),
           );
         }
       });
@@ -334,16 +332,32 @@ import Platform.Sub as Sub exposing ( Sub )
     moduleNameNode: SyntaxNode,
     foundModule: ITreeContainer,
   ): IImport[] {
-    return exposedNodes.map((a) => {
-      return {
-        alias: a.name,
-        fromModuleName: moduleNameNode.text,
-        fromUri: foundModule.uri,
-        maintainerAndPackageName: foundModule.maintainerAndPackageName,
-        node: a.syntaxNode,
-        type: a.type,
-        explicitlyExposed: true,
-      };
-    });
+    return exposedNodes
+      .map((a) => {
+        return [
+          {
+            alias: a.name,
+            fromModuleName: moduleNameNode.text,
+            fromUri: foundModule.uri,
+            maintainerAndPackageName: foundModule.maintainerAndPackageName,
+            node: a.syntaxNode,
+            type: a.type,
+            explicitlyExposed: true,
+          },
+        ].concat(
+          a.exposedUnionConstructors?.map((b) => {
+            return {
+              alias: b.name,
+              fromModuleName: moduleNameNode.text,
+              fromUri: foundModule.uri,
+              maintainerAndPackageName: foundModule.maintainerAndPackageName,
+              node: b.syntaxNode,
+              type: "UnionConstructor",
+              explicitlyExposed: false,
+            };
+          }) ?? [],
+        );
+      })
+      .reduce((a, b) => a.concat(b), []);
   }
 }
