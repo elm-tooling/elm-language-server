@@ -28,7 +28,6 @@ export interface IExposing {
   exposedUnionConstructors?: {
     name: string;
     syntaxNode: SyntaxNode;
-    accessibleWithoutPrefix: boolean;
   }[];
 }
 
@@ -142,7 +141,6 @@ export class TreeUtils {
               const unionConstructors: {
                 name: string;
                 syntaxNode: SyntaxNode;
-                accessibleWithoutPrefix: boolean;
               }[] = [];
               TreeUtils.descendantsOfType(
                 typeDeclaration,
@@ -154,7 +152,6 @@ export class TreeUtils {
                 );
                 if (name && name.parent) {
                   unionConstructors.push({
-                    accessibleWithoutPrefix: false,
                     name: name.text,
                     syntaxNode: name.parent,
                   });
@@ -231,7 +228,6 @@ export class TreeUtils {
                   const unionConstructors: {
                     name: string;
                     syntaxNode: SyntaxNode;
-                    accessibleWithoutPrefix: boolean;
                   }[] = [];
                   TreeUtils.descendantsOfType(
                     typeDeclaration,
@@ -243,7 +239,6 @@ export class TreeUtils {
                     );
                     if (unionConstructorName && unionConstructorName.parent) {
                       unionConstructors.push({
-                        accessibleWithoutPrefix: true,
                         name: unionConstructorName.text,
                         syntaxNode: unionConstructorName.parent,
                       });
@@ -2155,7 +2150,6 @@ export class TreeUtils {
           .filter(
             (imp) =>
               imp.fromModuleName === module &&
-              imp.explicitlyExposed &&
               (imp.type === "Type" ||
                 imp.type === "TypeAlias" ||
                 imp.type === "UnionConstructor"),

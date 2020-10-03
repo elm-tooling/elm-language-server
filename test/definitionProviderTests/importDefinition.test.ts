@@ -163,51 +163,10 @@ type Page = Home
     await testBase.testDefinition(source);
   });
 
-  xit(`test union constructor ref in import exposing list`, async () => {
-    const source = `
---@ main.elm
-import App exposing (Page(Home))
-                          --^App.elm
---@ App.elm
-module App exposing (Page(Home))
-type Page = Home
-           --X
-`;
-    await testBase.testDefinition(source);
-  });
-
-  xit(`test union constructor ref in expression`, async () => {
-    const source = `
---@ main.elm
-import App exposing (Page(Home))
-defaultPage = Home
-              --^App.elm
---@ App.elm
-module App exposing (Page(Home))
-type Page = Home
-           --X
-`;
-    await testBase.testDefinition(source);
-  });
-
-  xit(`test union constructor ref in expression via import exposing all constructors`, async () => {
+  it(`test union constructor ref in expression`, async () => {
     const source = `
 --@ main.elm
 import App exposing (Page(..))
-defaultPage = Home
-              --^App.elm
---@ App.elm
-module App exposing (Page(Home))
-type Page = Home
-           --X
-`;
-    await testBase.testDefinition(source);
-  });
-
-  it(`test union constructor ref in expression via module exposing all constructors`, async () => {
-    const source = `
---@ main.elm
-import App exposing (Page(Home))
 defaultPage = Home
               --^App.elm
 --@ App.elm
@@ -218,7 +177,35 @@ type Page = Home
     await testBase.testDefinition(source);
   });
 
-  xit(`test union constructor ref in expression exposing all from both sides`, async () => {
+  it(`test union constructor ref in expression via import exposing all constructors`, async () => {
+    const source = `
+--@ main.elm
+import App exposing (Page(..))
+defaultPage = Home
+              --^App.elm
+--@ App.elm
+module App exposing (Page(..))
+type Page = Home
+           --X
+`;
+    await testBase.testDefinition(source);
+  });
+
+  it(`test union constructor ref in expression via module exposing all constructors`, async () => {
+    const source = `
+--@ main.elm
+import App exposing (Page(..))
+defaultPage = Home
+              --^App.elm
+--@ App.elm
+module App exposing (Page(..))
+type Page = Home
+           --X
+`;
+    await testBase.testDefinition(source);
+  });
+
+  it(`test union constructor ref in expression exposing all from both sides`, async () => {
     const source = `
 --@ main.elm
 import App exposing (..)
@@ -235,7 +222,7 @@ type Page = Home
   it(`test union constructor ref in expression but not exposed by module`, async () => {
     const source = `
 --@ main.elm
-import App exposing (Page(Home))
+import App exposing (Page(..))
 defaultPage = Home
               --^unresolved
 --@ App.elm
@@ -252,8 +239,8 @@ import Foo as
 import App exposing (Page(..))
 defaultPage = Home
               --^App.elm
---@ App.elmtest union constructor ref in
-module App exposing (Page(Home))
+--@ App.elm
+module App exposing (Page(..))
 type Page = Home
            --X
 --@Foo.elm
@@ -262,16 +249,16 @@ module Foo exposing(..)
     await testBase.testDefinition(source);
   });
 
-  xit(`test union constructor ref in pattern destructuring`, async () => {
+  it(`test union constructor ref in pattern destructuring`, async () => {
     const source = `
 --@ main.elm
-import App exposing (Page(Home))
+import App exposing (Page(..))
 title page =
     case page of
         Home -> "home"
         --^App.elm
 --@ App.elm
-module App exposing (Page(Home))
+module App exposing (Page(..))
 type Page = Home
            --X
 `;
@@ -462,21 +449,6 @@ power a b = 42
 import Math exposing (..)
 f = 2 ** 3
      --^Math.elm
---@ Math.elm
-module Math exposing ((**))
-infix left 5 (**) = power
-power a b = 42
---X
-`;
-    await testBase.testDefinition(source);
-  });
-
-  xit(`test binary operator as a function`, async () => {
-    const source = `
---@ main.elm
-import Math exposing ((**))
-f = (**) 2 3
-    --^Math.elm
 --@ Math.elm
 module Math exposing ((**))
 infix left 5 (**) = power
