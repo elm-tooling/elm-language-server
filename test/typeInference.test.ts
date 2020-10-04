@@ -354,4 +354,158 @@ func model =
       "{ a | field : Int } -> App.Result",
     );
   });
+
+  test("tuples, lists, and units", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func a b =
+--^
+  if a == b then 
+    ([ a ], ())
+  else
+    ([ b, 3 ], ())
+`;
+    await testTypeInference(
+      basicsSources + source,
+      "number -> number -> (List number, ())",
+    );
+  });
+
+  test("records, chars, anonymous functions", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func a =
+--^
+  (\\p -> { field = 'a', field2 = a + 2, field3 = p + 1 })
+`;
+    await testTypeInference(
+      basicsSources + source,
+      "number -> number -> { field : Char, field2 : number, field3 : number }",
+    );
+  });
+
+  test("records with base record", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+record = { field = 1, field2 = 2, field3 = 3 }
+
+func a =
+--^
+  { record | field = a }
+`;
+    await testTypeInference(
+      basicsSources + source,
+      "number -> { field : number, field2 : number, field3 : number }",
+    );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Model = { 
+  field1 : number,
+  field2 : number,
+  field3 : number
+}
+
+record = { field1 = 1, field2 = 2, field3 = 3 }
+
+update : Model -> Model
+update model =
+  model
+
+func a =
+--^
+  { record | field1 = a } |> update
+`;
+    await testTypeInference(basicsSources + source2, "number -> Model");
+  });
+
+  test("field access, if else", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func a =
+--^
+  if a == 1 then
+    { record | field = a + 1 }.field
+  else if a == 2 then
+    2
+  else if a == 3 then
+    3
+  else
+    4
+`;
+    await testTypeInference(basicsSources + source, "number -> number");
+  });
+
+  test("case of patterns", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func a =
+--^
+  case a of
+    (b, c) ->
+      case b of
+        { d, e } ->
+          case d of
+            () ->
+              1 
+            _ ->
+              case e of
+                'a' -> 1
+                'b' -> 2
+                'c' ->
+                  case c of
+                    "a" -> 1
+                    "b" -> 2
+
+`;
+    await testTypeInference(basicsSources + source, "(a, b) -> number");
+  });
+
+  test("pattern value declaration", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func : Int -> Float -> Int
+func a b =
+--^
+  let
+    { c, d } = { c = a, d = b }
+
+  in
+    c
+
+`;
+    await testTypeInference(basicsSources + source, "Int -> Float -> Int");
+  });
+
+  test("record constructor", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Model = {
+  field : Int,
+  field2 : Float
+}
+
+func a b =
+--^
+  Model a b
+
+`;
+    await testTypeInference(basicsSources + source, "Int -> Float -> Model");
+  });
 });
