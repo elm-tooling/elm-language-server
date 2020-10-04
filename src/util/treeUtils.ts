@@ -902,6 +902,12 @@ export class TreeUtils {
     ) {
       const upperCaseQid = nodeAtPosition.parent;
       const definitionNode = TreeUtils.findUppercaseQidNode(tree, upperCaseQid);
+      if (
+        nodeAtPosition.parent?.parent?.parent?.type === "pattern" &&
+        definitionNode?.nodeType === "TypeAlias"
+      ) {
+        return;
+      }
 
       let definitionFromOtherFile;
       if (
@@ -978,6 +984,13 @@ export class TreeUtils {
           imports,
         );
         if (definitionFromOtherFile) {
+          if (
+            nodeAtPosition.parent?.parent?.parent?.type === "pattern" &&
+            definitionNode?.nodeType === "TypeAlias"
+          ) {
+            return;
+          }
+
           return {
             node: definitionFromOtherFile.node,
             nodeType: "TypeAlias",

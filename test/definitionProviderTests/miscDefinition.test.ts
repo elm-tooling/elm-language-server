@@ -15,12 +15,14 @@ f = magicNumber + 1
 
   // LET-IN EXPRESSIONS
 
-  xit(`test simple value declared by let-in`, async () => {
+  it(`test simple value declared by let-in`, async () => {
     const source = `
 f x =
-    let y = 42
+    let
+        y = 42
       --X
-    in x + y
+    in
+       x + y
          --^
 `;
     await testBase.testDefinition(source);

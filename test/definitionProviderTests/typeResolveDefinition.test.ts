@@ -95,9 +95,21 @@ title : Person a -> String
     await testBase.testDefinition(source);
   });
 
-  xit(`test union constructor ref should not resolve to a record constructor`, async () => {
+  it(`test union constructor ref should not resolve to a record constructor`, async () => {
     const source = `
 type alias User = { name : String, age : Int }
+
+foo user =
+  case user of
+    User -> "foo"
+    --^unresolved
+    `;
+    await testBase.testDefinition(source);
+  });
+
+  it(`test union constructor ref should not resolve to a type`, async () => {
+    const source = `
+type User = GroupA
 
 foo user =
   case user of

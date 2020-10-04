@@ -56,31 +56,6 @@ f x =
     await testBase.testDefinition(source);
   });
 
-  xit(`test name shadowing basic`, async () => {
-    const source = `
-f x =
-    let x = 42
-      --X
-    in x
-     --^
-`;
-    await testBase.testDefinition(source);
-  });
-
-  xit(`test name shadowing within let-in decls`, async () => {
-    const source = `
-f x =
-    let
-        x = 42
-      --X
-        y = x + 1
-          --^
-    in
-        x
-`;
-    await testBase.testDefinition(source);
-  });
-
   it(`test recursive function ref`, async () => {
     const source = `
 foo x =
@@ -128,20 +103,6 @@ foo a = a
 outer =
     let
         foo a = a
-    in foo
-`;
-    await testBase.testDefinition(source);
-  });
-
-  xit(`test nested type annotation name ref`, async () => {
-    const source = `
-foo a = a
-outer =
-    let
-        foo : Int -> Int
-        --^
-        foo a = a
-        --X
     in foo
 `;
     await testBase.testDefinition(source);
