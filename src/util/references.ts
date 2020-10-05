@@ -274,12 +274,19 @@ export class References {
 
                     if (treeToCheck && treeToCheck.writeable) {
                       needsToBeChecked.forEach((a) => {
-                        const importNameNode = TreeUtils.findImportNameNode(
-                          treeToCheck.tree,
-                          a.alias,
-                        );
-                        if (importNameNode) {
-                          references.push({ node: importNameNode, uri });
+                        switch (a.type) {
+                          case "Module": {
+                            const importNameNode = TreeUtils.findImportNameNode(
+                              treeToCheck.tree,
+                              a.alias,
+                            );
+                            if (importNameNode) {
+                              references.push({ node: importNameNode, uri });
+                            }
+                            break;
+                          }
+                          default:
+                            break;
                         }
                       });
                     }
