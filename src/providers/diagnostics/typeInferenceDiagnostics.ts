@@ -43,7 +43,7 @@ export class TypeInferenceDiagnostics {
         .filter(Utils.notUndefinedOrNull)
         .map((func) => func.firstChild?.firstChild)
         .filter(Utils.notUndefinedOrNull)
-        .flatMap((node) => {
+        .map((node) => {
           try {
             const typeString: string = TypeRenderer.typeToString(
               findType(node, uri, elmWorkspace),
