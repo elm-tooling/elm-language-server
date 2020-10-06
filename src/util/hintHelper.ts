@@ -47,8 +47,8 @@ export class HintHelper {
         if (declaration.previousNamedSibling.type === "type_annotation") {
           annotation = declaration.previousNamedSibling.text;
         }
-        return this.formatHint(annotation, comment);
       }
+      return this.formatHint(annotation, comment);
     }
   }
 
