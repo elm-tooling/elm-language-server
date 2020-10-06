@@ -1,5 +1,10 @@
 # Change Log
 
+## 1.12.1
+- Fixed hovers for functions not showing up
+- Fixed hovers for let definitions not showing if they have no type annotation
+- Fixed a problem with node 10
+
 ## 1.12.0
 
 - Make entrypoints configurable via elm-tooling.json
