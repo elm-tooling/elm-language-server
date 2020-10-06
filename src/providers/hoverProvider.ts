@@ -42,7 +42,7 @@ export class HoverProvider {
         params.position,
       );
 
-      const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
+      let definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
         nodeAtPosition,
         params.textDocument.uri,
         tree,
@@ -50,6 +50,14 @@ export class HoverProvider {
       );
 
       if (definitionNode) {
+        if (definitionNode.nodeType === "Function") {
+          definitionNode = {
+            node: definitionNode.node.parent!,
+            uri: definitionNode.uri,
+            nodeType: definitionNode.nodeType,
+          };
+        }
+
         return this.createMarkdownHoverFromDefinition(definitionNode);
       } else {
         const specialMatch = getEmptyTypes().find(
