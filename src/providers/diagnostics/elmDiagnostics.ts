@@ -34,6 +34,8 @@ export class ElmDiagnostics {
       ...this.getUnusedValueAndTypeDiagnostics(tree),
       ...this.getUnusedAliasDiagnostics(tree),
       ...this.getUnusedPatternVariableDiagnostics(tree),
+      ...this.getCaseBranchMapNothingToNothingDiagnostics(tree),
+      ...this.getBooleanCaseExpressionDiagnostics(tree),
     ];
   };
 
@@ -130,7 +132,7 @@ export class ElmDiagnostics {
             diagnostic.range.start,
           );
 
-          const edit =
+          const edit: TextEdit =
             node.parent?.parent?.type === "record_pattern"
               ? RefactorEditUtils.removeRecordPatternValue(node.parent)
               : TextEdit.replace(diagnostic.range, "_");
@@ -302,6 +304,76 @@ export class ElmDiagnostics {
             tags: [DiagnosticTag.Unnecessary],
           });
         }
+      });
+    });
+
+    return diagnostics;
+  }
+
+  private getCaseBranchMapNothingToNothingDiagnostics(
+    tree: Tree,
+  ): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    const caseBranches = this.language
+      .query(
+        `
+        (
+          (case_of_branch 
+            (pattern) @casePattern
+            (value_expr) @caseValue
+          ) @caseBranch
+          (#eq? @casePattern "Nothing")
+          (#eq? @caseValue "Nothing")
+        )
+      `,
+      )
+      .matches(tree.rootNode)
+      .map((match) => match.captures[0].node);
+
+    caseBranches.forEach((caseBranch) => {
+      diagnostics.push({
+        code: "map_nothing_to_nothing",
+        range: this.getNodeRange(caseBranch),
+        message: `\`Nothing\` mapped to \`Nothing\` in case expression. Use Maybe.map or Maybe.andThen instead.`,
+        severity: DiagnosticSeverity.Warning,
+        source: this.ELM,
+      });
+    });
+
+    return diagnostics;
+  }
+
+  private getBooleanCaseExpressionDiagnostics(tree: Tree): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    // For some reason, we can't match on case_expr, tree-sitter throws a memory access error
+    const caseExpressions = this.language
+      .query(
+        `
+        (
+          (case_of_branch
+            pattern: (pattern) @casePattern1
+            (#match? @casePattern1 "^(True|False)$")
+          ) @caseBranch
+          (case_of_branch
+            pattern: (pattern) @casePattern2
+            (#match? @casePattern2 "^(True|False|_)$")
+          )
+        )
+        `,
+      )
+      .matches(tree.rootNode)
+      .map((match) => match.captures[0].node.parent)
+      .filter(Utils.notUndefinedOrNull.bind(this));
+
+    caseExpressions.forEach((caseExpr) => {
+      diagnostics.push({
+        code: "boolean_case_expr",
+        range: this.getNodeRange(caseExpr),
+        message: `Use an if expression instead of a case expression.`,
+        severity: DiagnosticSeverity.Warning,
+        source: this.ELM,
       });
     });
 
