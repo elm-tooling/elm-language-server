@@ -44,24 +44,20 @@ export class TypeInferenceDiagnostics {
         .map((func) => func.firstChild?.firstChild)
         .filter(Utils.notUndefinedOrNull)
         .map((node) => {
-          try {
-            const typeString: string = TypeRenderer.typeToString(
-              findType(node, uri, elmWorkspace),
-              node.tree,
-              uri,
-              elmWorkspace.getImports(),
-            );
+          const typeString: string = TypeRenderer.typeToString(
+            findType(node, uri, elmWorkspace),
+            node.tree,
+            uri,
+            elmWorkspace.getImports(),
+          );
 
-            if (typeString && typeString !== "Unknown" && node) {
-              return {
-                range: this.getNodeRange(node),
-                message: `Missing type annotation: \`${typeString}\``,
-                severity: DiagnosticSeverity.Information,
-                source: this.TYPE_INFERENCE,
-              };
-            }
-          } catch (e) {
-            console.log(e);
+          if (typeString && typeString !== "Unknown" && node) {
+            return {
+              range: this.getNodeRange(node),
+              message: `Missing type annotation: \`${typeString}\``,
+              severity: DiagnosticSeverity.Information,
+              source: this.TYPE_INFERENCE,
+            };
           }
         })
         .filter(Utils.notUndefined.bind(this));
