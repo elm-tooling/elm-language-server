@@ -30,13 +30,19 @@ export class ElmDiagnostics {
   }
 
   public createDiagnostics = (tree: Tree, uri: string): Diagnostic[] => {
-    return [
-      ...this.getUnusedValueAndTypeDiagnostics(tree),
-      ...this.getUnusedAliasDiagnostics(tree),
-      ...this.getUnusedPatternVariableDiagnostics(tree),
-      ...this.getCaseBranchMapNothingToNothingDiagnostics(tree),
-      ...this.getBooleanCaseExpressionDiagnostics(tree),
-    ];
+    try {
+      return [
+        ...this.getUnusedImportDiagnostics(tree),
+        ...this.getUnusedImportValueAndTypeDiagnostics(tree),
+        ...this.getUnusedImportAliasDiagnostics(tree),
+        ...this.getUnusedPatternVariableDiagnostics(tree),
+        ...this.getCaseBranchMapNothingToNothingDiagnostics(tree),
+        ...this.getBooleanCaseExpressionDiagnostics(tree),
+      ];
+    } catch (e) {
+      console.log(e);
+    }
+    return [];
   };
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
@@ -151,23 +157,86 @@ export class ElmDiagnostics {
     return result;
   }
 
-  private getUnusedValueAndTypeDiagnostics(tree: Tree): Diagnostic[] {
+  private getUnusedImportDiagnostics(tree: Tree): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    const moduleImports = this.language
+      .query(
+        `
+        (import_clause 
+          (upper_case_qid) @moduleName
+        )
+        `,
+      )
+      .matches(tree.rootNode)
+      .map((match) => match.captures[0].node)
+      .filter(
+        (node) =>
+          node.nextNamedSibling?.type !== "exposing_list" &&
+          node.nextNamedSibling?.type !== "as_clause",
+      );
+
+    // Would need to adjust tree-sitter (use fields) to get a better query
+    moduleImports.forEach((moduleImport) => {
+      const references = this.language
+        .query(
+          `
+          (value_qid
+            (
+              (upper_case_identifier)
+              (dot)
+            )* @module.reference
+          )
+          (upper_case_qid
+            (
+              (upper_case_identifier)
+              (dot)
+            )* @module.reference
+          )
+          `,
+        )
+        .matches(tree.rootNode)
+        .filter(Utils.notUndefined.bind(this))
+        .filter(
+          (match) =>
+            match.captures.length > 0 &&
+            match.captures[0].node.parent?.type !== "import_clause",
+        )
+        .map((match) => match.captures.map((n) => n.node.text).join("."))
+        .filter((moduleReference) => moduleReference === moduleImport.text);
+
+      if (references.length === 0 && moduleImport.parent) {
+        diagnostics.push({
+          code: "unused_import",
+          range: this.getNodeRange(moduleImport.parent),
+          message: `Unused import \`${moduleImport.text}\``,
+          severity: DiagnosticSeverity.Warning,
+          source: this.ELM,
+          tags: [DiagnosticTag.Unnecessary],
+        });
+      }
+    });
+
+    return diagnostics;
+  }
+
+  private getUnusedImportValueAndTypeDiagnostics(tree: Tree): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
     const exposedValuesAndTypes = this.language
       .query(
         `
-      (import_clause 
-        (exposing_list
-          (exposed_value) @exposedValue
+        (import_clause 
+          (exposing_list
+            (exposed_value) @exposedValue
+          )
         )
-      )
-      (import_clause 
-        (exposing_list
-          (exposed_type) @exposedType
+        (import_clause 
+          (exposing_list
+            (exposed_type) @exposedType
+          )
         )
-      )
-      `,
+        `,
       )
       .matches(tree.rootNode)
       .map((match) => match.captures[0].node);
@@ -180,14 +249,14 @@ export class ElmDiagnostics {
       const references = this.language
         .query(
           `
-      ((value_expr) @value.reference
-        (#eq? @value.reference "${exposedValueOrType.text}")
-      )
-      ((type_ref 
-        (upper_case_qid) @type.reference)
-        (#eq? @type.reference "${exposedValueOrType.text}")
-      )
-      `,
+          ((value_expr) @value.reference
+            (#eq? @value.reference "${exposedValueOrType.text}")
+          )
+          ((type_ref 
+            (upper_case_qid) @type.reference)
+            (#eq? @type.reference "${exposedValueOrType.text}")
+          )
+          `,
         )
         .matches(tree.rootNode)
         .filter(Utils.notUndefined.bind(this));
@@ -209,18 +278,18 @@ export class ElmDiagnostics {
     return diagnostics;
   }
 
-  private getUnusedAliasDiagnostics(tree: Tree): Diagnostic[] {
+  private getUnusedImportAliasDiagnostics(tree: Tree): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
     const moduleAliases = this.language
       .query(
         `
-      (import_clause 
-        (as_clause
-          (upper_case_identifier) @moduleAlias
+        (import_clause 
+          (as_clause
+            (upper_case_identifier) @moduleAlias
+          )
         )
-      )
-      `,
+        `,
       )
       .matches(tree.rootNode)
       .map((match) => match.captures[0].node);
@@ -229,20 +298,25 @@ export class ElmDiagnostics {
       const references = this.language
         .query(
           `
-      ((value_expr
-        [
-        (value_qid 
-          (upper_case_identifier) @moduleAlias.reference)
-        (upper_case_qid 
-          (upper_case_identifier) @moduleAlias.reference)
-        ]
-        )
-        (#eq? @moduleAlias.reference "${moduleAlias.text}")
-      )
-      `,
+          (value_qid
+            (
+              (upper_case_identifier)
+              (dot)
+            )* @module.reference
+          )
+          (upper_case_qid
+            (
+              (upper_case_identifier)
+              (dot)
+            )* @module.reference
+          )
+          `,
         )
         .matches(tree.rootNode)
-        .filter(Utils.notUndefined.bind(this));
+        .filter(Utils.notUndefined.bind(this))
+        .filter((match) => match.captures.length > 0)
+        .map((match) => match.captures[0].node.text)
+        .filter((moduleReference) => moduleReference === moduleAlias.text);
 
       if (references.length === 0 && moduleAlias.parent) {
         diagnostics.push({
@@ -261,37 +335,58 @@ export class ElmDiagnostics {
 
   private getUnusedPatternVariableDiagnostics(tree: Tree): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
-    const usedPatterns: number[] = [];
 
-    const patternMatches = tree.rootNode
-      .descendantsOfType(["function_declaration_left", "pattern"])
-      .map((fdlOrPattern) => {
-        return {
-          parent: fdlOrPattern.parent,
-          patterns: fdlOrPattern.descendantsOfType("lower_pattern"),
-        };
-      });
+    const patternMatches = this.language
+      .query(
+        `
+        (value_declaration
+          (function_declaration_left
+            [
+              (pattern)
+              (record_pattern)
+              (lower_pattern)
+            ] @pattern
+          )
+        ) @patternScope
 
-    patternMatches.forEach(({ parent, patterns }) => {
-      if (!parent) {
-        return;
-      }
+        (let_in_expr
+          (value_declaration
+            [
+              (pattern)
+              (record_pattern)
+            ] @letPattern
+          )
+        ) @patternScope
 
-      patterns.forEach((pattern) => {
-        if (usedPatterns.includes(pattern.id)) {
-          return;
-        }
-        usedPatterns.push(pattern.id);
+        (case_of_branch
+          (pattern) @pattern
+        ) @patternScope
+        `,
+      )
+      .matches(tree.rootNode);
 
+    patternMatches
+      .filter(Utils.notUndefined.bind(this))
+      .map((match) => {
+        const scope = match.captures[0].node;
+        const patternMatch = match.captures[1].node;
+        return patternMatch.type === "lower_pattern"
+          ? [{ scope, pattern: patternMatch }]
+          : patternMatch.descendantsOfType("lower_pattern").map((pattern) => {
+              return { scope, pattern };
+            });
+      })
+      .reduce((a, b) => a.concat(b), [])
+      .forEach(({ scope, pattern }) => {
         const references = this.language
           .query(
             `
-          ((value_expr) @patternVariable.reference
-            (#eq? @patternVariable.reference "${pattern.text}")
+            ((value_expr) @patternVariable.reference
+              (#eq? @patternVariable.reference "${pattern.text}")
+            )
+            `,
           )
-          `,
-          )
-          .matches(parent)
+          .matches(scope)
           .filter(Utils.notUndefined.bind(this));
 
         if (references.length === 0) {
@@ -305,7 +400,6 @@ export class ElmDiagnostics {
           });
         }
       });
-    });
 
     return diagnostics;
   }
