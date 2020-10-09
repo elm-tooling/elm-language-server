@@ -26,7 +26,7 @@ module.exports = {
     "prettier/prettier": "error",
     "no-prototype-builtins": "warn",
     "no-case-declarations": "warn",
-    "no-use-before-define": "warn",
+    "no-use-before-define": "off",
     "no-async-promise-executor": "warn",
     "@typescript-eslint/no-misused-promises": "warn",
     "@typescript-eslint/unbound-method": "warn",
