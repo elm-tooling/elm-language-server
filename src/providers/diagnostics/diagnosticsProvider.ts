@@ -11,7 +11,9 @@ import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 import { TypeInferenceDiagnostics } from "./typeInferenceDiagnostics";
 import { ASTProvider } from "../astProvider";
-import { IElmWorkspace } from "src/elmWorkspace";
+import { IElmWorkspace } from "../../elmWorkspace";
+import { debounce } from "ts-debounce";
+import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -34,12 +36,7 @@ export class DiagnosticsProvider {
   private elmAnalyseDiagnostics: ElmAnalyseDiagnostics | null = null;
   private typeInferenceDiagnostics: TypeInferenceDiagnostics;
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<{ uri: string }>;
-  private currentDiagnostics: {
-    elmMake: Map<string, Diagnostic[]>;
-    elmAnalyse: Map<string, Diagnostic[]>;
-    elmTest: Map<string, Diagnostic[]>;
-    typeInference: Map<string, Diagnostic[]>;
-  };
+  private currentDiagnostics: Map<string, FileDiagnostics>;
   private events: TextDocumentEvents;
   private connection: IConnection;
   private settings: Settings;
@@ -62,7 +59,6 @@ export class DiagnosticsProvider {
     );
     this.connection = container.resolve<IConnection>("Connection");
     this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
-    this.newElmAnalyseDiagnostics = this.newElmAnalyseDiagnostics.bind(this);
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((doc) =>
       URI.parse(doc.uri),
     );
@@ -70,12 +66,7 @@ export class DiagnosticsProvider {
 
     const astProvider = container.resolve<ASTProvider>(ASTProvider);
 
-    this.currentDiagnostics = {
-      elmAnalyse: new Map<string, Diagnostic[]>(),
-      elmMake: new Map<string, Diagnostic[]>(),
-      elmTest: new Map<string, Diagnostic[]>(),
-      typeInference: new Map<string, Diagnostic[]>(),
-    };
+    this.currentDiagnostics = new Map<string, FileDiagnostics>();
     // register onChange listener if settings are not on-save only
     void this.settings.getClientSettings().then(({ elmAnalyseTrigger }) => {
       this.events.on("open", (d) =>
@@ -89,17 +80,13 @@ export class DiagnosticsProvider {
           .filter((a) => a.type === FileChangeType.Deleted)
           .map((a) => a.uri);
         newDeleteEvents.forEach((uri) => {
-          this.currentDiagnostics.elmAnalyse.delete(uri);
-          this.currentDiagnostics.elmMake.delete(uri);
-          this.currentDiagnostics.elmTest.delete(uri);
-          this.currentDiagnostics.typeInference.delete(uri);
+          this.deleteDiagnostics(uri);
         });
-        this.sendDiagnostics();
       });
       if (this.elmAnalyseDiagnostics) {
         this.elmAnalyseDiagnostics.on(
           "new-diagnostics",
-          this.newElmAnalyseDiagnostics,
+          this.newElmAnalyseDiagnostics.bind(this),
         );
       }
       if (elmAnalyseTrigger === "change") {
@@ -117,15 +104,14 @@ export class DiagnosticsProvider {
               workspace,
             );
 
-            this.currentDiagnostics.typeInference.set(
+            this.updateDiagnostics(
               treeContainer.uri,
+              DiagnosticKind.TypeInference,
               treeDiagnostics,
             );
           }
         });
       });
-
-      this.sendDiagnostics();
 
       astProvider.onTreeChange(({ uri, tree }) => {
         let workspace;
@@ -140,12 +126,11 @@ export class DiagnosticsProvider {
           throw error;
         }
 
-        this.currentDiagnostics.typeInference.set(
+        this.updateDiagnostics(
           uri,
+          DiagnosticKind.TypeInference,
           this.typeInferenceDiagnostics.createDiagnostics(tree, uri, workspace),
         );
-
-        this.sendDiagnostics();
       });
     });
   }
@@ -153,60 +138,50 @@ export class DiagnosticsProvider {
   private newElmAnalyseDiagnostics(
     diagnostics: Map<string, Diagnostic[]>,
   ): void {
-    this.currentDiagnostics.elmAnalyse = diagnostics;
-    this.sendDiagnostics();
+    diagnostics.forEach((diagnostics, uri) => {
+      this.updateDiagnostics(uri, DiagnosticKind.ElmAnalyse, diagnostics);
+    });
   }
 
-  private addOrMergeDiagnostics(
-    map1: Map<string, Diagnostic[]>,
-    map2: Map<string, Diagnostic[]>,
-  ): Map<string, Diagnostic[]> {
-    const result = new Map<string, Diagnostic[]>(map1);
+  private updateDiagnostics(
+    uri: string,
+    kind: DiagnosticKind,
+    diagnostics: Diagnostic[],
+  ): void {
+    let didUpdate = false;
 
-    for (const key of map2.keys()) {
-      const value = map2.get(key);
+    let fileDiagnostics = this.currentDiagnostics.get(uri);
 
-      if (value) {
-        if (map1.has(key)) {
-          const value1 = map1.get(key);
-          if (value1) {
-            result.set(key, [...value, ...value1]);
-          }
-        } else {
-          result.set(key, value);
-        }
-      }
+    if (fileDiagnostics) {
+      didUpdate = fileDiagnostics.update(kind, diagnostics);
+    } else if (diagnostics.length > 0) {
+      fileDiagnostics = new FileDiagnostics(uri);
+      fileDiagnostics.update(kind, diagnostics);
+      this.currentDiagnostics.set(uri, fileDiagnostics);
+      didUpdate = true;
     }
 
-    return result;
+    if (didUpdate) {
+      const sendDiagnostics = (uri: string): void => {
+        const fileDiagnostics = this.currentDiagnostics.get(uri);
+        this.connection.sendDiagnostics({
+          uri,
+          diagnostics: fileDiagnostics ? fileDiagnostics.get() : [],
+        });
+      };
+
+      const sendDiagnosticsDebounced = debounce(sendDiagnostics, 50);
+
+      sendDiagnosticsDebounced(uri);
+    }
   }
 
-  private sendDiagnostics(): void {
-    let allDiagnostics = new Map<string, Diagnostic[]>();
-
-    allDiagnostics = this.addOrMergeDiagnostics(
-      allDiagnostics,
-      this.currentDiagnostics.elmMake,
-    );
-
-    allDiagnostics = this.addOrMergeDiagnostics(
-      allDiagnostics,
-      this.currentDiagnostics.elmTest,
-    );
-
-    allDiagnostics = this.addOrMergeDiagnostics(
-      allDiagnostics,
-      this.currentDiagnostics.elmAnalyse,
-    );
-
-    allDiagnostics = this.addOrMergeDiagnostics(
-      allDiagnostics,
-      this.currentDiagnostics.typeInference,
-    );
-
-    for (const [uri, diagnostics] of allDiagnostics) {
-      this.connection.sendDiagnostics({ uri, diagnostics });
-    }
+  private deleteDiagnostics(uri: string): void {
+    this.currentDiagnostics.delete(uri);
+    this.connection.sendDiagnostics({
+      uri,
+      diagnostics: [],
+    });
   }
 
   private async getDiagnostics(
@@ -236,14 +211,23 @@ export class DiagnosticsProvider {
     const text = document.getText();
 
     if (isSaveOrOpen) {
-      this.currentDiagnostics.elmMake = await this.elmMakeDiagnostics.createDiagnostics(
+      const elmMakeDiagnostics = await this.elmMakeDiagnostics.createDiagnostics(
         uri,
       );
+
+      elmMakeDiagnostics.forEach((diagnostics, diagnosticsUri) => {
+        this.updateDiagnostics(
+          diagnosticsUri,
+          DiagnosticKind.ElmMake,
+          diagnostics,
+        );
+      });
     }
 
-    const elmMakeDiagnosticsForCurrentFile = this.currentDiagnostics.elmMake.get(
-      uri.toString(),
-    );
+    const elmMakeDiagnosticsForCurrentFile =
+      this.currentDiagnostics
+        .get(uri.toString())
+        ?.getForKind(DiagnosticKind.ElmMake) ?? [];
 
     if (
       this.elmAnalyseDiagnostics &&
@@ -254,7 +238,5 @@ export class DiagnosticsProvider {
     ) {
       await this.elmAnalyseDiagnostics.updateFile(uri, text);
     }
-
-    this.sendDiagnostics();
   }
 }
