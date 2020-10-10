@@ -22,6 +22,7 @@
     "globby": "^11.0.1",
     "pjson": "1.0.9",
     "reflect-metadata": "^0.1.13",
+    "ts-debounce": "^2.0.1",
     "tsyringe": "^4.3.0",
     "vscode-languageserver": "^6.1.1",
     "vscode-languageserver-textdocument": "1.0.1",
