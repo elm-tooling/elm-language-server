@@ -47,6 +47,10 @@
     "typescript": "4.0.3"
   },
   "scripts": {
+    "version-patch": "npm --no-git-tag-version version patch",
+    "version-minor": "npm --no-git-tag-version version minor",
+    "version-major": "npm --no-git-tag-version version major",
+    "version": "npm i && npm run compile",
     "copy-wasm": "copyfiles ./tree-sitter-elm.wasm out",
     "compile": "npm run copy-wasm && tsc -p ./",
     "watch": "npm run copy-wasm && tsc -watch -p ./",
