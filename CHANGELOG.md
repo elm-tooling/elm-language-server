@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.12.2
+
+- Fixed problem with communication for clients like VIM
+
 ## 1.12.1
 
 - Fixed hovers for functions not showing up
