@@ -34,6 +34,7 @@ import {
   EOperatorAsFunctionExpr,
   ERecordExpr,
   EFieldAccessExpr,
+  ENegateExpr,
 } from "./expressionTree";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { TypeExpression } from "./typeExpression";
@@ -780,6 +781,9 @@ export class InferenceScope {
       case "ListExpr":
         type = this.inferList(e);
         break;
+      case "NegateExpr":
+        type = this.inferNegateExpr(e);
+        break;
       case "NumberConstant":
         type = e.isFloat ? TFloat : TNumber;
         break;
@@ -1368,6 +1372,15 @@ export class InferenceScope {
       [TMutableRecord({ [field]: typeVar }, TVar("a"))],
       typeVar,
     );
+  }
+
+  private inferNegateExpr(negateExpr: ENegateExpr): Type {
+    const exprType = this.infer(negateExpr.expression);
+    if (this.isAssignable(negateExpr.expression, exprType, TVar("number"))) {
+      return exprType;
+    } else {
+      return TUnknown;
+    }
   }
 
   private inferOperatorAsFunctionExpr(

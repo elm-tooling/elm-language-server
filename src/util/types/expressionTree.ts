@@ -27,6 +27,7 @@ export type Expression =
   | EListPattern
   | ELowerPattern
   | ELowerTypeName
+  | ENegateExpr
   | ENumberConstant
   | EOperator
   | EOperatorAsFunctionExpr
@@ -241,6 +242,10 @@ export interface ECharConstantExpr extends SyntaxNode {
 export interface EGlslCodeExpr extends SyntaxNode {
   nodeType: "GlslCodeExpr";
   content: SyntaxNode;
+}
+export interface ENegateExpr extends SyntaxNode {
+  nodeType: "NegateExpr";
+  expression: Expression;
 }
 
 export function mapSyntaxNodeToExpression(
@@ -647,6 +652,11 @@ export function mapSyntaxNodeToExpression(
           TreeUtils.findFirstNamedChildOfType("operator_identifier", node),
         ),
       } as EOperatorAsFunctionExpr);
+    case "negate_expr":
+      return Object.assign(node, {
+        nodeType: "NegateExpr",
+        expression: mapSyntaxNodeToExpression(node.lastNamedChild),
+      } as ENegateExpr);
     default:
       return mapSyntaxNodeToExpression(node.firstNamedChild);
   }
