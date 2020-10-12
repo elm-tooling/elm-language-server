@@ -1,4 +1,4 @@
-import { Tree } from "web-tree-sitter";
+import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IExposing, TreeUtils } from "./util/treeUtils";
 
 export interface ITreeContainer {
@@ -28,6 +28,7 @@ export interface IForest {
     packageName?: string,
   ): void;
   removeTree(uri: string): void;
+  getUriOfNode(node: SyntaxNode): string | undefined;
 }
 
 export class Forest implements IForest {
@@ -106,5 +107,12 @@ export class Forest implements IForest {
   public removeTree(uri: string): void {
     // Not sure this is the best way to do this...
     this.treeIndex = this.treeIndex.filter((tree) => tree.uri !== uri);
+  }
+
+  getUriOfNode(node: SyntaxNode): string | undefined {
+    return this.treeIndex.find(
+      (treeContainer) =>
+        treeContainer.tree.rootNode.id === node.tree.rootNode.id,
+    )?.uri;
   }
 }

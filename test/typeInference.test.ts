@@ -56,7 +56,16 @@ describe("test type inference", () => {
       result.position,
     );
 
-    const nodeType = findType(nodeAtPosition, testUri, workspace);
+    const declaration = TreeUtils.findParentOfType(
+      "value_declaration",
+      nodeAtPosition,
+    );
+
+    if (!declaration) {
+      throw new Error("Could not get value declaration");
+    }
+
+    const nodeType = findType(declaration, testUri, workspace);
 
     expect(
       TypeRenderer.typeToString(

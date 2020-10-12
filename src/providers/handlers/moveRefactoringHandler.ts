@@ -160,8 +160,7 @@ export class MoveRefactoringHandler {
             nodeType: "Function",
             uri: params.sourceUri,
           },
-          forest,
-          imports,
+          elmWorkspace,
         ).map((ref) => {
           return {
             ...ref,

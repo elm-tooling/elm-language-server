@@ -1,16 +1,17 @@
-import { SyntaxNode } from "web-tree-sitter";
-import { IForest } from "../forest";
-import { IImports } from "../imports";
+import { IElmWorkspace } from "src/elmWorkspace";
+import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IReferenceNode } from "./referenceNode";
 import { TreeUtils } from "./treeUtils";
 
 export class References {
   public static find(
     definitionNode: IReferenceNode | undefined,
-    forest: IForest,
-    imports: IImports,
+    elmWorkspace: IElmWorkspace,
   ): { node: SyntaxNode; uri: string }[] {
     const references: { node: SyntaxNode; uri: string }[] = [];
+
+    const forest = elmWorkspace.getForest();
+    const imports = elmWorkspace.getImports();
 
     if (definitionNode) {
       const refSourceTree = forest.getByUri(definitionNode.uri);
@@ -446,6 +447,53 @@ export class References {
             }
             break;
 
+          case "FieldType":
+            {
+              const fieldName = definitionNode.node.childForFieldName("name");
+
+              if (fieldName) {
+                references.push({
+                  node: fieldName,
+                  uri: definitionNode.uri,
+                });
+
+                references.push(
+                  ...this.getFieldReferences(
+                    fieldName.text,
+                    definitionNode,
+                    refSourceTree.tree,
+                    definitionNode.uri,
+                    elmWorkspace,
+                  ),
+                );
+
+                for (const uri in imports.imports) {
+                  const element = imports.imports[uri];
+                  const needsToBeChecked = element.filter(
+                    (a) =>
+                      uri !== definitionNode.uri &&
+                      a.fromModuleName === moduleNameNode?.text,
+                  );
+                  if (needsToBeChecked.length > 0) {
+                    const treeToCheck = forest.getByUri(uri);
+
+                    if (treeToCheck && treeToCheck.writeable) {
+                      references.push(
+                        ...this.getFieldReferences(
+                          fieldName.text,
+                          definitionNode,
+                          treeToCheck.tree,
+                          uri,
+                          elmWorkspace,
+                        ),
+                      );
+                    }
+                  }
+                }
+              }
+            }
+            break;
+
           default:
             break;
         }
@@ -524,5 +572,35 @@ export class References {
     ) {
       return node.parent.previousNamedSibling.firstChild;
     }
+  }
+
+  private static getFieldReferences(
+    fieldName: string,
+    definition: { node: SyntaxNode; uri: string },
+    tree: Tree,
+    uri: string,
+    elmWorkspace: IElmWorkspace,
+  ): { node: SyntaxNode; uri: string }[] {
+    const references: { node: SyntaxNode; uri: string }[] = [];
+
+    const fieldUsages = TreeUtils.findFieldUsages(tree, fieldName);
+
+    fieldUsages.forEach((field) => {
+      const fieldDef = TreeUtils.findDefinitionNodeByReferencingNode(
+        field,
+        uri,
+        tree,
+        elmWorkspace,
+      );
+
+      if (fieldDef?.node.id === definition.node.id) {
+        references.push({
+          node: field,
+          uri,
+        });
+      }
+    });
+
+    return references;
   }
 }

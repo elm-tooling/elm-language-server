@@ -46,7 +46,7 @@ export class HoverProvider {
         nodeAtPosition,
         params.textDocument.uri,
         tree,
-        elmWorkspace.getImports(),
+        elmWorkspace,
       );
 
       if (definitionNode) {

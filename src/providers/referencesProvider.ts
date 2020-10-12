@@ -32,7 +32,6 @@ export class ReferencesProvider {
   ): ReferenceResult => {
     this.connection.console.info(`References were requested`);
 
-    const imports = elmWorkspace.getImports();
     const forest = elmWorkspace.getForest();
 
     const tree: Tree | undefined = forest.getTree(params.textDocument.uri);
@@ -47,10 +46,10 @@ export class ReferencesProvider {
         nodeAtPosition,
         params.textDocument.uri,
         tree,
-        imports,
+        elmWorkspace,
       );
 
-      const references = References.find(definitionNode, forest, imports);
+      const references = References.find(definitionNode, elmWorkspace);
 
       if (references) {
         return references.map((a) =>

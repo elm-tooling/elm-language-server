@@ -34,7 +34,7 @@ export class RenameUtils {
         nodeAtPosition,
         uri,
         tree,
-        imports,
+        elmWorkspace,
       );
 
       if (definitionNode) {
@@ -42,7 +42,7 @@ export class RenameUtils {
         if (refTree && refTree.writeable) {
           return {
             originalNode: nodeAtPosition,
-            references: References.find(definitionNode, forest, imports),
+            references: References.find(definitionNode, elmWorkspace),
           };
         }
         if (refTree && !refTree.writeable) {

@@ -266,9 +266,8 @@ export class CompletionProvider {
           nodeAtPosition,
           tree,
           replaceRange,
-          elmWorkspace.getImports(),
           params.textDocument.uri,
-          forest,
+          elmWorkspace,
         );
       }
 
@@ -322,8 +321,7 @@ export class CompletionProvider {
           targetNode,
           params.textDocument.uri,
           tree,
-          elmWorkspace.getImports(),
-          forest,
+          elmWorkspace,
           replaceRange,
           targetWord,
         );
@@ -336,9 +334,8 @@ export class CompletionProvider {
           targetNode,
           tree,
           replaceRange,
-          elmWorkspace.getImports(),
           params.textDocument.uri,
-          forest,
+          elmWorkspace,
         );
 
         if (recordCompletions.length > 0) {
@@ -745,26 +742,23 @@ export class CompletionProvider {
     node: SyntaxNode,
     tree: Tree,
     range: Range,
-    imports: IImports,
     uri: string,
-    forest: IForest,
+    elmWorkspace: IElmWorkspace,
   ): CompletionItem[] {
     const result: CompletionItem[] = [];
     let typeDeclarationNode = TreeUtils.getTypeAliasOfRecord(
       node,
       tree,
-      imports,
       uri,
-      forest,
+      elmWorkspace,
     )?.node;
 
     if (!typeDeclarationNode && node.parent?.parent) {
       typeDeclarationNode = TreeUtils.getTypeAliasOfRecordField(
         node.parent.parent,
         tree,
-        imports,
         uri,
-        forest,
+        elmWorkspace,
       )?.node;
     }
 
@@ -772,8 +766,8 @@ export class CompletionProvider {
       typeDeclarationNode = TreeUtils.getTypeOrTypeAliasOfFunctionRecordParameter(
         node.parent.parent,
         tree,
-        imports,
         uri,
+        elmWorkspace,
       );
     }
 
@@ -1094,12 +1088,13 @@ export class CompletionProvider {
     node: SyntaxNode,
     uri: string,
     tree: Tree,
-    imports: IImports,
-    forest: IForest,
+    elmWorkspace: IElmWorkspace,
     range: Range,
     targetModule: string,
   ): CompletionItem[] {
     const result: CompletionItem[] = [];
+
+    const forest = elmWorkspace.getForest();
 
     // Handle possible submodules
     result.push(
@@ -1118,7 +1113,7 @@ export class CompletionProvider {
       node,
       uri,
       tree,
-      imports,
+      elmWorkspace,
     );
 
     let moduleTree: ITreeContainer | undefined;

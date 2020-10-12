@@ -1,8 +1,8 @@
 import { SyntaxNode } from "web-tree-sitter";
 import { OperatorAssociativity } from "./operatorPrecedence";
 import { TreeUtils } from "../treeUtils";
-import { IImports } from "src/imports";
 import { Utils } from "../utils";
+import { IElmWorkspace } from "src/elmWorkspace";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export type Expression =
@@ -655,17 +655,17 @@ export function mapSyntaxNodeToExpression(
 export function findDefinition(
   e: SyntaxNode | undefined | null,
   uri: string,
-  imports: IImports,
+  elmWorkspace: IElmWorkspace,
 ): { expr: Expression; uri: string } | undefined {
   if (!e) {
     return;
   }
 
-  const definition = TreeUtils.findDefinitionNodeByReferencingNode(
+  const definition = TreeUtils.findDefinitionNodeByReferencingNodeShallow(
     e,
     uri,
     e.tree,
-    imports,
+    elmWorkspace,
   );
 
   const mappedNode = mapSyntaxNodeToExpression(definition?.node);

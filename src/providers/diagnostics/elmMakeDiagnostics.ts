@@ -13,8 +13,7 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { Forest, ITreeContainer } from "../../forest";
-import { IImports } from "../../imports";
+import { ITreeContainer } from "../../forest";
 import * as utils from "../../util/elmUtils";
 import { execCmd } from "../../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
@@ -26,6 +25,7 @@ import { Utils } from "../../util/utils";
 import { IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
+import { IElmWorkspace } from "src/elmWorkspace";
 
 const ELM_MAKE = "Elm";
 const NAMING_ERROR = "NAMING ERROR";
@@ -215,15 +215,15 @@ export class ElmMakeDiagnostics {
   ): CodeAction[] {
     const result: CodeAction[] = [];
 
-    const forest = this.elmWorkspaceMatcher
-      .getElmWorkspaceFor(URI.parse(uri))
-      .getForest();
+    const elmWorkspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(
+      URI.parse(uri),
+    );
+
+    const forest = elmWorkspace.getForest();
 
     const exposedValues = ImportUtils.getPossibleImports(forest, uri);
 
-    const imports = this.elmWorkspaceMatcher
-      .getElmWorkspaceFor(URI.parse(uri))
-      .getImports();
+    const imports = elmWorkspace.getImports();
 
     const sourceTree = forest.getByUri(uri);
 
@@ -364,9 +364,8 @@ export class ElmMakeDiagnostics {
             ...this.addCaseQuickfixes(
               sourceTree,
               diagnostic,
-              imports,
               uri,
-              forest,
+              elmWorkspace,
             ),
           );
         }
@@ -374,13 +373,7 @@ export class ElmMakeDiagnostics {
         diagnostic.message.startsWith("MISSING PATTERNS - This `case`")
       ) {
         result.push(
-          ...this.addCaseQuickfixes(
-            sourceTree,
-            diagnostic,
-            imports,
-            uri,
-            forest,
-          ),
+          ...this.addCaseQuickfixes(sourceTree, diagnostic, uri, elmWorkspace),
         );
       }
     });
@@ -390,9 +383,8 @@ export class ElmMakeDiagnostics {
   private addCaseQuickfixes(
     sourceTree: ITreeContainer | undefined,
     diagnostic: Diagnostic,
-    imports: IImports,
     uri: string,
-    forest: Forest,
+    elmWorkspace: IElmWorkspace,
   ): CodeAction[] {
     const result = [];
     const valueNode = sourceTree?.tree.rootNode.namedDescendantForPosition(
@@ -419,9 +411,8 @@ export class ElmMakeDiagnostics {
         const typeDeclarationNode = TreeUtils.getTypeAliasOfCase(
           valueNode.namedChildren[1].firstNamedChild!.firstNamedChild!,
           sourceTree!.tree,
-          imports,
           uri,
-          forest,
+          elmWorkspace,
         );
 
         if (typeDeclarationNode) {

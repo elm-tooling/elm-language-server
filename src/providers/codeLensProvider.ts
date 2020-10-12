@@ -112,10 +112,10 @@ export class CodeLensProvider {
             nodeAtPosition,
             data.uri,
             tree,
-            imports,
+            elmWorkspace,
           );
 
-          const references = References.find(definitionNode, forest, imports);
+          const references = References.find(definitionNode, elmWorkspace);
 
           let refLocations: Location[] = [];
           if (references) {

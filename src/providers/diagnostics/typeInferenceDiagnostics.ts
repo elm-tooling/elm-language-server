@@ -41,7 +41,7 @@ export class TypeInferenceDiagnostics {
     if (allTopLevelFunctions) {
       const inferencedTypes = allTopLevelFunctions
         .filter(Utils.notUndefinedOrNull)
-        .map((func) => func.firstChild?.firstChild)
+        .map((func) => func.firstChild)
         .filter(Utils.notUndefinedOrNull)
         .map((node) => {
           const typeString: string = TypeRenderer.typeToString(
@@ -51,9 +51,9 @@ export class TypeInferenceDiagnostics {
             elmWorkspace.getImports(),
           );
 
-          if (typeString && typeString !== "Unknown" && node) {
+          if (typeString && typeString !== "Unknown" && node.firstNamedChild) {
             return {
-              range: this.getNodeRange(node),
+              range: this.getNodeRange(node.firstNamedChild),
               message: `Missing type annotation: \`${typeString}\``,
               severity: DiagnosticSeverity.Information,
               source: this.TYPE_INFERENCE,
@@ -106,21 +106,23 @@ export class TypeInferenceDiagnostics {
           diagnostic.range.start,
         );
 
-        const typeString: string = TypeRenderer.typeToString(
-          findType(nodeAtPosition, uri, elmWorkspace),
-          nodeAtPosition.tree,
-          uri,
-          elmWorkspace.getImports(),
-        );
-
-        result.push(
-          this.insertQuickFixAtStart(
+        if (nodeAtPosition.parent) {
+          const typeString: string = TypeRenderer.typeToString(
+            findType(nodeAtPosition.parent, uri, elmWorkspace),
+            nodeAtPosition.tree,
             uri,
-            `${nodeAtPosition.text} : ${typeString}\n`,
-            diagnostic,
-            "Add inferred annotation",
-          ),
-        );
+            elmWorkspace.getImports(),
+          );
+
+          result.push(
+            this.insertQuickFixAtStart(
+              uri,
+              `${nodeAtPosition.text} : ${typeString}\n`,
+              diagnostic,
+              "Add inferred annotation",
+            ),
+          );
+        }
       });
     }
     return result;
