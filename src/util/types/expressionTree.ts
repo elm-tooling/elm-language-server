@@ -1,8 +1,8 @@
 import { SyntaxNode } from "web-tree-sitter";
 import { OperatorAssociativity } from "./operatorPrecedence";
 import { TreeUtils } from "../treeUtils";
-import { IImports } from "src/imports";
 import { Utils } from "../utils";
+import { IElmWorkspace } from "src/elmWorkspace";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export type Expression =
@@ -27,6 +27,7 @@ export type Expression =
   | EListPattern
   | ELowerPattern
   | ELowerTypeName
+  | ENegateExpr
   | ENumberConstant
   | EOperator
   | EOperatorAsFunctionExpr
@@ -241,6 +242,10 @@ export interface ECharConstantExpr extends SyntaxNode {
 export interface EGlslCodeExpr extends SyntaxNode {
   nodeType: "GlslCodeExpr";
   content: SyntaxNode;
+}
+export interface ENegateExpr extends SyntaxNode {
+  nodeType: "NegateExpr";
+  expression: Expression;
 }
 
 export function mapSyntaxNodeToExpression(
@@ -647,6 +652,11 @@ export function mapSyntaxNodeToExpression(
           TreeUtils.findFirstNamedChildOfType("operator_identifier", node),
         ),
       } as EOperatorAsFunctionExpr);
+    case "negate_expr":
+      return Object.assign(node, {
+        nodeType: "NegateExpr",
+        expression: mapSyntaxNodeToExpression(node.lastNamedChild),
+      } as ENegateExpr);
     default:
       return mapSyntaxNodeToExpression(node.firstNamedChild);
   }
@@ -655,17 +665,17 @@ export function mapSyntaxNodeToExpression(
 export function findDefinition(
   e: SyntaxNode | undefined | null,
   uri: string,
-  imports: IImports,
+  elmWorkspace: IElmWorkspace,
 ): { expr: Expression; uri: string } | undefined {
   if (!e) {
     return;
   }
 
-  const definition = TreeUtils.findDefinitionNodeByReferencingNode(
+  const definition = TreeUtils.findDefinitionNodeByReferencingNodeShallow(
     e,
     uri,
     e.tree,
-    imports,
+    elmWorkspace,
   );
 
   const mappedNode = mapSyntaxNodeToExpression(definition?.node);

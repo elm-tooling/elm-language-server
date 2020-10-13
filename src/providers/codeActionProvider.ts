@@ -112,7 +112,11 @@ export class CodeActionProvider {
         !TreeUtils.getTypeAnnotation(nodeAtPosition.parent.parent)
       ) {
         const typeString: string = TypeRenderer.typeToString(
-          findType(nodeAtPosition, params.textDocument.uri, elmWorkspace),
+          findType(
+            nodeAtPosition.parent,
+            params.textDocument.uri,
+            elmWorkspace,
+          ),
           nodeAtPosition.tree,
           params.textDocument.uri,
           elmWorkspace.getImports(),

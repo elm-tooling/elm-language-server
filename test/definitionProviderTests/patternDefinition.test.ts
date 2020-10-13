@@ -5,7 +5,7 @@ describe("patternDefinition", () => {
 
   // CASE-OF EXPRESSIONS AND PATTERNS
 
-  xit(`test case-of pattern wildcard`, async () => {
+  it(`test case-of pattern wildcard`, async () => {
     const source = `
 f x =
     case x of
@@ -130,7 +130,7 @@ f =
     await testBase.testDefinition(source);
   });
 
-  xit(`test pattern alias in let-in destructuring assignment`, async () => {
+  it(`test pattern alias in let-in destructuring assignment`, async () => {
     const source = `
 f =
     let
@@ -143,12 +143,35 @@ f =
     await testBase.testDefinition(source);
   });
 
-  xit(`test pattern alias in case-of branch`, async () => {
+  it(`test pattern in let-in destructuring assignment`, async () => {
+    const source = `
+f =
+    let
+        (x, y) = (320, 480)
+       --X
+    in
+        x
+      --^
+`;
+    await testBase.testDefinition(source);
+  });
+
+  it(`test pattern alias in case-of branch`, async () => {
     const source = `
 f x =
     case x of
         ((x, y) as point) -> point
                    --X       --^
+`;
+    await testBase.testDefinition(source);
+  });
+
+  it(`test record pattern in case-of branch`, async () => {
+    const source = `
+f x =
+    case x of
+        Field { point } -> point
+                --X        --^
 `;
     await testBase.testDefinition(source);
   });

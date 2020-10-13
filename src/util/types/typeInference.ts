@@ -34,6 +34,7 @@ import {
   EOperatorAsFunctionExpr,
   ERecordExpr,
   EFieldAccessExpr,
+  ENegateExpr,
 } from "./expressionTree";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { TypeExpression } from "./typeExpression";
@@ -554,7 +555,7 @@ export interface InferenceResult {
   expressionTypes: SyntaxNodeMap<Expression, Type>;
   diagnostics: Diagnostic[];
   type: Type;
-  resolvedDeclarations: SyntaxNodeMap<EValueDeclaration, Type>;
+  recordDiffs: SyntaxNodeMap<Expression, RecordDiff>;
 }
 
 export class InferenceScope {
@@ -739,7 +740,7 @@ export class InferenceScope {
       expressionTypes: this.expressionTypes,
       diagnostics: this.diagnostics,
       type: ret,
-      resolvedDeclarations: this.resolvedDeclarations,
+      recordDiffs: this.recordDiffs,
     };
   }
 
@@ -779,6 +780,9 @@ export class InferenceScope {
         break;
       case "ListExpr":
         type = this.inferList(e);
+        break;
+      case "NegateExpr":
+        type = this.inferNegateExpr(e);
         break;
       case "NumberConstant":
         type = e.isFloat ? TFloat : TNumber;
@@ -820,7 +824,7 @@ export class InferenceScope {
       expressionTypes: this.expressionTypes,
       diagnostics: this.diagnostics,
       type: uncurryFunction(TFunction(paramVars, bodyType)),
-      resolvedDeclarations: this.resolvedDeclarations,
+      recordDiffs: this.recordDiffs,
     };
   }
 
@@ -841,7 +845,7 @@ export class InferenceScope {
       expressionTypes: this.expressionTypes,
       diagnostics: this.diagnostics,
       type: bodyType,
-      resolvedDeclarations: this.resolvedDeclarations,
+      recordDiffs: this.recordDiffs,
     };
   }
 
@@ -856,7 +860,7 @@ export class InferenceScope {
       expressionTypes: this.expressionTypes,
       diagnostics: this.diagnostics,
       type,
-      resolvedDeclarations: this.resolvedDeclarations,
+      recordDiffs: this.recordDiffs,
     };
   }
 
@@ -878,6 +882,8 @@ export class InferenceScope {
 
     this.diagnostics.push(...result.diagnostics);
 
+    result.recordDiffs.forEach((val, key) => this.recordDiffs.set(key, val));
+
     result.expressionTypes.forEach((val, key) =>
       this.expressionTypes.set(key, val),
     );
@@ -894,11 +900,8 @@ export class InferenceScope {
       activeScopes,
     );
 
-    this.diagnostics.push(...result.diagnostics);
-
-    result.expressionTypes.forEach((val, key) =>
-      this.expressionTypes.set(key, val),
-    );
+    this.resolvedDeclarations.set(declaration, result.type);
+    this.expressionTypes.set(declaration, result.type);
 
     const funcName = TreeUtils.getFunctionNameNodeFromDefinition(declaration)
       ?.text;
@@ -975,13 +978,8 @@ export class InferenceScope {
       findDefinition(
         e.firstNamedChild?.lastNamedChild,
         this.uri,
-        this.elmWorkspace.getImports(),
-      ) ??
-      findDefinition(
-        e.firstNamedChild,
-        this.uri,
-        this.elmWorkspace.getImports(),
-      );
+        this.elmWorkspace,
+      ) ?? findDefinition(e.firstNamedChild, this.uri, this.elmWorkspace);
 
     if (!definition) {
       this.diagnostics.push(missingValueError(e));
@@ -1332,11 +1330,7 @@ export class InferenceScope {
     e: EOperator,
   ): [Type, IOperatorPrecedence] {
     // Find operator reference
-    const definition = findDefinition(
-      e,
-      this.uri,
-      this.elmWorkspace.getImports(),
-    );
+    const definition = findDefinition(e, this.uri, this.elmWorkspace);
 
     const opDeclaration = mapSyntaxNodeToExpression(definition?.expr.parent);
 
@@ -1380,6 +1374,15 @@ export class InferenceScope {
     );
   }
 
+  private inferNegateExpr(negateExpr: ENegateExpr): Type {
+    const exprType = this.infer(negateExpr.expression);
+    if (this.isAssignable(negateExpr.expression, exprType, TVar("number"))) {
+      return exprType;
+    } else {
+      return TUnknown;
+    }
+  }
+
   private inferOperatorAsFunctionExpr(
     operatorFunction: EOperatorAsFunctionExpr,
   ): Type {
@@ -1387,7 +1390,7 @@ export class InferenceScope {
     const definition = findDefinition(
       operatorFunction.operator,
       this.uri,
-      this.elmWorkspace.getImports(),
+      this.elmWorkspace,
     );
 
     const opDeclaration = mapSyntaxNodeToExpression(definition?.expr.parent);
@@ -1478,7 +1481,11 @@ export class InferenceScope {
         type = this.inferFieldAccess(target);
         break;
       default:
-        throw new Error("Unexpected field access target expression");
+        if (target.parent?.type === "parenthesized_expr") {
+          type = this.infer(target);
+        } else {
+          throw new Error("Unexpected field access target expression");
+        }
     }
 
     this.expressionTypes.set(target, type);
@@ -1812,7 +1819,7 @@ export class InferenceScope {
     const variant = findDefinition(
       unionPattern.constructor.lastNamedChild,
       this.uri,
-      this.elmWorkspace.getImports(),
+      this.elmWorkspace,
     );
 
     if (variant?.expr.nodeType !== "UnionVariant") {
@@ -2473,18 +2480,25 @@ export function findType(
         new Set<EValueDeclaration>(),
       );
 
-      if (node.parent?.type === "function_declaration_left") {
-        if (node.parent.parent?.parent?.type === "file") {
-          // Top level function
-          return inferenceResult.type;
-        } else {
-          // Let expr function
+      if (node?.type === "function_declaration_left") {
+        const declaration = TreeUtils.findParentOfType(
+          "value_declaration",
+          node,
+        );
+
+        if (declaration) {
           return (
-            inferenceResult.resolvedDeclarations.get(
-              node.parent.parent as EValueDeclaration,
-            ) ?? TUnknown
+            inferenceResult.expressionTypes.get(declaration as Expression) ??
+            inferenceResult.type
           );
+        } else {
+          return TUnknown;
         }
+      } else if (node.type === "value_declaration") {
+        return (
+          inferenceResult.expressionTypes.get(node as Expression) ??
+          inferenceResult.type
+        );
       }
 
       const findTypeOrParentType = (

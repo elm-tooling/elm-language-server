@@ -49,8 +49,7 @@ export class DefinitionProvider {
         nodeAtPosition,
         param.textDocument.uri,
         tree,
-        elmWorkspace.getImports(),
-        forest,
+        elmWorkspace,
       );
 
       if (definitionNode) {

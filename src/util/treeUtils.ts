@@ -4,6 +4,8 @@ import { IImport, IImports } from "../imports";
 import { IForest } from "../forest";
 import { Utils } from "./utils";
 import { comparePosition } from "../positionUtil";
+import { findType, Type } from "./types/typeInference";
+import { IElmWorkspace } from "src/elmWorkspace";
 
 export type NodeType =
   | "Function"
@@ -491,22 +493,20 @@ export class TreeUtils {
         });
 
       if (!ret) {
-        functions.forEach((elmFunction) => {
-          const declaration = TreeUtils.findFirstNamedChildOfType(
+        for (const elmFunction of functions) {
+          const pattern = TreeUtils.findFirstNamedChildOfType(
             "pattern",
             elmFunction,
           );
-          if (
-            declaration &&
-            declaration.children[0] &&
-            declaration.children[0].children
-          ) {
-            ret = declaration.children[0].children
-              .find((a) => functionName === a.text)
-              ?.child(0);
-            return;
+          if (pattern) {
+            ret =
+              pattern
+                .descendantsOfType("lower_pattern")
+                .find((a) => functionName === a.text)?.firstNamedChild ??
+              undefined;
+            break;
           }
-        });
+        }
       }
       return ret;
     }
@@ -713,9 +713,40 @@ export class TreeUtils {
     nodeAtPosition: SyntaxNode,
     uri: string,
     tree: Tree,
-    imports: IImports,
-    forest?: IForest,
+    elmWorkspace: IElmWorkspace,
   ): { node: SyntaxNode; uri: string; nodeType: NodeType } | undefined {
+    const definition = this.findDefinitionNodeByReferencingNodeShallow(
+      nodeAtPosition,
+      uri,
+      tree,
+      elmWorkspace,
+    );
+
+    if (definition?.node.parent?.type === "lower_pattern") {
+      const innerDefinition = this.findDefinitionNodeByReferencingNodeShallow(
+        definition.node,
+        uri,
+        tree,
+        elmWorkspace,
+      );
+
+      if (innerDefinition) {
+        return innerDefinition;
+      }
+    }
+
+    return definition;
+  }
+
+  public static findDefinitionNodeByReferencingNodeShallow(
+    nodeAtPosition: SyntaxNode,
+    uri: string,
+    tree: Tree,
+    elmWorkspace: IElmWorkspace,
+  ): { node: SyntaxNode; uri: string; nodeType: NodeType } | undefined {
+    const imports = elmWorkspace.getImports();
+    const forest = elmWorkspace.getForest();
+
     if (
       nodeAtPosition.parent &&
       nodeAtPosition.parent.type === "upper_case_qid" &&
@@ -1021,6 +1052,12 @@ export class TreeUtils {
         };
       }
     } else if (
+      nodeAtPosition.parent?.type === "lower_pattern" &&
+      nodeAtPosition.parent.parent?.type === "record_pattern"
+    ) {
+      const type = findType(nodeAtPosition.parent.parent, uri, elmWorkspace);
+      return TreeUtils.findFieldReference(type, nodeAtPosition.text, forest);
+    } else if (
       nodeAtPosition.parent &&
       (nodeAtPosition.parent.type === "value_qid" ||
         nodeAtPosition.parent.type === "lower_pattern" ||
@@ -1200,96 +1237,48 @@ export class TreeUtils {
         return { node: definitionNode, uri, nodeType: "Operator" };
       }
     } else if (nodeAtPosition.parent?.type === "field_access_expr") {
-      const variableNodes = this.descendantsOfType(
-        nodeAtPosition.parent,
-        "lower_case_identifier",
-      );
-      if (variableNodes.length > 0) {
-        const indexOfNode = variableNodes.findIndex(
-          (varNode) => varNode.text === nodeAtPosition.text,
-        );
+      let target = nodeAtPosition.parent?.childForFieldName("target");
 
-        const variableRef =
-          TreeUtils.findDefinitionNodeByReferencingNode(
-            variableNodes[indexOfNode > 0 ? indexOfNode - 1 : 0],
-            uri,
-            tree,
-            imports,
-          )?.node ?? undefined;
+      // Adjust for parenthesis expr. Will need to change when we handle it better in inference
+      if (target?.type === "parenthesized_expr") {
+        target = target.namedChildren[1];
+      }
 
-        let variableDef: SyntaxNode | null | undefined =
-          TreeUtils.getTypeOrTypeAliasOfFunctionParameter(variableRef) ??
-          (variableRef?.parent
-            ? TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
-                variableRef.parent,
-              )
-            : undefined);
-
-        if (!variableDef && variableRef) {
-          variableDef = TreeUtils.findFirstNamedChildOfType(
-            "type_expression",
-            variableRef,
-          )?.firstNamedChild;
-        }
-
-        if (variableDef) {
-          const variableType = TreeUtils.findDefinitionNodeByReferencingNode(
-            variableDef.firstNamedChild?.firstNamedChild ?? variableDef,
-            uri,
-            tree,
-            imports,
-          );
-
-          const fieldName = nodeAtPosition.text;
-
-          if (variableType) {
-            const fieldNode = TreeUtils.descendantsOfType(
-              variableType.node,
-              "field_type",
-            ).find((f) => {
-              return f.firstNamedChild?.text === fieldName;
-            });
-
-            if (fieldNode) {
-              return {
-                node: fieldNode,
-                nodeType: "FieldType",
-                uri: variableType.uri,
-              };
-            }
-          }
-        }
+      if (target) {
+        const type = findType(target, uri, elmWorkspace);
+        return TreeUtils.findFieldReference(type, nodeAtPosition.text, forest);
       }
     } else if (
-      nodeAtPosition.parent?.parent?.type === "record_expr" &&
-      forest
+      nodeAtPosition.type === "lower_case_identifier" &&
+      nodeAtPosition.parent?.type === "field" &&
+      nodeAtPosition.parent.parent?.type === "record_expr"
     ) {
-      const typeDef = TreeUtils.getTypeAliasOfRecord(
-        nodeAtPosition,
-        tree,
-        imports,
-        uri,
-        forest,
-      );
+      const type = findType(nodeAtPosition.parent.parent, uri, elmWorkspace);
+      return TreeUtils.findFieldReference(type, nodeAtPosition.text, forest);
+    } else if (
+      nodeAtPosition.type === "lower_case_identifier" &&
+      nodeAtPosition.parent?.type === "field_accessor_function_expr"
+    ) {
+      const type = findType(nodeAtPosition.parent, uri, elmWorkspace);
 
-      const fieldName = nodeAtPosition.text;
+      if (type.nodeType === "Function") {
+        const paramType = type.params[0];
 
-      if (typeDef) {
-        const fieldNode = TreeUtils.descendantsOfType(
-          typeDef.node,
-          "field_type",
-        ).find((f) => {
-          return f.firstNamedChild?.text === fieldName;
-        });
-
-        if (fieldNode) {
-          return {
-            node: fieldNode,
-            nodeType: "FieldType",
-            uri: typeDef.uri,
-          };
-        }
+        return TreeUtils.findFieldReference(
+          paramType,
+          nodeAtPosition.text,
+          forest,
+        );
       }
+    } else if (
+      nodeAtPosition.type === "lower_case_identifier" &&
+      nodeAtPosition.parent?.type === "field_type"
+    ) {
+      return {
+        node: nodeAtPosition.parent,
+        nodeType: "FieldType",
+        uri,
+      };
     } else if (
       nodeAtPosition.type === "upper_case_identifier" &&
       nodeAtPosition.parent?.type === "ERROR"
@@ -1462,24 +1451,17 @@ export class TreeUtils {
     caseParameterName: string,
   ): SyntaxNode | undefined {
     if (node.parent) {
-      if (
-        node.parent.type === "case_of_branch" &&
-        node.parent.firstChild &&
-        node.parent.firstChild.firstChild &&
-        node.parent.firstChild.type === "pattern"
-      ) {
-        if (node.parent.firstChild) {
-          const match = node.parent.firstChild.firstChild.children.find(
-            (a) => a.type === "lower_pattern" && a.text === caseParameterName,
+      if (node.parent.type === "case_of_branch" && node.parent.firstChild) {
+        const match = node.parent.firstChild
+          .descendantsOfType("lower_pattern")
+          .find((a) => a.text === caseParameterName);
+        if (match && match.firstNamedChild) {
+          return match.firstNamedChild;
+        } else {
+          return this.findCaseOfParameterDefinition(
+            node.parent,
+            caseParameterName,
           );
-          if (match) {
-            return match;
-          } else {
-            return this.findCaseOfParameterDefinition(
-              node.parent,
-              caseParameterName,
-            );
-          }
         }
       } else {
         return this.findCaseOfParameterDefinition(
@@ -1663,8 +1645,8 @@ export class TreeUtils {
   public static getTypeOrTypeAliasOfFunctionRecordParameter(
     node: SyntaxNode | undefined,
     tree: Tree,
-    imports: IImports,
     uri: string,
+    elmWorkspace: IElmWorkspace,
   ): SyntaxNode | undefined {
     if (
       node?.parent?.type === "function_call_expr" &&
@@ -1682,7 +1664,7 @@ export class TreeUtils {
         functionName[functionName.length - 1],
         uri,
         tree,
-        imports,
+        elmWorkspace,
       );
 
       if (functionDefinition?.node.previousNamedSibling?.lastNamedChild) {
@@ -1705,7 +1687,7 @@ export class TreeUtils {
                 typeNodes[0],
                 uri,
                 tree,
-                imports,
+                elmWorkspace,
               )?.node;
             }
           } else {
@@ -1719,18 +1701,16 @@ export class TreeUtils {
   public static getTypeAliasOfRecordField(
     node: SyntaxNode | undefined,
     tree: Tree,
-    imports: IImports,
     uri: string,
-    forest: IForest,
+    elmWorkspace: IElmWorkspace,
   ): { node: SyntaxNode; uri: string } | undefined {
     const fieldName = node?.parent?.firstNamedChild?.text;
 
     let recordType = TreeUtils.getTypeAliasOfRecord(
       node,
       tree,
-      imports,
       uri,
-      forest,
+      elmWorkspace,
     );
 
     while (!recordType && node?.parent?.parent) {
@@ -1738,9 +1718,8 @@ export class TreeUtils {
       recordType = TreeUtils.getTypeAliasOfRecordField(
         node,
         tree,
-        imports,
         uri,
-        forest,
+        elmWorkspace,
       );
     }
 
@@ -1773,7 +1752,7 @@ export class TreeUtils {
               typeNode[0],
               recordType.uri,
               tree,
-              imports,
+              elmWorkspace,
             );
 
             if (typeAliasNode) {
@@ -1788,20 +1767,21 @@ export class TreeUtils {
   public static getTypeAliasOfCase(
     type: SyntaxNode | undefined,
     tree: Tree,
-    imports: IImports,
     uri: string,
-    forest: IForest,
+    elmWorkspace: IElmWorkspace,
   ): { node: SyntaxNode; uri: string } | undefined {
     if (type) {
       const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
         type,
         uri,
         tree,
-        imports,
+        elmWorkspace,
       );
 
       if (definitionNode) {
-        const definitionTree = forest.getTree(definitionNode.uri);
+        const definitionTree = elmWorkspace
+          .getForest()
+          .getTree(definitionNode.uri);
 
         let aliasNode;
         if (definitionNode.nodeType === "FunctionParameter") {
@@ -1832,7 +1812,7 @@ export class TreeUtils {
               childNode[0],
               definitionNode.uri,
               definitionTree,
-              imports,
+              elmWorkspace,
             );
 
             if (typeNode) {
@@ -1847,9 +1827,8 @@ export class TreeUtils {
   public static getTypeAliasOfRecord(
     node: SyntaxNode | undefined,
     tree: Tree,
-    imports: IImports,
     uri: string,
-    forest: IForest,
+    elmWorkspace: IElmWorkspace,
   ): { node: SyntaxNode; uri: string } | undefined {
     if (node?.parent?.parent) {
       let type: SyntaxNode | undefined | null =
@@ -1879,11 +1858,13 @@ export class TreeUtils {
           type.firstNamedChild ? type.firstNamedChild : type,
           uri,
           tree,
-          imports,
+          elmWorkspace,
         );
 
         if (definitionNode) {
-          const definitionTree = forest.getTree(definitionNode.uri);
+          const definitionTree = elmWorkspace
+            .getForest()
+            .getTree(definitionNode.uri);
 
           let aliasNode;
           if (definitionNode.nodeType === "FunctionParameter") {
@@ -1914,7 +1895,7 @@ export class TreeUtils {
                 childNode[0],
                 definitionNode.uri,
                 definitionTree,
-                imports,
+                elmWorkspace,
               );
 
               if (typeNode) {
@@ -2285,6 +2266,28 @@ export class TreeUtils {
       }
 
       return node;
+    }
+  }
+
+  private static findFieldReference(
+    type: Type,
+    fieldName: string,
+    forest: IForest,
+  ): { node: SyntaxNode; uri: string; nodeType: NodeType } | undefined {
+    if (type.nodeType === "Record") {
+      const fieldRefs = type.fieldReferences.get(fieldName);
+
+      if (fieldRefs.length > 0) {
+        const refUri = forest.getUriOfNode(fieldRefs[0]);
+
+        if (refUri) {
+          return {
+            node: fieldRefs[0],
+            nodeType: "FieldType",
+            uri: refUri,
+          };
+        }
+      }
     }
   }
 }

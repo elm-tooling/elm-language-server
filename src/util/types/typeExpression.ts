@@ -289,7 +289,7 @@ export class TypeExpression {
       type,
       expressionTypes: this.expressionTypes,
       diagnostics: this.diagnostics,
-      resolvedDeclarations: new SyntaxNodeMap(),
+      recordDiffs: new SyntaxNodeMap(),
     };
   }
 
@@ -325,7 +325,7 @@ export class TypeExpression {
     const definition = findDefinition(
       typeVariable.firstNamedChild,
       this.uri,
-      this.workspace.getImports(),
+      this.workspace,
     );
 
     // The type variable doesn't reference anything
@@ -394,7 +394,7 @@ export class TypeExpression {
     const baseTypeDefinition = findDefinition(
       record.baseType,
       this.uri,
-      this.workspace.getImports(),
+      this.workspace,
     )?.expr;
 
     const baseType = baseTypeDefinition
@@ -403,7 +403,10 @@ export class TypeExpression {
       ? TVar(record.baseType.text)
       : undefined;
 
-    return TRecord(fieldTypes, baseType, undefined, fieldRefs);
+    const type = TRecord(fieldTypes, baseType, undefined, fieldRefs);
+
+    this.expressionTypes.set(record, type);
+    return type;
   }
 
   private typeRefType(typeRef: ETypeRef): Type {
@@ -425,7 +428,7 @@ export class TypeExpression {
     const definition = findDefinition(
       typeRef.firstNamedChild?.lastNamedChild,
       this.uri,
-      this.workspace.getImports(),
+      this.workspace,
     );
 
     let declaredType: Type = TUnknown;
