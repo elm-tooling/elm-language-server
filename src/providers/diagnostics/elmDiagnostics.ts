@@ -138,7 +138,7 @@ export class ElmDiagnostics {
             diagnostic.range.start,
           );
 
-          const edit: TextEdit =
+          const edit =
             node.parent?.parent?.type === "record_pattern"
               ? RefactorEditUtils.removeRecordPatternValue(node.parent)
               : TextEdit.replace(diagnostic.range, "_");
@@ -349,16 +349,26 @@ export class ElmDiagnostics {
           )
         ) @patternScope
 
-        (let_in_expr
-          (value_declaration
-            [
-              (pattern)
-              (record_pattern)
-            ] @letPattern
+        ; For some reason, we can match on the let_in_expr
+        (value_declaration
+          [
+            (pattern)
+            (record_pattern)
+          ] @pattern
+        ) @patternScope
+
+        ; For let expr variables
+        (value_declaration
+          (function_declaration_left
+            (lower_case_identifier) @pattern
           )
         ) @patternScope
 
         (case_of_branch
+          (pattern) @pattern
+        ) @patternScope
+
+        (anonymous_function_expr
           (pattern) @pattern
         ) @patternScope
         `,
@@ -368,9 +378,28 @@ export class ElmDiagnostics {
     patternMatches
       .filter(Utils.notUndefined.bind(this))
       .map((match) => {
-        const scope = match.captures[0].node;
+        let scope = match.captures[0].node;
         const patternMatch = match.captures[1].node;
-        return patternMatch.type === "lower_pattern"
+
+        // Adjust the scope of let_in_expr due to the query bug above
+        if (
+          scope.type === "value_declaration" &&
+          scope.parent?.type === "let_in_expr" &&
+          (patternMatch.type === "lower_case_identifier" ||
+            patternMatch.parent?.type === "value_declaration")
+        ) {
+          scope = scope.parent;
+        }
+
+        if (
+          patternMatch.type === "lower_case_identifier" &&
+          scope.parent?.type === "file"
+        ) {
+          scope = scope.parent;
+        }
+
+        return patternMatch.type === "lower_pattern" ||
+          patternMatch.type === "lower_case_identifier"
           ? [{ scope, pattern: patternMatch }]
           : patternMatch.descendantsOfType("lower_pattern").map((pattern) => {
               return { scope, pattern };
@@ -381,7 +410,12 @@ export class ElmDiagnostics {
         const references = this.language
           .query(
             `
-            ((value_expr) @patternVariable.reference
+            (
+              [
+                (value_expr)
+                (record_base_identifier)
+                (exposed_value)
+              ] @patternVariable.reference
               (#eq? @patternVariable.reference "${pattern.text}")
             )
             `,
@@ -390,14 +424,25 @@ export class ElmDiagnostics {
           .filter(Utils.notUndefined.bind(this));
 
         if (references.length === 0) {
-          diagnostics.push({
-            code: "unused_pattern",
-            range: this.getNodeRange(pattern),
-            message: `Unused pattern variable \`${pattern.text}\``,
-            severity: DiagnosticSeverity.Warning,
-            source: this.ELM,
-            tags: [DiagnosticTag.Unnecessary],
-          });
+          if (scope.type === "file") {
+            diagnostics.push({
+              code: "unused_top_level",
+              range: this.getNodeRange(pattern),
+              message: `Unused top level definition \`${pattern.text}\``,
+              severity: DiagnosticSeverity.Warning,
+              source: this.ELM,
+              tags: [DiagnosticTag.Unnecessary],
+            });
+          } else {
+            diagnostics.push({
+              code: "unused_pattern",
+              range: this.getNodeRange(pattern),
+              message: `Unused pattern variable \`${pattern.text}\``,
+              severity: DiagnosticSeverity.Warning,
+              source: this.ELM,
+              tags: [DiagnosticTag.Unnecessary],
+            });
+          }
         }
       });
 
