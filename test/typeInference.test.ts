@@ -479,7 +479,10 @@ func a =
                     "b" -> 2
 
 `;
-    await testTypeInference(basicsSources + source, "(a, b) -> number");
+    await testTypeInference(
+      basicsSources + source,
+      "({ a | d : (), e : b }, c) -> number",
+    );
   });
 
   test("pattern value declaration", async () => {

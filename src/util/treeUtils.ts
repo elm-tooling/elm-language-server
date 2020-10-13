@@ -2269,46 +2269,6 @@ export class TreeUtils {
     }
   }
 
-  public static findFieldUsages(tree: Tree, fieldName: string): SyntaxNode[] {
-    return tree.rootNode
-      .descendantsOfType([
-        "field",
-        "field_accessor_function_expr",
-        "field_access_expr",
-        "record_pattern",
-      ])
-      .map((field) => {
-        if (field.type === "record_pattern") {
-          const lowerPattern = field.namedChildren.find(
-            (pattern) =>
-              pattern.type === "lower_pattern" && pattern.text === fieldName,
-          );
-
-          if (lowerPattern) {
-            const declaration = TreeUtils.findParentOfType(
-              "value_declaration",
-              lowerPattern,
-            );
-
-            const patternRefs =
-              declaration
-                ?.descendantsOfType("value_qid")
-                .filter((ref) => ref.text === fieldName) ?? [];
-
-            return [lowerPattern, ...patternRefs];
-          }
-        }
-
-        return [field];
-      })
-      .reduce((a, b) => a.concat(b), [])
-      .map((field) =>
-        TreeUtils.findFirstNamedChildOfType("lower_case_identifier", field),
-      )
-      .filter(Utils.notUndefinedOrNull.bind(this))
-      .filter((field) => field.text === fieldName);
-  }
-
   private static findFieldReference(
     type: Type,
     fieldName: string,

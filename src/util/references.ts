@@ -2,6 +2,7 @@ import { IElmWorkspace } from "src/elmWorkspace";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IReferenceNode } from "./referenceNode";
 import { TreeUtils } from "./treeUtils";
+import { Utils } from "./utils";
 
 export class References {
   public static find(
@@ -574,6 +575,46 @@ export class References {
     }
   }
 
+  private static findFieldUsages(tree: Tree, fieldName: string): SyntaxNode[] {
+    return tree.rootNode
+      .descendantsOfType([
+        "field",
+        "field_accessor_function_expr",
+        "field_access_expr",
+        "record_pattern",
+      ])
+      .map((field) => {
+        if (field.type === "record_pattern") {
+          const lowerPattern = field.namedChildren.find(
+            (pattern) =>
+              pattern.type === "lower_pattern" && pattern.text === fieldName,
+          );
+
+          if (lowerPattern) {
+            const declaration = TreeUtils.findParentOfType(
+              "value_declaration",
+              lowerPattern,
+            );
+
+            const patternRefs =
+              declaration
+                ?.descendantsOfType("value_qid")
+                .filter((ref) => ref.text === fieldName) ?? [];
+
+            return [lowerPattern, ...patternRefs];
+          }
+        }
+
+        return [field];
+      })
+      .reduce((a, b) => a.concat(b), [])
+      .map((field) =>
+        TreeUtils.findFirstNamedChildOfType("lower_case_identifier", field),
+      )
+      .filter(Utils.notUndefinedOrNull.bind(this))
+      .filter((field) => field.text === fieldName);
+  }
+
   private static getFieldReferences(
     fieldName: string,
     definition: { node: SyntaxNode; uri: string },
@@ -583,7 +624,7 @@ export class References {
   ): { node: SyntaxNode; uri: string }[] {
     const references: { node: SyntaxNode; uri: string }[] = [];
 
-    const fieldUsages = TreeUtils.findFieldUsages(tree, fieldName);
+    const fieldUsages = References.findFieldUsages(tree, fieldName);
 
     fieldUsages.forEach((field) => {
       const fieldDef = TreeUtils.findDefinitionNodeByReferencingNode(

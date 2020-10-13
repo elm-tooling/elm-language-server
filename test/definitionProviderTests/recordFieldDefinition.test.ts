@@ -227,7 +227,7 @@ main r =
     await testBase.testDefinition(source);
   });
 
-  // Problem with the tree parsing an error. I'm guessing its the comment in the let expr
+  // Problem with the tree parsing an error
   xit(`test nested decl mapper`, async () => {
     const source = `                                        
 type alias R = 
