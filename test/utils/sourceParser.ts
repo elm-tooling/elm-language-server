@@ -175,7 +175,7 @@ export function getTargetPositionFromSource(
   }
 }
 
-function getSourceFiles(source: string): { [K: string]: string } {
+export function getSourceFiles(source: string): { [K: string]: string } {
   const sources: { [K: string]: string } = {};
   let currentFile = "";
   const regex = /--@ ([a-zA-Z/]+.elm)/;
