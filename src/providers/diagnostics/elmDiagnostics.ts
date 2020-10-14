@@ -38,6 +38,10 @@ export class ElmDiagnostics {
         ...this.getUnusedPatternVariableDiagnostics(tree),
         ...this.getCaseBranchMapNothingToNothingDiagnostics(tree),
         ...this.getBooleanCaseExpressionDiagnostics(tree),
+        ...this.getDropConcatOfListsDiagnostics(tree),
+        ...this.getDropConsOfItemAndListDiagnostics(tree),
+        ...this.getUseConsOverConcatDiagnostics(tree),
+        ...this.getSingleFieldRecordDiagnostics(tree),
       ];
     } catch (e) {
       console.log(e);
@@ -70,7 +74,7 @@ export class ElmDiagnostics {
 
     if (treeContainer) {
       diagnostics.forEach((diagnostic) => {
-        if (diagnostic.code === "unused_value") {
+        if (diagnostic.code === "unused_imported_value") {
           const node = TreeUtils.getNamedDescendantForPosition(
             treeContainer.tree.rootNode,
             diagnostic.range.start,
@@ -263,7 +267,7 @@ export class ElmDiagnostics {
 
       if (references.length === 0) {
         diagnostics.push({
-          code: "unused_value",
+          code: "unused_imported_value",
           range: this.getNodeRange(exposedValueOrType),
           message: `Unused imported ${
             exposedValueOrType.type === "exposed_type" ? "type" : "value"
@@ -511,6 +515,162 @@ export class ElmDiagnostics {
         code: "boolean_case_expr",
         range: this.getNodeRange(caseExpr),
         message: `Use an if expression instead of a case expression.`,
+        severity: DiagnosticSeverity.Warning,
+        source: this.ELM,
+      });
+    });
+
+    return diagnostics;
+  }
+
+  private getDropConcatOfListsDiagnostics(tree: Tree): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    const listExpressions = this.language
+      .query(
+        `
+        (
+          (list_expr) @startList
+          .
+          (operator
+            (operator_identifier
+              "++"
+            )
+          )
+          .
+          (list_expr) @endList
+        )
+        `,
+      )
+      .matches(tree.rootNode)
+      .map((match) => [match.captures[0].node, match.captures[1].node])
+      .filter(Utils.notUndefinedOrNull.bind(this));
+
+    listExpressions.forEach(([startList, endList]) => {
+      diagnostics.push({
+        code: "drop_concat_of_lists",
+        range: {
+          start: this.getNodeRange(startList).start,
+          end: this.getNodeRange(endList).end,
+        },
+        message: `If you concatenate two lists, then you can merge them into one list.`,
+        severity: DiagnosticSeverity.Warning,
+        source: this.ELM,
+      });
+    });
+
+    return diagnostics;
+  }
+
+  private getDropConsOfItemAndListDiagnostics(tree: Tree): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    const consExpressions = this.language
+      .query(
+        `
+        (bin_op_expr
+          (_) @itemExpr
+          .
+          (operator
+            (operator_identifier
+              "::"
+            )
+          )
+          .
+          (list_expr) @listExpr
+        )
+      `,
+      )
+      .matches(tree.rootNode)
+      .map((match) => [match.captures[0].node, match.captures[1].node])
+      .filter(Utils.notUndefinedOrNull.bind(this));
+
+    consExpressions.forEach(([itemExpr, listExpr]) => {
+      diagnostics.push({
+        code: "drop_cons_of_item_and_list",
+        range: {
+          start: this.getNodeRange(itemExpr).start,
+          end: this.getNodeRange(listExpr).end,
+        },
+        message: `If you cons an item to a literal list, then you can just put the item into the list.`,
+        severity: DiagnosticSeverity.Warning,
+        source: this.ELM,
+      });
+    });
+
+    return diagnostics;
+  }
+
+  private getUseConsOverConcatDiagnostics(tree: Tree): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    const concatExpressions = this.language
+      .query(
+        `
+        (bin_op_expr
+          (list_expr
+            (left_square_bracket)
+            .
+            (_)
+            .
+            (right_square_bracket)
+          ) @firstPart
+          .
+          (operator
+            (operator_identifier
+              "++"
+            )
+          )
+          .
+          (_) @lastPart
+        )
+      `,
+      )
+      .matches(tree.rootNode)
+      .map((match) => [match.captures[0].node, match.captures[1].node])
+      .filter(Utils.notUndefinedOrNull.bind(this));
+
+    concatExpressions.forEach(([firstPart, lastPart]) => {
+      diagnostics.push({
+        code: "use_cons_over_concat",
+        range: {
+          start: this.getNodeRange(firstPart).start,
+          end: this.getNodeRange(lastPart).end,
+        },
+        message: `If you concatenate two lists, but the first item is a single element list, then you should use the cons operator.`,
+        severity: DiagnosticSeverity.Warning,
+        source: this.ELM,
+      });
+    });
+
+    return diagnostics;
+  }
+
+  getSingleFieldRecordDiagnostics(tree: Tree): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    const recordTypes = this.language
+      .query(
+        `
+        (record_type
+          (left_brace)
+          .
+          (_)
+          .
+          (right_brace)
+        ) @recordType
+      `,
+      )
+      .matches(tree.rootNode)
+      .map((match) => match.captures[0].node)
+      .filter(Utils.notUndefinedOrNull.bind(this));
+
+    recordTypes.forEach((recordType) => {
+      diagnostics.push({
+        code: "single_field_record",
+        range: this.getNodeRange(recordType),
+
+        message: `Using a record is obsolete if you only plan to store a single field in it.`,
         severity: DiagnosticSeverity.Warning,
         source: this.ELM,
       });

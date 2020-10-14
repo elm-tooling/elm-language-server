@@ -910,4 +910,301 @@ x =
       await testDiagnostics(source, "unused_pattern", []);
     });
   });
+
+  describe("drop cons of item and list", () => {
+    const diagnosticWithRange = (range: Range): Diagnostic => {
+      return {
+        code: "drop_cons_of_item_and_list",
+        message: `If you cons an item to a literal list, then you can just put the item into the list.`,
+        source: "Elm",
+        severity: DiagnosticSeverity.Warning,
+        range,
+      };
+    };
+
+    it("no optimization", async () => {
+      const source = `
+module Bar exposing (foo)
+
+foo : Int
+foo =
+    [1, 2] ++ var
+			`;
+
+      await testDiagnostics(source, "drop_cons_of_item_and_list", []);
+    });
+
+    it("cons with literal list", async () => {
+      const source = `
+module Bar exposing (foo)
+
+foo : Int
+foo =
+    1 :: [2 , 3]
+			`;
+
+      await testDiagnostics(source, "drop_cons_of_item_and_list", [
+        diagnosticWithRange({
+          start: { line: 5, character: 4 },
+          end: { line: 5, character: 16 },
+        }),
+      ]);
+    });
+  });
+
+  describe("map nothing to nothing", () => {
+    const diagnosticWithRange = (range: Range): Diagnostic => {
+      return {
+        code: "map_nothing_to_nothing",
+        message: `\`Nothing\` mapped to \`Nothing\` in case expression. Use Maybe.map or Maybe.andThen instead.`,
+        source: "Elm",
+        severity: DiagnosticSeverity.Warning,
+        range,
+      };
+    };
+
+    it("map nothing to nothing", async () => {
+      const source = `
+module Foo exposing (..)
+
+y = case x of
+    Just a -> Just (a + 1)
+    Nothing -> Nothing
+			`;
+
+      await testDiagnostics(source, "map_nothing_to_nothing", [
+        diagnosticWithRange({
+          start: { line: 5, character: 4 },
+          end: { line: 5, character: 22 },
+        }),
+      ]);
+    });
+
+    it("map nothing to something", async () => {
+      const source = `
+module Foo exposing (..)
+
+y = case x of
+    Just a -> Just (a + 1)
+    Nothing -> 0
+			`;
+
+      await testDiagnostics(source, "map_nothing_to_nothing", []);
+    });
+
+    it("map something to nothing", async () => {
+      const source = `
+module Foo exposing (..)
+
+y = case x of
+    Just a -> Nothing
+    Nothing -> 0
+			`;
+
+      await testDiagnostics(source, "map_nothing_to_nothing", []);
+    });
+  });
+
+  describe("drop concat of lists", () => {
+    const diagnosticWithRange = (range: Range): Diagnostic => {
+      return {
+        code: "drop_concat_of_lists",
+        message: `If you concatenate two lists, then you can merge them into one list.`,
+        source: "Elm",
+        severity: DiagnosticSeverity.Warning,
+        range,
+      };
+    };
+
+    it("could use cons", async () => {
+      const source = `
+module Bar exposing (foo)
+
+foo : Int
+foo =
+    [1] ++ [3, 4]
+			`;
+
+      await testDiagnostics(source, "drop_concat_of_lists", [
+        diagnosticWithRange({
+          start: { line: 5, character: 4 },
+          end: { line: 5, character: 17 },
+        }),
+      ]);
+    });
+
+    it("no optimization", async () => {
+      const source = `
+module Bar exposing (foo)
+
+foo : Int
+foo =
+    [1, 2] ++ var
+			`;
+
+      await testDiagnostics(source, "drop_concat_of_lists", []);
+    });
+
+    it("concat multi element list", async () => {
+      const source = `
+module Bar exposing (foo)
+
+foo : Int
+foo =
+    [1, 2] ++ [3, 4]
+			`;
+
+      await testDiagnostics(source, "drop_concat_of_lists", [
+        diagnosticWithRange({
+          start: { line: 5, character: 4 },
+          end: { line: 5, character: 20 },
+        }),
+      ]);
+    });
+  });
+
+  describe("use cons over concat", () => {
+    const diagnosticWithRange = (range: Range): Diagnostic => {
+      return {
+        code: "use_cons_over_concat",
+        message: `If you concatenate two lists, but the first item is a single element list, then you should use the cons operator.`,
+        source: "Elm",
+        severity: DiagnosticSeverity.Warning,
+        range,
+      };
+    };
+
+    it("no optimization", async () => {
+      const source = `
+module Bar exposing (foo)
+
+foo : Int
+foo =
+    [1, 2] ++ bar
+			`;
+
+      await testDiagnostics(source, "use_cons_over_concat", []);
+    });
+
+    it("concat single item to var", async () => {
+      const source = `
+module Bar exposing (foo)
+
+foo : Int
+foo =
+    [1] ++ bar
+			`;
+
+      await testDiagnostics(source, "use_cons_over_concat", [
+        diagnosticWithRange({
+          start: { line: 5, character: 4 },
+          end: { line: 5, character: 14 },
+        }),
+      ]);
+    });
+  });
+
+  describe("single field record", () => {
+    const diagnosticWithRange = (range: Range): Diagnostic => {
+      return {
+        code: "single_field_record",
+        message: `Using a record is obsolete if you only plan to store a single field in it.`,
+        source: "Elm",
+        severity: DiagnosticSeverity.Warning,
+        range,
+      };
+    };
+
+    it("single field", async () => {
+      const source = `
+module Bar exposing (foo)
+
+type alias Foo =
+  { x : Int }
+			`;
+
+      await testDiagnostics(source, "single_field_record", [
+        diagnosticWithRange({
+          start: { line: 4, character: 2 },
+          end: { line: 4, character: 13 },
+        }),
+      ]);
+    });
+
+    it("single field generic", async () => {
+      const source = `
+module Bar exposing (foo)
+
+type alias Foo =
+  { a | x : Int }
+			`;
+
+      await testDiagnostics(source, "single_field_record", []);
+    });
+
+    it("multi field", async () => {
+      const source = `
+module Bar exposing (foo)
+
+type alias Foo =
+  { x : Int
+  , y : String
+  }
+			`;
+
+      await testDiagnostics(source, "single_field_record", []);
+    });
+
+    it("single field nested", async () => {
+      const source = `
+module Bar exposing (foo)
+
+type alias Foo =
+  { x : Int
+  , y : { z : String }
+  }
+			`;
+
+      await testDiagnostics(source, "single_field_record", [
+        diagnosticWithRange({
+          start: { line: 5, character: 8 },
+          end: { line: 5, character: 22 },
+        }),
+      ]);
+    });
+
+    it("single field in type", async () => {
+      const source = `
+module Bar exposing (foo)
+
+type Foo =
+  Bar { x : Int }
+			`;
+
+      await testDiagnostics(source, "single_field_record", [
+        diagnosticWithRange({
+          start: { line: 4, character: 6 },
+          end: { line: 4, character: 17 },
+        }),
+      ]);
+    });
+
+    xit("single field as generic arg", async () => {
+      const source = `
+module Bar exposing (foo)
+
+type alias Params x a =
+    { x
+        | id : String
+        , label : String
+        , action : a
+    }
+-- more type aliasses that extends from Params
+type alias CheckboxParams a =
+    Params { checked : Bool } (Bool -> a)
+			`;
+
+      await testDiagnostics(source, "single_field_record", []);
+    });
+  });
 });
