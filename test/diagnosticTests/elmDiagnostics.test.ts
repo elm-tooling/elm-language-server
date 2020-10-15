@@ -1207,4 +1207,156 @@ type alias CheckboxParams a =
       await testDiagnostics(source, "single_field_record", []);
     });
   });
+
+  describe("unnecessary list concat", () => {
+    const diagnosticWithRange = (range: Range): Diagnostic => {
+      return {
+        code: "unnecessary_list_concat",
+        message: `You should just merge the arguments of \`List.concat\` to a single list.`,
+        source: "Elm",
+        severity: DiagnosticSeverity.Warning,
+        range,
+      };
+    };
+
+    it("could merge", async () => {
+      const source = `
+module Bar exposing (foo)
+
+foo =
+    List.concat [ [1], [2] ]
+			`;
+
+      await testDiagnostics(source, "unnecessary_list_concat", [
+        diagnosticWithRange({
+          start: { line: 4, character: 4 },
+          end: { line: 4, character: 28 },
+        }),
+      ]);
+    });
+
+    it("could merge 2", async () => {
+      const source = `
+module Bar exposing (foo)
+
+foo x =
+  case x of
+    DropConsOfItemAndList fileName range ->
+        ( String.concat
+            [ "Adding an item to the front of a literal list, but instead you can just put it in the list. "
+            , fileName
+            , " at "
+            , rangeToString range
+            ]
+        , always (List.concat [ [ fileName ], [] ])
+        , [ range ]
+        , True
+        )
+			`;
+
+      await testDiagnostics(source, "unnecessary_list_concat", [
+        diagnosticWithRange({
+          start: { line: 12, character: 18 },
+          end: { line: 12, character: 50 },
+        }),
+      ]);
+    });
+
+    it("could not merge", async () => {
+      const source = `
+module Bar exposing (foo)
+
+foo =
+    List.concat [ bar, [2] ]
+			`;
+
+      await testDiagnostics(source, "unnecessary_list_concat", []);
+    });
+  });
+
+  describe("unnecessary port module", () => {
+    const diagnosticWithRange = (range: Range): Diagnostic => {
+      return {
+        code: "unnecessary_port_module",
+        message: `Module is definined as a \`port\` module, but does not define any ports.`,
+        source: "Elm",
+        severity: DiagnosticSeverity.Warning,
+        range,
+      };
+    };
+
+    it("no ports", async () => {
+      const source = `
+port module Bar exposing (foo)
+
+foo = 1
+
+bar = 2
+
+type alias Foo = {}
+
+type Bar = Other
+			`;
+
+      await testDiagnostics(source, "unnecessary_port_module", [
+        diagnosticWithRange({
+          start: { line: 1, character: 0 },
+          end: { line: 1, character: 30 },
+        }),
+      ]);
+    });
+
+    it("some ports", async () => {
+      const source = `
+port module Bar exposing (foo)
+
+bar = 2
+
+type alias Foo = {}
+
+type Bar = Other
+
+port foo : String -> Cmd msg
+			`;
+
+      await testDiagnostics(source, "unnecessary_port_module", []);
+    });
+  });
+
+  describe("fully applied operator as prefix", () => {
+    const diagnosticWithRange = (range: Range): Diagnostic => {
+      return {
+        code: "no_uncurried_prefix",
+        message: `Don't use fully applied prefix notation for operators.`,
+        source: "Elm",
+        severity: DiagnosticSeverity.Warning,
+        range,
+      };
+    };
+
+    it("prefix as application with two args", async () => {
+      const source = `
+module Foo exposing (..)
+
+foo = (+) 1 2
+			`;
+
+      await testDiagnostics(source, "no_uncurried_prefix", [
+        diagnosticWithRange({
+          start: { line: 3, character: 6 },
+          end: { line: 3, character: 13 },
+        }),
+      ]);
+    });
+
+    it("prefix as application with one arg", async () => {
+      const source = `
+module Foo exposing (..)
+
+foo = (+) 1
+			`;
+
+      await testDiagnostics(source, "no_uncurried_prefix", []);
+    });
+  });
 });

@@ -42,6 +42,9 @@ export class ElmDiagnostics {
         ...this.getDropConsOfItemAndListDiagnostics(tree),
         ...this.getUseConsOverConcatDiagnostics(tree),
         ...this.getSingleFieldRecordDiagnostics(tree),
+        ...this.getUnnecessaryListConcatDiagnostics(tree),
+        ...this.getUnnecessaryPortModuleDiagnostics(tree),
+        ...this.getFullyAppliedOperatorAsPrefixDiagnostics(tree),
       ];
     } catch (e) {
       console.log(e);
@@ -669,8 +672,110 @@ export class ElmDiagnostics {
       diagnostics.push({
         code: "single_field_record",
         range: this.getNodeRange(recordType),
-
         message: `Using a record is obsolete if you only plan to store a single field in it.`,
+        severity: DiagnosticSeverity.Warning,
+        source: this.ELM,
+      });
+    });
+
+    return diagnostics;
+  }
+
+  private getUnnecessaryListConcatDiagnostics(tree: Tree): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    const listConcats = this.language
+      .query(
+        `
+        (
+          (function_call_expr
+            target: (_) @target
+            arg: (list_expr
+              (left_square_bracket)
+              .
+              (list_expr)
+              .
+              ((comma) . (list_expr))*
+              .
+              (right_square_bracket)
+            )
+          ) @functionCall
+          (#eq? @target "List.concat")
+        )
+        `,
+      )
+      .matches(tree.rootNode)
+      .map((match) => match.captures[0].node)
+      .filter(Utils.notUndefinedOrNull.bind(this));
+
+    listConcats.forEach((listConcat) => {
+      diagnostics.push({
+        code: "unnecessary_list_concat",
+        range: this.getNodeRange(listConcat),
+        message: `You should just merge the arguments of \`List.concat\` to a single list.`,
+        severity: DiagnosticSeverity.Warning,
+        source: this.ELM,
+      });
+    });
+
+    return diagnostics;
+  }
+
+  private getUnnecessaryPortModuleDiagnostics(tree: Tree): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    const unusedPortMatches = this.language
+      .query(
+        `
+        (module_declaration
+          (port)
+        ) @portModule
+        
+        (port_annotation) @portAnnotation
+        `,
+      )
+      .matches(tree.rootNode);
+
+    if (
+      unusedPortMatches[0]?.captures[0].name === "portModule" &&
+      !unusedPortMatches[1]
+    ) {
+      diagnostics.push({
+        code: "unnecessary_port_module",
+        range: this.getNodeRange(unusedPortMatches[0].captures[0].node),
+        message: `Module is definined as a \`port\` module, but does not define any ports.`,
+        severity: DiagnosticSeverity.Warning,
+        source: this.ELM,
+      });
+    }
+
+    return diagnostics;
+  }
+
+  private getFullyAppliedOperatorAsPrefixDiagnostics(tree: Tree): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    const operatorFunctions = this.language
+      .query(
+        `
+        (function_call_expr
+          target: (operator_as_function_expr)
+          .
+          (_) @arg1
+          .
+          (_) @arg2
+        ) @functionCall
+        `,
+      )
+      .matches(tree.rootNode)
+      .map((match) => match.captures[0].node)
+      .filter(Utils.notUndefinedOrNull.bind(this));
+
+    operatorFunctions.forEach((operatorFunction) => {
+      diagnostics.push({
+        code: "no_uncurried_prefix",
+        range: this.getNodeRange(operatorFunction),
+        message: `Don't use fully applied prefix notation for operators.`,
         severity: DiagnosticSeverity.Warning,
         source: this.ELM,
       });
