@@ -717,7 +717,11 @@ export class ElmDiagnostics {
           "lower_case_identifier",
         )[0];
 
-        if (type.nodeType === "Record" && type.fields[singleField.text]) {
+        if (
+          type.nodeType === "Record" &&
+          Object.keys(type.fields).length > 1 &&
+          type.fields[singleField.text]
+        ) {
           isSingleField = false;
         }
       }
