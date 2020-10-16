@@ -2069,7 +2069,7 @@ export class TreeUtils {
       return node;
     }
     if (node.parent) {
-      return this.findParentOfType(typeToLookFor, node.parent);
+      return this.findParentOfType(typeToLookFor, node.parent, topLevel);
     }
   }
 

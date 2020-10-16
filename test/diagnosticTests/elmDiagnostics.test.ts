@@ -1140,7 +1140,7 @@ type Foo =
       ]);
     });
 
-    xit("single field as generic arg", async () => {
+    it("single field as generic arg", async () => {
       const source = `
 module Bar exposing (foo)
 

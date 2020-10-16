@@ -709,17 +709,28 @@ export class ElmDiagnostics {
       .filter(Utils.notUndefinedOrNull.bind(this));
 
     recordTypes.forEach((recordType) => {
-      if (recordType.parent?.type === "type_ref") {
-        const type = findType(recordType, uri, elmWorkspace);
+      let isSingleField = true;
+      if (recordType.parent?.type === "type_ref" && recordType.parent.parent) {
+        const type = findType(recordType.parent, uri, elmWorkspace);
+
+        const singleField = recordType.descendantsOfType(
+          "lower_case_identifier",
+        )[0];
+
+        if (type.nodeType === "Record" && type.fields[singleField.text]) {
+          isSingleField = false;
+        }
       }
 
-      diagnostics.push({
-        code: "single_field_record",
-        range: this.getNodeRange(recordType),
-        message: `Using a record is obsolete if you only plan to store a single field in it.`,
-        severity: DiagnosticSeverity.Warning,
-        source: this.ELM,
-      });
+      if (isSingleField) {
+        diagnostics.push({
+          code: "single_field_record",
+          range: this.getNodeRange(recordType),
+          message: `Using a record is obsolete if you only plan to store a single field in it.`,
+          severity: DiagnosticSeverity.Warning,
+          source: this.ELM,
+        });
+      }
     });
 
     return diagnostics;

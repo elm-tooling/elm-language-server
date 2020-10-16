@@ -2523,6 +2523,10 @@ export function findType(
         workspace,
       );
 
+      if (node.type === "type_alias_declaration") {
+        return inferenceResult.type;
+      }
+
       return findTypeOrParentType(node, inferenceResult) ?? TUnknown;
     }
 
