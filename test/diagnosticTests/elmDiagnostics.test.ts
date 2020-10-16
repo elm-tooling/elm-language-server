@@ -35,7 +35,7 @@ describe("ElmDiagnostics", () => {
     }
 
     const diagnostics = elmDiagnostics
-      .createDiagnostics(treeContainer.tree, uri)
+      .createDiagnostics(treeContainer.tree, uri, workspace)
       .filter((diagnostic) => diagnostic.code === code);
 
     const diagnosticsEqual = Utils.arrayEquals(
@@ -156,7 +156,7 @@ some = 1
       ]);
     });
 
-    xit("used variable as record update", async () => {
+    it("used variable as record update", async () => {
       const source = `
 module Bar exposing (..)
 
@@ -167,7 +167,7 @@ addUsedVariable x =
       await testDiagnostics(source, "unused_top_level", []);
     });
 
-    xit("used variable in case expression", async () => {
+    it("used variable in case expression", async () => {
       const source = `
 module Bar exposing (..)
 
@@ -179,7 +179,7 @@ foo x =
       await testDiagnostics(source, "unused_top_level", []);
     });
 
-    xit("used variable in all declaration", async () => {
+    it("used variable in all declaration", async () => {
       const source = `
 module Bar exposing (..)
 
@@ -196,56 +196,7 @@ x y =
       await testDiagnostics(source, "unused_top_level", []);
     });
 
-    it("used value constructor", async () => {
-      const source = `
-module Bar exposing (foo)
-
-type Some = Thing
-
-foo = Thing
-			`;
-
-      await testDiagnostics(source, "unused_top_level", []);
-    });
-
-    xit("unused value constructor not exposed", async () => {
-      const source = `
-module Bar exposing (foo, Some))
-
-type Some = Thing | Other
-			`;
-
-      await testDiagnostics(source, "unused_top_level", [
-        diagnosticWithRangeAndName(
-          {
-            start: { line: 3, character: 12 },
-            end: { line: 3, character: 17 },
-          },
-          "Thing",
-        ),
-        diagnosticWithRangeAndName(
-          {
-            start: { line: 3, character: 20 },
-            end: { line: 3, character: 25 },
-          },
-          "Other",
-        ),
-      ]);
-    });
-
-    it("exposed value constructor", async () => {
-      const source = `
-module Bar exposing (foo, Some(..)))
-
-type Some = Thing
-
-foo = 1
-			`;
-
-      await testDiagnostics(source, "unused_top_level", []);
-    });
-
-    xit("only used in self", async () => {
+    it("only used in self", async () => {
       const source = `
 module Bar exposing (foo, Some(..)))
 
@@ -259,8 +210,8 @@ bar = bar + foo
       await testDiagnostics(source, "unused_top_level", [
         diagnosticWithRangeAndName(
           {
-            start: { line: 6, character: 0 },
-            end: { line: 6, character: 3 },
+            start: { line: 7, character: 0 },
+            end: { line: 7, character: 3 },
           },
           "bar",
         ),
@@ -306,7 +257,7 @@ foo (Blue c) =
       await testDiagnostics(source, "unused_top_level", []);
     });
 
-    xit("used in destructuring let", async () => {
+    it("used in destructuring let", async () => {
       const source = `
 module Foo exposing (..)
 
@@ -1357,6 +1308,225 @@ foo = (+) 1
 			`;
 
       await testDiagnostics(source, "no_uncurried_prefix", []);
+    });
+  });
+
+  describe("unused type alias", () => {
+    const diagnosticWithRangeAndName = (
+      range: Range,
+      name: string,
+    ): Diagnostic => {
+      return {
+        code: "unused_type_alias",
+        message: `Type alias \`${name}\` is not used.`,
+        source: "Elm",
+        severity: DiagnosticSeverity.Warning,
+        range,
+        tags: [DiagnosticTag.Unnecessary],
+      };
+    };
+
+    it("unused but exposed", async () => {
+      const source = `
+module Foo exposing (Bar)
+
+type alias Bar = Int
+			`;
+
+      await testDiagnostics(source, "unused_type_alias", []);
+    });
+
+    it("used in signature", async () => {
+      const source = `
+module Foo exposing (foo)
+
+type alias Bar = Int
+
+foo : Bar
+foo = 1
+			`;
+
+      await testDiagnostics(source, "unused_type_alias", []);
+    });
+
+    it("used as function", async () => {
+      const source = `
+module Foo exposing (foo)
+
+type alias Person = { name : String, age : Int}
+
+foo =
+    Person "John" 12
+			`;
+
+      await testDiagnostics(source, "unused_type_alias", []);
+    });
+
+    it("used in port", async () => {
+      const source = `
+module Foo exposing (foo)
+
+type alias Person = { name : String, age : Int}
+
+port foo : Person -> Cmd msg
+			`;
+
+      await testDiagnostics(source, "unused_type_alias", []);
+    });
+
+    it("used alias in record", async () => {
+      const source = `
+module Foo exposing (InputInterfaces)
+
+type alias InputFiles =
+    List String
+
+type alias InputInterfaces =
+    List ( String, InputFiles )
+			`;
+
+      await testDiagnostics(source, "unused_type_alias", []);
+    });
+
+    it("used alias in type", async () => {
+      const source = `
+module Foo exposing (Patch(..))
+
+type alias InputFiles =
+    List String
+
+type Patch
+    = OnFiles InputFiles
+			`;
+
+      await testDiagnostics(source, "unused_type_alias", []);
+    });
+
+    it("unused type alias", async () => {
+      const source = `
+module Foo exposing (foo)
+
+type alias Person = { name : String, age : Int}
+
+foo = 1
+			`;
+
+      await testDiagnostics(source, "unused_type_alias", [
+        diagnosticWithRangeAndName(
+          {
+            start: { line: 3, character: 0 },
+            end: { line: 3, character: 47 },
+          },
+          "Person",
+        ),
+      ]);
+    });
+  });
+
+  describe("unused value constructor", () => {
+    const diagnosticWithRangeAndName = (
+      range: Range,
+      name: string,
+    ): Diagnostic => {
+      return {
+        code: "unused_value_constructor",
+        message: `Value constructor \`${name}\` is not used.`,
+        source: "Elm",
+        severity: DiagnosticSeverity.Warning,
+        range,
+        tags: [DiagnosticTag.Unnecessary],
+      };
+    };
+
+    it("unused but exposed", async () => {
+      const source = `
+module Foo exposing (Foo(..))
+
+type Foo = Bar
+			`;
+
+      await testDiagnostics(source, "unused_value_constructor", []);
+    });
+
+    it("used and not exposed", async () => {
+      const source = `
+module Foo exposing (foo)
+
+type Foo = Bar Int
+
+foo = Bar 1
+			`;
+
+      await testDiagnostics(source, "unused_value_constructor", []);
+    });
+
+    it("unused and not exposed", async () => {
+      const source = `
+module Foo exposing (foo)
+
+type Foo = Bar Int
+
+foo (Bar i) = i
+			`;
+
+      await testDiagnostics(source, "unused_value_constructor", [
+        diagnosticWithRangeAndName(
+          {
+            start: { line: 3, character: 11 },
+            end: { line: 3, character: 18 },
+          },
+          "Bar",
+        ),
+      ]);
+    });
+
+    it("used value constructor", async () => {
+      const source = `
+module Bar exposing (foo)
+
+type Some = Thing
+
+foo = Thing
+			`;
+
+      await testDiagnostics(source, "unused_value_constructor", []);
+    });
+
+    it("unused value constructor not exposed", async () => {
+      const source = `
+module Bar exposing (foo, Some))
+
+type Some = Thing | Other
+			`;
+
+      await testDiagnostics(source, "unused_value_constructor", [
+        diagnosticWithRangeAndName(
+          {
+            start: { line: 3, character: 12 },
+            end: { line: 3, character: 17 },
+          },
+          "Thing",
+        ),
+        diagnosticWithRangeAndName(
+          {
+            start: { line: 3, character: 20 },
+            end: { line: 3, character: 25 },
+          },
+          "Other",
+        ),
+      ]);
+    });
+
+    it("exposed value constructor", async () => {
+      const source = `
+module Bar exposing (foo, Some(..)))
+
+type Some = Thing
+
+foo = 1
+			`;
+
+      await testDiagnostics(source, "unused_value_constructor", []);
     });
   });
 });

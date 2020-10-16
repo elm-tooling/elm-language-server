@@ -2060,8 +2060,12 @@ export class TreeUtils {
   public static findParentOfType(
     typeToLookFor: string,
     node: SyntaxNode,
+    topLevel?: boolean,
   ): SyntaxNode | undefined {
-    if (node.type === typeToLookFor) {
+    if (
+      node.type === typeToLookFor &&
+      (!topLevel || node.parent?.type === "file")
+    ) {
       return node;
     }
     if (node.parent) {

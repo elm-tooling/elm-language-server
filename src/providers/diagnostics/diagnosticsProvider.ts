@@ -119,6 +119,7 @@ export class DiagnosticsProvider {
               this.elmDiagnostics.createDiagnostics(
                 treeContainer.tree,
                 treeContainer.uri,
+                workspace,
               ),
             );
           }
@@ -147,7 +148,7 @@ export class DiagnosticsProvider {
         this.updateDiagnostics(
           uri,
           DiagnosticKind.Elm,
-          this.elmDiagnostics.createDiagnostics(tree, uri),
+          this.elmDiagnostics.createDiagnostics(tree, uri, workspace),
         );
       });
     });

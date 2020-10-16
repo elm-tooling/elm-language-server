@@ -17,6 +17,8 @@ import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { URI } from "vscode-uri";
 import { TreeUtils } from "../../util/treeUtils";
+import { IElmWorkspace } from "../../elmWorkspace";
+import { findType } from "../../util/types/typeInference";
 
 export class ElmDiagnostics {
   ELM = "Elm";
@@ -29,7 +31,11 @@ export class ElmDiagnostics {
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
   }
 
-  public createDiagnostics = (tree: Tree, uri: string): Diagnostic[] => {
+  public createDiagnostics = (
+    tree: Tree,
+    uri: string,
+    elmWorkspace: IElmWorkspace,
+  ): Diagnostic[] => {
     try {
       return [
         ...this.getUnusedImportDiagnostics(tree),
@@ -41,10 +47,12 @@ export class ElmDiagnostics {
         ...this.getDropConcatOfListsDiagnostics(tree),
         ...this.getDropConsOfItemAndListDiagnostics(tree),
         ...this.getUseConsOverConcatDiagnostics(tree),
-        ...this.getSingleFieldRecordDiagnostics(tree),
+        ...this.getSingleFieldRecordDiagnostics(tree, uri, elmWorkspace),
         ...this.getUnnecessaryListConcatDiagnostics(tree),
         ...this.getUnnecessaryPortModuleDiagnostics(tree),
         ...this.getFullyAppliedOperatorAsPrefixDiagnostics(tree),
+        ...this.getUnusedTypeAliasDiagnostics(tree),
+        ...this.getUnusedValueConstructorDiagnostics(tree),
       ];
     } catch (e) {
       console.log(e);
@@ -425,13 +433,39 @@ export class ElmDiagnostics {
               ] @patternVariable.reference
               (#eq? @patternVariable.reference "${pattern.text}")
             )
+            (
+              (module_declaration
+                (exposing_list
+                  (double_dot)
+                ) @exposingAll 
+              )
+            )
             `,
           )
           .matches(scope)
           .filter(Utils.notUndefined.bind(this));
 
-        if (references.length === 0) {
-          if (scope.type === "file") {
+        if (scope.type === "file") {
+          let outsideRef = false;
+          const topLevelDeclaration = TreeUtils.findParentOfType(
+            "value_declaration",
+            pattern,
+          );
+
+          for (const ref of references) {
+            const valueDeclaration = TreeUtils.findParentOfType(
+              "value_declaration",
+              ref.captures[0].node,
+              true,
+            );
+
+            if (valueDeclaration?.id !== topLevelDeclaration?.id) {
+              outsideRef = true;
+              break;
+            }
+          }
+
+          if (!outsideRef) {
             diagnostics.push({
               code: "unused_top_level",
               range: this.getNodeRange(pattern),
@@ -440,7 +474,9 @@ export class ElmDiagnostics {
               source: this.ELM,
               tags: [DiagnosticTag.Unnecessary],
             });
-          } else {
+          }
+        } else if (references.length === 0) {
+          {
             diagnostics.push({
               code: "unused_pattern",
               range: this.getNodeRange(pattern),
@@ -649,7 +685,11 @@ export class ElmDiagnostics {
     return diagnostics;
   }
 
-  getSingleFieldRecordDiagnostics(tree: Tree): Diagnostic[] {
+  getSingleFieldRecordDiagnostics(
+    tree: Tree,
+    uri: string,
+    elmWorkspace: IElmWorkspace,
+  ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
     const recordTypes = this.language
@@ -669,6 +709,10 @@ export class ElmDiagnostics {
       .filter(Utils.notUndefinedOrNull.bind(this));
 
     recordTypes.forEach((recordType) => {
+      if (recordType.parent?.type === "type_ref") {
+        const type = findType(recordType, uri, elmWorkspace);
+      }
+
       diagnostics.push({
         code: "single_field_record",
         range: this.getNodeRange(recordType),
@@ -779,6 +823,110 @@ export class ElmDiagnostics {
         severity: DiagnosticSeverity.Warning,
         source: this.ELM,
       });
+    });
+
+    return diagnostics;
+  }
+
+  private getUnusedTypeAliasDiagnostics(tree: Tree): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    const typeAliases = this.language
+      .query(
+        `
+        (type_alias_declaration
+          (upper_case_identifier) @typeAlias  
+        )
+        `,
+      )
+      .matches(tree.rootNode)
+      .map((match) => match.captures[0].node)
+      .filter(Utils.notUndefinedOrNull.bind(this));
+
+    typeAliases.forEach((typeAlias) => {
+      const references = this.language
+        .query(
+          `
+          (
+            [
+              (value_expr)
+              (exposed_type)
+            ] @value.reference
+            (#eq? @value.reference "${typeAlias.text}")
+          )
+          ((type_ref 
+            (upper_case_qid) @type.reference)
+            (#eq? @type.reference "${typeAlias.text}")
+          )
+          `,
+        )
+        .matches(tree.rootNode)
+        .filter(Utils.notUndefined.bind(this));
+
+      if (references.length === 0 && typeAlias.parent) {
+        diagnostics.push({
+          code: "unused_type_alias",
+          range: this.getNodeRange(typeAlias.parent),
+          message: `Type alias \`${typeAlias.text}\` is not used.`,
+          severity: DiagnosticSeverity.Warning,
+          source: this.ELM,
+          tags: [DiagnosticTag.Unnecessary],
+        });
+      }
+    });
+
+    return diagnostics;
+  }
+
+  private getUnusedValueConstructorDiagnostics(tree: Tree): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    const unionVariants = this.language
+      .query(
+        `
+        (type_declaration
+          (upper_case_identifier) @typeName
+          (union_variant
+            (upper_case_identifier) @unionVariant
+          ) 
+        )
+        `,
+      )
+      .matches(tree.rootNode)
+      .map((match) => [match.captures[1].node, match.captures[0].node])
+      .filter(Utils.notUndefinedOrNull.bind(this));
+
+    unionVariants.forEach(([unionVariant, typeName]) => {
+      const references = this.language
+        .query(
+          `
+          (
+            (exposed_type) @exposed.reference
+            (#eq? @exposed.reference "${typeName.text}(..)")
+          )
+          (
+            (value_expr) @value.reference
+            (#eq? @value.reference "${unionVariant.text}")
+          )
+          ((type_ref 
+            (upper_case_qid) @type.reference)
+            (#eq? @type.reference "${unionVariant.text}")
+          )
+          `,
+        )
+        .matches(tree.rootNode)
+        .filter(Utils.notUndefined.bind(this));
+
+      if (references.length === 0 && unionVariant.parent) {
+        diagnostics.push({
+          code: "unused_value_constructor",
+          range: this.getNodeRange(unionVariant.parent),
+          message: `Value constructor \`${unionVariant.text}\` is not used.`,
+          severity: DiagnosticSeverity.Warning,
+          source: this.ELM,
+          tags: [DiagnosticTag.Unnecessary],
+        });
+      }
     });
 
     return diagnostics;
