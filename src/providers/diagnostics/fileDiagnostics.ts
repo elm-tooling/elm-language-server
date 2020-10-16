@@ -49,6 +49,7 @@ export class FileDiagnostics {
       ...this.getForKind(DiagnosticKind.ElmAnalyse),
       ...this.getForKind(DiagnosticKind.ElmTest),
       ...this.getForKind(DiagnosticKind.TypeInference),
+      ...this.getForKind(DiagnosticKind.Elm),
     ];
   }
 
