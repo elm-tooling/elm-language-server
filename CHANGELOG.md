@@ -1,5 +1,12 @@
 # Change Log
 
+## 1.13.0
+
+- Debounce sending diagnostics to the client
+- Support finding field references and renaming
+- Tree sitter parser improvements
+- Handle negate expressions in type inference
+
 ## 1.12.2
 
 - Fixed problem with communication for clients like VIM
