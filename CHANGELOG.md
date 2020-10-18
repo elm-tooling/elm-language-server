@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.13.1
+
+- Fixed some type inference bugs
+
 ## 1.13.0
 
 - Debounce sending diagnostics to the client
