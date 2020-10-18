@@ -520,4 +520,25 @@ func a b =
 `;
     await testTypeInference(basicsSources + source, "Int -> Float -> Model");
   });
+
+  test("let pattern defined after used in let expr", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func a b =
+--^
+  let
+    var = c
+
+    { c, d } = a
+  in
+  var
+
+`;
+    await testTypeInference(
+      basicsSources + source,
+      "{ a | c : b, d : c } -> d -> e",
+    );
+  });
 });
