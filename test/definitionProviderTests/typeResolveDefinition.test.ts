@@ -177,4 +177,24 @@ User { data = "" }
 `;
     await testBase.testDefinition(source);
   });
+
+  it(`test union contructor should not resolve to type alias`, async () => {
+    const source = `
+type Page
+= Home
+  --X   
+
+type alias Home = {
+  field : String
+}
+
+func a = 
+  case a of
+    Home ->
+    --^ 
+      ""
+  
+`;
+    await testBase.testDefinition(source);
+  });
 });

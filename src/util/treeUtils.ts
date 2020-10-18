@@ -502,8 +502,7 @@ export class TreeUtils {
             ret =
               pattern
                 .descendantsOfType("lower_pattern")
-                .find((a) => functionName === a.text)?.firstNamedChild ??
-              undefined;
+                .find((a) => functionName === a.text) ?? undefined;
             break;
           }
         }
@@ -689,7 +688,7 @@ export class TreeUtils {
       tree,
       nodeAtPosition.text,
     );
-    if (definitionNode) {
+    if (definitionNode && nodeAtPosition.parent?.type !== "union_pattern") {
       return { node: definitionNode, nodeType: "TypeAlias" };
     }
     if (
