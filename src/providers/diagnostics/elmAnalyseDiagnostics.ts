@@ -75,7 +75,10 @@ export class ElmAnalyseDiagnostics {
     );
   }
 
-  public on(event: string | symbol, listener: (...args: any[]) => void): this {
+  public on(
+    event: string | symbol,
+    listener: (diagnostics: Map<string, Diagnostic[]>) => void,
+  ): this {
     this.eventEmitter.on(event, listener);
     return this;
   }
@@ -149,7 +152,7 @@ export class ElmAnalyseDiagnostics {
   ): Promise<ApplyWorkspaceEditResponse | undefined> {
     let uri: URI;
     switch (params.command) {
-      case CODE_ACTION_ELM_ANALYSE:
+      case CODE_ACTION_ELM_ANALYSE: {
         if (!params.arguments || params.arguments.length !== 2) {
           this.connection.console.warn(
             "Received incorrect number of arguments for elm-analyse fixer. Returning early.",
@@ -168,7 +171,8 @@ export class ElmAnalyseDiagnostics {
           return;
         }
         return this.fixer(uri, code);
-      case CODE_ACTION_ELM_ANALYSE_FIX_ALL:
+      }
+      case CODE_ACTION_ELM_ANALYSE_FIX_ALL: {
         if (!params.arguments || params.arguments.length !== 1) {
           this.connection.console.warn(
             "Received incorrect number of arguments for elm-analyse fixer. Returning early.",
@@ -177,6 +181,7 @@ export class ElmAnalyseDiagnostics {
         }
         uri = params.arguments[0];
         return this.fixer(uri);
+      }
     }
   }
 
@@ -321,7 +326,7 @@ export class ElmAnalyseDiagnostics {
 
     return new Promise((resolve) => {
       // Wait for elm-analyse to send back the first report
-      const cb = (firstReport: any): void => {
+      const cb = (firstReport: Report): void => {
         elmAnalyse.ports.sendReportValue.unsubscribe(cb);
         const onNewReport = this.onNewReportForWorkspace(elmWorkspace);
         onNewReport(firstReport);
@@ -350,7 +355,7 @@ export class ElmAnalyseDiagnostics {
       arr.push(this.messageToDiagnostic(message));
       acc.set(uri, arr);
       return acc;
-    }, new Map());
+    }, new Map<string, Diagnostic[]>());
     const filesInReport = new Set(this.diagnostics.keys());
     const filesThatAreNowFixed = new Set(
       [...this.filesWithDiagnostics].filter(

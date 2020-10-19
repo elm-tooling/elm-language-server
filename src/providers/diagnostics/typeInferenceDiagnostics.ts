@@ -40,9 +40,9 @@ export class TypeInferenceDiagnostics {
 
     if (allTopLevelFunctions) {
       const inferencedTypes = allTopLevelFunctions
-        .filter(Utils.notUndefinedOrNull)
+        .filter(Utils.notUndefinedOrNull.bind(this))
         .map((func) => func.firstChild)
-        .filter(Utils.notUndefinedOrNull)
+        .filter(Utils.notUndefinedOrNull.bind(this))
         .map((node) => {
           const typeString: string = TypeRenderer.typeToString(
             findType(node, uri, elmWorkspace),

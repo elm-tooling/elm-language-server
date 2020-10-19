@@ -196,17 +196,6 @@ export class DiagnosticsProvider {
     );
 
     const uri = URI.parse(document.uri);
-    let workspace;
-    try {
-      workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(document);
-    } catch (error) {
-      if (error instanceof NoWorkspaceContainsError) {
-        this.connection.console.info(error.message);
-        return; // ignore file that doesn't correspond to a workspace
-      }
-
-      throw error;
-    }
 
     const text = document.getText();
 

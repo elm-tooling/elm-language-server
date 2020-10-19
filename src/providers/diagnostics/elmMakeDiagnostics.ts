@@ -223,8 +223,6 @@ export class ElmMakeDiagnostics {
 
     const exposedValues = ImportUtils.getPossibleImports(forest, uri);
 
-    const imports = elmWorkspace.getImports();
-
     const sourceTree = forest.getByUri(uri);
 
     diagnostics.forEach((diagnostic) => {
@@ -428,7 +426,7 @@ export class ElmMakeDiagnostics {
             ?.map(
               (a) => a.firstNamedChild?.firstNamedChild?.firstNamedChild?.text,
             )
-            .filter(Utils.notUndefined);
+            .filter(Utils.notUndefined.bind(this));
 
           let edit = "";
           fields?.forEach((unionVariant) => {
