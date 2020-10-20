@@ -1,6 +1,5 @@
 import { IElmWorkspace } from "src/elmWorkspace";
 import { Forest } from "src/forest";
-import { IImports } from "src/imports";
 import { Position, ResponseError } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { References } from "./references";
@@ -20,7 +19,6 @@ export class RenameUtils {
         }[];
       }
     | undefined {
-    const imports: IImports = elmWorkspace.getImports();
     const forest: Forest = elmWorkspace.getForest();
     const tree: Tree | undefined = forest.getTree(uri);
 

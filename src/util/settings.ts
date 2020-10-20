@@ -30,7 +30,10 @@ export class Settings {
 
   private initDone = false;
 
-  constructor(config: any, private clientCapabilities: ClientCapabilities) {
+  constructor(
+    config: IClientSettings,
+    private clientCapabilities: ClientCapabilities,
+  ) {
     this.connection = container.resolve<IConnection>("Connection");
     this.updateSettings(config);
   }
@@ -56,7 +59,7 @@ export class Settings {
     return this.clientSettings.extendedCapabilities;
   }
 
-  private updateSettings(config: any): void {
+  private updateSettings(config: IClientSettings): void {
     this.clientSettings = { ...this.clientSettings, ...config };
   }
 }

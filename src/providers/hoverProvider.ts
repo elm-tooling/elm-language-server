@@ -50,9 +50,12 @@ export class HoverProvider {
       );
 
       if (definitionNode) {
-        if (definitionNode.nodeType === "Function") {
+        if (
+          definitionNode.nodeType === "Function" &&
+          definitionNode.node.parent
+        ) {
           definitionNode = {
-            node: definitionNode.node.parent!,
+            node: definitionNode.node.parent,
             uri: definitionNode.uri,
             nodeType: definitionNode.nodeType,
           };

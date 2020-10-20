@@ -22,7 +22,7 @@ export class SymbolInformationTranslator {
           SymbolKind.Function,
           uri,
         );
-      case "module_declaration":
+      case "module_declaration": {
         const nameNodeModule = TreeUtils.findFirstNamedChildOfType(
           "upper_case_qid",
           node,
@@ -37,7 +37,8 @@ export class SymbolInformationTranslator {
         } else {
           return;
         }
-      case "type_declaration":
+      }
+      case "type_declaration": {
         const nameNodeTypeDec = TreeUtils.findFirstNamedChildOfType(
           "upper_case_identifier",
           node,
@@ -52,7 +53,8 @@ export class SymbolInformationTranslator {
         } else {
           return;
         }
-      case "type_alias_declaration":
+      }
+      case "type_alias_declaration": {
         const nameNodeAliasDec = TreeUtils.findFirstNamedChildOfType(
           "upper_case_identifier",
           node,
@@ -67,6 +69,7 @@ export class SymbolInformationTranslator {
         } else {
           return;
         }
+      }
       case "union_variant":
         return this.createSymbolInformation(
           node.text,

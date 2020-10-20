@@ -70,7 +70,6 @@ export class MoveRefactoringHandler {
     }
 
     const forest = elmWorkspace.getForest();
-    const imports = elmWorkspace.getImports();
     const tree = forest.getTree(params.sourceUri);
     const destinationTree = forest.getTree(params.destination.uri);
 
