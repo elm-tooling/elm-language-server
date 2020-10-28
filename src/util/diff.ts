@@ -22,16 +22,15 @@ export function getTextRangeChanges(
     if (part[0] === 0 || part[0] === -1) {
       // Split the part into lines. Loop through these lines to find
       // the line no. and column at the end of this part.
-      const substring = part[1];
-      const lines = substring.split("\n");
-      lines.forEach((line, lineIndex) => {
+      const lines = part[1].split("\n").map((a) => a.length);
+      lines.forEach((lineLength, lineIndex) => {
         // The first `line` is actually just a continuation of the last line
         if (lineIndex === 0) {
-          column += line.length;
+          column += lineLength;
           // All other lines come after a line break.
         } else if (lineIndex > 0) {
           lineNumber += 1;
-          column = line.length;
+          column = lineLength;
         }
       });
     }
