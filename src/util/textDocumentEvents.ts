@@ -33,7 +33,7 @@ export class TextDocumentEvents extends EventEmitter {
         td.text,
       );
       this._documents[params.textDocument.uri] = document;
-      this.emit("open", Object.freeze({ document }));
+      this.emit("open", Object.freeze({ document, ...params }));
     });
 
     events.on("change", (params: DidChangeTextDocumentParams) => {
@@ -62,7 +62,7 @@ export class TextDocumentEvents extends EventEmitter {
     events.on("save", (params: DidSaveTextDocumentParams) => {
       const document = this._documents[params.textDocument.uri];
       if (document) {
-        this.emit("save", Object.freeze({ document }));
+        this.emit("save", Object.freeze({ document, ...params }));
       }
     });
 
@@ -70,7 +70,7 @@ export class TextDocumentEvents extends EventEmitter {
       const document = this._documents[params.textDocument.uri];
       if (document) {
         delete this._documents[params.textDocument.uri];
-        this.emit("close", Object.freeze({ document }));
+        this.emit("close", Object.freeze({ document, ...params }));
       }
     });
   }
