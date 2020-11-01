@@ -141,25 +141,25 @@ export class TypeExpression {
         true,
       ).inferTypeExpression(e.typeExpression!);
 
-      let type = TypeReplacement.replace(inferenceResult.type, new Map());
+      const type = TypeReplacement.replace(inferenceResult.type, new Map());
       TypeReplacement.freeze(inferenceResult.type);
-
-      if (!rigid) {
-        type = TypeReplacement.flexify(type);
-      }
 
       return { ...inferenceResult, type };
     };
 
-    if (!workspace.getForest().getByUri(uri)?.writeable) {
-      return workspace
-        .getTypeCache()
-        .getOrSet("PACKAGE_TYPE_ANNOTATION", e.typeExpression, setter);
-    } else {
-      return workspace
-        .getTypeCache()
-        .getOrSet("PROJECT_TYPE_ANNOTATION", e.typeExpression, setter);
+    const result = !workspace.getForest().getByUri(uri)?.writeable
+      ? workspace
+          .getTypeCache()
+          .getOrSet("PACKAGE_TYPE_ANNOTATION", e.typeExpression, setter)
+      : workspace
+          .getTypeCache()
+          .getOrSet("PROJECT_TYPE_ANNOTATION", e.typeExpression, setter);
+
+    if (!rigid) {
+      result.type = TypeReplacement.flexify(result.type);
     }
+
+    return result;
   }
 
   public static unionVariantInference(
@@ -495,15 +495,8 @@ export class TypeExpression {
   }
 
   private getTypeVar(e: Expression): TVar {
-    if (this.varsByExpression.has(e)) {
-      const tVar = this.varsByExpression.get(e);
-      if (tVar) {
-        return tVar;
-      }
-    }
-
-    const tVar = TVar(e.text, this.rigidVars);
-    this.varsByExpression.set(e, tVar);
-    return tVar;
+    return this.varsByExpression.getOrSet(e, () =>
+      TVar(e.text, this.rigidVars),
+    );
   }
 }
