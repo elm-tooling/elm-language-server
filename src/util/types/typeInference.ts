@@ -1872,8 +1872,10 @@ export class InferenceScope {
         } else {
           unionPattern.argPatterns.forEach((p, i) => {
             // The other type is a nullary constructor argument pattern, which doesn't bind anything
-            // We don't have this type in tree sitter, its just a upper_case_qid
-            if (p.type.includes("pattern")) {
+            if (
+              p.type.includes("pattern") &&
+              p.nodeType !== "NullaryConstructorArgumentPattern"
+            ) {
               this.bindPattern(p, variantType.params[i], isParameter);
             }
           });

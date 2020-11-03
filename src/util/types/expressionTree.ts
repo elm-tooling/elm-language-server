@@ -554,10 +554,7 @@ export function mapSyntaxNodeToExpression(
           .slice(1)
           .filter(
             (node) =>
-              // We don't have support for nullary argument pattern
-              node.type.includes("pattern") ||
-              node.type === "upper_case_qid" ||
-              node.type.includes("constant"),
+              node.type.includes("pattern") || node.type.includes("constant"),
           )
           .map((node) => mapSyntaxNodeToExpression(node) ?? node),
       } as EUnionPattern);
@@ -669,9 +666,8 @@ export function mapSyntaxNodeToExpression(
       } as ENegateExpr);
     case "nullary_constructor_argument_pattern":
       return Object.assign(node, {
-        nodeType: "NegateExpr",
-        expression: mapSyntaxNodeToExpression(node.lastNamedChild),
-      } as ENegateExpr);
+        nodeType: "NullaryConstructorArgumentPattern",
+      } as ENullaryConstructorArgumentPattern);
     default:
       return mapSyntaxNodeToExpression(node.firstNamedChild);
   }
