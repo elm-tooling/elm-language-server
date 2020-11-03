@@ -2211,7 +2211,7 @@ export class TreeUtils {
             child.firstNamedChild?.text,
         ),
       )
-      .filter(Utils.notUndefined)
+      .filter(Utils.notUndefined.bind(this))
       .map((node: SyntaxNode) => {
         return { node, text: node.firstNamedChild?.text };
       })
