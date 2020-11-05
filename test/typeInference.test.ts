@@ -560,6 +560,8 @@ func a =
 --@ Test.elm
 module Test exposing (..)
 
+type Maybe a = Just a | Nothing
+
 func =
 --^
   case foo of

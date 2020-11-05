@@ -1275,6 +1275,7 @@ func model =
 --@ Test.elm
 module Test exposing (..)
 
+
 type State
     = State { field1 : String, field2 : String }
 
@@ -1329,9 +1330,10 @@ func : Maybe Model -> a
 func model =
     case model of
         Just { prop1, prop2 } ->
-            prop1.{-caret-}
+            prop1.f{-caret-}
 
         Nothing ->
+            ""
 `;
 
     await testCompletions(source, ["field1", "field2"], "exactMatch");
