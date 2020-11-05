@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.13.2
+
+- Fix bug on file open
+- Fix some type inference bugs
+- Reset diagnostics for elmMake and elmAnalyze
+
 ## 1.13.1
 
 - Fixed some type inference bugs
