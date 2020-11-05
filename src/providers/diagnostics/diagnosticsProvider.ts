@@ -138,6 +138,8 @@ export class DiagnosticsProvider {
   private newElmAnalyseDiagnostics(
     diagnostics: Map<string, Diagnostic[]>,
   ): void {
+    this.resetDiagnostics(diagnostics, DiagnosticKind.ElmAnalyse);
+
     diagnostics.forEach((diagnostics, uri) => {
       this.updateDiagnostics(uri, DiagnosticKind.ElmAnalyse, diagnostics);
     });
@@ -204,6 +206,8 @@ export class DiagnosticsProvider {
         uri,
       );
 
+      this.resetDiagnostics(elmMakeDiagnostics, DiagnosticKind.ElmMake);
+
       elmMakeDiagnostics.forEach((diagnostics, diagnosticsUri) => {
         this.updateDiagnostics(
           diagnosticsUri,
@@ -227,5 +231,19 @@ export class DiagnosticsProvider {
     ) {
       await this.elmAnalyseDiagnostics.updateFile(uri, text);
     }
+  }
+
+  private resetDiagnostics(
+    diagnosticList: Map<string, Diagnostic[]>,
+    diagnosticKind: DiagnosticKind,
+  ): void {
+    this.currentDiagnostics.forEach((fileDiagnostics, diagnosticsUri) => {
+      if (
+        !diagnosticList.has(diagnosticsUri) &&
+        fileDiagnostics.getForKind(diagnosticKind).length > 0
+      ) {
+        diagnosticList.set(diagnosticsUri, []);
+      }
+    });
   }
 }
