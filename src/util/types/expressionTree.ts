@@ -29,6 +29,7 @@ export type Expression =
   | ELowerTypeName
   | ENegateExpr
   | ENumberConstant
+  | ENullaryConstructorArgumentPattern
   | EOperator
   | EOperatorAsFunctionExpr
   | EPattern
@@ -247,6 +248,9 @@ export interface ENegateExpr extends SyntaxNode {
   nodeType: "NegateExpr";
   expression: Expression;
 }
+export interface ENullaryConstructorArgumentPattern extends SyntaxNode {
+  nodeType: "NullaryConstructorArgumentPattern";
+}
 
 export function mapSyntaxNodeToExpression(
   node: SyntaxNode | null | undefined,
@@ -306,7 +310,7 @@ export function mapSyntaxNodeToExpression(
     case "number_constant_expr":
       return Object.assign(node, {
         nodeType: "NumberConstant",
-        isFloat: false,
+        isFloat: node.text.includes("."),
       } as ENumberConstant);
 
     case "string_constant_expr":
@@ -542,14 +546,17 @@ export function mapSyntaxNodeToExpression(
       return Object.assign(node, {
         nodeType: "UnionPattern",
         constructor: node.firstNamedChild,
-        namedParams: node.namedChildren
-          .filter((n) => n.type.includes("pattern"))
+        namedParams: node
+          .descendantsOfType("lower_pattern")
           .map(mapSyntaxNodeToExpression)
           .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
         argPatterns: node.namedChildren
-          .filter((n) => n.type.includes("pattern"))
-          .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
+          .slice(1)
+          .filter(
+            (node) =>
+              node.type.includes("pattern") || node.type.includes("constant"),
+          )
+          .map((node) => mapSyntaxNodeToExpression(node) ?? node),
       } as EUnionPattern);
 
     case "cons_pattern":
@@ -590,7 +597,7 @@ export function mapSyntaxNodeToExpression(
         typeVariables:
           TreeUtils.findAllNamedChildrenOfType("lower_type_name", node)
             ?.map(mapSyntaxNodeToExpression)
-            .filter(Utils.notUndefined) ?? [],
+            .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)) ?? [],
         typeExpression: mapSyntaxNodeToExpression(
           TreeUtils.findFirstNamedChildOfType("type_expression", node),
         ),
@@ -657,6 +664,10 @@ export function mapSyntaxNodeToExpression(
         nodeType: "NegateExpr",
         expression: mapSyntaxNodeToExpression(node.lastNamedChild),
       } as ENegateExpr);
+    case "nullary_constructor_argument_pattern":
+      return Object.assign(node, {
+        nodeType: "NullaryConstructorArgumentPattern",
+      } as ENullaryConstructorArgumentPattern);
     default:
       return mapSyntaxNodeToExpression(node.firstNamedChild);
   }

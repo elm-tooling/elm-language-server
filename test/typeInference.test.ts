@@ -541,4 +541,37 @@ func a b =
       "{ a | c : b, d : c } -> d -> e",
     );
   });
+
+  test("floats", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func a =
+--^
+  3.14 + a
+
+`;
+    await testTypeInference(basicsSources + source, "Float -> Float");
+  });
+
+  test("nullary constructor", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type Maybe a = Just a | Nothing
+
+func =
+--^
+  case foo of
+    Just Nothing ->
+      ""
+    
+    _ ->
+      ""
+
+`;
+    await testTypeInference(basicsSources + source, "String");
+  });
 });

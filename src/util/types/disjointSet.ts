@@ -7,7 +7,7 @@ export class DisjointSet {
     this.map.set(tvar, type);
   }
 
-  public get(type: Type): Type | undefined {
+  public get(type: Type): Type {
     if (type.nodeType !== "Var") {
       return type;
     }
