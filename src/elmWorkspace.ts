@@ -7,11 +7,12 @@ import util from "util";
 import { IConnection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
-import { Forest } from "./forest";
-import { Imports } from "./imports";
+import { Forest, IForest } from "./forest";
+import { IPossibleImportsCache, PossibleImportsCache } from "./providers";
 import * as utils from "./util/elmUtils";
 import { Settings } from "./util/settings";
 import { TypeCache } from "./util/types/typeCache";
+import { createTypeChecker, TypeChecker } from "./util/types/typeChecker";
 
 const readFile = util.promisify(fs.readFile);
 const readdir = util.promisify(fs.readdir);
@@ -28,24 +29,30 @@ export interface IElmWorkspace {
   hasDocument(uri: URI): boolean;
   hasPath(uri: URI): boolean;
   getPath(uri: URI): string | undefined;
-  getForest(): Forest;
-  getImports(): Imports;
+  getForest(synchronize?: boolean): IForest;
   getRootPath(): URI;
   getTypeCache(): TypeCache;
+  getTypeChecker(): TypeChecker;
+  markAsDirty(): void;
+  getPossibleImportsCache(): IPossibleImportsCache;
+}
+
+export interface IRootFolder {
+  uri: string;
+  writeable: boolean;
+  maintainerAndPackageName?: string;
 }
 
 export class ElmWorkspace implements IElmWorkspace {
-  private elmFolders: {
-    uri: string;
-    writeable: boolean;
-    maintainerAndPackageName?: string;
-  }[] = [];
-  private forest: Forest = new Forest();
-  private imports: Imports;
+  private elmFolders: IRootFolder[] = [];
+  private forest: IForest = new Forest([]);
   private parser: Parser;
   private connection: IConnection;
   private settings: Settings;
   private typeCache: TypeCache;
+  private typeChecker: TypeChecker | undefined;
+  private dirty = true;
+  private possibleImportsCache: IPossibleImportsCache;
 
   constructor(private rootPath: URI) {
     this.settings = container.resolve("Settings");
@@ -55,8 +62,8 @@ export class ElmWorkspace implements IElmWorkspace {
       `Starting language server for folder: ${this.rootPath.toString()}`,
     );
 
-    this.imports = new Imports();
     this.typeCache = new TypeCache();
+    this.possibleImportsCache = new PossibleImportsCache();
   }
 
   public async init(
@@ -79,12 +86,13 @@ export class ElmWorkspace implements IElmWorkspace {
       .find((elmFolder) => uri.fsPath.startsWith(elmFolder));
   }
 
-  public getForest(): Forest {
-    return this.forest;
-  }
+  public getForest(synchronize = true): IForest {
+    if (this.dirty && synchronize) {
+      this.forest.synchronize();
+      this.dirty = false;
+    }
 
-  public getImports(): Imports {
-    return this.imports;
+    return this.forest;
   }
 
   public getRootPath(): URI {
@@ -93,6 +101,26 @@ export class ElmWorkspace implements IElmWorkspace {
 
   public getTypeCache(): TypeCache {
     return this.typeCache;
+  }
+
+  public getTypeChecker(): TypeChecker {
+    if (this.dirty) {
+      this.forest.synchronize();
+      this.dirty = false;
+    }
+
+    return this.typeChecker ?? (this.typeChecker = createTypeChecker(this));
+  }
+
+  public markAsDirty(): void {
+    if (!this.dirty) {
+      this.dirty = true;
+      this.typeChecker = undefined;
+    }
+  }
+
+  public getPossibleImportsCache(): IPossibleImportsCache {
+    return this.possibleImportsCache;
   }
 
   private async initWorkspace(
@@ -212,6 +240,8 @@ export class ElmWorkspace implements IElmWorkspace {
         );
       }
 
+      this.forest = new Forest(this.elmFolders);
+
       const promiseList: Promise<void>[] = [];
       const PARSE_STAGES = 3;
       const progressDelta = 100 / (elmFilePaths.length * PARSE_STAGES);
@@ -224,14 +254,6 @@ export class ElmWorkspace implements IElmWorkspace {
         );
       }
       await Promise.all(promiseList);
-
-      this.forest.treeIndex.forEach((item) => {
-        this.connection.console.info(
-          `Adding imports ${URI.parse(item.uri).fsPath}`,
-        );
-        this.imports.updateImports(item.uri, item.tree, this.forest);
-        progressCallback((progress += progressDelta));
-      });
 
       this.connection.console.info(
         `Done parsing all files for ${pathToElmJson}`,

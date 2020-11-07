@@ -1,7 +1,5 @@
 import { URI } from "vscode-uri";
 import { TreeUtils } from "../src/util/treeUtils";
-import { findType } from "../src/util/types/typeInference";
-import { TypeRenderer } from "../src/util/types/typeRenderer";
 import { baseUri } from "./utils/mockElmWorkspace";
 import { getTargetPositionFromSource } from "./utils/sourceParser";
 import { SourceTreeParser } from "./utils/sourceTreeParser";
@@ -47,12 +45,12 @@ describe("test type inference", () => {
     const testUri = URI.file(baseUri + "Test.elm").toString();
 
     const workspace = treeParser.getWorkspace(result.sources);
-    const tree = workspace.getForest().getByUri(testUri)?.tree;
+    const treeContainer = workspace.getForest().getByUri(testUri);
 
-    if (!tree) throw new Error("Getting tree failed");
+    if (!treeContainer) throw new Error("Getting tree failed");
 
     const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-      tree.rootNode,
+      treeContainer.tree.rootNode,
       result.position,
     );
 
@@ -65,16 +63,10 @@ describe("test type inference", () => {
       throw new Error("Could not get value declaration");
     }
 
-    const nodeType = findType(declaration, testUri, workspace);
+    const checker = workspace.getTypeChecker();
+    const nodeType = checker.findType(declaration, testUri);
 
-    expect(
-      TypeRenderer.typeToString(
-        nodeType,
-        tree,
-        testUri,
-        workspace.getImports(),
-      ),
-    ).toEqual(expectedType);
+    expect(checker.typeToString(nodeType, treeContainer)).toEqual(expectedType);
   }
 
   test("simple function", async () => {

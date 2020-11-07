@@ -42,9 +42,7 @@ import { IElmWorkspace } from "src/elmWorkspace";
 import { Sequence } from "../sequence";
 import { Utils } from "../utils";
 import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
-import { TypeRenderer } from "./typeRenderer";
-import { container } from "tsyringe";
-import { IConnection } from "vscode-languageserver";
+import { TypeChecker } from "./typeChecker";
 
 export interface Alias {
   module: string;
@@ -362,6 +360,7 @@ export function nthVarName(n: number): string {
 }
 
 function typeMismatchError(
+  checker: TypeChecker,
   node: SyntaxNode,
   found: Type,
   expected: Type,
@@ -369,8 +368,8 @@ function typeMismatchError(
   patternBinding = false,
   recordDiff?: RecordDiff,
 ): Diagnostic {
-  const foundText = TypeRenderer.typeToString(found);
-  const expectedText = TypeRenderer.typeToString(expected);
+  const foundText = checker.typeToString(found);
+  const expectedText = checker.typeToString(expected);
 
   const message = patternBinding
     ? `Invalid pattern error\nExpected: ${expectedText}\nFound: ${foundText}`
@@ -380,21 +379,21 @@ function typeMismatchError(
     let s = "";
 
     if (diff.extra.size > 0) {
-      s += `\nExtra fields: ${TypeRenderer.typeToString(
+      s += `\nExtra fields: ${checker.typeToString(
         TRecord(Object.fromEntries(diff.extra.entries())),
       )}`;
     }
     if (diff.missing.size > 0) {
-      s += `\nMissing fields: ${TypeRenderer.typeToString(
+      s += `\nMissing fields: ${checker.typeToString(
         TRecord(Object.fromEntries(diff.missing.entries())),
       )}`;
     }
     if (diff.mismatched.size > 0) {
       s += `\nMismatched fields: `;
       diff.mismatched.forEach(([expected, found], field) => {
-        s += `\n Field ${field} expected ${TypeRenderer.typeToString(
+        s += `\n Field ${field} expected ${checker.typeToString(
           expected,
-        )}, found ${TypeRenderer.typeToString(found)}`;
+        )}, found ${checker.typeToString(found)}`;
       });
     }
 
@@ -504,21 +503,29 @@ function recordFieldError(node: SyntaxNode, field: string): Diagnostic {
   };
 }
 
-function recordBaseIdError(node: SyntaxNode, type: Type): Diagnostic {
+function recordBaseIdError(
+  checker: TypeChecker,
+  node: SyntaxNode,
+  type: Type,
+): Diagnostic {
   return {
     node,
     endNode: node,
-    message: `Type must be a record, instead found: ${TypeRenderer.typeToString(
+    message: `Type must be a record, instead found: ${checker.typeToString(
       type,
     )}`,
   };
 }
 
-function fieldAccessOnNonRecordError(node: SyntaxNode, type: Type): Diagnostic {
+function fieldAccessOnNonRecordError(
+  checker: TypeChecker,
+  node: SyntaxNode,
+  type: Type,
+): Diagnostic {
   return {
     node,
     endNode: node,
-    message: `Cannot access fields on non-record type: ${TypeRenderer.typeToString(
+    message: `Cannot access fields on non-record type: ${checker.typeToString(
       type,
     )}`,
   };
@@ -1436,7 +1443,13 @@ export class InferenceScope {
 
     if (targetTy?.nodeType === "Var") {
       if (targetTy.rigid) {
-        this.diagnostics.push(recordBaseIdError(expr.target, targetTy));
+        this.diagnostics.push(
+          recordBaseIdError(
+            this.elmWorkspace.getTypeChecker(),
+            expr.target,
+            targetTy,
+          ),
+        );
         return TUnknown;
       }
 
@@ -1466,7 +1479,11 @@ export class InferenceScope {
     if (targetTy?.nodeType !== "Record") {
       if (targetTy?.nodeType !== "Unknown" && targetTy) {
         this.diagnostics.push(
-          fieldAccessOnNonRecordError(expr.target, targetTy),
+          fieldAccessOnNonRecordError(
+            this.elmWorkspace.getTypeChecker(),
+            expr.target,
+            targetTy,
+          ),
         );
       }
       return TUnknown;
@@ -1817,7 +1834,14 @@ export class InferenceScope {
       if (ty.nodeType !== "Unknown") {
         const actualType = TTuple(this.uniqueVars(patterns.length));
         this.diagnostics.push(
-          typeMismatchError(tuplePattern, actualType, ty, tuplePattern, true),
+          typeMismatchError(
+            this.elmWorkspace.getTypeChecker(),
+            tuplePattern,
+            actualType,
+            ty,
+            tuplePattern,
+            true,
+          ),
         );
       }
       return;
@@ -1916,6 +1940,7 @@ export class InferenceScope {
       if (ty.nodeType !== "Unknown") {
         this.diagnostics.push(
           typeMismatchError(
+            this.elmWorkspace.getTypeChecker(),
             listPattern,
             TList(TVar("a")),
             ty,
@@ -1977,7 +2002,15 @@ export class InferenceScope {
             : undefined;
 
         this.diagnostics.push(
-          typeMismatchError(pattern, actualTy, ty, undefined, true, recordDiff),
+          typeMismatchError(
+            this.elmWorkspace.getTypeChecker(),
+            pattern,
+            actualTy,
+            ty,
+            undefined,
+            true,
+            recordDiff,
+          ),
         );
 
         if (recordDiff) {
@@ -2039,7 +2072,14 @@ export class InferenceScope {
 
       const errorExpr = expr.nodeType === "LetInExpr" ? expr.body : expr;
       this.diagnostics.push(
-        typeMismatchError(errorExpr, t1, t2, errorExpr, patternBinding),
+        typeMismatchError(
+          this.elmWorkspace.getTypeChecker(),
+          errorExpr,
+          t1,
+          t2,
+          errorExpr,
+          patternBinding,
+        ),
       );
 
       if (diff && expr.nodeType === "RecordExpr") {
@@ -2474,94 +2514,4 @@ interface Unannotated extends ParameterBindingResult {
 }
 interface Other extends ParameterBindingResult {
   bindingType: "Other";
-}
-
-export function findType(
-  node: SyntaxNode,
-  uri: string,
-  workspace: IElmWorkspace,
-): Type {
-  try {
-    let declaration: SyntaxNode | null = node;
-    while (
-      declaration &&
-      (declaration.type !== "value_declaration" ||
-        declaration.parent?.type !== "file")
-    ) {
-      declaration = declaration.parent;
-    }
-
-    // We can't find the top level declaration
-    if (
-      declaration?.type !== "value_declaration" ||
-      declaration.parent?.type !== "file"
-    ) {
-      return TUnknown;
-    }
-
-    const mappedDeclaration = mapSyntaxNodeToExpression(declaration);
-
-    if (
-      mappedDeclaration &&
-      mappedDeclaration.nodeType === "ValueDeclaration"
-    ) {
-      const inferenceResult = InferenceScope.valueDeclarationInference(
-        mappedDeclaration,
-        uri,
-        workspace,
-        new Set<EValueDeclaration>(),
-      );
-
-      if (node?.type === "function_declaration_left") {
-        const declaration = TreeUtils.findParentOfType(
-          "value_declaration",
-          node,
-        );
-
-        if (declaration) {
-          return (
-            inferenceResult.expressionTypes.get(declaration as Expression) ??
-            inferenceResult.type
-          );
-        } else {
-          return TUnknown;
-        }
-      } else if (node.type === "value_declaration") {
-        return (
-          inferenceResult.expressionTypes.get(node as Expression) ??
-          inferenceResult.type
-        );
-      }
-
-      const findTypeOrParentType = (
-        expr: SyntaxNode | undefined,
-      ): Type | undefined => {
-        const found = expr
-          ? inferenceResult.expressionTypes.get(expr as Expression)
-          : undefined;
-
-        if (found) {
-          return found;
-        }
-
-        // Check if the parent is the same text and position
-        if (
-          expr &&
-          expr.text === expr.parent?.text &&
-          expr.startIndex === expr.parent?.startIndex &&
-          expr.endIndex === expr.parent?.endIndex
-        ) {
-          return findTypeOrParentType(expr.parent);
-        }
-      };
-
-      return findTypeOrParentType(node) ?? TUnknown;
-    } else {
-      return TUnknown;
-    }
-  } catch (error) {
-    const connection = container.resolve<IConnection>("Connection");
-    connection.console.warn(`Error while trying to infer a type. ${error}`);
-    return TUnknown;
-  }
 }

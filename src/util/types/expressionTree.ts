@@ -682,12 +682,15 @@ export function findDefinition(
     return;
   }
 
-  const definition = TreeUtils.findDefinitionNodeByReferencingNodeShallow(
-    e,
-    uri,
-    e.tree,
-    elmWorkspace,
-  );
+  const treeContainer = elmWorkspace.getForest().getByUri(uri);
+
+  if (!treeContainer) {
+    return;
+  }
+
+  const definition = elmWorkspace
+    .getTypeChecker()
+    .findDefinitionShallow(e, treeContainer);
 
   const mappedNode = mapSyntaxNodeToExpression(definition?.node);
 

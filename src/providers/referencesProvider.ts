@@ -33,20 +33,19 @@ export class ReferencesProvider {
     this.connection.console.info(`References were requested`);
 
     const forest = elmWorkspace.getForest();
+    const checker = elmWorkspace.getTypeChecker();
 
-    const tree: Tree | undefined = forest.getTree(params.textDocument.uri);
+    const treeContainer = forest.getByUri(params.textDocument.uri);
 
-    if (tree) {
+    if (treeContainer) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        tree.rootNode,
+        treeContainer.tree.rootNode,
         params.position,
       );
 
-      const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
+      const definitionNode = checker.findDefinition(
         nodeAtPosition,
-        params.textDocument.uri,
-        tree,
-        elmWorkspace,
+        treeContainer,
       );
 
       const references = References.find(definitionNode, elmWorkspace);

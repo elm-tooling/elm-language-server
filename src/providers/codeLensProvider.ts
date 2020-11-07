@@ -79,8 +79,11 @@ export class CodeLensProvider {
       `A code lens resolve was requested for ${data.uri}`,
     );
     const forest = elmWorkspace.getForest();
-    const tree = forest.getTree(data.uri);
-    if (tree && data.codeLensType) {
+    const checker = elmWorkspace.getTypeChecker();
+    const treeContainer = forest.getByUri(data.uri);
+    if (treeContainer && data.codeLensType) {
+      const tree = treeContainer.tree;
+
       switch (data.codeLensType) {
         case "exposed": {
           const exposed = data.isFunction
@@ -108,11 +111,9 @@ export class CodeLensProvider {
             tree.rootNode,
             param.range.start,
           );
-          const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
+          const definitionNode = checker.findDefinition(
             nodeAtPosition,
-            data.uri,
-            tree,
-            elmWorkspace,
+            treeContainer,
           );
 
           const references = References.find(definitionNode, elmWorkspace);

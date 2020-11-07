@@ -1,5 +1,3 @@
-import { findType } from "../util/types/typeInference";
-import { TypeRenderer } from "../util/types/typeRenderer";
 import { container } from "tsyringe";
 import {
   CompletionItem,
@@ -17,15 +15,16 @@ import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { IForest, ITreeContainer } from "../forest";
-import { IImports } from "../imports";
 import { comparePosition, PositionUtil } from "../positionUtil";
 import { getEmptyTypes } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
-import { ImportUtils } from "../util/importUtils";
+import { ImportUtils, IPossibleImport } from "../util/importUtils";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { TreeUtils } from "../util/treeUtils";
 import RANKING_LIST from "./ranking";
+import escapeStringRegexp from "escape-string-regexp";
+import { TypeChecker } from "src/util/types/typeChecker";
 
 export type CompletionResult =
   | CompletionItem[]
@@ -42,6 +41,33 @@ interface ICompletionOptions {
   detail?: string;
   additionalTextEdits?: TextEdit[];
   filterText?: string;
+}
+
+export interface IPossibleImportsCache {
+  get(uri: string): IPossibleImport[] | undefined;
+  set(uri: string, possibleImports: IPossibleImport[]): void;
+  clear(): void;
+}
+
+export class PossibleImportsCache implements IPossibleImportsCache {
+  private uri: string | undefined;
+  private possibleImports: IPossibleImport[] | undefined;
+
+  public get(uri: string): IPossibleImport[] | undefined {
+    if (uri === this.uri) {
+      return this.possibleImports;
+    }
+  }
+
+  public set(uri: string, possibleImports: IPossibleImport[]): void {
+    this.uri = uri;
+    this.possibleImports = possibleImports;
+  }
+
+  public clear(): void {
+    this.uri = undefined;
+    this.possibleImports = undefined;
+  }
 }
 
 export class CompletionProvider {
@@ -65,9 +91,12 @@ export class CompletionProvider {
     const completions: CompletionItem[] = [];
 
     const forest = elmWorkspace.getForest();
-    const tree: Tree | undefined = forest.getTree(params.textDocument.uri);
+    const checker = elmWorkspace.getTypeChecker();
+    const treeContainer = forest.getByUri(params.textDocument.uri);
 
-    if (tree) {
+    if (treeContainer) {
+      const tree = treeContainer?.tree;
+
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
         tree.rootNode,
         params.position,
@@ -264,9 +293,8 @@ export class CompletionProvider {
       } else if (nodeAtPosition.parent?.parent?.type === "record_expr") {
         return this.getRecordCompletions(
           nodeAtPosition,
-          tree,
+          treeContainer,
           replaceRange,
-          params.textDocument.uri,
           elmWorkspace,
         );
       }
@@ -319,8 +347,7 @@ export class CompletionProvider {
       if (targetNode) {
         const moduleCompletions = this.getSubmodulesOrValues(
           targetNode,
-          params.textDocument.uri,
-          tree,
+          treeContainer,
           elmWorkspace,
           replaceRange,
           targetWord,
@@ -332,9 +359,8 @@ export class CompletionProvider {
 
         const recordCompletions = this.getRecordCompletions(
           targetNode,
-          tree,
+          treeContainer,
           replaceRange,
-          params.textDocument.uri,
           elmWorkspace,
         );
 
@@ -359,8 +385,8 @@ export class CompletionProvider {
 
       completions.push(
         ...this.getCompletionsFromOtherFile(
-          tree,
-          elmWorkspace.getImports(),
+          checker,
+          treeContainer,
           params.textDocument.uri,
           replaceRange,
           targetWord,
@@ -371,8 +397,8 @@ export class CompletionProvider {
       completions.push(...this.getKeywordsInline());
 
       const possibleImportCompletions = this.getPossibleImports(
+        elmWorkspace,
         replaceRange,
-        forest,
         tree,
         params.textDocument.uri,
         nodeAtPosition.text,
@@ -409,7 +435,7 @@ export class CompletionProvider {
     targetModule?: string,
   ): CompletionItem[] {
     const currentModuleNameNode = TreeUtils.getModuleNameNode(tree);
-    return forest.treeIndex
+    return Array.from(forest.treeMap.values())
       .filter(
         (t) =>
           t.moduleName &&
@@ -453,9 +479,9 @@ export class CompletionProvider {
     ) {
       const sortPrefix = "c";
       const moduleName = exposingListNode.previousNamedSibling.text;
-      const exposedByModule = forest.getExposingByModuleName(moduleName);
+      const exposedByModule = forest.getByModuleName(moduleName)?.exposing;
       if (exposedByModule) {
-        return exposedByModule
+        return Array.from(exposedByModule.values())
           .map((a) => {
             const markdownDocumentation = HintHelper.createHint(a.syntaxNode);
             switch (a.type) {
@@ -509,112 +535,109 @@ export class CompletionProvider {
   }
 
   private getCompletionsFromOtherFile(
-    tree: Tree,
-    imports: IImports,
+    checker: TypeChecker,
+    treeContainer: ITreeContainer,
     uri: string,
     range: Range,
     inputText: string,
   ): CompletionItem[] {
     const completions: CompletionItem[] = [];
 
-    if (imports.imports && imports.imports[uri]) {
-      const importList = imports.imports[uri];
-      importList.forEach((element) => {
-        const markdownDocumentation = HintHelper.createHint(element.node);
-        let sortPrefix = "d";
-        if (element.maintainerAndPackageName) {
-          const matchedRanking: string = (RANKING_LIST as {
-            [index: string]: string;
-          })[element.maintainerAndPackageName];
+    checker.getAllImports(treeContainer).forEach((element) => {
+      const markdownDocumentation = HintHelper.createHint(element.node);
+      let sortPrefix = "d";
+      if (element.maintainerAndPackageName) {
+        const matchedRanking: string = (RANKING_LIST as {
+          [index: string]: string;
+        })[element.maintainerAndPackageName];
 
-          if (matchedRanking) {
-            sortPrefix = `e${matchedRanking}`;
-          }
+        if (matchedRanking) {
+          sortPrefix = `e${matchedRanking}`;
         }
+      }
 
-        const label = element.alias;
-        let filterText = label;
+      const label = element.alias;
+      let filterText = label;
 
-        const dotIndex = label.lastIndexOf(".");
-        const valuePart = label.slice(dotIndex + 1);
+      const dotIndex = label.lastIndexOf(".");
+      const valuePart = label.slice(dotIndex + 1);
 
-        const importNode = TreeUtils.findImportClauseByName(
-          tree,
-          element.fromModuleName,
-        );
+      const importNode = TreeUtils.findImportClauseByName(
+        treeContainer.tree,
+        element.fromModuleName,
+      );
 
-        // Check if a value is already imported for this module using the exposing list
-        // In this case, we want to prefex the unqualified value since they are using the import exposing list
-        const valuesAlreadyExposed =
-          importNode &&
-          !!TreeUtils.findFirstNamedChildOfType("exposing_list", importNode);
+      // Check if a value is already imported for this module using the exposing list
+      // In this case, we want to prefex the unqualified value since they are using the import exposing list
+      const valuesAlreadyExposed =
+        importNode &&
+        !!TreeUtils.findFirstNamedChildOfType("exposing_list", importNode);
 
-        // Try to determine if just the value is being typed
-        if (
-          !valuesAlreadyExposed &&
-          valuePart.toLowerCase().startsWith(inputText.toLowerCase())
-        ) {
-          filterText = valuePart;
-        }
+      // Try to determine if just the value is being typed
+      if (
+        !valuesAlreadyExposed &&
+        valuePart.toLowerCase().startsWith(inputText.toLowerCase())
+      ) {
+        filterText = valuePart;
+      }
 
-        switch (element.type) {
-          case "Function":
-            completions.push(
-              this.createFunctionCompletion({
-                markdownDocumentation,
-                label,
-                range,
-                sortPrefix,
-                filterText,
-              }),
-            );
-            break;
-          case "UnionConstructor":
-            completions.push(
-              this.createUnionConstructorCompletion({
-                label,
-                range,
-                sortPrefix,
-                filterText,
-              }),
-            );
-            break;
-          case "Operator":
-            completions.push(
-              this.createOperatorCompletion({
-                markdownDocumentation,
-                label,
-                range,
-                sortPrefix,
-              }),
-            );
-            break;
-          case "Type":
-            completions.push(
-              this.createTypeCompletion({
-                markdownDocumentation,
-                label,
-                range,
-                sortPrefix,
-                filterText,
-              }),
-            );
-            break;
-          case "TypeAlias":
-            completions.push(
-              this.createTypeAliasCompletion({
-                markdownDocumentation,
-                label,
-                range,
-                sortPrefix,
-                filterText,
-              }),
-            );
-            break;
-          // Do not handle operators, they are not valid if prefixed
-        }
-      });
-    }
+      switch (element.type) {
+        case "Function":
+          completions.push(
+            this.createFunctionCompletion({
+              markdownDocumentation,
+              label,
+              range,
+              sortPrefix,
+              filterText,
+            }),
+          );
+          break;
+        case "UnionConstructor":
+          completions.push(
+            this.createUnionConstructorCompletion({
+              label,
+              range,
+              sortPrefix,
+              filterText,
+            }),
+          );
+          break;
+        case "Operator":
+          completions.push(
+            this.createOperatorCompletion({
+              markdownDocumentation,
+              label,
+              range,
+              sortPrefix,
+            }),
+          );
+          break;
+        case "Type":
+          completions.push(
+            this.createTypeCompletion({
+              markdownDocumentation,
+              label,
+              range,
+              sortPrefix,
+              filterText,
+            }),
+          );
+          break;
+        case "TypeAlias":
+          completions.push(
+            this.createTypeAliasCompletion({
+              markdownDocumentation,
+              label,
+              range,
+              sortPrefix,
+              filterText,
+            }),
+          );
+          break;
+        // Do not handle operators, they are not valid if prefixed
+      }
+    });
 
     completions.push(
       ...getEmptyTypes().map((a) =>
@@ -740,24 +763,21 @@ export class CompletionProvider {
 
   private getRecordCompletions(
     node: SyntaxNode,
-    tree: Tree,
+    treeContainer: ITreeContainer,
     range: Range,
-    uri: string,
     elmWorkspace: IElmWorkspace,
   ): CompletionItem[] {
     const result: CompletionItem[] = [];
     let typeDeclarationNode = TreeUtils.getTypeAliasOfRecord(
       node,
-      tree,
-      uri,
+      treeContainer,
       elmWorkspace,
     )?.node;
 
     if (!typeDeclarationNode && node.parent?.parent) {
       typeDeclarationNode = TreeUtils.getTypeAliasOfRecordField(
         node.parent.parent,
-        tree,
-        uri,
+        treeContainer,
         elmWorkspace,
       )?.node;
     }
@@ -765,8 +785,7 @@ export class CompletionProvider {
     if (!typeDeclarationNode && node.parent?.parent) {
       typeDeclarationNode = TreeUtils.getTypeOrTypeAliasOfFunctionRecordParameter(
         node.parent.parent,
-        tree,
-        uri,
+        treeContainer,
         elmWorkspace,
       );
     }
@@ -802,12 +821,13 @@ export class CompletionProvider {
     elmWorkspace: IElmWorkspace,
   ): CompletionItem[] {
     const result = [];
-    const foundType = findType(targetNode, uri, elmWorkspace);
+    const checker = elmWorkspace.getTypeChecker();
+    const foundType = checker.findType(targetNode, uri);
 
     if (foundType.nodeType === "Record") {
       for (const field in foundType.fields) {
         const hint = HintHelper.createHintForTypeAliasReference(
-          TypeRenderer.typeToString(foundType.fields[field]),
+          checker.typeToString(foundType.fields[field]),
           field,
           foundType.alias?.name ?? "",
         );
@@ -1027,16 +1047,94 @@ export class CompletionProvider {
     return result;
   }
 
+  private getPossibleImportsFiltered(
+    workspace: IElmWorkspace,
+    uri: string,
+    filterText: string,
+  ): IPossibleImport[] {
+    const forest = workspace.getForest();
+    const possibleImportsCache = workspace.getPossibleImportsCache();
+    const treeContainer = forest.getByUri(uri);
+
+    if (treeContainer) {
+      const allImportedValues = workspace
+        .getTypeChecker()
+        .getAllImports(treeContainer);
+
+      const importedModules =
+        TreeUtils.findAllImportClauseNodes(treeContainer.tree)?.map(
+          (n) => TreeUtils.findFirstNamedChildOfType("upper_case_qid", n)?.text,
+        ) ?? [];
+
+      const cached = possibleImportsCache.get(uri);
+      const possibleImports =
+        cached ?? ImportUtils.getPossibleImports(forest, uri);
+
+      if (!cached) {
+        possibleImportsCache.set(uri, possibleImports);
+      }
+
+      // Filter out already imported values
+      // Then sort by startsWith filter text, then matches filter text
+      return possibleImports
+        .filter(
+          (possibleImport) =>
+            !allImportedValues.get(
+              possibleImport.valueToImport ?? possibleImport.value,
+              (imp) => imp.fromModuleName === possibleImport.module,
+            ),
+        )
+        .sort((a, b) => {
+          const aValue = (a.valueToImport ?? a.value).toLowerCase();
+          const bValue = (b.valueToImport ?? b.value).toLowerCase();
+
+          filterText = filterText.toLowerCase();
+
+          const aStartsWith = aValue.startsWith(filterText);
+          const bStartsWith = bValue.startsWith(filterText);
+
+          if (aStartsWith && !bStartsWith) {
+            return -1;
+          } else if (!aStartsWith && bStartsWith) {
+            return 1;
+          } else {
+            const regex = new RegExp(escapeStringRegexp(filterText));
+            const aMatches = regex.exec(aValue);
+            const bMatches = regex.exec(bValue);
+
+            if (aMatches && !bMatches) {
+              return -1;
+            } else if (!aMatches && bMatches) {
+              return 1;
+            } else {
+              const aModuleImported = importedModules.includes(a.module);
+              const bModuleImported = importedModules.includes(b.module);
+
+              if (aModuleImported && !bModuleImported) {
+                return -1;
+              } else if (!aModuleImported && bModuleImported) {
+                return 1;
+              } else {
+                return 0;
+              }
+            }
+          }
+        });
+    }
+
+    return [];
+  }
+
   private getPossibleImports(
+    workspace: IElmWorkspace,
     range: Range,
-    forest: IForest,
     tree: Tree,
     uri: string,
     filterText: string,
   ): { list: CompletionItem[]; isIncomplete: boolean } {
     const result: CompletionItem[] = [];
-    const possibleImports = ImportUtils.getPossibleImportsFiltered(
-      forest,
+    const possibleImports = this.getPossibleImportsFiltered(
+      workspace,
       uri,
       filterText,
     );
@@ -1086,8 +1184,7 @@ export class CompletionProvider {
 
   private getSubmodulesOrValues(
     node: SyntaxNode,
-    uri: string,
-    tree: Tree,
+    treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
     range: Range,
     targetModule: string,
@@ -1095,6 +1192,8 @@ export class CompletionProvider {
     const result: CompletionItem[] = [];
 
     const forest = elmWorkspace.getForest();
+    const checker = elmWorkspace.getTypeChecker();
+    const tree = treeContainer.tree;
 
     // Handle possible submodules
     result.push(
@@ -1109,12 +1208,7 @@ export class CompletionProvider {
     let alreadyImported = true;
 
     // Try to find the module definition that is already imported
-    const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
-      node,
-      uri,
-      tree,
-      elmWorkspace,
-    );
+    const definitionNode = checker.findDefinition(node, treeContainer);
 
     let moduleTree: ITreeContainer | undefined;
 

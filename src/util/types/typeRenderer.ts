@@ -1,6 +1,5 @@
-import { IImports } from "src/imports";
-import { Tree } from "web-tree-sitter";
-import { TreeUtils } from "../treeUtils";
+import { ITreeContainer } from "../../forest";
+import { TypeChecker } from "./typeChecker";
 import {
   getTypeclassName,
   getVarNames,
@@ -13,21 +12,11 @@ export class TypeRenderer {
   private usedVarNames = new Map<TVar, string>();
 
   constructor(
-    private tree?: Tree,
-    private uri?: string,
-    private imports?: IImports,
+    private typeChecker: TypeChecker,
+    private treeContainer?: ITreeContainer,
   ) {}
 
-  public static typeToString(
-    t: Type,
-    tree?: Tree,
-    uri?: string,
-    imports?: IImports,
-  ): string {
-    return new TypeRenderer(tree, uri, imports).render(t);
-  }
-
-  private render(t: Type): string {
+  public render(t: Type): string {
     if (t.alias) {
       return this.renderUnion(
         TUnion(t.alias.module, t.alias.name, t.alias.parameters),
@@ -82,14 +71,12 @@ export class TypeRenderer {
         .join(" ")}`;
     }
 
-    if (this.tree && this.uri && this.imports) {
+    if (this.treeContainer) {
       return `${
-        TreeUtils.getQualifierForName(
-          this.tree,
-          this.uri,
+        this.typeChecker.getQualifierForName(
+          this.treeContainer,
           t.module,
           t.name,
-          this.imports,
         ) ?? ""
       }${type}`;
     } else {

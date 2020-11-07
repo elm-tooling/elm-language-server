@@ -2,9 +2,8 @@ import { IForest, ITreeContainer } from "../forest";
 import RANKING_LIST from "../providers/ranking";
 import { TreeUtils, NodeType } from "./treeUtils";
 import { SyntaxNode } from "web-tree-sitter";
-import escapeStringRegexp from "escape-string-regexp";
 
-interface IPossibleImport {
+export interface IPossibleImport {
   module: string;
   value: string;
   type: NodeType;
@@ -14,77 +13,6 @@ interface IPossibleImport {
 }
 
 export class ImportUtils {
-  public static getPossibleImportsFiltered(
-    forest: IForest,
-    uri: string,
-    filterText: string,
-  ): IPossibleImport[] {
-    const currentTree = forest.getTree(uri);
-
-    if (currentTree) {
-      const allImportedValues = TreeUtils.getAllImportedValues(
-        forest,
-        currentTree,
-      );
-
-      const importedModules =
-        TreeUtils.findAllImportClauseNodes(currentTree)?.map(
-          (n) => TreeUtils.findFirstNamedChildOfType("upper_case_qid", n)?.text,
-        ) ?? [];
-
-      // Filter out already imported values
-      // Then sort by startsWith filter text, then matches filter text
-      return this.getPossibleImports(forest, uri)
-        .filter(
-          (possibleImport) =>
-            !allImportedValues.find(
-              (importedValue) =>
-                importedValue.module === possibleImport.module &&
-                importedValue.value ===
-                  (possibleImport.valueToImport ?? possibleImport.value),
-            ),
-        )
-        .sort((a, b) => {
-          const aValue = (a.valueToImport ?? a.value).toLowerCase();
-          const bValue = (b.valueToImport ?? b.value).toLowerCase();
-
-          filterText = filterText.toLowerCase();
-
-          const aStartsWith = aValue.startsWith(filterText);
-          const bStartsWith = bValue.startsWith(filterText);
-
-          if (aStartsWith && !bStartsWith) {
-            return -1;
-          } else if (!aStartsWith && bStartsWith) {
-            return 1;
-          } else {
-            const regex = new RegExp(escapeStringRegexp(filterText));
-            const aMatches = regex.exec(aValue);
-            const bMatches = regex.exec(bValue);
-
-            if (aMatches && !bMatches) {
-              return -1;
-            } else if (!aMatches && bMatches) {
-              return 1;
-            } else {
-              const aModuleImported = importedModules.includes(a.module);
-              const bModuleImported = importedModules.includes(b.module);
-
-              if (aModuleImported && !bModuleImported) {
-                return -1;
-              } else if (!aModuleImported && bModuleImported) {
-                return 1;
-              } else {
-                return 0;
-              }
-            }
-          }
-        });
-    }
-
-    return [];
-  }
-
   public static getPossibleImports(
     forest: IForest,
     uri: string,
@@ -94,19 +22,11 @@ export class ImportUtils {
     const exposedValues: IPossibleImport[] = [];
 
     // Find all exposed values that could be imported
-    if (forest) {
-      forest.treeIndex
-        .filter(
-          (tree) =>
-            tree.moduleName !== "Basics" &&
-            tree.moduleName !== "Debug" &&
-            tree.moduleName !== "Tuple" &&
-            tree.uri !== uri,
-        )
-        .forEach((tree) => {
-          exposedValues.push(...ImportUtils.getPossibleImportsOfTree(tree));
-        });
-    }
+    forest.treeMap.forEach((tree) => {
+      if (tree.uri !== uri && tree.moduleName !== "Basics") {
+        exposedValues.push(...ImportUtils.getPossibleImportsOfTree(tree));
+      }
+    });
 
     const ranking = RANKING_LIST as {
       [index: string]: string | undefined;

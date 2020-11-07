@@ -1,6 +1,6 @@
-import Parser, { SyntaxNode, Tree } from "web-tree-sitter";
+import Parser, { SyntaxNode } from "web-tree-sitter";
 import { IForest, ITreeContainer } from "./forest";
-import { IExposing, NodeType, TreeUtils } from "./util/treeUtils";
+import { IExposed, IExposing, NodeType, TreeUtils } from "./util/treeUtils";
 import { container } from "tsyringe";
 
 export interface IImport {
@@ -13,189 +13,219 @@ export interface IImport {
   explicitlyExposed: boolean; // needed to resolve shadowing of (..) definitions
 }
 
-export interface IImports {
-  imports?: { [uri: string]: IImport[] };
-  updateImports(uri: string, tree: Tree, forest: IForest): void;
-}
+/**
+ * Imports class that extends a map to handle multiple named imports
+ */
+export class Imports extends Map<string, IImport | IImport[]> {
+  public get(
+    key: string,
+    filter?: (val: IImport) => boolean,
+  ): IImport | undefined {
+    let found = super.get(key);
 
-export class Imports implements IImports {
-  public imports?: { [uri: string]: IImport[] } = {};
-  private parser: Parser;
+    if (!found) {
+      return;
+    }
 
-  constructor() {
-    this.parser = container.resolve("Parser");
+    if (Array.isArray(found)) {
+      found = (filter ? found.filter(filter) : found).sort((a) =>
+        a.explicitlyExposed ? -1 : 1,
+      )[0];
+    }
+
+    if (found && (!filter || filter(found))) {
+      return found;
+    }
   }
 
-  public updateImports(uri: string, tree: Tree, forest: IForest): void {
-    const result: IImport[] = [];
-    // Add standard imports
-    let importNodes = this.getVirtualImports();
+  public set(key: string, val: IImport): this {
+    if (super.has(key)) {
+      const existing = super.get(key);
 
-    importNodes = importNodes.concat(
-      TreeUtils.findAllNamedChildrenOfType("import_clause", tree.rootNode) ??
-        [],
-    );
-    if (importNodes) {
-      importNodes.forEach((importNode) => {
-        const moduleNameNode = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_qid",
-          importNode,
-        );
-        if (moduleNameNode) {
-          const foundModule = forest.getByModuleName(moduleNameNode.text);
-          if (foundModule) {
-            const foundModuleNode = TreeUtils.findModuleDeclaration(
-              foundModule.tree,
-            );
-            if (foundModuleNode) {
-              result.push({
-                alias: moduleNameNode.text,
-                fromModuleName: moduleNameNode.text,
-                fromUri: foundModule.uri,
-                maintainerAndPackageName: foundModule.maintainerAndPackageName,
-                node: foundModuleNode,
-                type: "Module",
-                explicitlyExposed: false,
-              });
+      if (Array.isArray(existing)) {
+        existing.push(val);
+      } else if (existing) {
+        super.set(key, [existing, val]);
+      }
+    } else {
+      super.set(key, val);
+    }
+    return this;
+  }
 
-              const exposedFromRemoteModule = forest.getExposingByModuleName(
-                moduleNameNode.text,
+  public forEach(
+    callbackfn: (
+      value: IImport,
+      key: string,
+      map: Map<string, IImport | IImport[]>,
+    ) => void,
+  ): void {
+    super.forEach((val, key, map) => {
+      if (Array.isArray(val)) {
+        val.forEach((v) => callbackfn(v, key, map));
+      } else {
+        callbackfn(val, key, map);
+      }
+    });
+  }
+
+  private static cachedVirtualImports: SyntaxNode[];
+
+  public static getImports(
+    treeContainer: ITreeContainer,
+    forest: IForest,
+  ): Imports {
+    const result = new Imports();
+
+    const importNodes = [
+      ...Imports.getVirtualImports(),
+      ...(TreeUtils.findAllImportClauseNodes(treeContainer.tree) ?? []),
+    ];
+
+    importNodes.forEach((importNode) => {
+      const moduleName = TreeUtils.findFirstNamedChildOfType(
+        "upper_case_qid",
+        importNode,
+      )?.text;
+
+      if (moduleName) {
+        const uri = treeContainer.resolvedModules?.get(moduleName);
+
+        if (!uri) {
+          return;
+        }
+
+        const foundModule = forest.getByUri(uri);
+        if (foundModule) {
+          const foundModuleNode = TreeUtils.findModuleDeclaration(
+            foundModule.tree,
+          );
+          if (foundModuleNode) {
+            result.set(moduleName, {
+              alias: moduleName,
+              fromModuleName: moduleName,
+              fromUri: uri,
+              maintainerAndPackageName: foundModule.maintainerAndPackageName,
+              node: foundModuleNode,
+              type: "Module",
+              explicitlyExposed: false,
+            });
+
+            const exposedFromRemoteModule = foundModule.exposing;
+            if (exposedFromRemoteModule) {
+              this.getPrefixedImports(
+                moduleName,
+                importNode,
+                exposedFromRemoteModule,
+                foundModule.uri,
+                foundModule.maintainerAndPackageName,
+              ).forEach((imp) => result.set(imp.alias, imp));
+
+              const exposingList = TreeUtils.findFirstNamedChildOfType(
+                "exposing_list",
+                importNode,
               );
-              if (exposedFromRemoteModule) {
-                result.push(
-                  ...this.getPrefixedCompletions(
-                    moduleNameNode,
-                    importNode,
+
+              if (exposingList) {
+                const doubleDot = TreeUtils.findFirstNamedChildOfType(
+                  "double_dot",
+                  exposingList,
+                );
+                if (doubleDot) {
+                  this.getAllExposedCompletions(
                     exposedFromRemoteModule,
+                    moduleName,
                     foundModule.uri,
                     foundModule.maintainerAndPackageName,
-                  ),
-                );
+                  ).forEach((imp) => result.set(imp.alias, imp));
+                } else {
+                  const exposedOperators = TreeUtils.descendantsOfType(
+                    exposingList,
+                    "operator_identifier",
+                  );
+                  exposedOperators.forEach((exposedOperator) => {
+                    const foundNode = exposedFromRemoteModule.get(
+                      exposedOperator.text,
+                    );
+                    if (foundNode) {
+                      this.exposedNodesToImports(
+                        [foundNode],
+                        moduleName,
+                        foundModule,
+                      ).forEach((imp) => result.set(imp.alias, imp));
+                    }
+                  });
 
-                const exposingList = TreeUtils.findFirstNamedChildOfType(
-                  "exposing_list",
-                  importNode,
-                );
-
-                if (exposingList) {
-                  const doubleDot = TreeUtils.findFirstNamedChildOfType(
-                    "double_dot",
+                  const exposedValues = TreeUtils.findAllNamedChildrenOfType(
+                    "exposed_value",
                     exposingList,
                   );
-                  if (doubleDot) {
-                    result.push(
-                      ...this.getAllExposedCompletions(
-                        exposedFromRemoteModule,
-                        moduleNameNode.text,
-                        foundModule.uri,
-                        foundModule.maintainerAndPackageName,
-                      ),
+                  exposedValues?.forEach((exposedValue) => {
+                    const foundNode = exposedFromRemoteModule.get(
+                      exposedValue.text,
                     );
-                  } else {
-                    const exposedOperators = TreeUtils.descendantsOfType(
-                      exposingList,
-                      "operator_identifier",
-                    );
-                    if (exposedOperators.length > 0) {
-                      const exposedNodes = exposedFromRemoteModule.filter(
-                        (element) => {
-                          return exposedOperators.find(
-                            (a) => a.text === element.name,
-                          );
-                        },
-                      );
-                      result.push(
-                        ...this.exposedNodesToImports(
-                          exposedNodes,
-                          moduleNameNode,
-                          foundModule,
-                        ),
-                      );
+                    if (foundNode) {
+                      this.exposedNodesToImports(
+                        [foundNode],
+                        moduleName,
+                        foundModule,
+                      ).forEach((imp) => result.set(imp.alias, imp));
                     }
+                  });
 
-                    const exposedValues = TreeUtils.findAllNamedChildrenOfType(
-                      "exposed_value",
-                      exposingList,
-                    );
-                    if (exposedValues) {
-                      const exposedNodes = exposedFromRemoteModule.filter(
-                        (element) => {
-                          return exposedValues.find(
-                            (a) => a.text === element.name,
-                          );
-                        },
-                      );
-                      result.push(
-                        ...this.exposedNodesToImports(
-                          exposedNodes,
-                          moduleNameNode,
-                          foundModule,
-                        ),
-                      );
-                    }
+                  const exposedTypes = TreeUtils.findAllNamedChildrenOfType(
+                    "exposed_type",
+                    exposingList,
+                  );
 
-                    const exposedType = TreeUtils.findAllNamedChildrenOfType(
-                      "exposed_type",
-                      exposingList,
-                    );
-                    if (exposedType) {
-                      const exposedNodes = exposedFromRemoteModule.filter(
-                        (element) => {
-                          return exposedType.find((a) => {
-                            const typeName = TreeUtils.findFirstNamedChildOfType(
-                              "upper_case_identifier",
-                              a,
-                            );
-                            if (typeName) {
-                              return typeName.text === element.name;
-                            } else {
-                              return false;
-                            }
-                          });
-                        },
-                      );
-                      result.push(
-                        ...this.exposedNodesToImports(
-                          exposedNodes,
-                          moduleNameNode,
+                  exposedTypes?.forEach((exposedType) => {
+                    const typeName = TreeUtils.findFirstNamedChildOfType(
+                      "upper_case_identifier",
+                      exposedType,
+                    )?.text;
+
+                    if (typeName) {
+                      const foundNode = exposedFromRemoteModule.get(typeName);
+                      if (foundNode) {
+                        this.exposedNodesToImports(
+                          [foundNode],
+                          moduleName,
                           foundModule,
-                        ),
-                      );
+                        ).forEach((imp) => result.set(imp.alias, imp));
+                      }
                     }
-                  }
+                  });
                 }
               }
             }
           }
         }
-      });
-    }
-    if (!this.imports) {
-      this.imports = {};
-    }
-    this.imports[uri] = result;
+      }
+    });
+
+    return result;
   }
 
-  private getPrefixedCompletions(
-    moduleNameNode: SyntaxNode,
+  private static getPrefixedImports(
+    moduleName: string,
     importNode: SyntaxNode,
-    exposed: IExposing[],
+    exposed: IExposing,
     uri: string,
     maintainerAndPackageName?: string,
   ): IImport[] {
     const result: IImport[] = [];
 
     const importedAs = this.findImportAsClause(importNode);
-    const importPrefix = importedAs ? importedAs : moduleNameNode.text;
+    const importPrefix = importedAs ? importedAs : moduleName;
 
-    exposed.forEach((element) => {
+    exposed.forEach((element, name) => {
       switch (element.type) {
         case "Function":
         case "Port":
         case "TypeAlias":
           result.push({
-            alias: `${importPrefix}.${element.name}`,
-            fromModuleName: moduleNameNode.text,
+            alias: `${importPrefix}.${name}`,
+            fromModuleName: moduleName,
             fromUri: uri,
             maintainerAndPackageName,
             node: element.syntaxNode,
@@ -205,8 +235,8 @@ export class Imports implements IImports {
           break;
         case "Type":
           result.push({
-            alias: `${importPrefix}.${element.name}`,
-            fromModuleName: moduleNameNode.text,
+            alias: `${importPrefix}.${name}`,
+            fromModuleName: moduleName,
             fromUri: uri,
             maintainerAndPackageName,
             node: element.syntaxNode,
@@ -218,7 +248,7 @@ export class Imports implements IImports {
               ...element.exposedUnionConstructors.map((a) => {
                 return {
                   alias: `${importPrefix}.${a.name}`,
-                  fromModuleName: moduleNameNode.text,
+                  fromModuleName: moduleName,
                   fromUri: uri,
                   maintainerAndPackageName,
                   node: a.syntaxNode,
@@ -236,29 +266,36 @@ export class Imports implements IImports {
     return result;
   }
 
-  private getVirtualImports(): SyntaxNode[] {
+  public static getVirtualImports(): SyntaxNode[] {
+    if (this.cachedVirtualImports) {
+      return this.cachedVirtualImports;
+    }
+
     const virtualImports = `
-    import Basics exposing (..)
-import List exposing (List, (::))
-import Maybe exposing (Maybe(..))
-import Result exposing (Result(..))
-import String exposing (String)
-import Char exposing (Char)
-import Tuple
+  import Basics exposing (..)
+  import List exposing (List, (::))
+  import Maybe exposing (Maybe(..))
+  import Result exposing (Result(..))
+  import String exposing (String)
+  import Char exposing (Char)
+  import Tuple
 
-import Debug
+  import Debug
 
-import Platform exposing ( Program )
-import Platform.Cmd as Cmd exposing ( Cmd )
-import Platform.Sub as Sub exposing ( Sub )
-    `;
+  import Platform exposing ( Program )
+  import Platform.Cmd as Cmd exposing ( Cmd )
+  import Platform.Sub as Sub exposing ( Sub )
+      `;
 
-    const importTree = this.parser.parse(virtualImports);
+    const parser = container.resolve<Parser>("Parser");
+    const importTree = parser.parse(virtualImports);
 
-    return importTree.rootNode.children;
+    return (this.cachedVirtualImports = importTree.rootNode.children);
   }
 
-  private findImportAsClause(importNode: SyntaxNode): string | undefined {
+  private static findImportAsClause(
+    importNode: SyntaxNode,
+  ): string | undefined {
     const asClause = TreeUtils.findFirstNamedChildOfType(
       "as_clause",
       importNode,
@@ -274,8 +311,8 @@ import Platform.Sub as Sub exposing ( Sub )
     }
   }
 
-  private getAllExposedCompletions(
-    exposed: IExposing[],
+  private static getAllExposedCompletions(
+    exposed: IExposing,
     moduleName: string,
     uri: string,
     maintainerAndPackageName?: string,
@@ -283,7 +320,7 @@ import Platform.Sub as Sub exposing ( Sub )
     const result: IImport[] = [];
 
     // These need to be added additionally, as they are nested
-    exposed
+    Array.from(exposed.values())
       .filter((it) => it.type === "Type")
       .forEach((element) => {
         if (element.exposedUnionConstructors) {
@@ -305,7 +342,7 @@ import Platform.Sub as Sub exposing ( Sub )
 
     return [
       ...result,
-      ...exposed.map((element: IExposing) => {
+      ...Array.from(exposed.values()).map((element) => {
         return {
           alias: element.name,
           fromModuleName: moduleName,
@@ -319,17 +356,9 @@ import Platform.Sub as Sub exposing ( Sub )
     ];
   }
 
-  private exposedNodesToImports(
-    exposedNodes: {
-      name: string;
-      syntaxNode: Parser.SyntaxNode;
-      type: NodeType;
-      exposedUnionConstructors?: {
-        name: string;
-        syntaxNode: Parser.SyntaxNode;
-      }[];
-    }[],
-    moduleNameNode: SyntaxNode,
+  private static exposedNodesToImports(
+    exposedNodes: IExposed[],
+    moduleName: string,
     foundModule: ITreeContainer,
   ): IImport[] {
     return exposedNodes
@@ -337,7 +366,7 @@ import Platform.Sub as Sub exposing ( Sub )
         return [
           {
             alias: a.name,
-            fromModuleName: moduleNameNode.text,
+            fromModuleName: moduleName,
             fromUri: foundModule.uri,
             maintainerAndPackageName: foundModule.maintainerAndPackageName,
             node: a.syntaxNode,
@@ -348,7 +377,7 @@ import Platform.Sub as Sub exposing ( Sub )
           a.exposedUnionConstructors?.map((b) => {
             return {
               alias: b.name,
-              fromModuleName: moduleNameNode.text,
+              fromModuleName: moduleName,
               fromUri: foundModule.uri,
               maintainerAndPackageName: foundModule.maintainerAndPackageName,
               node: b.syntaxNode,

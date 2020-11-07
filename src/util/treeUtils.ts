@@ -1,10 +1,9 @@
 import { Position } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IImport, IImports } from "../imports";
-import { IForest } from "../forest";
+import { ITreeContainer } from "../forest";
 import { Utils } from "./utils";
 import { comparePosition } from "../positionUtil";
-import { findType, Type } from "./types/typeInference";
+import { Type } from "./types/typeInference";
 import { IElmWorkspace } from "src/elmWorkspace";
 
 export type NodeType =
@@ -23,7 +22,7 @@ export type NodeType =
 
 const functionNameRegex = new RegExp("[a-zA-Z0-9_]+");
 
-export interface IExposing {
+export interface IExposed {
   name: string;
   syntaxNode: SyntaxNode;
   type: NodeType;
@@ -32,6 +31,8 @@ export interface IExposing {
     syntaxNode: SyntaxNode;
   }[];
 }
+
+export type IExposing = Map<string, IExposed>;
 
 export function flatMap<T, U>(
   array: T[],
@@ -73,108 +74,98 @@ export class TreeUtils {
     return [];
   }
 
-  public static getModuleNameAndExposing(
-    tree: Tree,
-  ): { moduleName: string; exposing: IExposing[] } | undefined {
+  public static getModuleExposing(tree: Tree): IExposing {
+    const exposed: IExposing = new Map<string, IExposed>();
     const moduleDeclaration:
       | SyntaxNode
       | undefined = this.findModuleDeclaration(tree);
     if (moduleDeclaration) {
-      const moduleName = this.findFirstNamedChildOfType(
-        "upper_case_qid",
-        moduleDeclaration,
-      );
-
       const exposingList = this.findFirstNamedChildOfType(
         "exposing_list",
         moduleDeclaration,
       );
       if (exposingList) {
-        const exposed: IExposing[] = [];
         if (TreeUtils.findFirstNamedChildOfType("double_dot", exposingList)) {
-          if (moduleName) {
+          TreeUtils.descendantsOfType(
+            tree.rootNode,
+            "value_declaration",
+          )?.forEach((elmFunction) => {
+            const declaration = TreeUtils.findFirstNamedChildOfType(
+              "function_declaration_left",
+              elmFunction,
+            );
+            if (declaration && declaration.firstNamedChild) {
+              const functionName = declaration.firstNamedChild.text;
+              exposed.set(functionName, {
+                name: functionName,
+                syntaxNode: declaration,
+                type: "Function",
+              });
+            }
+          });
+
+          TreeUtils.findAllNamedChildrenOfType(
+            "port_annotation",
+            tree.rootNode,
+          )?.forEach((elmPort) => {
+            const name = elmPort.children[1].text;
+            if (name) {
+              exposed.set(name, {
+                name,
+                syntaxNode: elmPort,
+                type: "Port",
+              });
+            }
+          });
+
+          this.findAllTypeAliasDeclarations(tree)?.forEach((typeAlias) => {
+            const name = TreeUtils.findFirstNamedChildOfType(
+              "upper_case_identifier",
+              typeAlias,
+            );
+            if (name) {
+              exposed.set(name.text, {
+                name: name.text,
+                syntaxNode: typeAlias,
+                type: "TypeAlias",
+                exposedUnionConstructors: undefined,
+              });
+            }
+          });
+
+          this.findAllTypeDeclarations(tree)?.forEach((typeDeclaration) => {
+            const unionConstructors: {
+              name: string;
+              syntaxNode: SyntaxNode;
+            }[] = [];
             TreeUtils.descendantsOfType(
-              tree.rootNode,
-              "value_declaration",
-            )?.forEach((elmFunction) => {
-              const declaration = TreeUtils.findFirstNamedChildOfType(
-                "function_declaration_left",
-                elmFunction,
-              );
-              if (declaration && declaration.firstNamedChild) {
-                const functionName = declaration.firstNamedChild.text;
-                exposed.push({
-                  name: functionName,
-                  syntaxNode: declaration,
-                  type: "Function",
-                });
-              }
-            });
-
-            TreeUtils.findAllNamedChildrenOfType(
-              "port_annotation",
-              tree.rootNode,
-            )?.forEach((elmPort) => {
-              if (elmPort.children[1].text) {
-                exposed.push({
-                  name: elmPort.children[1].text,
-                  syntaxNode: elmPort,
-                  type: "Port",
-                });
-              }
-            });
-
-            this.findAllTypeAliasDeclarations(tree)?.forEach((typeAlias) => {
+              typeDeclaration,
+              "union_variant",
+            ).forEach((variant) => {
               const name = TreeUtils.findFirstNamedChildOfType(
                 "upper_case_identifier",
-                typeAlias,
+                variant,
               );
-              if (name) {
-                exposed.push({
-                  exposedUnionConstructors: undefined,
+              if (name && name.parent) {
+                unionConstructors.push({
                   name: name.text,
-                  syntaxNode: typeAlias,
-                  type: "TypeAlias",
+                  syntaxNode: name.parent,
                 });
               }
             });
-
-            this.findAllTypeDeclarations(tree)?.forEach((typeDeclaration) => {
-              const unionConstructors: {
-                name: string;
-                syntaxNode: SyntaxNode;
-              }[] = [];
-              TreeUtils.descendantsOfType(
-                typeDeclaration,
-                "union_variant",
-              ).forEach((variant) => {
-                const name = TreeUtils.findFirstNamedChildOfType(
-                  "upper_case_identifier",
-                  variant,
-                );
-                if (name && name.parent) {
-                  unionConstructors.push({
-                    name: name.text,
-                    syntaxNode: name.parent,
-                  });
-                }
+            const typeDeclarationName = TreeUtils.findFirstNamedChildOfType(
+              "upper_case_identifier",
+              typeDeclaration,
+            );
+            if (typeDeclarationName) {
+              exposed.set(typeDeclarationName.text, {
+                name: typeDeclarationName.text,
+                syntaxNode: typeDeclaration,
+                type: "Type",
+                exposedUnionConstructors: unionConstructors,
               });
-              const typeDeclarationName = TreeUtils.findFirstNamedChildOfType(
-                "upper_case_identifier",
-                typeDeclaration,
-              );
-              if (typeDeclarationName) {
-                exposed.push({
-                  exposedUnionConstructors: unionConstructors,
-                  name: typeDeclarationName.text,
-                  syntaxNode: typeDeclaration,
-                  type: "Type",
-                });
-              }
-            });
-
-            return { moduleName: moduleName.text, exposing: exposed };
-          }
+            }
+          });
         } else {
           const exposedOperators = TreeUtils.descendantsOfType(
             exposingList,
@@ -185,11 +176,11 @@ export class TreeUtils {
             const functionNode = this.findOperator(tree, value.text);
 
             if (functionNode) {
-              exposed.push({
-                exposedUnionConstructors: undefined,
+              exposed.set(value.text, {
                 name: value.text,
                 syntaxNode: functionNode,
                 type: "Operator",
+                exposedUnionConstructors: undefined,
               });
             }
           }
@@ -201,12 +192,16 @@ export class TreeUtils {
 
           const exposedValuesText = exposedValues.map((a) => a.text);
 
-          exposed.push(
-            ...this.findExposedTopLevelFunctions(tree, exposedValuesText),
+          this.findExposedTopLevelFunctions(tree, exposedValuesText).forEach(
+            (exposedFunction, name) => {
+              exposed.set(name, exposedFunction);
+            },
           );
 
-          exposed.push(
-            ...this.findExposedTopLevelPorts(tree, exposedValuesText),
+          this.findExposedTopLevelPorts(tree, exposedValuesText).forEach(
+            (exposedPort, name) => {
+              exposed.set(name, exposedPort);
+            },
           );
 
           const exposedTypes = TreeUtils.descendantsOfType(
@@ -247,11 +242,11 @@ export class TreeUtils {
                     }
                   });
 
-                  exposed.push({
-                    exposedUnionConstructors: unionConstructors,
+                  exposed.set(name.text, {
                     name: name.text,
                     syntaxNode: typeDeclaration,
                     type: "Type",
+                    exposedUnionConstructors: unionConstructors,
                   });
                 }
               }
@@ -259,11 +254,11 @@ export class TreeUtils {
               const typeNode = this.findTypeDeclaration(tree, value.text);
 
               if (typeNode) {
-                exposed.push({
-                  exposedUnionConstructors: undefined,
+                exposed.set(value.text, {
                   name: value.text,
                   syntaxNode: typeNode,
                   type: "Type",
+                  exposedUnionConstructors: undefined,
                 });
               } else {
                 const typeAliasNode = this.findTypeAliasDeclaration(
@@ -271,23 +266,21 @@ export class TreeUtils {
                   value.text,
                 );
                 if (typeAliasNode) {
-                  exposed.push({
-                    exposedUnionConstructors: undefined,
+                  exposed.set(value.text, {
                     name: value.text,
                     syntaxNode: typeAliasNode,
                     type: "TypeAlias",
+                    exposedUnionConstructors: undefined,
                   });
                 }
               }
             }
           }
-
-          if (moduleName) {
-            return { moduleName: moduleName.text, exposing: exposed };
-          }
         }
       }
     }
+
+    return exposed;
   }
 
   public static findFirstNamedChildOfType(
@@ -719,672 +712,6 @@ export class TreeUtils {
     }
   }
 
-  public static findDefinitionNodeByReferencingNode(
-    nodeAtPosition: SyntaxNode,
-    uri: string,
-    tree: Tree,
-    elmWorkspace: IElmWorkspace,
-  ): { node: SyntaxNode; uri: string; nodeType: NodeType } | undefined {
-    const definition = this.findDefinitionNodeByReferencingNodeShallow(
-      nodeAtPosition,
-      uri,
-      tree,
-      elmWorkspace,
-    );
-
-    if (
-      definition?.node.type === "lower_pattern" &&
-      definition.node.firstNamedChild
-    ) {
-      const innerDefinition = this.findDefinitionNodeByReferencingNodeShallow(
-        definition.node.firstNamedChild,
-        uri,
-        tree,
-        elmWorkspace,
-      );
-
-      if (innerDefinition) {
-        return innerDefinition;
-      }
-    }
-
-    return definition;
-  }
-
-  public static findDefinitionNodeByReferencingNodeShallow(
-    nodeAtPosition: SyntaxNode,
-    uri: string,
-    tree: Tree,
-    elmWorkspace: IElmWorkspace,
-  ): { node: SyntaxNode; uri: string; nodeType: NodeType } | undefined {
-    const imports = elmWorkspace.getImports();
-    const forest = elmWorkspace.getForest();
-
-    if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "upper_case_qid" &&
-      nodeAtPosition.parent.previousNamedSibling &&
-      nodeAtPosition.parent.previousNamedSibling.type === "module"
-    ) {
-      const moduleNode = nodeAtPosition.parent.parent;
-
-      if (moduleNode) {
-        return {
-          node: moduleNode,
-          nodeType: "Module",
-          uri,
-        };
-      }
-    } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "upper_case_qid" &&
-      nodeAtPosition.parent.previousNamedSibling &&
-      nodeAtPosition.parent.previousNamedSibling.type === "import"
-    ) {
-      const upperCaseQid = nodeAtPosition.parent;
-      const definitionFromOtherFile = this.findImportFromImportList(
-        uri,
-        upperCaseQid.text,
-        "Module",
-        imports,
-      );
-      if (definitionFromOtherFile) {
-        return {
-          node: definitionFromOtherFile.node,
-          nodeType: "Module",
-          uri: definitionFromOtherFile.fromUri,
-        };
-      }
-    } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "function_declaration_left"
-    ) {
-      const definitionNode =
-        nodeAtPosition.parent.parent &&
-        nodeAtPosition.parent.parent.parent &&
-        nodeAtPosition.parent.parent.parent.type === "let_in_expr"
-          ? this.findFunction(
-              nodeAtPosition.parent.parent.parent,
-              nodeAtPosition.text,
-              false,
-            )
-          : this.findFunction(tree.rootNode, nodeAtPosition.text);
-
-      if (definitionNode) {
-        return {
-          node: definitionNode,
-          nodeType: "Function",
-          uri,
-        };
-      }
-    } else if (
-      (nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "exposed_value" &&
-        nodeAtPosition.parent.parent &&
-        nodeAtPosition.parent.parent.parent &&
-        nodeAtPosition.parent.parent.parent.type === "module_declaration") ||
-      (nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "type_annotation")
-    ) {
-      const definitionNode = TreeUtils.findFunction(
-        tree.rootNode,
-        nodeAtPosition.text,
-      );
-
-      if (definitionNode) {
-        return {
-          node: definitionNode,
-          nodeType: "Function",
-          uri,
-        };
-      }
-    } else if (
-      (nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "exposed_type" &&
-        nodeAtPosition.parent.parent &&
-        nodeAtPosition.parent.parent.parent &&
-        nodeAtPosition.parent.parent.parent.type === "module_declaration") ||
-      (nodeAtPosition.previousNamedSibling &&
-        (nodeAtPosition.previousNamedSibling.type === "type" ||
-          nodeAtPosition.previousNamedSibling.type === "alias"))
-    ) {
-      const definitionNode = TreeUtils.findUppercaseQidNode(
-        tree,
-        nodeAtPosition,
-      );
-
-      if (definitionNode) {
-        return {
-          node: definitionNode.node,
-          nodeType: definitionNode.nodeType,
-          uri,
-        };
-      }
-    } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "exposed_value" &&
-      nodeAtPosition.parent.parent &&
-      nodeAtPosition.parent.parent.parent &&
-      nodeAtPosition.parent.parent.parent.type === "import_clause"
-    ) {
-      const definitionFromOtherFile = this.findImportFromImportList(
-        uri,
-        nodeAtPosition.text,
-        "Function",
-        imports,
-      );
-
-      if (definitionFromOtherFile) {
-        return {
-          node: definitionFromOtherFile.node,
-          nodeType: "Function",
-          uri: definitionFromOtherFile.fromUri,
-        };
-      }
-      const portFromOtherFile = this.findImportFromImportList(
-        uri,
-        nodeAtPosition.text,
-        "Port",
-        imports,
-      );
-
-      if (portFromOtherFile) {
-        return {
-          node: portFromOtherFile.node.namedChildren[1],
-          nodeType: "Port",
-          uri: portFromOtherFile.fromUri,
-        };
-      }
-    } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "exposed_type" &&
-      nodeAtPosition.parent.parent &&
-      nodeAtPosition.parent.parent.parent &&
-      nodeAtPosition.parent.parent.parent.type === "import_clause"
-    ) {
-      const upperCaseQid = nodeAtPosition;
-      let definitionFromOtherFile = this.findImportFromImportList(
-        uri,
-        upperCaseQid.text,
-        "Type",
-        imports,
-      );
-      if (definitionFromOtherFile) {
-        return {
-          node: definitionFromOtherFile.node,
-          nodeType: "Type",
-          uri: definitionFromOtherFile.fromUri,
-        };
-      }
-
-      definitionFromOtherFile = this.findImportFromImportList(
-        uri,
-        upperCaseQid.text,
-        "TypeAlias",
-        imports,
-      );
-      if (definitionFromOtherFile) {
-        return {
-          node: definitionFromOtherFile.node,
-          nodeType: "TypeAlias",
-          uri: definitionFromOtherFile.fromUri,
-        };
-      }
-    } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "union_variant"
-    ) {
-      const definitionNode = nodeAtPosition.parent;
-      return {
-        node: definitionNode,
-        nodeType: "UnionConstructor",
-        uri,
-      };
-    } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "upper_case_qid"
-    ) {
-      const upperCaseQid = nodeAtPosition.parent;
-      const definitionNode = TreeUtils.findUppercaseQidNode(tree, upperCaseQid);
-      if (
-        nodeAtPosition.parent?.parent?.parent?.type === "pattern" &&
-        definitionNode?.nodeType === "TypeAlias"
-      ) {
-        return;
-      }
-
-      let definitionFromOtherFile;
-      if (
-        !definitionNode ||
-        (definitionNode.nodeType === "UnionConstructor" &&
-          upperCaseQid.parent?.type === "type_ref")
-      ) {
-        // Make sure the next node is a dot, or else it isn't a Module
-        if (TreeUtils.nextNode(nodeAtPosition)?.type === "dot") {
-          const endPos =
-            upperCaseQid.text.indexOf(nodeAtPosition.text) +
-            nodeAtPosition.text.length;
-
-          const moduleNameOrAlias = nodeAtPosition.parent.text.substring(
-            0,
-            endPos,
-          );
-          const moduleName =
-            TreeUtils.findImportNameNode(tree, moduleNameOrAlias)?.text ??
-            moduleNameOrAlias;
-
-          definitionFromOtherFile = this.findImportFromImportList(
-            uri,
-            moduleName,
-            "Module",
-            imports,
-          );
-          if (definitionFromOtherFile) {
-            return {
-              node: definitionFromOtherFile.node,
-              nodeType: "Module",
-              uri: definitionFromOtherFile.fromUri,
-            };
-          }
-        }
-
-        if (
-          TreeUtils.findParentOfType("type_ref", upperCaseQid) ||
-          upperCaseQid.parent?.type === "exposed_type"
-        ) {
-          definitionFromOtherFile = this.findImportFromImportList(
-            uri,
-            upperCaseQid.text,
-            "Type",
-            imports,
-          );
-          if (definitionFromOtherFile) {
-            return {
-              node: definitionFromOtherFile.node,
-              nodeType: "Type",
-              uri: definitionFromOtherFile.fromUri,
-            };
-          }
-        } else {
-          definitionFromOtherFile = this.findImportFromImportList(
-            uri,
-            upperCaseQid.text,
-            "UnionConstructor",
-            imports,
-          );
-          if (definitionFromOtherFile) {
-            return {
-              node: definitionFromOtherFile.node,
-              nodeType: "UnionConstructor",
-              uri: definitionFromOtherFile.fromUri,
-            };
-          }
-        }
-
-        definitionFromOtherFile = this.findImportFromImportList(
-          uri,
-          upperCaseQid.text,
-          "TypeAlias",
-          imports,
-        );
-        if (definitionFromOtherFile) {
-          if (
-            nodeAtPosition.parent?.parent?.parent?.type === "pattern" &&
-            definitionNode?.nodeType === "TypeAlias"
-          ) {
-            return;
-          }
-
-          return {
-            node: definitionFromOtherFile.node,
-            nodeType: "TypeAlias",
-            uri: definitionFromOtherFile.fromUri,
-          };
-        }
-
-        definitionFromOtherFile = this.findImportFromImportList(
-          uri,
-          TreeUtils.findImportNameNode(tree, upperCaseQid.text)?.text ??
-            upperCaseQid.text,
-          "Module",
-          imports,
-        );
-        if (definitionFromOtherFile) {
-          return {
-            node: definitionFromOtherFile.node,
-            nodeType: "Module",
-            uri: definitionFromOtherFile.fromUri,
-          };
-        }
-      }
-      if (definitionNode) {
-        return {
-          node: definitionNode.node,
-          nodeType: definitionNode.nodeType,
-          uri,
-        };
-      }
-    } else if (
-      nodeAtPosition.parent?.type === "lower_pattern" &&
-      nodeAtPosition.parent.parent?.type === "record_pattern"
-    ) {
-      const type = findType(nodeAtPosition.parent.parent, uri, elmWorkspace);
-      return TreeUtils.findFieldReference(type, nodeAtPosition.text, forest);
-    } else if (
-      nodeAtPosition.parent &&
-      (nodeAtPosition.parent.type === "value_qid" ||
-        nodeAtPosition.parent.type === "lower_pattern" ||
-        nodeAtPosition.parent.type === "record_base_identifier")
-    ) {
-      let nodeAtPositionText = nodeAtPosition.text;
-      if (nodeAtPosition.parent.type === "value_qid") {
-        nodeAtPositionText = nodeAtPosition.parent.text;
-      }
-
-      const caseOfParameter = this.findCaseOfParameterDefinition(
-        nodeAtPosition,
-        nodeAtPositionText,
-      );
-
-      if (caseOfParameter) {
-        return {
-          node: caseOfParameter,
-          nodeType: "CasePattern",
-          uri,
-        };
-      }
-
-      const anonymousFunctionDefinition = this.findAnonymousFunctionParameterDefinition(
-        nodeAtPosition,
-        nodeAtPositionText,
-      );
-
-      if (anonymousFunctionDefinition) {
-        return {
-          node: anonymousFunctionDefinition,
-          nodeType: "AnonymousFunctionParameter",
-          uri,
-        };
-      }
-
-      const functionParameter = this.findFunctionParameterDefinition(
-        nodeAtPosition,
-        nodeAtPositionText,
-      );
-
-      if (functionParameter) {
-        return {
-          node: functionParameter,
-          nodeType: "FunctionParameter",
-          uri,
-        };
-      }
-
-      const typeVariable = TreeUtils.findTypeAliasTypeVariable(
-        nodeAtPosition,
-        nodeAtPositionText,
-      );
-
-      if (typeVariable) {
-        return {
-          node: typeVariable,
-          nodeType: "TypeVariable",
-          uri,
-        };
-      }
-
-      const letDefinitionNode = TreeUtils.findLetFunctionNodeDefinition(
-        nodeAtPosition,
-        nodeAtPositionText,
-      );
-
-      if (letDefinitionNode) {
-        return {
-          node: letDefinitionNode,
-          nodeType: "Function",
-          uri,
-        };
-      }
-
-      const portDefinitionNode = TreeUtils.findPort(tree, nodeAtPositionText);
-
-      if (portDefinitionNode) {
-        return {
-          node: portDefinitionNode,
-          nodeType: "Port",
-          uri,
-        };
-      }
-
-      const topLevelDefinitionNode = TreeUtils.findFunction(
-        tree.rootNode,
-        nodeAtPosition.parent.text,
-      );
-
-      if (!topLevelDefinitionNode) {
-        // Get the full module name and handle an import alias if there is one
-        const endPos =
-          nodeAtPosition.parent.text.indexOf(nodeAtPosition.text) +
-          nodeAtPosition.text.length;
-        const moduleNameOrAlias = nodeAtPosition.parent.text.substring(
-          0,
-          endPos,
-        );
-        const moduleName =
-          TreeUtils.findImportNameNode(tree, moduleNameOrAlias)?.text ??
-          moduleNameOrAlias;
-
-        const moduleDefinitionFromOtherFile = this.findImportFromImportList(
-          uri,
-          moduleName,
-          "Module",
-          imports,
-        );
-
-        if (moduleDefinitionFromOtherFile) {
-          return {
-            node: moduleDefinitionFromOtherFile.node,
-            nodeType: "Module",
-            uri: moduleDefinitionFromOtherFile.fromUri,
-          };
-        }
-
-        const portDefinitionFromOtherFile = TreeUtils.findImportFromImportList(
-          uri,
-          nodeAtPosition.parent.text,
-          "Port",
-          imports,
-        );
-
-        if (portDefinitionFromOtherFile) {
-          return {
-            node: portDefinitionFromOtherFile.node,
-            nodeType: "Port",
-            uri: portDefinitionFromOtherFile.fromUri,
-          };
-        }
-
-        const functionDefinitionFromOtherFile = TreeUtils.findImportFromImportList(
-          uri,
-          nodeAtPosition.parent.text,
-          "Function",
-          imports,
-        );
-
-        if (functionDefinitionFromOtherFile) {
-          return {
-            node: functionDefinitionFromOtherFile.node,
-            nodeType: "Function",
-            uri: functionDefinitionFromOtherFile.fromUri,
-          };
-        }
-      }
-
-      if (topLevelDefinitionNode) {
-        return {
-          node: topLevelDefinitionNode,
-          nodeType: "Function",
-          uri,
-        };
-      }
-    } else if (nodeAtPosition.type === "operator_identifier") {
-      const definitionNode = TreeUtils.findOperator(tree, nodeAtPosition.text);
-
-      if (!definitionNode) {
-        const definitionFromOtherFile = this.findImportFromImportList(
-          uri,
-          nodeAtPosition.text,
-          "Operator",
-          imports,
-        );
-
-        if (definitionFromOtherFile) {
-          return {
-            node: definitionFromOtherFile.node,
-            nodeType: "Operator",
-            uri: definitionFromOtherFile.fromUri,
-          };
-        }
-      }
-      if (definitionNode) {
-        return { node: definitionNode, uri, nodeType: "Operator" };
-      }
-    } else if (nodeAtPosition.parent?.type === "field_access_expr") {
-      let target = nodeAtPosition.parent?.childForFieldName("target");
-
-      // Adjust for parenthesis expr. Will need to change when we handle it better in inference
-      if (target?.type === "parenthesized_expr") {
-        target = target.namedChildren[1];
-      }
-
-      if (target) {
-        const type = findType(target, uri, elmWorkspace);
-        return TreeUtils.findFieldReference(type, nodeAtPosition.text, forest);
-      }
-    } else if (
-      nodeAtPosition.type === "lower_case_identifier" &&
-      nodeAtPosition.parent?.type === "field" &&
-      nodeAtPosition.parent.parent?.type === "record_expr"
-    ) {
-      const type = findType(nodeAtPosition.parent.parent, uri, elmWorkspace);
-      return TreeUtils.findFieldReference(type, nodeAtPosition.text, forest);
-    } else if (
-      nodeAtPosition.type === "lower_case_identifier" &&
-      nodeAtPosition.parent?.type === "field_accessor_function_expr"
-    ) {
-      const type = findType(nodeAtPosition.parent, uri, elmWorkspace);
-
-      if (type.nodeType === "Function") {
-        const paramType = type.params[0];
-
-        return TreeUtils.findFieldReference(
-          paramType,
-          nodeAtPosition.text,
-          forest,
-        );
-      }
-    } else if (
-      nodeAtPosition.type === "lower_case_identifier" &&
-      nodeAtPosition.parent?.type === "field_type"
-    ) {
-      return {
-        node: nodeAtPosition.parent,
-        nodeType: "FieldType",
-        uri,
-      };
-    } else if (
-      nodeAtPosition.type === "upper_case_identifier" &&
-      nodeAtPosition.parent?.type === "ERROR"
-    ) {
-      let fullModuleName = nodeAtPosition.text;
-
-      // Get fully qualified module name
-      // Ex: nodeAtPosition.text is Attributes, we need to get Html.Attributes manually
-      let currentNode = nodeAtPosition.previousNamedSibling;
-      while (
-        currentNode?.type === "dot" &&
-        currentNode.previousNamedSibling?.type === "upper_case_identifier"
-      ) {
-        fullModuleName = `${currentNode.previousNamedSibling.text}.${fullModuleName}`;
-        currentNode = currentNode.previousNamedSibling.previousNamedSibling;
-      }
-
-      const definitionFromOtherFile = this.findImportFromImportList(
-        uri,
-        TreeUtils.findImportNameNode(tree, fullModuleName)?.text ??
-          fullModuleName,
-        "Module",
-        imports,
-      );
-      if (definitionFromOtherFile) {
-        return {
-          node: definitionFromOtherFile.node,
-          nodeType: "Module",
-          uri: definitionFromOtherFile.fromUri,
-        };
-      }
-    }
-
-    const parentType =
-      TreeUtils.findParentOfType("type_annotation", nodeAtPosition) ??
-      TreeUtils.findParentOfType("type_declaration", nodeAtPosition) ??
-      TreeUtils.findParentOfType("type_alias_declaration", nodeAtPosition);
-
-    if (parentType?.type === "type_annotation") {
-      const ancestorDeclarations = TreeUtils.getAllAncestorsOfType(
-        "value_declaration",
-        parentType,
-      );
-
-      const allAnnotations = [
-        ...ancestorDeclarations
-          .map((n) => TreeUtils.getTypeAnnotation(n))
-          .filter((n) => !!n)
-          .reverse(),
-        parentType,
-      ];
-
-      // Remove `flatMap` function when Node 10 is dropped
-      const callback = (annotation: SyntaxNode | undefined): SyntaxNode[] =>
-        annotation
-          ? TreeUtils.descendantsOfType(annotation, "type_variable")
-          : [];
-
-      const allTypeVariables: SyntaxNode[] = allAnnotations.flatMap
-        ? allAnnotations.flatMap(callback)
-        : flatMap(allAnnotations, callback);
-
-      const firstMatching = allTypeVariables.find(
-        (t) => t.text === nodeAtPosition.text,
-      );
-
-      if (firstMatching) {
-        return {
-          node: firstMatching,
-          nodeType: "TypeVariable",
-          uri,
-        };
-      }
-    } else if (parentType) {
-      const allTypeNames = TreeUtils.findAllNamedChildrenOfType(
-        "lower_type_name",
-        parentType,
-      );
-
-      const firstMatching = allTypeNames?.find(
-        (t) => t.text === nodeAtPosition.text,
-      );
-
-      if (firstMatching) {
-        return {
-          node: firstMatching,
-          nodeType: "TypeVariable",
-          uri,
-        };
-      }
-    }
-  }
-
   public static findTypeAliasTypeVariable(
     nodeAtPosition: SyntaxNode,
     nodeAtPositionText: string,
@@ -1485,33 +812,6 @@ export class TreeUtils {
     }
   }
 
-  public static findImportFromImportList(
-    uri: string,
-    nodeName: string,
-    type: NodeType,
-    imports: IImports,
-  ): IImport | undefined {
-    if (imports.imports) {
-      const allFileImports = imports.imports[uri];
-      if (allFileImports) {
-        // We prefer explicitlyExposed functions as in "import Foo exposing (Bar)" to "import Bar exposing (..)"
-        const foundNode = allFileImports.find(
-          (a) => a.alias === nodeName && a.type === type && a.explicitlyExposed,
-        );
-        if (foundNode) {
-          return foundNode;
-        } else {
-          const foundNode = allFileImports.find(
-            (a) => a.alias === nodeName && a.type === type,
-          );
-          if (foundNode) {
-            return foundNode;
-          }
-        }
-      }
-    }
-  }
-
   public static findImportClauseByName(
     tree: Tree,
     moduleName: string,
@@ -1525,65 +825,6 @@ export class TreeUtils {
           a.children[1].text === moduleName,
       );
     }
-  }
-
-  public static getAllImportedValues(
-    forest: IForest,
-    tree: Tree,
-  ): { module: string; value: string }[] {
-    const allImports = TreeUtils.findAllImportClauseNodes(tree);
-
-    const allImportedValues: { module: string; value: string }[] = [];
-
-    if (allImports) {
-      allImports.forEach((importClause) => {
-        const exposingList = TreeUtils.findFirstNamedChildOfType(
-          "exposing_list",
-          importClause,
-        );
-
-        const moduleName = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_qid",
-          importClause,
-        )?.text;
-
-        if (exposingList && moduleName) {
-          TreeUtils.findAllNamedChildrenOfType(
-            ["exposed_value", "exposed_type"],
-            exposingList,
-          )?.forEach((node) => {
-            allImportedValues.push({
-              module: moduleName,
-              value: node.text,
-            });
-            // Todo: Add exposing union constructors
-          });
-
-          // Handle all imports
-          if (exposingList.text === "exposing (..)") {
-            const moduleTree = forest.treeIndex.find(
-              (tree) => tree.moduleName === moduleName,
-            );
-
-            moduleTree?.exposing?.forEach((exposed) => {
-              allImportedValues.push({
-                module: moduleName,
-                value: exposed.name,
-              });
-
-              exposed.exposedUnionConstructors?.forEach((exposedUnion) => {
-                allImportedValues.push({
-                  module: moduleName,
-                  value: exposedUnion.name,
-                });
-              });
-            });
-          }
-        }
-      });
-    }
-
-    return allImportedValues;
   }
 
   public static findImportNameNode(
@@ -1657,10 +898,10 @@ export class TreeUtils {
 
   public static getTypeOrTypeAliasOfFunctionRecordParameter(
     node: SyntaxNode | undefined,
-    tree: Tree,
-    uri: string,
+    treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
   ): SyntaxNode | undefined {
+    const checker = elmWorkspace.getTypeChecker();
     if (
       node?.parent?.type === "function_call_expr" &&
       node.parent.firstNamedChild
@@ -1673,11 +914,9 @@ export class TreeUtils {
         "lower_case_identifier",
       );
 
-      const functionDefinition = TreeUtils.findDefinitionNodeByReferencingNode(
+      const functionDefinition = checker.findDefinition(
         functionName[functionName.length - 1],
-        uri,
-        tree,
-        elmWorkspace,
+        treeContainer,
       );
 
       if (functionDefinition?.node.previousNamedSibling?.lastNamedChild) {
@@ -1696,12 +935,7 @@ export class TreeUtils {
             );
 
             if (typeNodes.length > 0) {
-              return TreeUtils.findDefinitionNodeByReferencingNode(
-                typeNodes[0],
-                uri,
-                tree,
-                elmWorkspace,
-              )?.node;
+              return checker.findDefinition(typeNodes[0], treeContainer)?.node;
             }
           } else {
             return typeNode || undefined;
@@ -1713,16 +947,14 @@ export class TreeUtils {
 
   public static getTypeAliasOfRecordField(
     node: SyntaxNode | undefined,
-    tree: Tree,
-    uri: string,
+    treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
   ): { node: SyntaxNode; uri: string } | undefined {
     const fieldName = node?.parent?.firstNamedChild?.text;
 
     let recordType = TreeUtils.getTypeAliasOfRecord(
       node,
-      tree,
-      uri,
+      treeContainer,
       elmWorkspace,
     );
 
@@ -1730,13 +962,16 @@ export class TreeUtils {
       node = node.parent.parent;
       recordType = TreeUtils.getTypeAliasOfRecordField(
         node,
-        tree,
-        uri,
+        treeContainer,
         elmWorkspace,
       );
     }
 
-    if (recordType) {
+    const recordTypeTree = elmWorkspace
+      .getForest()
+      .getByUri(recordType?.uri ?? "");
+
+    if (recordType && recordTypeTree) {
       const fieldTypes = TreeUtils.descendantsOfType(
         recordType.node,
         "field_type",
@@ -1761,12 +996,9 @@ export class TreeUtils {
           );
 
           if (typeNode.length > 0) {
-            const typeAliasNode = TreeUtils.findDefinitionNodeByReferencingNode(
-              typeNode[0],
-              recordType.uri,
-              tree,
-              elmWorkspace,
-            );
+            const typeAliasNode = elmWorkspace
+              .getTypeChecker()
+              .findDefinition(typeNode[0], recordTypeTree);
 
             if (typeAliasNode) {
               return { node: typeAliasNode.node, uri: typeAliasNode.uri };
@@ -1779,22 +1011,18 @@ export class TreeUtils {
 
   public static getTypeAliasOfCase(
     type: SyntaxNode | undefined,
-    tree: Tree,
-    uri: string,
+    treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
   ): { node: SyntaxNode; uri: string } | undefined {
     if (type) {
-      const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
-        type,
-        uri,
-        tree,
-        elmWorkspace,
-      );
+      const definitionNode = elmWorkspace
+        .getTypeChecker()
+        .findDefinition(type, treeContainer);
 
       if (definitionNode) {
         const definitionTree = elmWorkspace
           .getForest()
-          .getTree(definitionNode.uri);
+          .getByUri(definitionNode.uri);
 
         let aliasNode;
         if (definitionNode.nodeType === "FunctionParameter") {
@@ -1821,12 +1049,9 @@ export class TreeUtils {
           );
 
           if (childNode.length > 0) {
-            const typeNode = TreeUtils.findDefinitionNodeByReferencingNode(
-              childNode[0],
-              definitionNode.uri,
-              definitionTree,
-              elmWorkspace,
-            );
+            const typeNode = elmWorkspace
+              .getTypeChecker()
+              .findDefinition(childNode[0], definitionTree);
 
             if (typeNode) {
               return { node: typeNode.node, uri: typeNode.uri };
@@ -1839,8 +1064,7 @@ export class TreeUtils {
 
   public static getTypeAliasOfRecord(
     node: SyntaxNode | undefined,
-    tree: Tree,
-    uri: string,
+    treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
   ): { node: SyntaxNode; uri: string } | undefined {
     if (node?.parent?.parent) {
@@ -1867,17 +1091,17 @@ export class TreeUtils {
       }
 
       if (type) {
-        const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
-          type.firstNamedChild ? type.firstNamedChild : type,
-          uri,
-          tree,
-          elmWorkspace,
-        );
+        const definitionNode = elmWorkspace
+          .getTypeChecker()
+          .findDefinition(
+            type.firstNamedChild ? type.firstNamedChild : type,
+            treeContainer,
+          );
 
         if (definitionNode) {
           const definitionTree = elmWorkspace
             .getForest()
-            .getTree(definitionNode.uri);
+            .getByUri(definitionNode.uri);
 
           let aliasNode;
           if (
@@ -1907,12 +1131,9 @@ export class TreeUtils {
             );
 
             if (childNode.length > 0) {
-              const typeNode = TreeUtils.findDefinitionNodeByReferencingNode(
-                childNode[0],
-                definitionNode.uri,
-                definitionTree,
-                elmWorkspace,
-              );
+              const typeNode = elmWorkspace
+                .getTypeChecker()
+                .findDefinition(childNode[0], definitionTree);
 
               if (typeNode) {
                 return { node: typeNode.node, uri: typeNode.uri };
@@ -2151,52 +1372,12 @@ export class TreeUtils {
     return declarations;
   }
 
-  public static getQualifierForName(
-    tree: Tree,
-    uri: string,
-    module: string,
-    name: string,
-    imports: IImports,
-  ): string | undefined {
-    if (imports.imports) {
-      if (
-        imports.imports[uri]
-          .filter(
-            (imp) =>
-              imp.fromModuleName === module &&
-              (imp.type === "Type" ||
-                imp.type === "TypeAlias" ||
-                imp.type === "UnionConstructor"),
-          )
-          .some((imp) => imp.alias === name)
-      ) {
-        return "";
-      }
-
-      const moduleImport = TreeUtils.findImportClauseByName(tree, module);
-
-      if (!moduleImport) {
-        return;
-      }
-
-      const asClause = TreeUtils.findFirstNamedChildOfType(
-        "as_clause",
-        moduleImport,
-      );
-
-      if (asClause) {
-        return `${asClause?.lastNamedChild?.text ?? module}.`;
-      }
-
-      return `${module}.`;
-    }
-  }
-
   private static findExposedTopLevelFunctions(
     tree: Tree,
     functionNamesToFind: string[],
-  ): IExposing[] {
-    return tree.rootNode.children
+  ): IExposing {
+    const exposed = new Map<string, IExposed>();
+    tree.rootNode.children
       .filter(
         (node) =>
           node.type === "value_declaration" &&
@@ -2216,23 +1397,24 @@ export class TreeUtils {
         return { node, text: node.firstNamedChild?.text };
       })
       .filter((node) => functionNamesToFind.includes(node.text!))
-      .map(
-        (functionNode): IExposing => {
-          return {
-            exposedUnionConstructors: undefined,
-            name: functionNode.text!,
-            syntaxNode: functionNode.node,
-            type: "Function",
-          };
-        },
-      );
+      .map((functionNode) => {
+        exposed.set(functionNode.text!, {
+          name: functionNode.text!,
+          syntaxNode: functionNode.node,
+          type: "Function",
+          exposedUnionConstructors: undefined,
+        });
+      });
+
+    return exposed;
   }
 
   private static findExposedTopLevelPorts(
     tree: Tree,
     functionNamesToFind: string[],
-  ): IExposing[] {
-    return tree.rootNode.children
+  ): IExposing {
+    const exposed = new Map<string, IExposed>();
+    tree.rootNode.children
       .filter(
         (node) =>
           node.type === "port_annotation" &&
@@ -2240,13 +1422,14 @@ export class TreeUtils {
           functionNamesToFind.includes(node.children[1].text),
       )
       .map((portNode) => {
-        return {
-          exposedUnionConstructors: undefined,
+        exposed.set(portNode.children[1].text, {
           name: portNode.children[1].text,
           syntaxNode: portNode,
           type: "Port",
-        };
+          exposedUnionConstructors: undefined,
+        });
       });
+    return exposed;
   }
 
   public static findAllImportClauseNodes(tree: Tree): SyntaxNode[] | undefined {
@@ -2289,16 +1472,15 @@ export class TreeUtils {
     }
   }
 
-  private static findFieldReference(
+  public static findFieldReference(
     type: Type,
     fieldName: string,
-    forest: IForest,
   ): { node: SyntaxNode; uri: string; nodeType: NodeType } | undefined {
     if (type.nodeType === "Record") {
       const fieldRefs = type.fieldReferences.get(fieldName);
 
       if (fieldRefs.length > 0) {
-        const refUri = forest.getUriOfNode(fieldRefs[0]);
+        const refUri = fieldRefs[0]?.tree.uri;
 
         if (refUri) {
           return {

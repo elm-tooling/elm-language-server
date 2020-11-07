@@ -407,7 +407,7 @@ import Ports exposing (foo)
 --@ Ports.elm
 port module Ports exposing (foo)
 port foo : String -> Cmd msg
-    --X
+--X
 `;
     await testBase.testDefinition(source);
   });
@@ -431,13 +431,13 @@ power a b = 42
   it(`test binary operator usage in value expression`, async () => {
     const source = `
 --@ main.elm
-import Math exposing ((**))
-f = 2 ** 3
-     --^Math.elm
+import Math exposing ((+))
+f = 2 + 3
+    --^Math.elm
 --@ Math.elm
-module Math exposing ((**))
-infix left 5 (**) = power
-power a b = 42
+module Math exposing ((+))
+infix left 5 (+) = add
+add a b = 42
 --X
 `;
     await testBase.testDefinition(source);
@@ -447,12 +447,12 @@ power a b = 42
     const source = `
 --@ main.elm
 import Math exposing (..)
-f = 2 ** 3
-     --^Math.elm
+f = 2 + 3
+    --^Math.elm
 --@ Math.elm
-module Math exposing ((**))
-infix left 5 (**) = power
-power a b = 42
+module Math exposing ((+))
+infix left 5 (+) = add
+add a b = 42
 --X
 `;
     await testBase.testDefinition(source);

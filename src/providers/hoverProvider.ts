@@ -34,19 +34,18 @@ export class HoverProvider {
     this.connection.console.info(`A hover was requested`);
 
     const forest = elmWorkspace.getForest();
-    const tree = forest.getTree(params.textDocument.uri);
+    const checker = elmWorkspace.getTypeChecker();
+    const treeContainer = forest.getByUri(params.textDocument.uri);
 
-    if (tree) {
+    if (treeContainer) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        tree.rootNode,
+        treeContainer.tree.rootNode,
         params.position,
       );
 
-      let definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
+      let definitionNode = checker.findDefinition(
         nodeAtPosition,
-        params.textDocument.uri,
-        tree,
-        elmWorkspace,
+        treeContainer,
       );
 
       if (definitionNode) {

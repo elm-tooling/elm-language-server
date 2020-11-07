@@ -1,5 +1,3 @@
-import { findType } from "../util/types/typeInference";
-import { TypeRenderer } from "../util/types/typeRenderer";
 import { container } from "tsyringe";
 import {
   ApplyWorkspaceEditResponse,
@@ -97,7 +95,9 @@ export class CodeActionProvider {
     const codeActions: CodeAction[] = [];
 
     const forest = elmWorkspace.getForest();
-    const tree = forest.getTree(params.textDocument.uri);
+    const treeContainer = forest.getByUri(params.textDocument.uri);
+    const tree = treeContainer?.tree;
+    const checker = elmWorkspace.getTypeChecker();
 
     if (tree) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
@@ -111,15 +111,9 @@ export class CodeActionProvider {
         nodeAtPosition.parent.parent &&
         !TreeUtils.getTypeAnnotation(nodeAtPosition.parent.parent)
       ) {
-        const typeString: string = TypeRenderer.typeToString(
-          findType(
-            nodeAtPosition.parent,
-            params.textDocument.uri,
-            elmWorkspace,
-          ),
-          nodeAtPosition.tree,
-          params.textDocument.uri,
-          elmWorkspace.getImports(),
+        const typeString: string = checker.typeToString(
+          checker.findType(nodeAtPosition.parent, params.textDocument.uri),
+          treeContainer,
         );
 
         codeActions.push({
@@ -307,7 +301,11 @@ export class CodeActionProvider {
     ) {
       const funcName = nodeAtPosition.text;
 
-      const tree = elmWorkspace.getForest().getTree(params.textDocument.uri);
+      const treeContainer = elmWorkspace
+        .getForest()
+        .getByUri(params.textDocument.uri);
+      const tree = treeContainer?.tree;
+      const checker = elmWorkspace.getTypeChecker();
 
       if (
         tree &&
@@ -321,11 +319,9 @@ export class CodeActionProvider {
           nodeAtPosition,
         );
 
-        const typeString: string = TypeRenderer.typeToString(
-          findType(nodeAtPosition, params.textDocument.uri, elmWorkspace),
-          nodeAtPosition.tree,
-          params.textDocument.uri,
-          elmWorkspace.getImports(),
+        const typeString: string = checker.typeToString(
+          checker.findType(nodeAtPosition, params.textDocument.uri),
+          treeContainer,
         );
 
         const edit = RefactorEditUtils.createTopLevelFunction(

@@ -16,14 +16,15 @@ import { Position, Range } from "vscode-languageserver-textdocument";
 import { FileEventsHandler } from "./handlers/fileEventsHandler";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 import { TreeUtils } from "../util/treeUtils";
+import { ITreeContainer } from "../forest";
 
 export class ASTProvider {
   private connection: IConnection;
   private parser: Parser;
   private documentEvents: TextDocumentEvents;
 
-  private treeChangeEvent = new Emitter<{ uri: string; tree: Tree }>();
-  readonly onTreeChange: Event<{ uri: string; tree: Tree }> = this
+  private treeChangeEvent = new Emitter<{ treeContainer: ITreeContainer }>();
+  readonly onTreeChange: Event<{ treeContainer: ITreeContainer }> = this
     .treeChangeEvent.event;
 
   constructor() {
@@ -57,8 +58,7 @@ export class ASTProvider {
     this.connection.console.info(
       `Changed text document, going to parse it. ${params.textDocument.uri}`,
     );
-    const forest = elmWorkspace.getForest();
-    const imports = elmWorkspace.getImports();
+    const forest = elmWorkspace.getForest(false); // Don't synchronize the forest, we are only looking at the tree
     const document: VersionedTextDocumentIdentifier = params.textDocument;
 
     let tree: Tree | undefined = forest.getTree(document.uri);
@@ -107,27 +107,22 @@ export class ASTProvider {
     tree = newTree;
 
     if (tree) {
-      forest.setTree(document.uri, true, true, tree, true);
+      const treeContainer = forest.setTree(
+        document.uri,
+        true,
+        true,
+        tree,
+        true,
+      );
 
-      // Figure out if we have files importing our changed file - update them
-      const urisToRefresh = [];
-      for (const uri in imports.imports) {
-        if (imports.imports.hasOwnProperty(uri)) {
-          const fileImports = imports.imports[uri];
+      // The workspace now needs to be synchronized
+      elmWorkspace.markAsDirty();
 
-          if (fileImports.some((a) => a.fromUri === document.uri)) {
-            urisToRefresh.push(uri);
-          }
+      setImmediate(() => {
+        if (tree) {
+          this.treeChangeEvent.fire({ treeContainer });
         }
-      }
-      urisToRefresh.forEach((a) => {
-        imports.updateImports(a, forest.getTree(a)!, forest);
       });
-
-      // Refresh imports of the calling file
-      imports.updateImports(document.uri, tree, forest);
-
-      this.treeChangeEvent.fire({ uri: document.uri, tree });
     }
   };
 

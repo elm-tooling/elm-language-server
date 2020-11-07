@@ -96,11 +96,10 @@ export class DiagnosticsProvider {
       }
 
       this.workspaces.forEach((workspace) => {
-        workspace.getForest().treeIndex.forEach((treeContainer) => {
+        workspace.getForest().treeMap.forEach((treeContainer) => {
           if (treeContainer.writeable) {
             const treeDiagnostics = this.typeInferenceDiagnostics.createDiagnostics(
-              treeContainer.tree,
-              treeContainer.uri,
+              treeContainer,
               workspace,
             );
 
@@ -113,10 +112,12 @@ export class DiagnosticsProvider {
         });
       });
 
-      astProvider.onTreeChange(({ uri, tree }) => {
+      astProvider.onTreeChange(({ treeContainer }) => {
         let workspace;
         try {
-          workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor({ uri });
+          workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor({
+            uri: treeContainer.uri,
+          });
         } catch (error) {
           if (error instanceof NoWorkspaceContainsError) {
             this.connection.console.info(error.message);
@@ -127,9 +128,12 @@ export class DiagnosticsProvider {
         }
 
         this.updateDiagnostics(
-          uri,
+          treeContainer.uri,
           DiagnosticKind.TypeInference,
-          this.typeInferenceDiagnostics.createDiagnostics(tree, uri, workspace),
+          this.typeInferenceDiagnostics.createDiagnostics(
+            treeContainer,
+            workspace,
+          ),
         );
       });
     });
