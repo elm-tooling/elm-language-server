@@ -101,7 +101,7 @@ export class Forest implements IForest {
     this.treeMap.forEach((treeContainer, uri) => {
       // Resolve import modules
       if (!treeContainer.resolvedModules) {
-        treeContainer.resolvedModules = this.resolveModules(treeContainer.tree);
+        treeContainer.resolvedModules = this.resolveModules(treeContainer);
       }
 
       if (!treeContainer.moduleName) {
@@ -128,10 +128,10 @@ export class Forest implements IForest {
     });
   }
 
-  private resolveModules(tree: Tree): Map<string, string> {
+  private resolveModules(treeContainer: ITreeContainer): Map<string, string> {
     const importClauses = [
       ...Imports.getVirtualImports(),
-      ...(TreeUtils.findAllImportClauseNodes(tree) ?? []),
+      ...(TreeUtils.findAllImportClauseNodes(treeContainer.tree) ?? []),
     ];
 
     const resolvedModules = new Map<string, string>();
@@ -146,15 +146,26 @@ export class Forest implements IForest {
       if (moduleName) {
         const modulePath = moduleName.split(".").join("/") + ".elm";
         const found = this.elmFolders.find((folder) =>
-          existsSync(path.join(folder.uri, modulePath)),
+          existsSync(
+            path.join(
+              !folder.writeable ? folder.uri + "/src" : folder.uri,
+              modulePath,
+            ),
+          ),
         );
 
-        if (!found) {
+        if (treeContainer.writeable && !found) {
           // TODO: Diagnostics for unresolved imports
-        } else {
+          console.log(`Could not resolve import for ${moduleName}`);
+        } else if (found) {
           resolvedModules.set(
             moduleName,
-            URI.file(path.join(found.uri, modulePath)).toString(),
+            URI.file(
+              path.join(
+                !found.writeable ? found.uri + "/src" : found.uri,
+                modulePath,
+              ),
+            ).toString(),
           );
         }
       }

@@ -177,6 +177,7 @@ export class ElmWorkspace implements IElmWorkspace {
         type === "application"
           ? {
               ...elmJson.dependencies.direct,
+              ...elmJson.dependencies.indirect,
               ...elmJson["test-dependencies"].direct,
             }
           : { ...elmJson.dependencies, ...elmJson["test-dependencies"] };
