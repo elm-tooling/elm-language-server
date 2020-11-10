@@ -10,10 +10,18 @@ import {
 import { IElmWorkspace } from "../../elmWorkspace";
 import { container } from "tsyringe";
 import { IConnection } from "vscode-languageserver";
-import { Type, TUnknown, InferenceScope } from "./typeInference";
+import { Type, TUnknown, InferenceScope, Diagnostic } from "./typeInference";
 import { ITreeContainer } from "../../forest";
 import { IImport, Imports } from "../../imports";
 import { TypeRenderer } from "./typeRenderer";
+import { performance } from "perf_hooks";
+import { bindTreeContainer } from "./binder";
+import { Sequence } from "../sequence";
+
+export let bindTime = 0;
+export function resetBindTime(): void {
+  bindTime = 0;
+}
 
 export interface DefinitionResult {
   node: SyntaxNode;
@@ -39,16 +47,19 @@ export interface TypeChecker {
     name: string,
   ) => string | undefined;
   typeToString: (t: Type, treeContainer?: ITreeContainer) => string;
+  getDiagnostics: (treeContainer: ITreeContainer) => Diagnostic[];
 }
 
 export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   const forest = workspace.getForest();
-
   const imports = new Map<string, Imports>();
 
+  const start = performance.now();
   forest.treeMap.forEach((treeContainer) => {
     bindTreeContainer(treeContainer);
   });
+  bindTime = performance.now() - start;
+
   const typeChecker: TypeChecker = {
     findType,
     findDefinition,
@@ -56,6 +67,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     getAllImports,
     getQualifierForName,
     typeToString,
+    getDiagnostics,
   };
 
   return typeChecker;
@@ -146,6 +158,29 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     }
   }
 
+  function getDiagnostics(treeContainer: ITreeContainer): Diagnostic[] {
+    const allTopLevelFunctions = TreeUtils.findAllTopLevelFunctionDeclarations(
+      treeContainer.tree,
+    );
+
+    return (
+      allTopLevelFunctions
+        ?.map(
+          (valueDeclaration) =>
+            InferenceScope.valueDeclarationInference(
+              mapSyntaxNodeToExpression(valueDeclaration) as EValueDeclaration,
+              treeContainer.uri,
+              workspace,
+              new Set(),
+            ).diagnostics,
+        )
+        .reduce((a, b) => a.concat(b), [])
+        .filter(
+          (diagnostic) => diagnostic.node.tree.uri === treeContainer.uri,
+        ) ?? []
+    );
+  }
+
   function getAllImports(treeContainer: ITreeContainer): Imports {
     const cached = imports.get(treeContainer.uri);
 
@@ -211,7 +246,6 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   ): DefinitionResult | undefined {
     const uri = treeContainer.uri;
     const tree = treeContainer.tree;
-
     if (
       nodeAtPosition.parent &&
       nodeAtPosition.parent.type === "upper_case_qid" &&
@@ -357,69 +391,69 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
       let definitionFromOtherFile;
 
-        // Make sure the next node is a dot, or else it isn't a Module
-        if (TreeUtils.nextNode(nodeAtPosition)?.type === "dot") {
-          const endPos =
-            upperCaseQid.text.indexOf(nodeAtPosition.text) +
-            nodeAtPosition.text.length;
+      // Make sure the next node is a dot, or else it isn't a Module
+      if (TreeUtils.nextNode(nodeAtPosition)?.type === "dot") {
+        const endPos =
+          upperCaseQid.text.indexOf(nodeAtPosition.text) +
+          nodeAtPosition.text.length;
 
-          const moduleNameOrAlias = nodeAtPosition.parent.text.substring(
-            0,
-            endPos,
-          );
-          const moduleName =
-            TreeUtils.findImportNameNode(tree, moduleNameOrAlias)?.text ??
-            moduleNameOrAlias;
+        const moduleNameOrAlias = nodeAtPosition.parent.text.substring(
+          0,
+          endPos,
+        );
+        const moduleName =
+          TreeUtils.findImportNameNode(tree, moduleNameOrAlias)?.text ??
+          moduleNameOrAlias;
 
-          const definitionFromOtherFile = findImportOfType(
-            treeContainer,
-            moduleName,
-            "Module",
-          );
-          if (definitionFromOtherFile) {
-            return definitionFromOtherFile;
-          }
+        const definitionFromOtherFile = findImportOfType(
+          treeContainer,
+          moduleName,
+          "Module",
+        );
+        if (definitionFromOtherFile) {
+          return definitionFromOtherFile;
         }
+      }
 
       if (isTypeUsage) {
-          definitionFromOtherFile = findImportOfType(
-            treeContainer,
-            upperCaseQid.text,
-            "Type",
-          );
-          if (definitionFromOtherFile) {
-            return definitionFromOtherFile;
-          }
-        } else {
-          definitionFromOtherFile = findImportOfType(
-            treeContainer,
-            upperCaseQid.text,
-            "UnionConstructor",
-          );
-          if (definitionFromOtherFile) {
-            return definitionFromOtherFile;
-          }
-        }
-
         definitionFromOtherFile = findImportOfType(
           treeContainer,
           upperCaseQid.text,
-          "TypeAlias",
+          "Type",
         );
         if (definitionFromOtherFile) {
           return definitionFromOtherFile;
         }
-
+      } else {
         definitionFromOtherFile = findImportOfType(
           treeContainer,
-          TreeUtils.findImportNameNode(tree, upperCaseQid.text)?.text ??
-            upperCaseQid.text,
-          "Module",
+          upperCaseQid.text,
+          "UnionConstructor",
         );
-
         if (definitionFromOtherFile) {
           return definitionFromOtherFile;
         }
+      }
+
+      definitionFromOtherFile = findImportOfType(
+        treeContainer,
+        upperCaseQid.text,
+        "TypeAlias",
+      );
+      if (definitionFromOtherFile) {
+        return definitionFromOtherFile;
+      }
+
+      definitionFromOtherFile = findImportOfType(
+        treeContainer,
+        TreeUtils.findImportNameNode(tree, upperCaseQid.text)?.text ??
+          upperCaseQid.text,
+        "Module",
+      );
+
+      if (definitionFromOtherFile) {
+        return definitionFromOtherFile;
+      }
     } else if (
       nodeAtPosition.parent?.type === "lower_pattern" &&
       nodeAtPosition.parent.parent?.type === "record_pattern"

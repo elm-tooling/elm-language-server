@@ -3,7 +3,16 @@ import { OperatorAssociativity } from "./operatorPrecedence";
 import { TreeUtils } from "../treeUtils";
 import { Utils } from "../utils";
 import { IElmWorkspace } from "src/elmWorkspace";
+import { performance } from "perf_hooks";
 /* eslint-disable @typescript-eslint/naming-convention */
+
+export let definitionTime = 0;
+export let mappingTime = 0;
+
+export function resetDefinitionAndMappingTime(): void {
+  definitionTime = 0;
+  mappingTime = 0;
+}
 
 export type Expression =
   | EAnonymousFunctionExpr
@@ -56,9 +65,9 @@ export type Expression =
 export interface EValueDeclaration extends SyntaxNode {
   nodeType: "ValueDeclaration";
   params: string[];
-  body?: Expression;
-  typeAnnotation?: ETypeAnnotation;
-  pattern?: EPattern;
+  body?: SyntaxNode;
+  typeAnnotation?: SyntaxNode;
+  pattern?: SyntaxNode;
 }
 export interface EFunctionCallExpr extends SyntaxNode {
   nodeType: "FunctionCallExpr";
@@ -132,7 +141,6 @@ export interface ETypeRef extends SyntaxNode {
 export interface ETypeDeclaration extends SyntaxNode {
   nodeType: "TypeDeclaration";
   name: string;
-  moduleName: string;
   unionVariants: Expression[];
   typeNames: Expression[];
 }
@@ -252,241 +260,305 @@ export interface ENullaryConstructorArgumentPattern extends SyntaxNode {
   nodeType: "NullaryConstructorArgumentPattern";
 }
 
+export const mappingTimes: { [func: string]: number } = {};
+function addTime(f: string, t: number): void {
+  mappingTimes[f] = (mappingTimes[f] ?? 0) + t;
+}
+
 export function mapSyntaxNodeToExpression(
   node: SyntaxNode | null | undefined,
 ): Expression | undefined {
   if (!node) return;
 
-  switch (node.type) {
-    case "lower_case_identifier":
-      return node as Expression;
-    case "value_declaration":
-      {
-        const body = mapSyntaxNodeToExpression(
-          node.namedChildren[node.namedChildren.length - 1],
-        );
+  const start = performance.now();
 
-        const typeAnnotation = mapSyntaxNodeToExpression(
-          TreeUtils.getTypeAnnotation(node),
-        );
-
-        if (body) {
-          const params =
+  try {
+    switch (node.type) {
+      case "lower_case_identifier":
+        return node as Expression;
+      case "value_declaration":
+        {
+          const valueDeclaration = node as EValueDeclaration;
+          valueDeclaration.nodeType = "ValueDeclaration";
+          valueDeclaration.params =
             node.firstNamedChild?.namedChildren.slice(1).map((a) => a.text) ??
             [];
-          return Object.assign(node, {
-            nodeType: "ValueDeclaration",
-            params,
-            body,
-            typeAnnotation,
-            pattern: mapSyntaxNodeToExpression(
-              node.childForFieldName("pattern"),
-            ),
-          } as EValueDeclaration);
+          valueDeclaration.body = node.childForFieldName("body") ?? undefined;
+          valueDeclaration.typeAnnotation = TreeUtils.getTypeAnnotation(node);
+          valueDeclaration.pattern =
+            node.childForFieldName("pattern") ?? undefined;
+          addTime("valueDeclaration", performance.now() - start);
+
+          return valueDeclaration;
+        }
+        break;
+      case "value_expr": {
+        const valueExpr = node as EValueExpr;
+        valueExpr.nodeType = "ValueExpr";
+        valueExpr.name = node.text;
+        addTime("valueExpr", performance.now() - start);
+        return valueExpr;
+      }
+
+      case "bin_op_expr": {
+        {
+          const binOpExpr = node as EBinOpExpr;
+          binOpExpr.nodeType = "BinOpExpr";
+          binOpExpr.parts = node.children
+            .map(mapSyntaxNodeToExpression)
+            .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+          addTime("binOpExpr", performance.now() - start);
+          return binOpExpr;
         }
       }
-      break;
-    case "value_expr":
-      return Object.assign(node, {
-        nodeType: "ValueExpr",
-        name: node.text,
-      } as EValueExpr);
 
-    case "bin_op_expr": {
-      return Object.assign(node, {
-        nodeType: "BinOpExpr",
-        parts: node.children
-          .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-      } as EBinOpExpr);
-    }
+      case "operator_identifier": {
+        const operatorIdentifier = node as EOperator;
+        operatorIdentifier.nodeType = "Operator";
+        return operatorIdentifier;
+      }
 
-    case "operator_identifier": {
-      return Object.assign(node, {
-        nodeType: "Operator",
-      } as EOperator);
-    }
+      case "number_constant_expr": {
+        const numberConstantExpr = node as ENumberConstant;
+        numberConstantExpr.nodeType = "NumberConstant";
+        numberConstantExpr.isFloat = node.text.includes(".");
+        return numberConstantExpr;
+      }
 
-    case "number_constant_expr":
-      return Object.assign(node, {
-        nodeType: "NumberConstant",
-        isFloat: node.text.includes("."),
-      } as ENumberConstant);
+      case "string_constant_expr": {
+        const stringConstantExpr = node as EStringConstant;
+        stringConstantExpr.nodeType = "StringConstant";
+        return stringConstantExpr;
+      }
 
-    case "string_constant_expr":
-      return Object.assign(node, {
-        nodeType: "StringConstant",
-      } as EStringConstant);
+      case "parenthesized_expr":
+        return mapSyntaxNodeToExpression(node.childForFieldName("expression"));
 
-    case "parenthesized_expr":
-      return mapSyntaxNodeToExpression(node.children[1]);
+      case "function_call_expr":
+        {
+          const target = mapSyntaxNodeToExpression(
+            node.childForFieldName("target"),
+          );
 
-    case "function_call_expr":
-      {
-        const target = mapSyntaxNodeToExpression(node.firstNamedChild);
-
-        if (target) {
-          return Object.assign(node, {
-            nodeType: "FunctionCallExpr",
-            target,
-            args: node.children
+          if (target) {
+            const functionCallExpr = node as EFunctionCallExpr;
+            functionCallExpr.nodeType = "FunctionCallExpr";
+            functionCallExpr.target = target;
+            functionCallExpr.args = node.children
               .slice(1)
-              .map(mapSyntaxNodeToExpression)
-              .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-          } as EFunctionCallExpr);
+              .map(mapSyntaxNodeToExpression) as Expression[];
+
+            addTime("functionCallExpr", performance.now() - start);
+            return functionCallExpr;
+          }
         }
+        break;
+
+      case "type_annotation": {
+        const typeAnnotation = node as ETypeAnnotation;
+        typeAnnotation.nodeType = "TypeAnnotation";
+        typeAnnotation.name = node.firstNamedChild?.text ?? "";
+        typeAnnotation.typeExpression = mapSyntaxNodeToExpression(
+          node.childForFieldName("typeExpression"),
+        ) as ETypeExpression;
+        addTime("typeAnnotation", performance.now() - start);
+        return typeAnnotation;
       }
-      break;
 
-    case "type_annotation":
-      return Object.assign(node, {
-        nodeType: "TypeAnnotation",
-        name: node.firstNamedChild?.text ?? "",
-        typeExpression: mapSyntaxNodeToExpression(
-          TreeUtils.findFirstNamedChildOfType("type_expression", node),
-        ),
-      } as ETypeAnnotation);
-
-    case "type_expression":
-      return Object.assign(node, {
-        nodeType: "TypeExpression",
-        segments: node.children
+      case "type_expression": {
+        const typeExpression = node as ETypeExpression;
+        typeExpression.nodeType = "TypeExpression";
+        typeExpression.segments = node.children
           .filter(
             (n) =>
               n.type !== "arrow" &&
               n.type !== "left_parenthesis" &&
               n.type !== "right_parenthesis",
           )
-          .map(mapSyntaxNodeToExpression),
-      } as ETypeExpression);
+          .map(mapSyntaxNodeToExpression)
+          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+        addTime("typeExpression", performance.now() - start);
+        return typeExpression;
+      }
 
-    case "type_variable":
-      return Object.assign(node, { nodeType: "TypeVariable" } as ETypeVariable);
+      case "type_variable": {
+        const typeVariable = node as ETypeVariable;
+        typeVariable.nodeType = "TypeVariable";
+        return typeVariable;
+      }
 
-    case "type_ref":
-      return Object.assign(node, { nodeType: "TypeRef" } as ETypeRef);
+      case "type_ref": {
+        const typeRef = node as ETypeRef;
+        typeRef.nodeType = "TypeRef";
+        return typeRef;
+      }
 
-    case "type_declaration":
-      return Object.assign(node, {
-        nodeType: "TypeDeclaration",
-        name:
-          TreeUtils.findFirstNamedChildOfType("upper_case_identifier", node)
-            ?.text ?? "",
-        moduleName: TreeUtils.getModuleNameNode(node.tree)?.text ?? "",
-        unionVariants: TreeUtils.findAllNamedChildrenOfType(
-          "union_variant",
-          node,
-        ),
-        typeNames:
-          TreeUtils.findAllNamedChildrenOfType("lower_type_name", node) ?? [],
-      } as ETypeDeclaration);
+      case "type_declaration": {
+        const typeDeclaration = node as ETypeDeclaration;
+        typeDeclaration.nodeType = "TypeDeclaration";
+        typeDeclaration.name = node.childForFieldName("name")?.text ?? "";
+        typeDeclaration.unionVariants = [];
+        typeDeclaration.typeNames = [];
 
-    case "infix_declaration":
-      return Object.assign(node, {
-        nodeType: "InfixDeclaration",
-        precedence: parseInt(
-          TreeUtils.findFirstNamedChildOfType("number_literal", node)?.text ??
-            "",
-        ),
-        associativity:
-          TreeUtils.findFirstNamedChildOfType(
-            "lower_case_identifier",
-            node,
-          )?.text.toUpperCase() ?? "NON",
-      } as EInfixDeclaration);
+        node.children.forEach((child) => {
+          if (child.type === "union_variant") {
+            typeDeclaration.unionVariants.push(
+              mapSyntaxNodeToExpression(child) as Expression,
+            );
+          } else if (child.type === "lower_type_name") {
+            typeDeclaration.typeNames.push(
+              mapSyntaxNodeToExpression(child) as Expression,
+            );
+          }
+        });
 
-    case "function_declaration_left":
-      return Object.assign(node, {
-        nodeType: "FunctionDeclarationLeft",
-        params: node.namedChildren
+        addTime("typeDeclaration", performance.now() - start);
+        return typeDeclaration;
+      }
+
+      case "infix_declaration": {
+        const infixDeclaration = node as EInfixDeclaration;
+        infixDeclaration.nodeType = "InfixDeclaration";
+        infixDeclaration.precedence = parseInt(
+          node.childForFieldName("precedence")?.text ?? "",
+        );
+        infixDeclaration.associativity =
+          (node
+            .childForFieldName("associativity")
+            ?.text.toUpperCase() as OperatorAssociativity) ?? "NON";
+        addTime("infixDeclaration", performance.now() - start);
+        return infixDeclaration;
+      }
+
+      case "function_declaration_left": {
+        const functionDeclarationLeft = node as EFunctionDeclarationLeft;
+        functionDeclarationLeft.nodeType = "FunctionDeclarationLeft";
+        functionDeclarationLeft.params = node.namedChildren
           .filter((n) => n.type.includes("pattern"))
           ?.map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-      } as EFunctionDeclarationLeft);
+          .filter(
+            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
+          ) as Pattern[];
+        addTime("functionDeclarationLeft", performance.now() - start);
+        return functionDeclarationLeft;
+      }
 
-    case "pattern": {
-      const asNode = TreeUtils.findFirstNamedChildOfType("as", node);
-      return Object.assign(node, {
-        nodeType: "Pattern",
-        patternAs: mapSyntaxNodeToExpression(asNode?.nextNamedSibling),
-      } as EPattern);
-    }
+      case "pattern": {
+        const patternAs = node.childForFieldName("patternAs");
+        const pattern = node as EPattern;
+        pattern.nodeType = "Pattern";
 
-    case "lower_pattern":
-      return Object.assign(node, {
-        nodeType: "LowerPattern",
-      } as ELowerPattern);
+        if (patternAs) {
+          pattern.patternAs = mapSyntaxNodeToExpression(
+            patternAs,
+          ) as ELowerPattern;
+        }
+        return pattern;
+      }
 
-    case "lower_type_name":
-      return Object.assign(node, {
-        nodeType: "LowerTypeName",
-      } as ELowerTypeName);
+      case "lower_pattern": {
+        const lowerPattern = node as ELowerPattern;
+        lowerPattern.nodeType = "LowerPattern";
+        return lowerPattern;
+      }
 
-    case "union_variant":
-      return Object.assign(node, {
-        nodeType: "UnionVariant",
-        name: node.firstNamedChild?.text ?? "",
-        params: node.namedChildren
+      case "lower_type_name": {
+        const lowerTypeName = node as ELowerTypeName;
+        lowerTypeName.nodeType = "LowerTypeName";
+        return lowerTypeName;
+      }
+
+      case "union_variant": {
+        const unionVariant = node as EUnionVariant;
+        unionVariant.nodeType = "UnionVariant";
+        unionVariant.name = node.childForFieldName("name")?.text ?? "";
+        unionVariant.params = node.children
           .slice(1)
           .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-      } as EUnionVariant);
+          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+        addTime("unionVariant", performance.now() - start);
+        return unionVariant;
+      }
 
-    case "if_else_expr":
-      return Object.assign(node, {
-        nodeType: "IfElseExpr",
-        exprList: node.namedChildren
+      case "if_else_expr": {
+        const ifElseExpr = node as EIfElseExpr;
+        ifElseExpr.nodeType = "IfElseExpr";
+        ifElseExpr.exprList = node.namedChildren
           .map((n) => mapSyntaxNodeToExpression(n))
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-      } as EIfElseExpr);
+          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+        addTime("ifElseExpr", performance.now() - start);
+        return ifElseExpr;
+      }
 
-    case "let_in_expr":
-      return Object.assign(node, {
-        nodeType: "LetInExpr",
-        valueDeclarations:
-          TreeUtils.findAllNamedChildrenOfType("value_declaration", node)?.map(
+      case "let_in_expr": {
+        const letInExpr = node as ELetInExpr;
+        letInExpr.nodeType = "LetInExpr";
+        letInExpr.valueDeclarations =
+          (TreeUtils.findAllNamedChildrenOfType("value_declaration", node)?.map(
             mapSyntaxNodeToExpression,
-          ) ?? [],
-        body: mapSyntaxNodeToExpression(node.lastNamedChild),
-      } as ELetInExpr);
+          ) as EValueDeclaration[]) ?? [];
+        letInExpr.body = mapSyntaxNodeToExpression(
+          node.lastNamedChild,
+        ) as Expression;
+        addTime("letInExpr", performance.now() - start);
+        return letInExpr;
+      }
 
-    case "case_of_expr":
-      return Object.assign(node, {
-        nodeType: "CaseOfExpr",
-        expr: mapSyntaxNodeToExpression(node.namedChildren[1]),
-        branches: node.namedChildren
+      case "case_of_expr": {
+        const caseOfExpr = node as ECaseOfExpr;
+        caseOfExpr.nodeType = "CaseOfExpr";
+        caseOfExpr.expr = mapSyntaxNodeToExpression(
+          node.namedChildren[1],
+        ) as Expression;
+        caseOfExpr.branches = node.namedChildren
           .slice(3)
           .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-      } as ECaseOfExpr);
+          .filter(
+            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
+          ) as ECaseOfBranch[];
+        addTime("caseOfExpr", performance.now() - start);
+        return caseOfExpr;
+      }
 
-    case "case_of_branch":
-      return Object.assign(node, {
-        nodeType: "CaseOfBranch",
-        pattern: mapSyntaxNodeToExpression(
-          TreeUtils.findFirstNamedChildOfType("pattern", node),
-        ),
-        expr: mapSyntaxNodeToExpression(node.lastNamedChild),
-      } as ECaseOfBranch);
+      case "case_of_branch": {
+        const caseOfBranch = node as ECaseOfBranch;
+        caseOfBranch.nodeType = "CaseOfBranch";
+        caseOfBranch.pattern = mapSyntaxNodeToExpression(
+          node.childForFieldName("pattern"),
+        ) as EPattern;
+        caseOfBranch.expr = mapSyntaxNodeToExpression(
+          node.childForFieldName("expr"),
+        ) as Expression;
+        addTime("caseOfBranch", performance.now() - start);
+        return caseOfBranch;
+      }
 
-    case "anonymous_function_expr":
-      return Object.assign(node, {
-        nodeType: "AnonymousFunctionExpr",
-        params: TreeUtils.findAllNamedChildrenOfType("pattern", node)
+      case "anonymous_function_expr": {
+        const anonymousFunctionExpr = node as EAnonymousFunctionExpr;
+        anonymousFunctionExpr.nodeType = "AnonymousFunctionExpr";
+        anonymousFunctionExpr.params = TreeUtils.findAllNamedChildrenOfType(
+          "pattern",
+          node,
+        )
           ?.map(mapSyntaxNodeToExpression)
-          .filter((n) => n?.nodeType === "Pattern"),
-        expr: mapSyntaxNodeToExpression(node.lastNamedChild),
-      } as EAnonymousFunctionExpr);
+          .filter((n) => n?.nodeType === "Pattern") as EPattern[];
+        anonymousFunctionExpr.expr = mapSyntaxNodeToExpression(
+          node.lastNamedChild,
+        ) as Expression;
+        addTime("anonymousFunctionExpr", performance.now() - start);
+        return anonymousFunctionExpr;
+      }
 
-    case "unit_expr":
-      return Object.assign(node, {
-        nodeType: "UnitExpr",
-      } as EUnitExpr);
+      case "unit_expr": {
+        const unitExpr = node as EUnitExpr;
+        unitExpr.nodeType = "UnitExpr";
+        return unitExpr;
+      }
 
-    case "tuple_expr":
-      return Object.assign(node, {
-        nodeType: "TupleExpr",
-        exprList: node.namedChildren
+      case "tuple_expr": {
+        const tupleExpr = node as ETupleExpr;
+        tupleExpr.nodeType = "TupleExpr";
+        tupleExpr.exprList = node.namedChildren
           .filter(
             (n) =>
               n.type !== "left_parenthesis" &&
@@ -494,182 +566,254 @@ export function mapSyntaxNodeToExpression(
               n.type !== "right_parenthesis",
           )
           .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-      } as ETupleExpr);
+          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+        addTime("tupleExpr", performance.now() - start);
+        return tupleExpr;
+      }
 
-    case "anything_pattern":
-      return Object.assign(node, {
-        nodeType: "AnythingPattern",
-      } as EAnythingPattern);
+      case "anything_pattern": {
+        const anythingPattern = node as EAnythingPattern;
+        anythingPattern.nodeType = "AnythingPattern";
+        return anythingPattern;
+      }
 
-    case "tuple_pattern":
-      return Object.assign(node, {
-        nodeType: "TuplePattern",
-        patterns: TreeUtils.findAllNamedChildrenOfType("pattern", node)
+      case "tuple_pattern": {
+        const tuplePattern = node as ETuplePattern;
+        tuplePattern.nodeType = "TuplePattern";
+        tuplePattern.patterns = TreeUtils.findAllNamedChildrenOfType(
+          "pattern",
+          node,
+        )
           ?.map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-      } as ETuplePattern);
+          .filter(
+            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
+          ) as EPattern[];
+        addTime("tuplePattern", performance.now() - start);
+        return tuplePattern;
+      }
 
-    case "tuple_type":
-      return Object.assign(node, {
-        nodeType: "TupleType",
-        typeExpressions: TreeUtils.findAllNamedChildrenOfType(
+      case "tuple_type": {
+        const tupleType = node as ETupleType;
+        tupleType.nodeType = "TupleType";
+        tupleType.typeExpressions = TreeUtils.findAllNamedChildrenOfType(
           "type_expression",
           node,
         )
           ?.map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-        unitExpr: mapSyntaxNodeToExpression(
-          TreeUtils.findFirstNamedChildOfType("unit_expr", node),
-        ),
-      } as ETupleType);
+          .filter(
+            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
+          ) as ETypeExpression[];
+        tupleType.unitExpr = mapSyntaxNodeToExpression(
+          node.childForFieldName("unitExpr"),
+        ) as EUnitExpr;
+        addTime("tupleType", performance.now() - start);
+        return tupleType;
+      }
 
-    case "list_expr":
-      return Object.assign(node, {
-        nodeType: "ListExpr",
-        exprList: node.namedChildren
+      case "list_expr": {
+        const listExpr = node as EListExpr;
+        listExpr.nodeType = "ListExpr";
+        listExpr.exprList = node.children
           .filter((n) => n.type.endsWith("expr"))
-          .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-      } as EListExpr);
+          .map(mapSyntaxNodeToExpression) as Expression[];
+        addTime("listExpr", performance.now() - start);
+        return listExpr;
+      }
 
-    case "list_pattern":
-      return Object.assign(node, {
-        nodeType: "ListPattern",
-        parts: node.namedChildren
+      case "list_pattern": {
+        const listPattern = node as EListPattern;
+        listPattern.nodeType = "ListPattern";
+        listPattern.parts = node.namedChildren
           .filter((n) => n.type.includes("pattern"))
           .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-      } as EListPattern);
+          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+        addTime("listPattern", performance.now() - start);
+        return listPattern;
+      }
 
-    case "union_pattern":
-      return Object.assign(node, {
-        nodeType: "UnionPattern",
-        constructor: node.firstNamedChild,
-        namedParams: node
+      case "union_pattern": {
+        const unionPattern = node as EUnionPattern;
+        unionPattern.nodeType = "UnionPattern";
+        unionPattern.constructor = node.firstNamedChild as SyntaxNode;
+        unionPattern.namedParams = node
           .descendantsOfType("lower_pattern")
           .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-        argPatterns: node.namedChildren
+          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+        unionPattern.argPatterns = node.namedChildren
           .slice(1)
           .filter(
             (node) =>
               node.type.includes("pattern") || node.type.includes("constant"),
           )
-          .map((node) => mapSyntaxNodeToExpression(node) ?? node),
-      } as EUnionPattern);
+          .map(
+            (node) => mapSyntaxNodeToExpression(node) ?? node,
+          ) as Expression[];
+        addTime("unionPattern", performance.now() - start);
+        return unionPattern;
+      }
 
-    case "cons_pattern":
-      return Object.assign(node, {
-        nodeType: "ConsPattern",
-        parts: node.namedChildren
-          .filter((n) => n.type.includes("pattern"))
-          .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-      } as EConsPattern);
-    case "record_type":
-      return Object.assign(node, {
-        nodeType: "RecordType",
-        baseType: mapSyntaxNodeToExpression(
-          TreeUtils.findFirstNamedChildOfType("record_base_identifier", node),
-        ),
-        fieldTypes: TreeUtils.findAllNamedChildrenOfType("field_type", node)
-          ?.map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-      } as ERecordType);
-    case "field_type":
-      return Object.assign(node, {
-        nodeType: "FieldType",
-        name:
-          TreeUtils.findFirstNamedChildOfType("lower_case_identifier", node)
-            ?.text ?? "",
-        typeExpression: mapSyntaxNodeToExpression(
-          TreeUtils.findFirstNamedChildOfType("type_expression", node),
-        ),
-      } as EFieldType);
-    case "type_alias_declaration":
-      return Object.assign(node, {
-        nodeType: "TypeAliasDeclaration",
-        name: TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
+      case "cons_pattern":
+        return Object.assign(node, {
+          nodeType: "ConsPattern",
+          parts: node.namedChildren
+            .filter((n) => n.type.includes("pattern"))
+            .map(mapSyntaxNodeToExpression)
+            .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
+        } as EConsPattern);
+
+      case "record_type": {
+        const recordType = node as ERecordType;
+        recordType.nodeType = "RecordType";
+        recordType.baseType = mapSyntaxNodeToExpression(
+          node.childForFieldName("baseRecord"),
+        ) as Expression;
+        recordType.fieldTypes = TreeUtils.findAllNamedChildrenOfType(
+          "field_type",
           node,
-        ),
-        typeVariables:
+        )
+          ?.map(mapSyntaxNodeToExpression)
+          .filter(
+            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
+          ) as EFieldType[];
+        addTime("recordType", performance.now() - start);
+        return recordType;
+      }
+
+      case "field_type": {
+        const fieldType = node as EFieldType;
+        fieldType.nodeType = "FieldType";
+        fieldType.name = node.childForFieldName("name")?.text ?? "";
+        fieldType.typeExpression = mapSyntaxNodeToExpression(
+          node.childForFieldName("typeExpression"),
+        ) as ETypeExpression;
+        addTime("fieldType", performance.now() - start);
+        return fieldType;
+      }
+
+      case "type_alias_declaration": {
+        const typeAliasDeclaration = node as ETypeAliasDeclaration;
+        typeAliasDeclaration.nodeType = "TypeAliasDeclaration";
+        typeAliasDeclaration.name = node.childForFieldName(
+          "name",
+        ) as SyntaxNode;
+        typeAliasDeclaration.typeVariables =
           TreeUtils.findAllNamedChildrenOfType("lower_type_name", node)
             ?.map(mapSyntaxNodeToExpression)
-            .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)) ?? [],
-        typeExpression: mapSyntaxNodeToExpression(
-          TreeUtils.findFirstNamedChildOfType("type_expression", node),
-        ),
-      } as ETypeAliasDeclaration);
-    case "field":
-      return Object.assign(node, {
-        nodeType: "Field",
-        name: node.firstNamedChild,
-        expression: mapSyntaxNodeToExpression(node.lastNamedChild),
-      } as EField);
-    case "field_access_expr":
-      return Object.assign(node, {
-        nodeType: "FieldAccessExpr",
-        target: mapSyntaxNodeToExpression(node.firstNamedChild),
-      } as EFieldAccessExpr);
-    case "field_accessor_function_expr":
-      return Object.assign(node, {
-        nodeType: "FieldAccessorFunctionExpr",
-      } as EFieldAccessorFunctionExpr);
-    case "record_pattern":
-      return Object.assign(node, {
-        nodeType: "RecordPattern",
-        patternList: TreeUtils.findAllNamedChildrenOfType("lower_pattern", node)
-          ?.map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-      } as ERecordPattern);
-    case "record_expr":
-      return Object.assign(node, {
-        nodeType: "RecordExpr",
-        baseRecord: TreeUtils.findFirstNamedChildOfType(
-          "record_base_identifier",
+            .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)) ?? [];
+        typeAliasDeclaration.typeExpression = mapSyntaxNodeToExpression(
+          node.childForFieldName("typeExpression"),
+        ) as ETypeExpression;
+        addTime("typeAliasDeclaration", performance.now() - start);
+        return typeAliasDeclaration;
+      }
+
+      case "field": {
+        const field = node as EField;
+        field.nodeType = "Field";
+        field.name = mapSyntaxNodeToExpression(
+          node.firstNamedChild,
+        ) as Expression;
+        field.expression = mapSyntaxNodeToExpression(
+          node.lastNamedChild,
+        ) as Expression;
+        addTime("field", performance.now() - start);
+        return field;
+      }
+
+      case "field_access_expr": {
+        const fieldAccessExpr = node as EFieldAccessExpr;
+        fieldAccessExpr.nodeType = "FieldAccessExpr";
+        fieldAccessExpr.target = mapSyntaxNodeToExpression(
+          node.firstNamedChild,
+        ) as Expression;
+        addTime("fieldAccessExpr", performance.now() - start);
+        return fieldAccessExpr;
+      }
+
+      case "field_accessor_function_expr": {
+        const fieldAccessorFunctionExpr = node as EFieldAccessorFunctionExpr;
+        fieldAccessorFunctionExpr.nodeType = "FieldAccessorFunctionExpr";
+        return fieldAccessorFunctionExpr;
+      }
+
+      case "record_pattern": {
+        const recordPattern = node as ERecordPattern;
+        recordPattern.nodeType = "RecordPattern";
+        recordPattern.patternList = TreeUtils.findAllNamedChildrenOfType(
+          "lower_pattern",
           node,
-        ),
-        fields: TreeUtils.findAllNamedChildrenOfType("field", node)
+        )
           ?.map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
-      } as ERecordExpr);
-    case "port_annotation":
-      return Object.assign(node, {
-        nodeType: "PortAnnotation",
-        name: node.children[1]?.text ?? "",
-        typeExpression: mapSyntaxNodeToExpression(
-          TreeUtils.findFirstNamedChildOfType("type_expression", node),
-        ),
-      } as EPortAnnotation);
-    case "char_constant_expr":
-      return Object.assign(node, {
-        nodeType: "CharConstantExpr",
-      } as ECharConstantExpr);
-    case "glsl_code_expr":
-      return Object.assign(node, {
-        nodeType: "GlslCodeExpr",
-        content: TreeUtils.findFirstNamedChildOfType("glsl_content", node),
-      } as EGlslCodeExpr);
-    case "operator_as_function_expr":
-      return Object.assign(node, {
-        nodeType: "OperatorAsFunctionExpr",
-        operator: mapSyntaxNodeToExpression(
-          TreeUtils.findFirstNamedChildOfType("operator_identifier", node),
-        ),
-      } as EOperatorAsFunctionExpr);
-    case "negate_expr":
-      return Object.assign(node, {
-        nodeType: "NegateExpr",
-        expression: mapSyntaxNodeToExpression(node.lastNamedChild),
-      } as ENegateExpr);
-    case "nullary_constructor_argument_pattern":
-      return Object.assign(node, {
-        nodeType: "NullaryConstructorArgumentPattern",
-      } as ENullaryConstructorArgumentPattern);
-    default:
-      return mapSyntaxNodeToExpression(node.firstNamedChild);
+          .filter(
+            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
+          ) as ELowerPattern[];
+        addTime("recordPattern", performance.now() - start);
+        return recordPattern;
+      }
+
+      case "record_expr": {
+        const recordExpr = node as ERecordExpr;
+        recordExpr.nodeType = "RecordExpr";
+        recordExpr.baseRecord = node.childForFieldName(
+          "baseRecord",
+        ) as SyntaxNode;
+        recordExpr.fields = TreeUtils.findAllNamedChildrenOfType("field", node)
+          ?.map(mapSyntaxNodeToExpression)
+          .filter(
+            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
+          ) as EField[];
+        addTime("recordExpr", performance.now() - start);
+        return recordExpr;
+      }
+
+      case "port_annotation":
+        return Object.assign(node, {
+          nodeType: "PortAnnotation",
+          name: node.childForFieldName("name")?.text ?? "",
+          typeExpression: mapSyntaxNodeToExpression(
+            node.childForFieldName("typeExpression"),
+          ),
+        } as EPortAnnotation);
+
+      case "char_constant_expr": {
+        const charConstantExpr = node as ECharConstantExpr;
+        charConstantExpr.nodeType = "CharConstantExpr";
+        return charConstantExpr;
+      }
+
+      case "glsl_code_expr":
+        return Object.assign(node, {
+          nodeType: "GlslCodeExpr",
+          content: node.childForFieldName("content"),
+        } as EGlslCodeExpr);
+
+      case "operator_as_function_expr":
+        return Object.assign(node, {
+          nodeType: "OperatorAsFunctionExpr",
+          operator: mapSyntaxNodeToExpression(
+            node.childForFieldName("operator"),
+          ),
+        } as EOperatorAsFunctionExpr);
+
+      case "negate_expr": {
+        const negateExpr = node as ENegateExpr;
+        negateExpr.nodeType = "NegateExpr";
+        negateExpr.expression = mapSyntaxNodeToExpression(
+          node.lastNamedChild,
+        ) as Expression;
+        return negateExpr;
+      }
+
+      case "nullary_constructor_argument_pattern":
+        return Object.assign(node, {
+          nodeType: "NullaryConstructorArgumentPattern",
+        } as ENullaryConstructorArgumentPattern);
+
+      default:
+        return mapSyntaxNodeToExpression(node.firstNamedChild);
+    }
+  } finally {
+    mappingTime += performance.now() - start;
   }
 }
 
@@ -688,9 +832,11 @@ export function findDefinition(
     return;
   }
 
+  const start = performance.now();
   const definition = elmWorkspace
     .getTypeChecker()
     .findDefinitionShallow(e, treeContainer);
+  definitionTime += performance.now() - start;
 
   const mappedNode = mapSyntaxNodeToExpression(definition?.node);
 

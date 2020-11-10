@@ -35,6 +35,7 @@ import {
   ERecordExpr,
   EFieldAccessExpr,
   ENegateExpr,
+  ETypeAnnotation,
 } from "./expressionTree";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { TypeExpression } from "./typeExpression";
@@ -43,6 +44,12 @@ import { Sequence } from "../sequence";
 import { Utils } from "../utils";
 import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
 import { TypeChecker } from "./typeChecker";
+import { performance } from "perf_hooks";
+
+export let inferTime = 0;
+export function resetInferTime(): void {
+  inferTime = 0;
+}
 
 export interface Alias {
   module: string;
@@ -677,7 +684,10 @@ export class InferenceScope {
 
     let bodyType: Type = TUnknown;
     if (declaration.body) {
-      bodyType = this.infer(declaration.body);
+      const mappedBody = mapSyntaxNodeToExpression(
+        declaration.body,
+      ) as Expression;
+      bodyType = this.infer(mappedBody);
 
       // Make sure the returned type is what is annotated
       if (binding.bindingType === "Annotated") {
@@ -686,9 +696,9 @@ export class InferenceScope {
           bindingType.nodeType === "Function"
             ? curryFunction(bindingType, binding.count)
             : bindingType;
-        this.isAssignable(declaration.body, bodyType, expected);
+        this.isAssignable(mappedBody, bodyType, expected);
       } else {
-        this.checkTopLevelCaseBranches(declaration.body, bodyType);
+        this.checkTopLevelCaseBranches(mappedBody, bodyType);
       }
     }
 
@@ -1122,7 +1132,9 @@ export class InferenceScope {
     // Get the type annotation if there is one
     if (declaration.typeAnnotation) {
       type = TypeExpression.typeAnnotationInference(
+        mapSyntaxNodeToExpression(
         declaration.typeAnnotation,
+        ) as ETypeAnnotation,
         referenceUri,
         this.elmWorkspace,
         false,
@@ -1655,7 +1667,7 @@ export class InferenceScope {
     if (valueDeclaration.pattern) {
       this.bindPatternDeclarationParameters(
         valueDeclaration,
-        valueDeclaration.pattern,
+        mapSyntaxNodeToExpression(valueDeclaration.pattern) as EPattern,
       );
       return { bindingType: "Other", count: 0 };
     }
@@ -1669,7 +1681,9 @@ export class InferenceScope {
   ): ParameterBindingResult {
     const typeRefType = valueDeclaration.typeAnnotation
       ? TypeExpression.typeAnnotationInference(
+          mapSyntaxNodeToExpression(
           valueDeclaration.typeAnnotation,
+          ) as ETypeAnnotation,
           this.uri,
           this.elmWorkspace,
           true,
@@ -1731,7 +1745,9 @@ export class InferenceScope {
     );
 
     const bodyType: Type = valueDeclaration.body
-      ? this.infer(valueDeclaration.body)
+      ? this.infer(
+          mapSyntaxNodeToExpression(valueDeclaration.body) as Expression,
+        )
       : TUnknown;
     this.bindPattern(pattern, bodyType, false);
 

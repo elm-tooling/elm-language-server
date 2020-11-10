@@ -491,7 +491,11 @@ export class TypeExpression {
       this.getTypeVar(name),
     );
 
-    return TUnion(typeDeclaration.moduleName, typeDeclaration.name, params);
+    return TUnion(
+      this.workspace.getForest().getByUri(this.uri)?.moduleName ?? "",
+      typeDeclaration.name,
+      params,
+    );
   }
 
   private getTypeVar(e: Expression): TVar {
