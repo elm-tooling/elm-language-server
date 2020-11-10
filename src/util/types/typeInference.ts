@@ -657,14 +657,19 @@ export class InferenceScope {
         /* recursionAllowed */ false,
       ).inferDeclaration(declaration, true);
 
-    if (!elmWorkspace.getForest().getByUri(uri)?.writeable) {
-      return elmWorkspace
-        .getTypeCache()
-        .getOrSet("PACKAGE_VALUE_DECLARATION", declaration, setter);
-    } else {
-      return elmWorkspace
-        .getTypeCache()
-        .getOrSet("PROJECT_VALUE_DECLARATION", declaration, setter);
+    const start = performance.now();
+    try {
+      if (!elmWorkspace.getForest().getByUri(uri)?.writeable) {
+        return elmWorkspace
+          .getTypeCache()
+          .getOrSet("PACKAGE_VALUE_DECLARATION", declaration, setter);
+      } else {
+        return elmWorkspace
+          .getTypeCache()
+          .getOrSet("PROJECT_VALUE_DECLARATION", declaration, setter);
+      }
+    } finally {
+      inferTime += performance.now() - start;
     }
   }
 
@@ -1133,7 +1138,7 @@ export class InferenceScope {
     if (declaration.typeAnnotation) {
       type = TypeExpression.typeAnnotationInference(
         mapSyntaxNodeToExpression(
-        declaration.typeAnnotation,
+          declaration.typeAnnotation,
         ) as ETypeAnnotation,
         referenceUri,
         this.elmWorkspace,
@@ -1682,7 +1687,7 @@ export class InferenceScope {
     const typeRefType = valueDeclaration.typeAnnotation
       ? TypeExpression.typeAnnotationInference(
           mapSyntaxNodeToExpression(
-          valueDeclaration.typeAnnotation,
+            valueDeclaration.typeAnnotation,
           ) as ETypeAnnotation,
           this.uri,
           this.elmWorkspace,

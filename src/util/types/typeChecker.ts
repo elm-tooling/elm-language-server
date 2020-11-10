@@ -165,15 +165,18 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
     return (
       allTopLevelFunctions
-        ?.map(
-          (valueDeclaration) =>
-            InferenceScope.valueDeclarationInference(
+        ?.map((valueDeclaration) => {
+          try {
+            return InferenceScope.valueDeclarationInference(
               mapSyntaxNodeToExpression(valueDeclaration) as EValueDeclaration,
               treeContainer.uri,
               workspace,
               new Set(),
-            ).diagnostics,
-        )
+            ).diagnostics;
+          } catch {
+            return [];
+          }
+        })
         .reduce((a, b) => a.concat(b), [])
         .filter(
           (diagnostic) => diagnostic.node.tree.uri === treeContainer.uri,
