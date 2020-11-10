@@ -2,6 +2,13 @@ import Parser, { SyntaxNode } from "web-tree-sitter";
 import { IForest, ITreeContainer } from "./forest";
 import { IExposed, IExposing, NodeType, TreeUtils } from "./util/treeUtils";
 import { container } from "tsyringe";
+import { MultiMap } from "./util/multiMap";
+import { performance } from "perf_hooks";
+
+export let importsTime = 0;
+export function resetImportsTime(): void {
+  importsTime = 0;
+}
 
 export interface IImport {
   alias: string;
@@ -16,65 +23,20 @@ export interface IImport {
 /**
  * Imports class that extends a map to handle multiple named imports
  */
-export class Imports extends Map<string, IImport | IImport[]> {
+export class Imports extends MultiMap<string, IImport> {
   public get(
     key: string,
     filter?: (val: IImport) => boolean,
   ): IImport | undefined {
-    let found = super.get(key);
-
-    if (!found) {
-      return;
-    }
-
-    if (Array.isArray(found)) {
-      found = (filter ? found.filter(filter) : found).sort((a) =>
-        a.explicitlyExposed ? -1 : 1,
-      )[0];
-    }
-
-    if (found && (!filter || filter(found))) {
-      return found;
-    }
+    return super.get(key, filter, (a) => (a.explicitlyExposed ? -1 : 1));
   }
-
-  public set(key: string, val: IImport): this {
-    if (super.has(key)) {
-      const existing = super.get(key);
-
-      if (Array.isArray(existing)) {
-        existing.push(val);
-      } else if (existing) {
-        super.set(key, [existing, val]);
-      }
-    } else {
-      super.set(key, val);
-    }
-    return this;
-  }
-
-  public forEach(
-    callbackfn: (
-      value: IImport,
-      key: string,
-      map: Map<string, IImport | IImport[]>,
-    ) => void,
-  ): void {
-    super.forEach((val, key, map) => {
-      if (Array.isArray(val)) {
-        val.forEach((v) => callbackfn(v, key, map));
-      } else {
-        callbackfn(val, key, map);
-      }
-    });
-  }
-
   private static cachedVirtualImports: SyntaxNode[];
 
   public static getImports(
     treeContainer: ITreeContainer,
     forest: IForest,
   ): Imports {
+    const start = performance.now();
     const result = new Imports();
 
     const importNodes = [
@@ -202,6 +164,8 @@ export class Imports extends Map<string, IImport | IImport[]> {
         }
       }
     });
+
+    importsTime += performance.now() - start;
 
     return result;
   }

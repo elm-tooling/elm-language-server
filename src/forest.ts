@@ -1,10 +1,12 @@
-import { Tree } from "web-tree-sitter";
+import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IRootFolder } from "./elmWorkspace";
 import { Imports } from "./imports";
 import { IExposing, TreeUtils } from "./util/treeUtils";
 import * as path from "path";
 import { existsSync } from "fs";
 import { URI } from "vscode-uri";
+import { SyntaxNodeMap } from "./util/types/syntaxNodeMap";
+import { SymbolMap } from "./util/types/binder";
 
 export interface ITreeContainer {
   uri: string;
@@ -18,6 +20,8 @@ export interface ITreeContainer {
   moduleName?: string;
   resolvedModules?: Map<string, string>; // Map of modules to uris
   exposing?: IExposing;
+
+  symbolLinks?: SyntaxNodeMap<SyntaxNode, SymbolMap>;
 }
 
 export interface IForest {

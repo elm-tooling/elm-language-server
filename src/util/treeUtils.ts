@@ -53,12 +53,7 @@ export class TreeUtils {
     const moduleDeclaration:
       | SyntaxNode
       | undefined = this.findModuleDeclaration(tree);
-    if (moduleDeclaration) {
-      return this.findFirstNamedChildOfType(
-        "upper_case_qid",
-        moduleDeclaration,
-      );
-    }
+    return moduleDeclaration?.childForFieldName("name") ?? undefined;
   }
 
   public static getModuleExposingListNodes(tree: Tree): SyntaxNode[] {
@@ -76,19 +71,14 @@ export class TreeUtils {
 
   public static getModuleExposing(tree: Tree): IExposing {
     const exposed: IExposing = new Map<string, IExposed>();
-    const moduleDeclaration:
-      | SyntaxNode
-      | undefined = this.findModuleDeclaration(tree);
+    const moduleDeclaration = this.findModuleDeclaration(tree);
     if (moduleDeclaration) {
-      const exposingList = this.findFirstNamedChildOfType(
-        "exposing_list",
-        moduleDeclaration,
-      );
+      const exposingList = moduleDeclaration.childForFieldName("exposing");
       if (exposingList) {
-        if (TreeUtils.findFirstNamedChildOfType("double_dot", exposingList)) {
-          TreeUtils.descendantsOfType(
-            tree.rootNode,
+        if (exposingList.childForFieldName("doubleDot")) {
+          TreeUtils.findAllNamedChildrenOfType(
             "value_declaration",
+            tree.rootNode,
           )?.forEach((elmFunction) => {
             const declaration = TreeUtils.findFirstNamedChildOfType(
               "function_declaration_left",
@@ -437,30 +427,6 @@ export class TreeUtils {
     }
   }
 
-  public static findLetFunctionNodeDefinition(
-    syntaxNode: SyntaxNode,
-    functionName: string,
-  ): SyntaxNode | undefined {
-    if (syntaxNode.parent?.type === "let_in_expr") {
-      const foundFunction = this.findFunction(
-        syntaxNode.parent,
-        functionName,
-        false,
-      );
-
-      if (foundFunction) {
-        return foundFunction;
-      }
-    }
-
-    if (syntaxNode.parent) {
-      return this.findLetFunctionNodeDefinition(
-        syntaxNode.parent,
-        functionName,
-      );
-    }
-  }
-
   public static findFunction(
     syntaxNode: SyntaxNode,
     functionName: string,
@@ -567,7 +533,7 @@ export class TreeUtils {
   }
 
   public static findModuleDeclaration(tree: Tree): SyntaxNode | undefined {
-    return this.findFirstNamedChildOfType("module_declaration", tree.rootNode);
+    return tree.rootNode.childForFieldName("moduleDeclaration") ?? undefined;
   }
 
   public static findTypeAliasDeclaration(
@@ -646,7 +612,7 @@ export class TreeUtils {
   public static getTypeOrTypeAliasNameNodeFromDefinition(
     node: SyntaxNode,
   ): SyntaxNode | undefined {
-    return TreeUtils.findFirstNamedChildOfType("upper_case_identifier", node);
+    return node.childForFieldName("name") ?? undefined;
   }
 
   public static findTypeOrTypeAliasCalls(
@@ -676,42 +642,6 @@ export class TreeUtils {
     );
   }
 
-  public static findUppercaseQidNode(
-    tree: Tree,
-    nodeAtPosition: SyntaxNode,
-  ): { node: SyntaxNode; nodeType: NodeType } | undefined {
-    let definitionNode = this.findTypeAliasDeclaration(
-      tree,
-      nodeAtPosition.text,
-    );
-
-    if (definitionNode && nodeAtPosition.parent?.type !== "union_pattern") {
-      const isRecordAlias =
-        TreeUtils.findFirstNamedChildOfType("type_expression", definitionNode)
-          ?.firstNamedChild?.type === "record_type";
-
-      // Check for record constructor usage
-      if (nodeAtPosition.parent?.type !== "value_expr" || isRecordAlias) {
-        return { node: definitionNode, nodeType: "TypeAlias" };
-      }
-    }
-    if (
-      TreeUtils.findParentOfType("type_ref", nodeAtPosition) ||
-      nodeAtPosition.parent?.type === "type_declaration" ||
-      nodeAtPosition.parent?.type === "exposed_type"
-    ) {
-      definitionNode = this.findTypeDeclaration(tree, nodeAtPosition.text);
-      if (definitionNode) {
-        return { node: definitionNode, nodeType: "Type" };
-      }
-    } else {
-      definitionNode = this.findUnionConstructor(tree, nodeAtPosition.text);
-      if (definitionNode) {
-        return { node: definitionNode, nodeType: "UnionConstructor" };
-      }
-    }
-  }
-
   public static findTypeAliasTypeVariable(
     nodeAtPosition: SyntaxNode,
     nodeAtPositionText: string,
@@ -728,87 +658,6 @@ export class TreeUtils {
       );
 
       return lowerTypeNames?.find((t) => t.text === nodeAtPositionText);
-    }
-  }
-
-  public static findFunctionParameterDefinition(
-    node: SyntaxNode,
-    functionParameterName: string,
-  ): SyntaxNode | undefined {
-    if (node.parent) {
-      if (
-        (node.parent.type === "value_declaration" ||
-          node.parent.type === "ERROR") &&
-        node.parent.firstChild &&
-        node.parent.firstChild.type === "function_declaration_left"
-      ) {
-        if (node.parent.firstChild) {
-          const match = this.descendantsOfType(
-            node.parent.firstChild,
-            "lower_pattern",
-          ).find((a) => a.text === functionParameterName);
-          if (match) {
-            return match;
-          } else {
-            return this.findFunctionParameterDefinition(
-              node.parent,
-              functionParameterName,
-            );
-          }
-        }
-      } else {
-        return this.findFunctionParameterDefinition(
-          node.parent,
-          functionParameterName,
-        );
-      }
-    }
-  }
-
-  public static findAnonymousFunctionParameterDefinition(
-    node: SyntaxNode,
-    functionParameterName: string,
-  ): SyntaxNode | undefined {
-    const anonymousFunctionExprNodes = TreeUtils.getAllAncestorsOfType(
-      "anonymous_function_expr",
-      node,
-    );
-
-    const match = anonymousFunctionExprNodes
-      .map((a) => TreeUtils.findAllNamedChildrenOfType("pattern", a) ?? [])
-      .reduce((a, b) => a.concat(b), [])
-      .map((pattern) => pattern.descendantsOfType("lower_pattern"))
-      .reduce((a, b) => a.concat(b), [])
-      .find((child) => child.text === functionParameterName);
-
-    if (match) {
-      return match;
-    }
-  }
-
-  public static findCaseOfParameterDefinition(
-    node: SyntaxNode,
-    caseParameterName: string,
-  ): SyntaxNode | undefined {
-    if (node.parent) {
-      if (node.parent.type === "case_of_branch" && node.parent.firstChild) {
-        const match = node.parent.firstChild
-          .descendantsOfType("lower_pattern")
-          .find((a) => a.text === caseParameterName);
-        if (match) {
-          return match;
-        } else {
-          return this.findCaseOfParameterDefinition(
-            node.parent,
-            caseParameterName,
-          );
-        }
-      } else {
-        return this.findCaseOfParameterDefinition(
-          node.parent,
-          caseParameterName,
-        );
-      }
     }
   }
 
