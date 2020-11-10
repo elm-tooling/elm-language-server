@@ -46,6 +46,9 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
   const imports = new Map<string, Imports>();
 
+  forest.treeMap.forEach((treeContainer) => {
+    bindTreeContainer(treeContainer);
+  });
   const typeChecker: TypeChecker = {
     findType,
     findDefinition,
@@ -285,15 +288,14 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         (nodeAtPosition.previousNamedSibling.type === "type" ||
           nodeAtPosition.previousNamedSibling.type === "alias"))
     ) {
-      const definitionNode = TreeUtils.findUppercaseQidNode(
-        tree,
-        nodeAtPosition,
-      );
+      const definitionNode = treeContainer.symbolLinks
+        ?.get(treeContainer.tree.rootNode)
+        ?.get(nodeAtPosition.text);
 
       if (definitionNode) {
         return {
           node: definitionNode.node,
-          nodeType: definitionNode.nodeType,
+          nodeType: definitionNode.type,
           uri,
         };
       }
@@ -318,20 +320,43 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       nodeAtPosition.parent.type === "upper_case_qid"
     ) {
       const upperCaseQid = nodeAtPosition.parent;
-      const definitionNode = TreeUtils.findUppercaseQidNode(tree, upperCaseQid);
-      if (
-        nodeAtPosition.parent?.parent?.parent?.type === "pattern" &&
-        definitionNode?.nodeType === "TypeAlias"
-      ) {
-        return;
+
+      // Usage is either a type or a constructor
+      // A type can only be used as a type
+      // A union variant can only be used as a constructor or as a pattern
+      // A type alias can be used as both a type and a constructor
+      const isTypeUsage =
+        TreeUtils.findParentOfType("type_ref", upperCaseQid) ||
+        upperCaseQid.parent?.type === "exposed_type";
+      const isConstructorUsage = upperCaseQid.parent?.type === "value_expr";
+
+      const definitionNode = treeContainer.symbolLinks
+        ?.get(treeContainer.tree.rootNode)
+        ?.get(upperCaseQid.text, (symbol) =>
+          isTypeUsage
+            ? symbol.type === "Type" || symbol.type === "TypeAlias"
+            : isConstructorUsage
+            ? symbol.type === "UnionConstructor" || symbol.type === "TypeAlias"
+            : symbol.type === "UnionConstructor",
+        );
+
+      // if (
+      //   nodeAtPosition.parent?.parent?.parent?.type === "pattern" &&
+      //   definitionNode?.type === "TypeAlias"
+      // ) {
+      //   return;
+      // }
+
+      if (definitionNode) {
+        return {
+          node: definitionNode.node,
+          nodeType: definitionNode.type,
+          uri,
+        };
       }
 
       let definitionFromOtherFile;
-      if (
-        !definitionNode ||
-        (definitionNode.nodeType === "UnionConstructor" &&
-          upperCaseQid.parent?.type === "type_ref")
-      ) {
+
         // Make sure the next node is a dot, or else it isn't a Module
         if (TreeUtils.nextNode(nodeAtPosition)?.type === "dot") {
           const endPos =
@@ -356,10 +381,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
           }
         }
 
-        if (
-          TreeUtils.findParentOfType("type_ref", upperCaseQid) ||
-          upperCaseQid.parent?.type === "exposed_type"
-        ) {
+      if (isTypeUsage) {
           definitionFromOtherFile = findImportOfType(
             treeContainer,
             upperCaseQid.text,
@@ -385,13 +407,6 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
           "TypeAlias",
         );
         if (definitionFromOtherFile) {
-          if (
-            nodeAtPosition.parent?.parent?.parent?.type === "pattern" &&
-            definitionNode?.nodeType === "TypeAlias"
-          ) {
-            return;
-          }
-
           return definitionFromOtherFile;
         }
 
@@ -405,14 +420,6 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         if (definitionFromOtherFile) {
           return definitionFromOtherFile;
         }
-      }
-      if (definitionNode) {
-        return {
-          node: definitionNode.node,
-          nodeType: definitionNode.nodeType,
-          uri,
-        };
-      }
     } else if (
       nodeAtPosition.parent?.type === "lower_pattern" &&
       nodeAtPosition.parent.parent?.type === "record_pattern"
@@ -430,87 +437,23 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         nodeAtPositionText = nodeAtPosition.parent.text;
       }
 
-      const caseOfParameter = TreeUtils.findCaseOfParameterDefinition(
+      // Traverse the parents and find a binding
+      const localBinding = new Sequence(
         nodeAtPosition,
-        nodeAtPositionText,
-      );
+        (node) => node.parent ?? undefined,
+      )
+        .map((node) =>
+          treeContainer.symbolLinks?.get(node)?.get(nodeAtPositionText),
+        )
+        .find((binding) => !!binding);
 
-      if (caseOfParameter) {
+      if (localBinding) {
         return {
-          node: caseOfParameter,
-          nodeType: "CasePattern",
-          uri,
+          node: localBinding.node,
+          nodeType: localBinding.type,
+          uri: treeContainer.uri,
         };
-      }
-
-      const anonymousFunctionDefinition = TreeUtils.findAnonymousFunctionParameterDefinition(
-        nodeAtPosition,
-        nodeAtPositionText,
-      );
-
-      if (anonymousFunctionDefinition) {
-        return {
-          node: anonymousFunctionDefinition,
-          nodeType: "AnonymousFunctionParameter",
-          uri,
-        };
-      }
-
-      const functionParameter = TreeUtils.findFunctionParameterDefinition(
-        nodeAtPosition,
-        nodeAtPositionText,
-      );
-
-      if (functionParameter) {
-        return {
-          node: functionParameter,
-          nodeType: "FunctionParameter",
-          uri,
-        };
-      }
-
-      const typeVariable = TreeUtils.findTypeAliasTypeVariable(
-        nodeAtPosition,
-        nodeAtPositionText,
-      );
-
-      if (typeVariable) {
-        return {
-          node: typeVariable,
-          nodeType: "TypeVariable",
-          uri,
-        };
-      }
-
-      const letDefinitionNode = TreeUtils.findLetFunctionNodeDefinition(
-        nodeAtPosition,
-        nodeAtPositionText,
-      );
-
-      if (letDefinitionNode) {
-        return {
-          node: letDefinitionNode,
-          nodeType: "Function",
-          uri,
-        };
-      }
-
-      const portDefinitionNode = TreeUtils.findPort(tree, nodeAtPositionText);
-
-      if (portDefinitionNode) {
-        return {
-          node: portDefinitionNode,
-          nodeType: "Port",
-          uri,
-        };
-      }
-
-      const topLevelDefinitionNode = TreeUtils.findFunction(
-        tree.rootNode,
-        nodeAtPosition.parent.text,
-      );
-
-      if (!topLevelDefinitionNode) {
+      } else {
         // Get the full module name and handle an import alias if there is one
         const endPos =
           nodeAtPosition.parent.text.indexOf(nodeAtPosition.text) +
@@ -552,14 +495,6 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         if (functionDefinitionFromOtherFile) {
           return functionDefinitionFromOtherFile;
         }
-      }
-
-      if (topLevelDefinitionNode) {
-        return {
-          node: topLevelDefinitionNode,
-          nodeType: "Function",
-          uri,
-        };
       }
     } else if (nodeAtPosition.type === "operator_identifier") {
       const definitionNode = TreeUtils.findOperator(tree, nodeAtPosition.text);
