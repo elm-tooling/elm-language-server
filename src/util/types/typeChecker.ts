@@ -17,6 +17,7 @@ import { TypeRenderer } from "./typeRenderer";
 import { performance } from "perf_hooks";
 import { bindTreeContainer } from "./binder";
 import { Sequence } from "../sequence";
+import { Utils } from "../utils";
 
 export let bindTime = 0;
 export function resetBindTime(): void {
@@ -249,11 +250,13 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   ): DefinitionResult | undefined {
     const uri = treeContainer.uri;
     const tree = treeContainer.tree;
+    const rootSymbols = treeContainer.symbolLinks?.get(
+      treeContainer.tree.rootNode,
+    );
+
     if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "upper_case_qid" &&
-      nodeAtPosition.parent.previousNamedSibling &&
-      nodeAtPosition.parent.previousNamedSibling.type === "module"
+      nodeAtPosition.parent?.type === "upper_case_qid" &&
+      nodeAtPosition.parent.previousNamedSibling?.type === "module"
     ) {
       const moduleNode = nodeAtPosition.parent.parent;
 
@@ -265,47 +268,17 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         };
       }
     } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "upper_case_qid" &&
-      nodeAtPosition.parent.previousNamedSibling &&
-      nodeAtPosition.parent.previousNamedSibling.type === "import"
+      nodeAtPosition.parent?.type === "upper_case_qid" &&
+      nodeAtPosition.parent.previousNamedSibling?.type === "import"
     ) {
       const upperCaseQid = nodeAtPosition.parent;
       return findImportOfType(treeContainer, upperCaseQid.text, "Module");
     } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "function_declaration_left"
+      (nodeAtPosition.parent?.type === "exposed_value" &&
+        nodeAtPosition.parent.parent?.parent?.type === "module_declaration") ||
+      nodeAtPosition.parent?.type === "type_annotation"
     ) {
-      const definitionNode =
-        nodeAtPosition.parent.parent &&
-        nodeAtPosition.parent.parent.parent &&
-        nodeAtPosition.parent.parent.parent.type === "let_in_expr"
-          ? TreeUtils.findFunction(
-              nodeAtPosition.parent.parent.parent,
-              nodeAtPosition.text,
-              false,
-            )
-          : TreeUtils.findFunction(tree.rootNode, nodeAtPosition.text);
-
-      if (definitionNode) {
-        return {
-          node: definitionNode,
-          nodeType: "Function",
-          uri,
-        };
-      }
-    } else if (
-      (nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "exposed_value" &&
-        nodeAtPosition.parent.parent &&
-        nodeAtPosition.parent.parent.parent &&
-        nodeAtPosition.parent.parent.parent.type === "module_declaration") ||
-      (nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "type_annotation")
-    ) {
-      const definitionNode = treeContainer.symbolLinks
-        ?.get(tree.rootNode)
-        ?.get(nodeAtPosition.text);
+      const definitionNode = rootSymbols?.get(nodeAtPosition.text);
 
       if (definitionNode && definitionNode.type === "Function") {
         return {
@@ -315,18 +288,12 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         };
       }
     } else if (
-      (nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "exposed_type" &&
-        nodeAtPosition.parent.parent &&
-        nodeAtPosition.parent.parent.parent &&
-        nodeAtPosition.parent.parent.parent.type === "module_declaration") ||
-      (nodeAtPosition.previousNamedSibling &&
-        (nodeAtPosition.previousNamedSibling.type === "type" ||
-          nodeAtPosition.previousNamedSibling.type === "alias"))
+      (nodeAtPosition.parent?.type === "exposed_type" &&
+        nodeAtPosition.parent.parent?.parent?.type === "module_declaration") ||
+      nodeAtPosition.previousNamedSibling?.type === "type" ||
+      nodeAtPosition.previousNamedSibling?.type === "alias"
     ) {
-      const definitionNode = treeContainer.symbolLinks
-        ?.get(treeContainer.tree.rootNode)
-        ?.get(nodeAtPosition.text);
+      const definitionNode = rootSymbols?.get(nodeAtPosition.text);
 
       if (definitionNode) {
         return {
@@ -341,10 +308,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       nodeAtPosition.parent.parent?.parent?.type === "import_clause"
     ) {
       return findImport(treeContainer, nodeAtPosition.text);
-    } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "union_variant"
-    ) {
+    } else if (nodeAtPosition.parent?.type === "union_variant") {
       const definitionNode = nodeAtPosition.parent;
       return {
         node: definitionNode,
@@ -366,15 +330,13 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         upperCaseQid.parent?.type === "exposed_type";
       const isConstructorUsage = upperCaseQid.parent?.type === "value_expr";
 
-      const definitionNode = treeContainer.symbolLinks
-        ?.get(treeContainer.tree.rootNode)
-        ?.get(upperCaseQid.text, (symbol) =>
-          isTypeUsage
-            ? symbol.type === "Type" || symbol.type === "TypeAlias"
-            : isConstructorUsage
-            ? symbol.type === "UnionConstructor" || symbol.type === "TypeAlias"
-            : symbol.type === "UnionConstructor",
-        );
+      const definitionNode = rootSymbols?.get(upperCaseQid.text, (symbol) =>
+        isTypeUsage
+          ? symbol.type === "Type" || symbol.type === "TypeAlias"
+          : isConstructorUsage
+          ? symbol.type === "UnionConstructor" || symbol.type === "TypeAlias"
+          : symbol.type === "UnionConstructor",
+      );
 
       if (definitionNode) {
         return {
@@ -456,10 +418,9 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       const type = findType(nodeAtPosition.parent.parent, uri);
       return TreeUtils.findFieldReference(type, nodeAtPosition.text);
     } else if (
-      nodeAtPosition.parent &&
-      (nodeAtPosition.parent.type === "value_qid" ||
-        nodeAtPosition.parent.type === "lower_pattern" ||
-        nodeAtPosition.parent.type === "record_base_identifier")
+      nodeAtPosition.parent?.type === "value_qid" ||
+      nodeAtPosition.parent?.type === "lower_pattern" ||
+      nodeAtPosition.parent?.type === "record_base_identifier"
     ) {
       let nodeAtPositionText = nodeAtPosition.text;
       if (nodeAtPosition.parent.type === "value_qid") {
@@ -467,14 +428,22 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       }
 
       // Traverse the parents and find a binding
+      // For operator functions, there are two bindings:
+      // The infix declaration and the function
+      // Never resolve to the infix declaration
       const localBinding = new Sequence(
         nodeAtPosition,
         (node) => node.parent ?? undefined,
       )
         .map((node) =>
-          treeContainer.symbolLinks?.get(node)?.get(nodeAtPositionText),
+          treeContainer.symbolLinks
+            ?.get(node)
+            ?.get(
+              nodeAtPositionText,
+              (s) => s.node.type !== "infix_declaration",
+            ),
         )
-        .find((binding) => !!binding);
+        .find(Utils.notUndefined.bind(findDefinition));
 
       if (localBinding) {
         return {
