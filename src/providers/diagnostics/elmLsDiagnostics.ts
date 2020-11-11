@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
+import { container } from "tsyringe";
 import {
   CodeAction,
   CodeActionKind,
@@ -9,18 +10,17 @@ import {
   Range,
   TextEdit,
 } from "vscode-languageserver";
-import { Language, Parser, SyntaxNode, Tree } from "web-tree-sitter";
-import { PositionUtil } from "../../positionUtil";
-import { container } from "tsyringe";
-import { Utils } from "../../util/utils";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
-import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { URI } from "vscode-uri";
-import { TreeUtils } from "../../util/treeUtils";
+import { Language, Parser, SyntaxNode, Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../../elmWorkspace";
+import { PositionUtil } from "../../positionUtil";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
+import { RefactorEditUtils } from "../../util/refactorEditUtils";
+import { TreeUtils } from "../../util/treeUtils";
 import { findType } from "../../util/types/typeInference";
+import { Utils } from "../../util/utils";
 
-export class ElmDiagnostics {
+export class ElmLsDiagnostics {
   ELMLS = "ElmLS";
 
   private language: Language;
@@ -178,7 +178,7 @@ export class ElmDiagnostics {
     const moduleImports = this.language
       .query(
         `
-        (import_clause 
+        (import_clause
           (upper_case_qid) @moduleName
         )
         `,
@@ -241,12 +241,12 @@ export class ElmDiagnostics {
     const exposedValuesAndTypes = this.language
       .query(
         `
-        (import_clause 
+        (import_clause
           (exposing_list
             (exposed_value) @exposedValue
           )
         )
-        (import_clause 
+        (import_clause
           (exposing_list
             (exposed_type) @exposedType
           )
@@ -267,7 +267,7 @@ export class ElmDiagnostics {
           ((value_expr) @value.reference
             (#eq? @value.reference "${exposedValueOrType.text}")
           )
-          ((type_ref 
+          ((type_ref
             (upper_case_qid) @type.reference)
             (#eq? @type.reference "${exposedValueOrType.text}")
           )
@@ -299,7 +299,7 @@ export class ElmDiagnostics {
     const moduleAliases = this.language
       .query(
         `
-        (import_clause 
+        (import_clause
           (as_clause
             (upper_case_identifier) @moduleAlias
           )
@@ -437,7 +437,7 @@ export class ElmDiagnostics {
               (module_declaration
                 (exposing_list
                   (double_dot)
-                ) @exposingAll 
+                ) @exposingAll
               )
             )
             `,
@@ -501,7 +501,7 @@ export class ElmDiagnostics {
       .query(
         `
         (
-          (case_of_branch 
+          (case_of_branch
             (pattern) @casePattern
             (value_expr) @caseValue
           ) @caseBranch
@@ -789,7 +789,7 @@ export class ElmDiagnostics {
         (module_declaration
           (port)
         ) @portModule
-        
+
         (port_annotation) @portAnnotation
         `,
       )
@@ -850,7 +850,7 @@ export class ElmDiagnostics {
       .query(
         `
         (type_alias_declaration
-          (upper_case_identifier) @typeAlias  
+          (upper_case_identifier) @typeAlias
         )
         `,
       )
@@ -869,7 +869,7 @@ export class ElmDiagnostics {
             ] @value.reference
             (#eq? @value.reference "${typeAlias.text}")
           )
-          ((type_ref 
+          ((type_ref
             (upper_case_qid) @type.reference)
             (#eq? @type.reference "${typeAlias.text}")
           )
@@ -903,7 +903,7 @@ export class ElmDiagnostics {
           (upper_case_identifier) @typeName
           (union_variant
             (upper_case_identifier) @unionVariant
-          ) 
+          )
         )
         `,
       )
@@ -923,7 +923,7 @@ export class ElmDiagnostics {
             (value_expr) @value.reference
             (#eq? @value.reference "${unionVariant.text}")
           )
-          ((type_ref 
+          ((type_ref
             (upper_case_qid) @type.reference)
             (#eq? @type.reference "${unionVariant.text}")
           )

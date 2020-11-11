@@ -22,14 +22,14 @@ import {
   ElmAnalyseDiagnostics,
   ElmMakeDiagnostics,
   FoldingRangeProvider,
-  TypeInferenceDiagnostics,
   HoverProvider,
   ReferencesProvider,
   RenameProvider,
   SelectionRangeProvider,
+  TypeInferenceDiagnostics,
   WorkspaceSymbolProvider,
 } from "./providers";
-import { ElmDiagnostics } from "./providers/diagnostics/elmDiagnostics";
+import { ElmLsDiagnostics } from "./providers/diagnostics/elmLsDiagnostics";
 import { Settings } from "./util/settings";
 
 export interface ILanguageServer {
@@ -136,8 +136,8 @@ export class Server implements ILanguageServer {
       useValue: new TypeInferenceDiagnostics(),
     });
 
-    container.register(ElmDiagnostics, {
-      useValue: new ElmDiagnostics(),
+    container.register(ElmLsDiagnostics, {
+      useValue: new ElmLsDiagnostics(),
     });
 
     const clientSettings = await settings.getClientSettings();
