@@ -71,52 +71,51 @@ export class DiagnosticsProvider {
 
     this.currentDiagnostics = new Map<string, FileDiagnostics>();
     // register onChange listener if settings are not on-save only
-    void this.settings.getClientSettings().then(({ elmAnalyseTrigger }) => {
-      this.events.on("open", (d) =>
-        this.getDiagnostics(d, true, elmAnalyseTrigger),
-      );
-      this.events.on("save", (d) =>
-        this.getDiagnostics(d, true, elmAnalyseTrigger),
-      );
-      this.connection.onDidChangeWatchedFiles((event) => {
-        const newDeleteEvents = event.changes
-          .filter((a) => a.type === FileChangeType.Deleted)
-          .map((a) => a.uri);
-        newDeleteEvents.forEach((uri) => {
-          this.deleteDiagnostics(uri);
-        });
+
+    const elmAnalyseTrigger = this.clientSettings.elmAnalyseTrigger;
+    this.events.on(
+      "open",
+      (d) => void this.getDiagnostics(d, true, elmAnalyseTrigger),
+    );
+    this.events.on(
+      "save",
+      (d) => void this.getDiagnostics(d, true, elmAnalyseTrigger),
+    );
+    this.connection.onDidChangeWatchedFiles((event) => {
+      const newDeleteEvents = event.changes
+        .filter((a) => a.type === FileChangeType.Deleted)
+        .map((a) => a.uri);
+      newDeleteEvents.forEach((uri) => {
+        this.deleteDiagnostics(uri);
       });
-      if (this.elmAnalyseDiagnostics) {
-        this.elmAnalyseDiagnostics.on(
-          "new-diagnostics",
-          this.newElmAnalyseDiagnostics.bind(this),
+    });
+    if (this.elmAnalyseDiagnostics) {
+      this.elmAnalyseDiagnostics.on(
+        "new-diagnostics",
+        this.newElmAnalyseDiagnostics.bind(this),
+      );
+    }
+    if (elmAnalyseTrigger === "change") {
+      this.events.on(
+        "change",
+        (d) => void this.getDiagnostics(d, false, elmAnalyseTrigger),
+      );
+    }
+
+    this.connection.onDidChangeConfiguration((params) => {
+      this.clientSettings = <IClientSettings>params.settings;
+
+      if (this.clientSettings.disableElmLSDiagnostics) {
+        this.currentDiagnostics.forEach((_, uri) =>
+          this.updateDiagnostics(uri, DiagnosticKind.ElmLS, []),
         );
-      }
-      if (elmAnalyseTrigger === "change") {
-        this.events.on("change", (d) =>
-          this.getDiagnostics(d, false, elmAnalyseTrigger),
-        );
-      }
-
-      this.workspaces.forEach((workspace) => {
-        workspace.getForest().treeIndex.forEach((treeContainer) => {
-          if (treeContainer.writeable) {
-            const treeDiagnostics = this.typeInferenceDiagnostics.createDiagnostics(
-              treeContainer.tree,
-              treeContainer.uri,
-              workspace,
-            );
-
-            this.updateDiagnostics(
-              treeContainer.uri,
-              DiagnosticKind.TypeInference,
-              treeDiagnostics,
-            );
-
-            if (!this.clientSettings.disableElmLSDiagnostics) {
+      } else {
+        this.workspaces.forEach((workspace) => {
+          workspace.getForest().treeIndex.forEach((treeContainer) => {
+            if (treeContainer.writeable) {
               this.updateDiagnostics(
                 treeContainer.uri,
-                DiagnosticKind.Elm,
+                DiagnosticKind.ElmLS,
                 this.elmDiagnostics.createDiagnostics(
                   treeContainer.tree,
                   treeContainer.uri,
@@ -124,8 +123,38 @@ export class DiagnosticsProvider {
                 ),
               );
             }
-          }
+          });
         });
+      }
+    });
+
+    this.workspaces.forEach((workspace) => {
+      workspace.getForest().treeIndex.forEach((treeContainer) => {
+        if (treeContainer.writeable) {
+          const treeDiagnostics = this.typeInferenceDiagnostics.createDiagnostics(
+            treeContainer.tree,
+            treeContainer.uri,
+            workspace,
+          );
+
+          this.updateDiagnostics(
+            treeContainer.uri,
+            DiagnosticKind.TypeInference,
+            treeDiagnostics,
+          );
+
+          if (!this.clientSettings.disableElmLSDiagnostics) {
+            this.updateDiagnostics(
+              treeContainer.uri,
+              DiagnosticKind.ElmLS,
+              this.elmDiagnostics.createDiagnostics(
+                treeContainer.tree,
+                treeContainer.uri,
+                workspace,
+              ),
+            );
+          }
+        }
       });
 
       astProvider.onTreeChange(({ uri, tree }) => {
@@ -150,7 +179,7 @@ export class DiagnosticsProvider {
         if (!this.clientSettings.disableElmLSDiagnostics) {
           this.updateDiagnostics(
             uri,
-            DiagnosticKind.Elm,
+            DiagnosticKind.ElmLS,
             this.elmDiagnostics.createDiagnostics(tree, uri, workspace),
           );
         }
