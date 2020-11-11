@@ -124,7 +124,7 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
     node.descendantsOfType("lower_pattern").forEach((lowerPattern) => {
       container.set(lowerPattern.text, {
         node: lowerPattern,
-        type: "Function", // This isn't a good type
+        type: "FunctionParameter",
       });
     });
   }

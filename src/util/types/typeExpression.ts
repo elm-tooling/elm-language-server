@@ -492,7 +492,8 @@ export class TypeExpression {
     );
 
     return TUnion(
-      this.workspace.getForest().getByUri(this.uri)?.moduleName ?? "",
+      this.workspace.getForest().getByUri(typeDeclaration.tree.uri)
+        ?.moduleName ?? "",
       typeDeclaration.name,
       params,
     );
