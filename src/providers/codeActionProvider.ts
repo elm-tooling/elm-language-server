@@ -53,9 +53,9 @@ export class CodeActionProvider {
     this.connection.onCodeAction(
       new ElmWorkspaceMatcher((param: CodeActionParams) =>
         URI.parse(param.textDocument.uri),
-      ).handlerForWorkspace(this.onCodeAction),
+      ).handlerForWorkspace(this.onCodeAction.bind(this)),
     );
-    this.connection.onExecuteCommand(this.onExecuteCommand);
+    this.connection.onExecuteCommand(this.onExecuteCommand.bind(this));
 
     if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
       new MoveRefactoringHandler();

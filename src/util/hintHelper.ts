@@ -81,7 +81,8 @@ export class HintHelper {
               "upper_case_identifier",
               declaration.parent,
             )?.text;
-            comment = `A variant on the union type \`${typeName}\`` || "";
+            comment =
+              `A variant on the union type \`${typeName ?? "unknown"}\`` || "";
           }
         } else {
           declaration = declaration.parent ? declaration.parent : declaration;

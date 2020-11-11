@@ -502,9 +502,11 @@ export class TreeUtils {
             ret =
               pattern
                 .descendantsOfType("lower_pattern")
-                .find((a) => functionName === a.text)?.firstNamedChild ??
-              undefined;
-            break;
+                .find((a) => functionName === a.text) ?? undefined;
+
+            if (ret) {
+              break;
+            }
           }
         }
       }
@@ -689,8 +691,16 @@ export class TreeUtils {
       tree,
       nodeAtPosition.text,
     );
-    if (definitionNode) {
-      return { node: definitionNode, nodeType: "TypeAlias" };
+
+    if (definitionNode && nodeAtPosition.parent?.type !== "union_pattern") {
+      const isRecordAlias =
+        TreeUtils.findFirstNamedChildOfType("type_expression", definitionNode)
+          ?.firstNamedChild?.type === "record_type";
+
+      // Check for record constructor usage
+      if (nodeAtPosition.parent?.type !== "value_expr" || isRecordAlias) {
+        return { node: definitionNode, nodeType: "TypeAlias" };
+      }
     }
     if (
       TreeUtils.findParentOfType("type_ref", nodeAtPosition) ||
@@ -722,9 +732,12 @@ export class TreeUtils {
       elmWorkspace,
     );
 
-    if (definition?.node.parent?.type === "lower_pattern") {
+    if (
+      definition?.node.type === "lower_pattern" &&
+      definition.node.firstNamedChild
+    ) {
       const innerDefinition = this.findDefinitionNodeByReferencingNodeShallow(
-        definition.node,
+        definition.node.firstNamedChild,
         uri,
         tree,
         elmWorkspace,
@@ -1406,7 +1419,7 @@ export class TreeUtils {
           const match = this.descendantsOfType(
             node.parent.firstChild,
             "lower_pattern",
-          ).find((a) => a.text === functionParameterName)?.firstNamedChild;
+          ).find((a) => a.text === functionParameterName);
           if (match) {
             return match;
           } else {
@@ -1455,8 +1468,8 @@ export class TreeUtils {
         const match = node.parent.firstChild
           .descendantsOfType("lower_pattern")
           .find((a) => a.text === caseParameterName);
-        if (match && match.firstNamedChild) {
-          return match.firstNamedChild;
+        if (match) {
+          return match;
         } else {
           return this.findCaseOfParameterDefinition(
             node.parent,
@@ -1867,9 +1880,12 @@ export class TreeUtils {
             .getTree(definitionNode.uri);
 
           let aliasNode;
-          if (definitionNode.nodeType === "FunctionParameter") {
+          if (
+            definitionNode.nodeType === "FunctionParameter" &&
+            definitionNode.node.firstNamedChild
+          ) {
             aliasNode = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
-              definitionNode.node,
+              definitionNode.node.firstNamedChild,
             );
           } else if (definitionNode.nodeType === "Function") {
             aliasNode = TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
@@ -2060,7 +2076,7 @@ export class TreeUtils {
   public static findParentOfType(
     typeToLookFor: string,
     node: SyntaxNode,
-    topLevel?: boolean,
+    topLevel = false,
   ): SyntaxNode | undefined {
     if (
       node.type === typeToLookFor &&
@@ -2195,7 +2211,7 @@ export class TreeUtils {
             child.firstNamedChild?.text,
         ),
       )
-      .filter(Utils.notUndefined)
+      .filter(Utils.notUndefined.bind(this))
       .map((node: SyntaxNode) => {
         return { node, text: node.firstNamedChild?.text };
       })

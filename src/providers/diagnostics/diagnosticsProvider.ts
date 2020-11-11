@@ -157,6 +157,8 @@ export class DiagnosticsProvider {
   private newElmAnalyseDiagnostics(
     diagnostics: Map<string, Diagnostic[]>,
   ): void {
+    this.resetDiagnostics(diagnostics, DiagnosticKind.ElmAnalyse);
+
     diagnostics.forEach((diagnostics, uri) => {
       this.updateDiagnostics(uri, DiagnosticKind.ElmAnalyse, diagnostics);
     });
@@ -215,17 +217,6 @@ export class DiagnosticsProvider {
     );
 
     const uri = URI.parse(document.uri);
-    let workspace;
-    try {
-      workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(document);
-    } catch (error) {
-      if (error instanceof NoWorkspaceContainsError) {
-        this.connection.console.info(error.message);
-        return; // ignore file that doesn't correspond to a workspace
-      }
-
-      throw error;
-    }
 
     const text = document.getText();
 
@@ -233,6 +224,8 @@ export class DiagnosticsProvider {
       const elmMakeDiagnostics = await this.elmMakeDiagnostics.createDiagnostics(
         uri,
       );
+
+      this.resetDiagnostics(elmMakeDiagnostics, DiagnosticKind.ElmMake);
 
       elmMakeDiagnostics.forEach((diagnostics, diagnosticsUri) => {
         this.updateDiagnostics(
@@ -257,5 +250,19 @@ export class DiagnosticsProvider {
     ) {
       await this.elmAnalyseDiagnostics.updateFile(uri, text);
     }
+  }
+
+  private resetDiagnostics(
+    diagnosticList: Map<string, Diagnostic[]>,
+    diagnosticKind: DiagnosticKind,
+  ): void {
+    this.currentDiagnostics.forEach((fileDiagnostics, diagnosticsUri) => {
+      if (
+        !diagnosticList.has(diagnosticsUri) &&
+        fileDiagnostics.getForKind(diagnosticKind).length > 0
+      ) {
+        diagnosticList.set(diagnosticsUri, []);
+      }
+    });
   }
 }

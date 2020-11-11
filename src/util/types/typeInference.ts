@@ -171,21 +171,31 @@ export const TMutableRecord = (
   };
 };
 
+function mutableRecordAsRecord(mutableRecord: TMutableRecord): TRecord {
+  return {
+    nodeType: "Record",
+    fields: mutableRecord.fields,
+    baseType: mutableRecord.baseType,
+    fieldReferences: mutableRecord.fieldReferences,
+  };
+}
+
 export const TUnknown: TUnknown = {
   nodeType: "Unknown",
 };
 
-const TInt = TUnion("Basics", "Int", []);
-const TFloat = TUnion("Basics", "Float", []);
-const TBool = TUnion("Basics", "Bool", []);
-const TString = TUnion("String", "String", []);
-const TChar = TUnion("Char", "Char", []);
-const TShader = TUnion("WebGL", "Shader", [TUnknown, TUnknown, TUnknown]);
+const TInt = (): TUnion => TUnion("Basics", "Int", []);
+const TFloat = (): TUnion => TUnion("Basics", "Float", []);
+const TBool = (): TUnion => TUnion("Basics", "Bool", []);
+const TString = (): TUnion => TUnion("String", "String", []);
+const TChar = (): TUnion => TUnion("Char", "Char", []);
+const TShader = (): TUnion =>
+  TUnion("WebGL", "Shader", [TUnknown, TUnknown, TUnknown]);
 
 export const TList = (elementType: Type): TUnion =>
   TUnion("List", "List", [elementType]);
 
-const TNumber = TVar("number");
+const TNumber = (): TVar => TVar("number");
 
 export const TUnit: TUnit = {
   nodeType: "Unit",
@@ -198,15 +208,15 @@ export const TInProgressBinding: TInProgressBinding = {
 const typeIsList = (t: TUnion): boolean =>
   t.module === "List" && t.name === "List";
 const typeIsInt = (t: TUnion): boolean =>
-  t.module === TInt.module && t.name === TInt.name;
+  t.module === TInt().module && t.name === TInt().name;
 const typeIsFloat = (t: TUnion): boolean =>
-  t.module === TFloat.module && t.name === TFloat.name;
+  t.module === TFloat().module && t.name === TFloat().name;
 const typeIsBool = (t: TUnion): boolean =>
-  t.module === TBool.module && t.name === TBool.name;
+  t.module === TBool().module && t.name === TBool().name;
 const typeIsString = (t: TUnion): boolean =>
-  t.module === TString.module && t.name === TString.name;
+  t.module === TString().module && t.name === TString().name;
 const typeIsChar = (t: TUnion): boolean =>
-  t.module === TChar.module && t.name === TChar.name;
+  t.module === TChar().module && t.name === TChar().name;
 
 function allTypeVars(type: Type): TVar[] {
   switch (type.nodeType) {
@@ -248,6 +258,9 @@ function anyTypeVar(type: Type, predicate: (tvar: TVar) => boolean): boolean {
     case "Var":
       result = predicate(type);
       break;
+    case "Tuple":
+      result = type.types.some((param) => anyTypeVar(param, predicate));
+      break;
     case "Union":
       result = type.params.some((param) => anyTypeVar(param, predicate));
       break;
@@ -263,7 +276,9 @@ function anyTypeVar(type: Type, predicate: (tvar: TVar) => boolean): boolean {
           anyTypeVar(field, predicate),
         ) || (type.baseType ? anyTypeVar(type.baseType, predicate) : false);
       break;
+    case "Unit":
     case "Unknown":
+    case "InProgressBinding":
       result = false;
       break;
   }
@@ -565,7 +580,10 @@ export class InferenceScope {
   > = new SyntaxNodeMap();
   private diagnostics: Diagnostic[] = [];
 
-  private bindings: Map<string, Type> = new Map<string, Type>();
+  private bindings: SyntaxNodeMap<SyntaxNode, Type> = new SyntaxNodeMap<
+    SyntaxNode,
+    Type
+  >();
   private replacements: DisjointSet;
 
   private annotationVars: TVar[] = [];
@@ -603,7 +621,7 @@ export class InferenceScope {
 
   private getBinding(e: Expression): Type | undefined {
     return this.ancestors
-      .map((a) => a.bindings.get(e.text))
+      .map((a) => a.bindings.get(e))
       .find(Utils.notUndefined.bind(this));
   }
 
@@ -621,8 +639,8 @@ export class InferenceScope {
         uri,
         elmWorkspace,
         shadowableNames,
-        activeScopes,
-        false,
+        new Set(activeScopes.values()),
+        /* recursionAllowed */ false,
       ).inferDeclaration(declaration, true);
 
     if (!elmWorkspace.getForest().getByUri(uri)?.writeable) {
@@ -758,7 +776,7 @@ export class InferenceScope {
         type = this.inferCase(e);
         break;
       case "CharConstantExpr":
-        type = TChar;
+        type = TChar();
         break;
       case "FieldAccessExpr":
         type = this.inferFieldAccess(e);
@@ -770,7 +788,7 @@ export class InferenceScope {
         type = this.inferFunctionCallExpr(e);
         break;
       case "GlslCodeExpr":
-        type = TShader;
+        type = TShader();
         break;
       case "IfElseExpr":
         type = this.inferIfElse(e);
@@ -785,7 +803,7 @@ export class InferenceScope {
         type = this.inferNegateExpr(e);
         break;
       case "NumberConstant":
-        type = e.isFloat ? TFloat : TNumber;
+        type = e.isFloat ? TFloat() : TNumber();
         break;
       case "OperatorAsFunctionExpr":
         type = this.inferOperatorAsFunctionExpr(e);
@@ -794,7 +812,7 @@ export class InferenceScope {
         type = this.inferRecord(e);
         break;
       case "StringConstant":
-        type = TString;
+        type = TString();
         break;
       case "TupleExpr":
         type = TTuple(e.exprList.map((expr) => this.infer(expr)));
@@ -873,7 +891,7 @@ export class InferenceScope {
       new InferenceScope(
         this.uri,
         this.elmWorkspace,
-        this.nonShadowableNames,
+        new Set(this.nonShadowableNames.values()),
         activeScopes,
         recursionAllowed,
         this,
@@ -956,7 +974,7 @@ export class InferenceScope {
 
     // Check all conditions are type Bool
     for (let i = 0; i < exprList.length - 1; i += 2) {
-      this.isAssignable(exprList[i], exprTypes[i], TBool);
+      this.isAssignable(exprList[i], exprTypes[i], TBool());
     }
 
     // Check that all branches match the first one
@@ -1159,7 +1177,6 @@ export class InferenceScope {
     }
 
     if (targetType.nodeType === "Unknown") {
-      this.diagnostics.push(missingFunctionError(e.target));
       const type = TFunction(argTypes, TVar("a"));
 
       if (this.isAssignable(e.target, targetType, type)) {
@@ -1376,7 +1393,7 @@ export class InferenceScope {
 
   private inferNegateExpr(negateExpr: ENegateExpr): Type {
     const exprType = this.infer(negateExpr.expression);
-    if (this.isAssignable(negateExpr.expression, exprType, TVar("number"))) {
+    if (this.isAssignable(negateExpr.expression, exprType, TNumber())) {
       return exprType;
     } else {
       return TUnknown;
@@ -1597,7 +1614,7 @@ export class InferenceScope {
 
     this.nonShadowableNames.add(exprName);
 
-    this.bindings.set(expr.text, type);
+    this.bindings.set(expr, type);
     this.expressionTypes.set(expr, type);
   }
 
@@ -1693,7 +1710,7 @@ export class InferenceScope {
     // so we can use them before we know the type
     const declaredNames = pattern.descendantsOfType("lower_pattern");
     declaredNames.forEach((name) =>
-      this.bindings.set(name.text, TInProgressBinding),
+      this.bindings.set(name, TInProgressBinding),
     );
 
     const bodyType: Type = valueDeclaration.body
@@ -1854,7 +1871,13 @@ export class InferenceScope {
           );
         } else {
           unionPattern.argPatterns.forEach((p, i) => {
-            this.bindPattern(p, variantType.params[i], isParameter);
+            // The other type is a nullary constructor argument pattern, which doesn't bind anything
+            if (
+              p.type.includes("pattern") &&
+              p.nodeType !== "NullaryConstructorArgumentPattern"
+            ) {
+              this.bindPattern(p, variantType.params[i], isParameter);
+            }
           });
         }
       } else {
@@ -1878,7 +1901,7 @@ export class InferenceScope {
   }
 
   private bindListPattern(listPattern: EListPattern, type: Type): void {
-    this.bindListPatternParts(listPattern, listPattern.parts, type, true);
+    this.bindListPatternParts(listPattern, listPattern.parts, type, false);
   }
 
   private bindListPatternParts(
@@ -2000,7 +2023,7 @@ export class InferenceScope {
       this.diagnostics.push({
         node: expr,
         endNode: endExpr ?? expr,
-        message: e,
+        message: e.message,
       });
       return false;
     }
@@ -2050,14 +2073,14 @@ export class InferenceScope {
       ty1 === ty2 || ty1?.nodeType === "Unknown" || ty2?.nodeType === "Unknown";
 
     if (!result) {
-      if (ty1 && ty2 && ty1.nodeType !== "Var" && ty2.nodeType === "Var") {
+      if (ty1?.nodeType !== "Var" && ty2?.nodeType === "Var") {
         result = this.nonVarAssignableToVar(ty1, ty2);
       } else {
         switch (ty1?.nodeType) {
           case "Var":
             if (ty2?.nodeType === "Var") {
               result = this.varsAssignable(ty1, ty2);
-            } else if (ty2) {
+            } else {
               result = this.nonVarAssignableToVar(ty2, ty1);
             }
             break;
@@ -2100,7 +2123,10 @@ export class InferenceScope {
                 (ty2?.nodeType === "Record" &&
                   this.mutableRecordAssignable(ty1, ty2)) ||
                 (ty2?.nodeType === "MutableRecord" &&
-                  this.mutableRecordAssignable(ty1, ty2));
+                  this.mutableRecordAssignable(
+                    ty1,
+                    mutableRecordAsRecord(ty2),
+                  ));
             }
             break;
           case "Unit":
@@ -2117,7 +2143,7 @@ export class InferenceScope {
       }
     }
 
-    if (result && ty1 && ty2) {
+    if (ty1 && ty2 && result) {
       this.trackReplacement(ty1, ty2);
     }
     return result;
@@ -2125,9 +2151,9 @@ export class InferenceScope {
 
   private mutableRecordAssignable(
     type1: TMutableRecord,
-    type2: TRecord | TMutableRecord,
+    type2: TRecord,
   ): boolean {
-    if (!this.recordAssignable(type1, type2)) {
+    if (!this.recordAssignable(mutableRecordAsRecord(type1), type2)) {
       return false;
     }
 
@@ -2135,10 +2161,7 @@ export class InferenceScope {
     return true;
   }
 
-  private recordAssignable(
-    type1: TRecord | TMutableRecord,
-    type2: TRecord | TMutableRecord,
-  ): boolean {
+  private recordAssignable(type1: TRecord, type2: TRecord): boolean {
     const result = this.calculateRecordDiff(type1, type2).isEmpty;
     if (result) {
       if (!type1.baseType && type2.baseType?.nodeType === "Var") {
@@ -2256,23 +2279,26 @@ export class InferenceScope {
     }
   }
 
-  private nonVarAssignableToVar(type: Type, typeVar: TVar): boolean {
+  private nonVarAssignableToVar(
+    type: Type | undefined,
+    typeVar: TVar,
+  ): boolean {
     const allAssignableTo = (types: Type[], typeClass: string): boolean => {
       return types.every((t) => this.assignable(t, TVar(typeClass)));
     };
 
     if (typeVar.name.startsWith("number")) {
       return (
-        type.nodeType === "Union" && (typeIsFloat(type) || typeIsInt(type))
+        type?.nodeType === "Union" && (typeIsFloat(type) || typeIsInt(type))
       );
     } else if (typeVar.name.startsWith("appendable")) {
       return (
-        type.nodeType === "Union" && (typeIsString(type) || typeIsList(type))
+        type?.nodeType === "Union" && (typeIsString(type) || typeIsList(type))
       );
     } else if (typeVar.name.startsWith("comparable")) {
-      if (type.nodeType === "Tuple") {
+      if (type?.nodeType === "Tuple") {
         return allAssignableTo(type.types, "comparable");
-      } else if (type.nodeType === "Union") {
+      } else if (type?.nodeType === "Union") {
         return (
           typeIsFloat(type) ||
           typeIsInt(type) ||
@@ -2287,7 +2313,7 @@ export class InferenceScope {
       }
     } else if (typeVar.name.startsWith("compappend")) {
       return (
-        type.nodeType === "Union" &&
+        type?.nodeType === "Union" &&
         (typeIsString(type) ||
           (typeIsList(type) &&
             (allAssignableTo(type.params, "comparable") ||
@@ -2405,8 +2431,14 @@ export class InferenceScope {
       type2.nodeType !== "Var" &&
       !this.replacements.contains(type1)
     ) {
-      // TODO: Handle extension records
-      assign(type1, type2);
+      if (type2.nodeType === "Record" && type2.baseType) {
+        assign(
+          type1,
+          TMutableRecord(Object.assign({}, type2.fields), type2.baseType),
+        );
+      } else {
+        assign(type1, type2);
+      }
     }
   }
 

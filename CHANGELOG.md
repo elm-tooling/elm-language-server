@@ -1,5 +1,22 @@
 # Change Log
 
+## 1.13.2
+
+- Fix bug on file open
+- Fix some type inference bugs
+- Reset diagnostics for elmMake and elmAnalyze
+
+## 1.13.1
+
+- Fixed some type inference bugs
+
+## 1.13.0
+
+- Debounce sending diagnostics to the client
+- Support finding field references and renaming
+- Tree sitter parser improvements
+- Handle negate expressions in type inference
+
 ## 1.12.2
 
 - Fixed problem with communication for clients like VIM
