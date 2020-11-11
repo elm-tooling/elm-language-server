@@ -303,15 +303,14 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       (nodeAtPosition.parent &&
         nodeAtPosition.parent.type === "type_annotation")
     ) {
-      const definitionNode = TreeUtils.findFunction(
-        tree.rootNode,
-        nodeAtPosition.text,
-      );
+      const definitionNode = treeContainer.symbolLinks
+        ?.get(tree.rootNode)
+        ?.get(nodeAtPosition.text);
 
-      if (definitionNode) {
+      if (definitionNode && definitionNode.type === "Function") {
         return {
-          node: definitionNode,
-          nodeType: "Function",
+          node: definitionNode.node,
+          nodeType: definitionNode.type,
           uri,
         };
       }
@@ -376,13 +375,6 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
             ? symbol.type === "UnionConstructor" || symbol.type === "TypeAlias"
             : symbol.type === "UnionConstructor",
         );
-
-      // if (
-      //   nodeAtPosition.parent?.parent?.parent?.type === "pattern" &&
-      //   definitionNode?.type === "TypeAlias"
-      // ) {
-      //   return;
-      // }
 
       if (definitionNode) {
         return {

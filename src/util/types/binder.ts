@@ -2,7 +2,8 @@
 import { ITreeContainer } from "src/forest";
 import { SyntaxNode } from "web-tree-sitter";
 import { MultiMap } from "../multiMap";
-import { NodeType, TreeUtils } from "../treeUtils";
+import { IExposed, IExposing, NodeType, TreeUtils } from "../treeUtils";
+import { Utils } from "../utils";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 
 export type SymbolMap = MultiMap<string, ISymbol>;
@@ -10,6 +11,7 @@ function createSymbolMap(): SymbolMap {
   return new MultiMap<string, ISymbol>();
 }
 
+// TODO: Look at merging ISymbol and IExposed
 export interface ISymbol {
   node: SyntaxNode;
   type: NodeType;
@@ -26,8 +28,10 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
   const treeCursor = treeContainer.tree.walk();
 
   bind();
-
   treeContainer.symbolLinks = symbolLinks;
+
+  // Bind exposing must happen after symbolLinks is bound
+  bindExposing();
 
   function forEachChild(func: () => void): void {
     if (treeCursor.gotoFirstChild()) {
@@ -198,5 +202,183 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
           break;
       }
     });
+  }
+
+  function bindExposing(): void {
+    const tree = treeContainer.tree;
+    const exposed: IExposing = new Map<string, IExposed>();
+    const moduleDeclaration = TreeUtils.findModuleDeclaration(tree);
+    if (moduleDeclaration) {
+      const exposingList = moduleDeclaration.childForFieldName("exposing");
+      if (exposingList) {
+        const rootSymbols = symbolLinks.get(tree.rootNode);
+        if (exposingList.childForFieldName("doubleDot")) {
+          rootSymbols?.forEach((symbol) => {
+            switch (symbol.type) {
+              case "Function":
+                {
+                  if (symbol.node.firstNamedChild) {
+                    const functionName = symbol.node.firstNamedChild.text;
+                    exposed.set(functionName, {
+                      name: functionName,
+                      syntaxNode: symbol.node,
+                      type: "Function",
+                    });
+                  }
+                }
+                break;
+
+              case "TypeAlias":
+                {
+                  const name = symbol.node.childForFieldName("name");
+                  if (name) {
+                    exposed.set(name.text, {
+                      name: name.text,
+                      syntaxNode: symbol.node,
+                      type: "TypeAlias",
+                    });
+                  }
+                }
+                break;
+
+              case "Type":
+                {
+                  const unionConstructors =
+                    TreeUtils.findAllNamedChildrenOfType(
+                      "union_variant",
+                      symbol.node,
+                    )
+                      ?.map((variant) => {
+                        const name = variant.childForFieldName("name");
+                        if (name && name.parent) {
+                          return {
+                            name: name.text,
+                            syntaxNode: variant,
+                          };
+                        }
+                      })
+                      .filter(Utils.notUndefined.bind(bindExposing)) ?? [];
+
+                  const typeDeclarationName = symbol.node.childForFieldName(
+                    "name",
+                  );
+                  if (typeDeclarationName) {
+                    exposed.set(typeDeclarationName.text, {
+                      name: typeDeclarationName.text,
+                      syntaxNode: symbol.node,
+                      type: "Type",
+                      exposedUnionConstructors: unionConstructors,
+                    });
+                  }
+                }
+                break;
+
+              case "Port":
+                {
+                  const name = symbol.node.childForFieldName("name")?.text;
+                  if (name) {
+                    exposed.set(name, {
+                      name,
+                      syntaxNode: symbol.node,
+                      type: "Port",
+                    });
+                  }
+                }
+                break;
+            }
+          });
+        } else {
+          const exposedOperators = TreeUtils.descendantsOfType(
+            exposingList,
+            "operator_identifier",
+          );
+
+          for (const value of exposedOperators) {
+            const functionNode = TreeUtils.findOperator(tree, value.text);
+
+            if (functionNode) {
+              exposed.set(value.text, {
+                name: value.text,
+                syntaxNode: functionNode,
+                type: "Operator",
+                exposedUnionConstructors: undefined,
+              });
+            }
+          }
+
+          TreeUtils.descendantsOfType(exposingList, "exposed_value")
+            .map((a) => a.text)
+            .forEach((exposedValue) => {
+              const symbol = rootSymbols?.get(exposedValue);
+
+              if (symbol) {
+                exposed.set(exposedValue, {
+                  name: exposedValue,
+                  syntaxNode: symbol.node,
+                  type: symbol.type,
+                });
+              }
+            });
+
+          const exposedTypes = TreeUtils.descendantsOfType(
+            exposingList,
+            "exposed_type",
+          );
+          for (const value of exposedTypes) {
+            const doubleDot = TreeUtils.descendantsOfType(value, "double_dot");
+            if (doubleDot.length > 0) {
+              const name = TreeUtils.findFirstNamedChildOfType(
+                "upper_case_identifier",
+                value,
+              );
+
+              if (name) {
+                const typeDeclaration = rootSymbols?.get(
+                  name.text,
+                  (s) => s.type === "Type",
+                );
+                if (typeDeclaration) {
+                  const unionConstructors = TreeUtils.descendantsOfType(
+                    typeDeclaration.node,
+                    "union_variant",
+                  )
+                    .map((variant) => {
+                      const unionConstructorName = variant.childForFieldName(
+                        "name",
+                      );
+                      if (unionConstructorName && unionConstructorName.parent) {
+                        return {
+                          name: unionConstructorName.text,
+                          syntaxNode: variant,
+                        };
+                      }
+                    })
+                    .filter(Utils.notUndefined.bind(bindExposing));
+
+                  exposed.set(name.text, {
+                    name: name.text,
+                    syntaxNode: typeDeclaration.node,
+                    type: "Type",
+                    exposedUnionConstructors: unionConstructors,
+                  });
+                }
+              }
+            } else {
+              const typeNode = rootSymbols?.get(value.text);
+
+              if (typeNode) {
+                exposed.set(value.text, {
+                  name: value.text,
+                  syntaxNode: typeNode.node,
+                  type: typeNode.type,
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    treeContainer.exposing = exposed;
   }
 }

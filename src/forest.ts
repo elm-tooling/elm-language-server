@@ -19,8 +19,9 @@ export interface ITreeContainer {
   // These are resolved in the synchronize step and are cached until the file is changed
   moduleName?: string;
   resolvedModules?: Map<string, string>; // Map of modules to uris
-  exposing?: IExposing;
 
+  // Resolved during binding
+  exposing?: IExposing;
   symbolLinks?: SyntaxNodeMap<SyntaxNode, SymbolMap>;
 }
 
@@ -116,12 +117,6 @@ export class Forest implements IForest {
           treeContainer.moduleName = moduleName;
           this.addModuleToUriMap(moduleName, uri);
         }
-      }
-
-      if (!treeContainer.exposing) {
-        treeContainer.exposing = TreeUtils.getModuleExposing(
-          treeContainer.tree,
-        );
       }
     });
   }
