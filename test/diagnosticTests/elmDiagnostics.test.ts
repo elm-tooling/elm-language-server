@@ -12,7 +12,7 @@ import { baseUri } from "../utils/mockElmWorkspace";
 import { getSourceFiles } from "../utils/sourceParser";
 import { SourceTreeParser } from "../utils/sourceTreeParser";
 
-describe("ElmDiagnostics", () => {
+describe("ElmLSDiagnostics", () => {
   let elmDiagnostics: ElmDiagnostics;
   const treeParser = new SourceTreeParser();
 
@@ -60,7 +60,7 @@ describe("ElmDiagnostics", () => {
       return {
         code: "boolean_case_expr",
         message: "Use an if expression instead of a case expression.",
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
       };
@@ -127,7 +127,7 @@ foo x =
       return {
         code: "unused_top_level",
         message: `Unused top level definition \`${name}\``,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
@@ -300,7 +300,7 @@ getItemAtIndex index =
       return {
         code: "unused_import",
         message: `Unused import \`${name}\``,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
@@ -412,7 +412,7 @@ foo = 1
       return {
         code: "unused_alias",
         message: `Unused import alias \`${name}\``,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
@@ -514,7 +514,7 @@ type alias Thing = { name : B.Name }
       return {
         code: "unused_imported_value",
         message: `Unused imported ${type} \`${name}\``,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
@@ -693,7 +693,7 @@ x y =
       return {
         code: "unused_pattern",
         message: `Unused pattern variable \`${name}\``,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
@@ -867,7 +867,7 @@ x =
       return {
         code: "drop_cons_of_item_and_list",
         message: `If you cons an item to a literal list, then you can just put the item into the list.`,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
       };
@@ -908,7 +908,7 @@ foo =
       return {
         code: "map_nothing_to_nothing",
         message: `\`Nothing\` mapped to \`Nothing\` in case expression. Use Maybe.map or Maybe.andThen instead.`,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
       };
@@ -961,7 +961,7 @@ y = case x of
       return {
         code: "drop_concat_of_lists",
         message: `If you concatenate two lists, then you can merge them into one list.`,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
       };
@@ -1019,7 +1019,7 @@ foo =
       return {
         code: "use_cons_over_concat",
         message: `If you concatenate two lists, but the first item is a single element list, then you should use the cons operator.`,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
       };
@@ -1060,7 +1060,7 @@ foo =
       return {
         code: "single_field_record",
         message: `Using a record is obsolete if you only plan to store a single field in it.`,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
       };
@@ -1164,7 +1164,7 @@ type alias CheckboxParams a =
       return {
         code: "unnecessary_list_concat",
         message: `You should just merge the arguments of \`List.concat\` to a single list.`,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
       };
@@ -1230,7 +1230,7 @@ foo =
       return {
         code: "unnecessary_port_module",
         message: `Module is definined as a \`port\` module, but does not define any ports.`,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
       };
@@ -1279,7 +1279,7 @@ port foo : String -> Cmd msg
       return {
         code: "no_uncurried_prefix",
         message: `Don't use fully applied prefix notation for operators.`,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
       };
@@ -1319,7 +1319,7 @@ foo = (+) 1
       return {
         code: "unused_type_alias",
         message: `Type alias \`${name}\` is not used.`,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
@@ -1431,7 +1431,7 @@ foo = 1
       return {
         code: "unused_value_constructor",
         message: `Value constructor \`${name}\` is not used.`,
-        source: "Elm",
+        source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
