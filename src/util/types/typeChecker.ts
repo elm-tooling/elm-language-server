@@ -49,6 +49,10 @@ export interface TypeChecker {
   ) => string | undefined;
   typeToString: (t: Type, treeContainer?: ITreeContainer) => string;
   getDiagnostics: (treeContainer: ITreeContainer) => Diagnostic[];
+  findImportModuleNameNode: (
+    moduleNameOrAlias: string,
+    treeContainer: ITreeContainer,
+  ) => SyntaxNode | undefined;
 }
 
 export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
@@ -69,6 +73,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     getQualifierForName,
     typeToString,
     getDiagnostics,
+    findImportModuleNameNode,
   };
 
   return typeChecker;
@@ -359,7 +364,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
           endPos,
         );
         const moduleName =
-          TreeUtils.findImportNameNode(tree, moduleNameOrAlias)?.text ??
+          findImportModuleNameNode(moduleNameOrAlias, treeContainer)?.text ??
           moduleNameOrAlias;
 
         const definitionFromOtherFile = findImportOfType(
@@ -403,7 +408,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
       definitionFromOtherFile = findImportOfType(
         treeContainer,
-        TreeUtils.findImportNameNode(tree, upperCaseQid.text)?.text ??
+        findImportModuleNameNode(upperCaseQid.text, treeContainer)?.text ??
           upperCaseQid.text,
         "Module",
       );
@@ -461,7 +466,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
           endPos,
         );
         const moduleName =
-          TreeUtils.findImportNameNode(tree, moduleNameOrAlias)?.text ??
+          findImportModuleNameNode(moduleNameOrAlias, treeContainer)?.text ??
           moduleNameOrAlias;
 
         const moduleDefinitionFromOtherFile = findImportOfType(
@@ -583,7 +588,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
       return findImportOfType(
         treeContainer,
-        TreeUtils.findImportNameNode(tree, fullModuleName)?.text ??
+        findImportModuleNameNode(fullModuleName, treeContainer)?.text ??
           fullModuleName,
         "Module",
       );
@@ -667,10 +672,8 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       return "";
     }
 
-    const moduleImport = TreeUtils.findImportClauseByName(
-      treeContainer.tree,
-      module,
-    );
+    const moduleImport = findImportModuleNameNode(module, treeContainer)
+      ?.parent;
 
     if (!moduleImport) {
       return;
@@ -690,5 +693,20 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
   function typeToString(t: Type, treeContainer?: ITreeContainer): string {
     return new TypeRenderer(typeChecker, treeContainer).render(t);
+  }
+
+  /**
+   * Get the module name node if the name is an alias
+   */
+  function findImportModuleNameNode(
+    moduleNameOrAlias: string,
+    treeContainer: ITreeContainer,
+  ): SyntaxNode | undefined {
+    return (
+      treeContainer.symbolLinks
+        ?.get(treeContainer.tree.rootNode)
+        ?.get(moduleNameOrAlias, (s) => s.type === "Import")
+        ?.node.childForFieldName("moduleName") ?? undefined
+    );
   }
 }

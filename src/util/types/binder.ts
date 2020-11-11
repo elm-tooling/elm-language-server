@@ -78,6 +78,9 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
       case "pattern":
         bindPattern(node);
         break;
+      case "import_clause":
+        bindImportClause(node);
+        break;
       default:
         forEachChild(bind);
     }
@@ -214,6 +217,21 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
           break;
       }
     });
+  }
+
+  function bindImportClause(node: SyntaxNode): void {
+    const asClause = node.childForFieldName("asClause");
+
+    let name;
+    if (asClause) {
+      name = asClause.childForFieldName("name");
+    } else {
+      name = node.childForFieldName("moduleName");
+    }
+
+    if (name) {
+      container.set(name.text, { node, type: "Import" });
+    }
   }
 
   function bindExposing(): void {

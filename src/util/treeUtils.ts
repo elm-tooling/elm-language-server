@@ -17,7 +17,8 @@ export type NodeType =
   | "UnionConstructor"
   | "FieldType"
   | "TypeVariable"
-  | "Port";
+  | "Port"
+  | "Import";
 
 const functionNameRegex = new RegExp("[a-zA-Z0-9_]+");
 
@@ -445,6 +446,9 @@ export class TreeUtils {
     }
   }
 
+  /**
+   * @deprecated Should not use do to performance. Use bindings instead
+   */
   public static findImportClauseByName(
     tree: Tree,
     moduleName: string,
@@ -457,27 +461,6 @@ export class TreeUtils {
           a.children[1].type === "upper_case_qid" &&
           a.children[1].text === moduleName,
       );
-    }
-  }
-
-  public static findImportNameNode(
-    tree: Tree,
-    moduleName: string,
-  ): SyntaxNode | undefined {
-    const allImports = this.findAllImportClauseNodes(tree);
-    if (allImports) {
-      const match = allImports.find(
-        (a) =>
-          (a.children.length > 1 &&
-            a.children[1].type === "upper_case_qid" &&
-            a.children[1].text === moduleName) ||
-          (a.children.length > 2 &&
-            a.children[2].type === "as_clause" &&
-            a.children[2].lastNamedChild?.text === moduleName),
-      );
-      if (match) {
-        return match.children[1];
-      }
     }
   }
 
@@ -1005,6 +988,9 @@ export class TreeUtils {
     return declarations;
   }
 
+  /**
+   * @deprecated Should not use do to performance. Use bindings instead
+   */
   public static findAllImportClauseNodes(tree: Tree): SyntaxNode[] | undefined {
     const result = tree.rootNode.children.filter(
       (a) => a.type === "import_clause",

@@ -282,9 +282,9 @@ export class References {
                   const treeToCheck = forest.getByUri(uri);
 
                   if (treeToCheck && treeToCheck.writeable) {
-                    const importNameNode = TreeUtils.findImportNameNode(
-                      treeToCheck.tree,
+                    const importNameNode = checker.findImportModuleNameNode(
                       found.alias,
+                      treeToCheck,
                     );
                     if (importNameNode) {
                       references.push({ node: importNameNode, uri });
