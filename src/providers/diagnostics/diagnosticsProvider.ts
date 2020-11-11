@@ -113,15 +113,17 @@ export class DiagnosticsProvider {
               treeDiagnostics,
             );
 
-            this.updateDiagnostics(
-              treeContainer.uri,
-              DiagnosticKind.Elm,
-              this.elmDiagnostics.createDiagnostics(
-                treeContainer.tree,
+            if (!this.clientSettings.disableElmLSDiagnostics) {
+              this.updateDiagnostics(
                 treeContainer.uri,
-                workspace,
-              ),
-            );
+                DiagnosticKind.Elm,
+                this.elmDiagnostics.createDiagnostics(
+                  treeContainer.tree,
+                  treeContainer.uri,
+                  workspace,
+                ),
+              );
+            }
           }
         });
       });
@@ -145,11 +147,13 @@ export class DiagnosticsProvider {
           this.typeInferenceDiagnostics.createDiagnostics(tree, uri, workspace),
         );
 
-        this.updateDiagnostics(
-          uri,
-          DiagnosticKind.Elm,
-          this.elmDiagnostics.createDiagnostics(tree, uri, workspace),
-        );
+        if (!this.clientSettings.disableElmLSDiagnostics) {
+          this.updateDiagnostics(
+            uri,
+            DiagnosticKind.Elm,
+            this.elmDiagnostics.createDiagnostics(tree, uri, workspace),
+          );
+        }
       });
     });
   }
