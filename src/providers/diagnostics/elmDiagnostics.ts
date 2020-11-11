@@ -21,7 +21,7 @@ import { IElmWorkspace } from "../../elmWorkspace";
 import { findType } from "../../util/types/typeInference";
 
 export class ElmDiagnostics {
-  ELM = "Elm";
+  ELMLS = "ElmLS";
 
   private language: Language;
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
@@ -63,7 +63,7 @@ export class ElmDiagnostics {
   public onCodeAction(params: CodeActionParams): CodeAction[] {
     const { uri } = params.textDocument;
     const elmDiagnostics: Diagnostic[] = params.context.diagnostics.filter(
-      (diagnostic) => diagnostic.source === this.ELM,
+      (diagnostic) => diagnostic.source === this.ELMLS,
     );
 
     return this.convertDiagnosticsToCodeActions(elmDiagnostics, uri);
@@ -226,7 +226,7 @@ export class ElmDiagnostics {
           range: this.getNodeRange(moduleImport.parent),
           message: `Unused import \`${moduleImport.text}\``,
           severity: DiagnosticSeverity.Warning,
-          source: this.ELM,
+          source: this.ELMLS,
           tags: [DiagnosticTag.Unnecessary],
         });
       }
@@ -284,7 +284,7 @@ export class ElmDiagnostics {
             exposedValueOrType.type === "exposed_type" ? "type" : "value"
           } \`${exposedValueOrType.text}\``,
           severity: DiagnosticSeverity.Warning,
-          source: this.ELM,
+          source: this.ELMLS,
           tags: [DiagnosticTag.Unnecessary],
         });
       }
@@ -339,7 +339,7 @@ export class ElmDiagnostics {
           range: this.getNodeRange(moduleAlias.parent),
           message: `Unused import alias \`${moduleAlias.text}\``,
           severity: DiagnosticSeverity.Warning,
-          source: this.ELM,
+          source: this.ELMLS,
           tags: [DiagnosticTag.Unnecessary],
         });
       }
@@ -471,7 +471,7 @@ export class ElmDiagnostics {
               range: this.getNodeRange(pattern),
               message: `Unused top level definition \`${pattern.text}\``,
               severity: DiagnosticSeverity.Warning,
-              source: this.ELM,
+              source: this.ELMLS,
               tags: [DiagnosticTag.Unnecessary],
             });
           }
@@ -482,7 +482,7 @@ export class ElmDiagnostics {
               range: this.getNodeRange(pattern),
               message: `Unused pattern variable \`${pattern.text}\``,
               severity: DiagnosticSeverity.Warning,
-              source: this.ELM,
+              source: this.ELMLS,
               tags: [DiagnosticTag.Unnecessary],
             });
           }
@@ -519,7 +519,7 @@ export class ElmDiagnostics {
         range: this.getNodeRange(caseBranch),
         message: `\`Nothing\` mapped to \`Nothing\` in case expression. Use Maybe.map or Maybe.andThen instead.`,
         severity: DiagnosticSeverity.Warning,
-        source: this.ELM,
+        source: this.ELMLS,
       });
     });
 
@@ -555,7 +555,7 @@ export class ElmDiagnostics {
         range: this.getNodeRange(caseExpr),
         message: `Use an if expression instead of a case expression.`,
         severity: DiagnosticSeverity.Warning,
-        source: this.ELM,
+        source: this.ELMLS,
       });
     });
 
@@ -594,7 +594,7 @@ export class ElmDiagnostics {
         },
         message: `If you concatenate two lists, then you can merge them into one list.`,
         severity: DiagnosticSeverity.Warning,
-        source: this.ELM,
+        source: this.ELMLS,
       });
     });
 
@@ -633,7 +633,7 @@ export class ElmDiagnostics {
         },
         message: `If you cons an item to a literal list, then you can just put the item into the list.`,
         severity: DiagnosticSeverity.Warning,
-        source: this.ELM,
+        source: this.ELMLS,
       });
     });
 
@@ -678,7 +678,7 @@ export class ElmDiagnostics {
         },
         message: `If you concatenate two lists, but the first item is a single element list, then you should use the cons operator.`,
         severity: DiagnosticSeverity.Warning,
-        source: this.ELM,
+        source: this.ELMLS,
       });
     });
 
@@ -732,7 +732,7 @@ export class ElmDiagnostics {
           range: this.getNodeRange(recordType),
           message: `Using a record is obsolete if you only plan to store a single field in it.`,
           severity: DiagnosticSeverity.Warning,
-          source: this.ELM,
+          source: this.ELMLS,
         });
       }
     });
@@ -773,7 +773,7 @@ export class ElmDiagnostics {
         range: this.getNodeRange(listConcat),
         message: `You should just merge the arguments of \`List.concat\` to a single list.`,
         severity: DiagnosticSeverity.Warning,
-        source: this.ELM,
+        source: this.ELMLS,
       });
     });
 
@@ -804,7 +804,7 @@ export class ElmDiagnostics {
         range: this.getNodeRange(unusedPortMatches[0].captures[0].node),
         message: `Module is definined as a \`port\` module, but does not define any ports.`,
         severity: DiagnosticSeverity.Warning,
-        source: this.ELM,
+        source: this.ELMLS,
       });
     }
 
@@ -836,7 +836,7 @@ export class ElmDiagnostics {
         range: this.getNodeRange(operatorFunction),
         message: `Don't use fully applied prefix notation for operators.`,
         severity: DiagnosticSeverity.Warning,
-        source: this.ELM,
+        source: this.ELMLS,
       });
     });
 
@@ -884,7 +884,7 @@ export class ElmDiagnostics {
           range: this.getNodeRange(typeAlias.parent),
           message: `Type alias \`${typeAlias.text}\` is not used.`,
           severity: DiagnosticSeverity.Warning,
-          source: this.ELM,
+          source: this.ELMLS,
           tags: [DiagnosticTag.Unnecessary],
         });
       }
@@ -938,7 +938,7 @@ export class ElmDiagnostics {
           range: this.getNodeRange(unionVariant.parent),
           message: `Value constructor \`${unionVariant.text}\` is not used.`,
           severity: DiagnosticSeverity.Warning,
-          source: this.ELM,
+          source: this.ELMLS,
           tags: [DiagnosticTag.Unnecessary],
         });
       }
