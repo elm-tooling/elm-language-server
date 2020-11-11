@@ -2482,31 +2482,36 @@ export function findType(
   workspace: IElmWorkspace,
 ): Type {
   try {
-    let declaration: SyntaxNode | null = node;
-    while (
-      declaration &&
-      (declaration.type !== "value_declaration" ||
-        declaration.parent?.type !== "file")
-    ) {
-      declaration = declaration.parent;
-    }
+    const declaration = mapSyntaxNodeToExpression(
+      TreeUtils.findParentOfType("value_declaration", node, true),
+    );
 
-    // We can't find the top level declaration
-    if (
-      declaration?.type !== "value_declaration" ||
-      declaration.parent?.type !== "file"
-    ) {
-      return TUnknown;
-    }
+    const findTypeOrParentType = (
+      expr: SyntaxNode | undefined,
+      inferenceResult: InferenceResult,
+    ): Type | undefined => {
+      const found = expr
+        ? inferenceResult.expressionTypes.get(expr as Expression)
+        : undefined;
 
-    const mappedDeclaration = mapSyntaxNodeToExpression(declaration);
+      if (found) {
+        return found;
+      }
 
-    if (
-      mappedDeclaration &&
-      mappedDeclaration.nodeType === "ValueDeclaration"
-    ) {
+      // Check if the parent is the same text and position
+      if (
+        expr &&
+        expr.text === expr.parent?.text &&
+        expr.startIndex === expr.parent?.startIndex &&
+        expr.endIndex === expr.parent?.endIndex
+      ) {
+        return findTypeOrParentType(expr.parent, inferenceResult);
+      }
+    };
+
+    if (declaration && declaration.nodeType === "ValueDeclaration") {
       const inferenceResult = InferenceScope.valueDeclarationInference(
-        mappedDeclaration,
+        declaration,
         uri,
         workspace,
         new Set<EValueDeclaration>(),
@@ -2533,32 +2538,45 @@ export function findType(
         );
       }
 
-      const findTypeOrParentType = (
-        expr: SyntaxNode | undefined,
-      ): Type | undefined => {
-        const found = expr
-          ? inferenceResult.expressionTypes.get(expr as Expression)
-          : undefined;
-
-        if (found) {
-          return found;
-        }
-
-        // Check if the parent is the same text and position
-        if (
-          expr &&
-          expr.text === expr.parent?.text &&
-          expr.startIndex === expr.parent?.startIndex &&
-          expr.endIndex === expr.parent?.endIndex
-        ) {
-          return findTypeOrParentType(expr.parent);
-        }
-      };
-
-      return findTypeOrParentType(node) ?? TUnknown;
-    } else {
-      return TUnknown;
+      return findTypeOrParentType(node, inferenceResult) ?? TUnknown;
     }
+
+    const typeAliasDeclaration = mapSyntaxNodeToExpression(
+      TreeUtils.findParentOfType("type_alias_declaration", node),
+    );
+
+    if (
+      typeAliasDeclaration &&
+      typeAliasDeclaration.nodeType === "TypeAliasDeclaration"
+    ) {
+      const inferenceResult = TypeExpression.typeAliasDeclarationInference(
+        typeAliasDeclaration,
+        uri,
+        workspace,
+      );
+
+      if (node.type === "type_alias_declaration") {
+        return inferenceResult.type;
+      }
+
+      return findTypeOrParentType(node, inferenceResult) ?? TUnknown;
+    }
+
+    const typeDeclaration = mapSyntaxNodeToExpression(
+      TreeUtils.findParentOfType("type_alias_declaration", node),
+    );
+
+    if (typeDeclaration && typeDeclaration.nodeType === "TypeDeclaration") {
+      const inferenceResult = TypeExpression.typeDeclarationInference(
+        typeDeclaration,
+        uri,
+        workspace,
+      );
+
+      return findTypeOrParentType(node, inferenceResult) ?? TUnknown;
+    }
+
+    return TUnknown;
   } catch (error) {
     const connection = container.resolve<IConnection>("Connection");
     connection.console.warn(`Error while trying to infer a type. ${error}`);

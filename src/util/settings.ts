@@ -8,6 +8,7 @@ export interface IClientSettings {
   elmAnalyseTrigger: ElmAnalyseTrigger;
   trace: { server: string };
   extendedCapabilities?: IExtendedCapabilites;
+  disableElmLSDiagnostics: boolean;
 }
 
 export interface IExtendedCapabilites {
@@ -25,6 +26,7 @@ export class Settings {
     elmPath: "",
     elmTestPath: "",
     trace: { server: "off" },
+    disableElmLSDiagnostics: false,
   };
   private connection: IConnection;
 
