@@ -6,10 +6,15 @@ import { importsTime, resetImportsTime } from "../src/imports";
 import {
   definitionTime,
   mappingTime,
+  mappingTimes,
   resetDefinitionAndMappingTime,
 } from "../src/util/types/expressionTree";
 import { bindTime, resetBindTime } from "../src/util/types/typeChecker";
-import { inferTime, resetInferTime } from "../src/util/types/typeInference";
+import {
+  inferTime,
+  inferTimes,
+  resetInferTime,
+} from "../src/util/types/typeInference";
 import * as path from "path";
 import { argv } from "process";
 import { Settings } from "../src/util/settings";
@@ -85,6 +90,18 @@ export async function runPerformanceTests(uri: string): Promise<void> {
     const averageTime = time / numTimes;
     console.log(`${name} ${averageTime.toFixed(1)}ms`);
   });
+
+  Object.entries(mappingTimes)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([func, time]) => {
+      console.log(`MAPPING: ${func} took ${time.toFixed(1)}ms`);
+    });
+
+  Object.entries(inferTimes)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([func, time]) => {
+      console.log(`INFER: ${func} took ${time.toFixed(1)}ms`);
+    });
 }
 
 /**

@@ -72,6 +72,9 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
       case "port_annotation":
         bindPortAnnotation(node);
         break;
+      case "infix_declaration":
+        bindInfixDeclaration(node);
+        break;
       case "pattern":
         bindPattern(node);
         break;
@@ -185,6 +188,15 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
     }
   }
 
+  function bindInfixDeclaration(node: SyntaxNode): void {
+    const operator = node.childForFieldName("operator");
+    const name = node.lastNamedChild;
+    if (operator && name) {
+      container.set(operator.text, { node, type: "Operator" });
+      container.set(name.text, { node, type: "Operator" });
+    }
+  }
+
   function bindPattern(node: SyntaxNode): void {
     node.descendantsOfType("lower_pattern").forEach((lowerPattern) => {
       switch (parent.type) {
@@ -294,7 +306,10 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
           );
 
           for (const value of exposedOperators) {
-            const functionNode = TreeUtils.findOperator(tree, value.text);
+            const functionNode = TreeUtils.findOperator(
+              treeContainer,
+              value.text,
+            );
 
             if (functionNode) {
               exposed.set(value.text, {

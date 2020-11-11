@@ -526,9 +526,25 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         }
       }
     } else if (nodeAtPosition.type === "operator_identifier") {
-      const definitionNode = TreeUtils.findOperator(tree, nodeAtPosition.text);
+      const operatorsCache = workspace.getOperatorsCache();
+      const cached = operatorsCache.get(nodeAtPosition.text);
+      if (cached) {
+        return cached;
+      }
 
-      if (!definitionNode) {
+      const definitionNode = TreeUtils.findOperator(
+        treeContainer,
+        nodeAtPosition.text,
+      );
+      if (definitionNode) {
+        const result: DefinitionResult = {
+          node: definitionNode,
+          uri,
+          nodeType: "Operator",
+        };
+        operatorsCache.set(nodeAtPosition.text, result);
+        return result;
+      } else {
         const definitionFromOtherFile = findImportOfType(
           treeContainer,
           nodeAtPosition.text,
@@ -536,11 +552,9 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         );
 
         if (definitionFromOtherFile) {
+          operatorsCache.set(nodeAtPosition.text, definitionFromOtherFile);
           return definitionFromOtherFile;
         }
-      }
-      if (definitionNode) {
-        return { node: definitionNode, uri, nodeType: "Operator" };
       }
     } else if (nodeAtPosition.parent?.type === "field_access_expr") {
       let target = nodeAtPosition.parent?.childForFieldName("target");

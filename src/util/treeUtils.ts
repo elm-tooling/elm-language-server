@@ -281,33 +281,25 @@ export class TreeUtils {
   }
 
   public static findOperator(
-    tree: Tree,
+    treeContainer: ITreeContainer,
     operatorName: string,
   ): SyntaxNode | undefined {
-    const infixDeclarations = this.findAllNamedChildrenOfType(
-      "infix_declaration",
-      tree.rootNode,
+    const rootSymbols = treeContainer.symbolLinks?.get(
+      treeContainer.tree.rootNode,
     );
-    if (infixDeclarations) {
-      const operatorNode = infixDeclarations.find((a) => {
-        const operator = TreeUtils.findFirstNamedChildOfType(
-          "operator_identifier",
-          a,
-        );
-        if (operator) {
-          return operator.text === operatorName;
-        }
-        return false;
-      });
 
-      if (operatorNode) {
-        const functionReference = TreeUtils.findFirstNamedChildOfType(
-          "value_expr",
-          operatorNode,
-        );
-        if (functionReference) {
-          return this.findFunction(tree.rootNode, functionReference.text);
-        }
+    const operatorNode = rootSymbols?.get(operatorName)?.node;
+
+    if (operatorNode) {
+      const functionReference = TreeUtils.findFirstNamedChildOfType(
+        "value_expr",
+        operatorNode,
+      );
+      if (functionReference) {
+        return rootSymbols?.get(
+          functionReference.text,
+          (s) => s.node.type !== "infix_declaration",
+        )?.node;
       }
     }
   }
@@ -395,10 +387,7 @@ export class TreeUtils {
     const declaration =
       node.type == "function_declaration_left"
         ? node
-        : TreeUtils.findFirstNamedChildOfType(
-            "function_declaration_left",
-            node,
-          );
+        : node.childForFieldName("functionDeclarationLeft");
     if (declaration && declaration.firstNamedChild) {
       return declaration.firstNamedChild;
     }

@@ -141,7 +141,6 @@ export interface ETypeRef extends SyntaxNode {
 export interface ETypeDeclaration extends SyntaxNode {
   nodeType: "TypeDeclaration";
   name: string;
-  unionVariants: Expression[];
   typeNames: Expression[];
 }
 export interface ETypeVariable extends SyntaxNode {
@@ -369,12 +368,6 @@ export function mapSyntaxNodeToExpression(
         const typeExpression = node as ETypeExpression;
         typeExpression.nodeType = "TypeExpression";
         typeExpression.segments = node.children
-          .filter(
-            (n) =>
-              n.type !== "arrow" &&
-              n.type !== "left_parenthesis" &&
-              n.type !== "right_parenthesis",
-          )
           .map(mapSyntaxNodeToExpression)
           .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
         addTime("typeExpression", performance.now() - start);
@@ -397,20 +390,10 @@ export function mapSyntaxNodeToExpression(
         const typeDeclaration = node as ETypeDeclaration;
         typeDeclaration.nodeType = "TypeDeclaration";
         typeDeclaration.name = node.childForFieldName("name")?.text ?? "";
-        typeDeclaration.unionVariants = [];
-        typeDeclaration.typeNames = [];
-
-        node.children.forEach((child) => {
-          if (child.type === "union_variant") {
-            typeDeclaration.unionVariants.push(
-              mapSyntaxNodeToExpression(child) as Expression,
-            );
-          } else if (child.type === "lower_type_name") {
-            typeDeclaration.typeNames.push(
-              mapSyntaxNodeToExpression(child) as Expression,
-            );
-          }
-        });
+        typeDeclaration.typeNames =
+          (TreeUtils.findAllNamedChildrenOfType("lower_type_name", node)?.map(
+            mapSyntaxNodeToExpression,
+          ) as Expression[]) ?? [];
 
         addTime("typeDeclaration", performance.now() - start);
         return typeDeclaration;

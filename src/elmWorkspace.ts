@@ -12,7 +12,11 @@ import { IPossibleImportsCache, PossibleImportsCache } from "./providers";
 import * as utils from "./util/elmUtils";
 import { Settings } from "./util/settings";
 import { TypeCache } from "./util/types/typeCache";
-import { createTypeChecker, TypeChecker } from "./util/types/typeChecker";
+import {
+  createTypeChecker,
+  DefinitionResult,
+  TypeChecker,
+} from "./util/types/typeChecker";
 
 const readFile = util.promisify(fs.readFile);
 const readdir = util.promisify(fs.readdir);
@@ -35,6 +39,7 @@ export interface IElmWorkspace {
   getTypeChecker(): TypeChecker;
   markAsDirty(): void;
   getPossibleImportsCache(): IPossibleImportsCache;
+  getOperatorsCache(): Map<string, DefinitionResult>;
 }
 
 export interface IRootFolder {
@@ -53,6 +58,7 @@ export class ElmWorkspace implements IElmWorkspace {
   private typeChecker: TypeChecker | undefined;
   private dirty = true;
   private possibleImportsCache: IPossibleImportsCache;
+  private operatorsCache: Map<string, DefinitionResult>;
 
   constructor(private rootPath: URI) {
     this.settings = container.resolve("Settings");
@@ -64,6 +70,7 @@ export class ElmWorkspace implements IElmWorkspace {
 
     this.typeCache = new TypeCache();
     this.possibleImportsCache = new PossibleImportsCache();
+    this.operatorsCache = new Map<string, DefinitionResult>();
   }
 
   public async init(
@@ -121,6 +128,10 @@ export class ElmWorkspace implements IElmWorkspace {
 
   public getPossibleImportsCache(): IPossibleImportsCache {
     return this.possibleImportsCache;
+  }
+
+  public getOperatorsCache(): Map<string, DefinitionResult> {
+    return this.operatorsCache;
   }
 
   private async initWorkspace(

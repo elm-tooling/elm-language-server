@@ -8,6 +8,7 @@ import { container } from "tsyringe";
 import { TypeCache } from "../../src/util/types/typeCache";
 import {
   createTypeChecker,
+  DefinitionResult,
   TypeChecker,
 } from "../../src/util/types/typeChecker";
 import { TreeUtils } from "../../src/util/treeUtils";
@@ -23,6 +24,7 @@ export class MockElmWorkspace implements IElmWorkspace {
   private parser: Parser;
   private typeCache = new TypeCache();
   private possibleImportsCache = new PossibleImportsCache();
+  private operatorsCache = new Map<string, DefinitionResult>();
 
   constructor(sources: { [K: string]: string }) {
     this.parser = container.resolve("Parser");
@@ -82,6 +84,10 @@ export class MockElmWorkspace implements IElmWorkspace {
 
   getPossibleImportsCache(): IPossibleImportsCache {
     return this.possibleImportsCache;
+  }
+
+  getOperatorsCache(): Map<string, DefinitionResult> {
+    return this.operatorsCache;
   }
 
   private parseAndAddToForest(fileName: string, source: string): void {

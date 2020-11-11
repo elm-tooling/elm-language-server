@@ -503,20 +503,23 @@ export class References {
     return references;
   }
 
-  public static findOperator(node: SyntaxNode): SyntaxNode | undefined {
+  public static findOperator(
+    node: SyntaxNode,
+    elmWorkspace: IElmWorkspace,
+  ): SyntaxNode | undefined {
     const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(node);
 
     if (functionNameNode) {
-      const infixRef = this.findFunctionCalls(
-        node.tree.rootNode,
-        functionNameNode.text,
-      )?.find(
-        (ref) => ref.parent?.parent?.parent?.type === "infix_declaration",
-      );
+      const infixRef = elmWorkspace
+        .getForest()
+        .getByUri(node.tree.uri)
+        ?.symbolLinks?.get(node.tree.rootNode)
+        ?.get(
+          functionNameNode.text,
+          (s) => s.node.type === "infix_declaration",
+        );
 
-      if (infixRef?.parent?.parent?.parent) {
-        return infixRef.parent.parent.parent;
-      }
+      return infixRef?.node;
     }
   }
 
