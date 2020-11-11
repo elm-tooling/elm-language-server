@@ -5,15 +5,15 @@ import {
   Range,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { ElmDiagnostics } from "../../src/providers/diagnostics/elmDiagnostics";
+import { ElmLsDiagnostics } from "../../src/providers/diagnostics/elmLsDiagnostics";
 import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics";
 import { Utils } from "../../src/util/utils";
 import { baseUri } from "../utils/mockElmWorkspace";
 import { getSourceFiles } from "../utils/sourceParser";
 import { SourceTreeParser } from "../utils/sourceTreeParser";
 
-describe("ElmLSDiagnostics", () => {
-  let elmDiagnostics: ElmDiagnostics;
+describe("ElmLsDiagnostics", () => {
+  let elmDiagnostics: ElmLsDiagnostics;
   const treeParser = new SourceTreeParser();
 
   const debug = process.argv.find((arg) => arg === "--debug");
@@ -24,7 +24,7 @@ describe("ElmLSDiagnostics", () => {
     expectedDiagnostics: Diagnostic[],
   ) {
     await treeParser.init();
-    elmDiagnostics = new ElmDiagnostics();
+    elmDiagnostics = new ElmLsDiagnostics();
 
     const workspace = treeParser.getWorkspace(getSourceFiles(source));
     const uri = URI.file(baseUri + "Main.elm").toString();
