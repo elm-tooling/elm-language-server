@@ -356,10 +356,6 @@ export function mapSyntaxNodeToExpression(
       case "type_annotation": {
         const typeAnnotation = node as ETypeAnnotation;
         typeAnnotation.nodeType = "TypeAnnotation";
-        typeAnnotation.name = node.firstNamedChild?.text ?? "";
-        typeAnnotation.typeExpression = mapSyntaxNodeToExpression(
-          node.childForFieldName("typeExpression"),
-        ) as ETypeExpression;
         addTime("typeAnnotation", performance.now() - start);
         return typeAnnotation;
       }
@@ -389,12 +385,6 @@ export function mapSyntaxNodeToExpression(
       case "type_declaration": {
         const typeDeclaration = node as ETypeDeclaration;
         typeDeclaration.nodeType = "TypeDeclaration";
-        typeDeclaration.name = node.childForFieldName("name")?.text ?? "";
-        typeDeclaration.typeNames =
-          (TreeUtils.findAllNamedChildrenOfType("lower_type_name", node)?.map(
-            mapSyntaxNodeToExpression,
-          ) as Expression[]) ?? [];
-
         addTime("typeDeclaration", performance.now() - start);
         return typeDeclaration;
       }
@@ -676,16 +666,6 @@ export function mapSyntaxNodeToExpression(
       case "type_alias_declaration": {
         const typeAliasDeclaration = node as ETypeAliasDeclaration;
         typeAliasDeclaration.nodeType = "TypeAliasDeclaration";
-        typeAliasDeclaration.name = node.childForFieldName(
-          "name",
-        ) as SyntaxNode;
-        typeAliasDeclaration.typeVariables =
-          TreeUtils.findAllNamedChildrenOfType("lower_type_name", node)
-            ?.map(mapSyntaxNodeToExpression)
-            .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)) ?? [];
-        typeAliasDeclaration.typeExpression = mapSyntaxNodeToExpression(
-          node.childForFieldName("typeExpression"),
-        ) as ETypeExpression;
         addTime("typeAliasDeclaration", performance.now() - start);
         return typeAliasDeclaration;
       }
@@ -798,6 +778,47 @@ export function mapSyntaxNodeToExpression(
   } finally {
     mappingTime += performance.now() - start;
   }
+}
+
+export function mapTypeAliasDeclaration(
+  typeAliasDeclaration: ETypeAliasDeclaration,
+): void {
+  const start = performance.now();
+  typeAliasDeclaration.name = typeAliasDeclaration.childForFieldName(
+    "name",
+  ) as SyntaxNode;
+  typeAliasDeclaration.typeVariables =
+    TreeUtils.findAllNamedChildrenOfType(
+      "lower_type_name",
+      typeAliasDeclaration,
+    )
+      ?.map(mapSyntaxNodeToExpression)
+      .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)) ?? [];
+  typeAliasDeclaration.typeExpression = mapSyntaxNodeToExpression(
+    typeAliasDeclaration.childForFieldName("typeExpression"),
+  ) as ETypeExpression;
+  addTime("typeAliasDeclaration", performance.now() - start);
+}
+
+export function mapTypeDeclaration(typeDeclaration: ETypeDeclaration): void {
+  const start = performance.now();
+  typeDeclaration.name = typeDeclaration.childForFieldName("name")?.text ?? "";
+  typeDeclaration.typeNames =
+    (TreeUtils.findAllNamedChildrenOfType(
+      "lower_type_name",
+      typeDeclaration,
+    )?.map(mapSyntaxNodeToExpression) as Expression[]) ?? [];
+  mappingTime += performance.now() - start;
+  addTime("typeDeclaration", performance.now() - start);
+}
+
+export function mapTypeAnnotation(typeAnnotation: ETypeAnnotation): void {
+  const start = performance.now();
+  typeAnnotation.name = typeAnnotation.firstNamedChild?.text ?? "";
+  typeAnnotation.typeExpression = mapSyntaxNodeToExpression(
+    typeAnnotation.childForFieldName("typeExpression"),
+  ) as ETypeExpression;
+  addTime("typeAnnotation", performance.now() - start);
 }
 
 export function findDefinition(

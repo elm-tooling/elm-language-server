@@ -736,10 +736,7 @@ export class InferenceScope {
     );
 
     const functionDeclaration = mapSyntaxNodeToExpression(
-      TreeUtils.findFirstNamedChildOfType(
-        "function_declaration_left",
-        declaration,
-      ),
+      declaration.childForFieldName("functionDeclarationLeft"),
     );
     if (
       isRecursive &&
@@ -1685,10 +1682,7 @@ export class InferenceScope {
     valueDeclaration: EValueDeclaration,
   ): ParameterBindingResult {
     const functionDeclarationLeft = mapSyntaxNodeToExpression(
-      TreeUtils.findFirstNamedChildOfType(
-        "function_declaration_left",
-        valueDeclaration,
-      ),
+      valueDeclaration.childForFieldName("functionDeclarationLeft"),
     ) as EFunctionDeclarationLeft;
 
     if (functionDeclarationLeft) {
@@ -1826,12 +1820,7 @@ export class InferenceScope {
       case "Pattern":
         {
           const child = mapSyntaxNodeToExpression(
-            pattern.namedChildren.find(
-              (c) =>
-                c.type.endsWith("pattern") ||
-                c.type.includes("constant") ||
-                c.type === "unit_expr",
-            ),
+            pattern.childForFieldName("child"),
           );
           if (!child) {
             throw new Error("Missing pattern child");
