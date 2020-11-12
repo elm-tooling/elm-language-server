@@ -15,8 +15,6 @@ import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { IClientSettings, Settings } from "../util/settings";
 import { TreeUtils } from "../util/treeUtils";
-import { findType } from "../util/types/typeInference";
-import { TypeRenderer } from "../util/types/typeRenderer";
 import { ElmAnalyseDiagnostics } from "./diagnostics/elmAnalyseDiagnostics";
 import { ElmLsDiagnostics } from "./diagnostics/elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
