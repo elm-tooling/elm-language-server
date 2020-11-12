@@ -271,16 +271,19 @@ export class TypeExpression {
     const segmentTypes = typeExpr.segments.map((s) =>
       this.typeSignatureSegmentType(s),
     );
-    if (segmentTypes.length === 1) {
-      return segmentTypes[0];
-    } else {
-      return uncurryFunction(
-        TFunction(
-          segmentTypes.slice(0, segmentTypes.length - 1),
-          segmentTypes[segmentTypes.length - 1],
-        ),
-      );
-    }
+    const type =
+      segmentTypes.length === 1
+        ? segmentTypes[0]
+        : uncurryFunction(
+            TFunction(
+              segmentTypes.slice(0, segmentTypes.length - 1),
+              segmentTypes[segmentTypes.length - 1],
+            ),
+          );
+
+    this.expressionTypes.set(typeExpr, type);
+
+    return type;
   }
 
   private toResult(type: Type): InferenceResult {

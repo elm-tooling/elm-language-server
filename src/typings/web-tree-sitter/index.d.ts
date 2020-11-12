@@ -41,4 +41,14 @@ declare module "web-tree-sitter" {
   interface Language {
     query(source: string): Query;
   }
+
+  class Parser {
+    static init(): Promise<void>;
+    delete(): void;
+    parse(input: string | Input, previousTree?: Tree, options?: Options): Tree;
+    getLanguage(): Language;
+    setLanguage(language: Language): void;
+    getLogger(): Logger;
+    setLogger(logFunc: Logger): void;
+  }
 }

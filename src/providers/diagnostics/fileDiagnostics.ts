@@ -6,6 +6,7 @@ export const enum DiagnosticKind {
   ElmAnalyse,
   ElmTest,
   TypeInference,
+  ElmLS,
 }
 
 export function diagnosticsEquals(a: Diagnostic, b: Diagnostic): boolean {
@@ -48,6 +49,7 @@ export class FileDiagnostics {
       ...this.getForKind(DiagnosticKind.ElmAnalyse),
       ...this.getForKind(DiagnosticKind.ElmTest),
       ...this.getForKind(DiagnosticKind.TypeInference),
+      ...this.getForKind(DiagnosticKind.ElmLS),
     ];
   }
 

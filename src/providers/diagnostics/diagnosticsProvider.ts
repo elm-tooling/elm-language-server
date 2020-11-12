@@ -1,19 +1,20 @@
 import { IClientSettings, Settings } from "src/util/settings";
+import { debounce } from "ts-debounce";
 import { container, injectable } from "tsyringe";
 import { Diagnostic, FileChangeType, IConnection } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import { ElmAnalyseDiagnostics } from "..";
+import { IElmWorkspace } from "../../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { NoWorkspaceContainsError } from "../../util/noWorkspaceContainsError";
 import { ElmAnalyseTrigger } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
-import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
-import { TypeInferenceDiagnostics } from "./typeInferenceDiagnostics";
 import { ASTProvider } from "../astProvider";
-import { IElmWorkspace } from "../../elmWorkspace";
-import { debounce } from "ts-debounce";
+import { ElmLsDiagnostics } from "./elmLsDiagnostics";
+import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics";
+import { TypeInferenceDiagnostics } from "./typeInferenceDiagnostics";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -35,6 +36,7 @@ export class DiagnosticsProvider {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
   private elmAnalyseDiagnostics: ElmAnalyseDiagnostics | null = null;
   private typeInferenceDiagnostics: TypeInferenceDiagnostics;
+  private elmDiagnostics: ElmLsDiagnostics;
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<{ uri: string }>;
   private currentDiagnostics: Map<string, FileDiagnostics>;
   private events: TextDocumentEvents;
@@ -57,6 +59,7 @@ export class DiagnosticsProvider {
     this.typeInferenceDiagnostics = container.resolve<TypeInferenceDiagnostics>(
       TypeInferenceDiagnostics,
     );
+    this.elmDiagnostics = container.resolve<ElmLsDiagnostics>(ElmLsDiagnostics);
     this.connection = container.resolve<IConnection>("Connection");
     this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((doc) =>
@@ -68,48 +71,89 @@ export class DiagnosticsProvider {
 
     this.currentDiagnostics = new Map<string, FileDiagnostics>();
     // register onChange listener if settings are not on-save only
-    void this.settings.getClientSettings().then(({ elmAnalyseTrigger }) => {
-      this.events.on("open", (d) =>
-        this.getDiagnostics(d, true, elmAnalyseTrigger),
-      );
-      this.events.on("save", (d) =>
-        this.getDiagnostics(d, true, elmAnalyseTrigger),
-      );
-      this.connection.onDidChangeWatchedFiles((event) => {
-        const newDeleteEvents = event.changes
-          .filter((a) => a.type === FileChangeType.Deleted)
-          .map((a) => a.uri);
-        newDeleteEvents.forEach((uri) => {
-          this.deleteDiagnostics(uri);
-        });
+
+    const elmAnalyseTrigger = this.clientSettings.elmAnalyseTrigger;
+    this.events.on(
+      "open",
+      (d) => void this.getDiagnostics(d, true, elmAnalyseTrigger),
+    );
+    this.events.on(
+      "save",
+      (d) => void this.getDiagnostics(d, true, elmAnalyseTrigger),
+    );
+    this.connection.onDidChangeWatchedFiles((event) => {
+      const newDeleteEvents = event.changes
+        .filter((a) => a.type === FileChangeType.Deleted)
+        .map((a) => a.uri);
+      newDeleteEvents.forEach((uri) => {
+        this.deleteDiagnostics(uri);
       });
-      if (this.elmAnalyseDiagnostics) {
-        this.elmAnalyseDiagnostics.on(
-          "new-diagnostics",
-          this.newElmAnalyseDiagnostics.bind(this),
-        );
-      }
-      if (elmAnalyseTrigger === "change") {
-        this.events.on("change", (d) =>
-          this.getDiagnostics(d, false, elmAnalyseTrigger),
-        );
-      }
+    });
+    if (this.elmAnalyseDiagnostics) {
+      this.elmAnalyseDiagnostics.on(
+        "new-diagnostics",
+        this.newElmAnalyseDiagnostics.bind(this),
+      );
+    }
+    if (elmAnalyseTrigger === "change") {
+      this.events.on(
+        "change",
+        (d) => void this.getDiagnostics(d, false, elmAnalyseTrigger),
+      );
+    }
 
-      this.workspaces.forEach((workspace) => {
-        workspace.getForest().treeMap.forEach((treeContainer) => {
-          if (treeContainer.writeable) {
-            const treeDiagnostics = this.typeInferenceDiagnostics.createDiagnostics(
-              treeContainer,
-              workspace,
-            );
+    this.connection.onDidChangeConfiguration((params) => {
+      this.clientSettings = <IClientSettings>params.settings;
 
+      if (this.clientSettings.disableElmLSDiagnostics) {
+        this.currentDiagnostics.forEach((_, uri) =>
+          this.updateDiagnostics(uri, DiagnosticKind.ElmLS, []),
+        );
+      } else {
+        this.workspaces.forEach((workspace) => {
+          workspace.getForest().treeMap.forEach((treeContainer) => {
+            if (treeContainer.writeable) {
+              this.updateDiagnostics(
+                treeContainer.uri,
+                DiagnosticKind.ElmLS,
+                this.elmDiagnostics.createDiagnostics(
+                  treeContainer.tree,
+                  treeContainer.uri,
+                  workspace,
+                ),
+              );
+            }
+          });
+        });
+      }
+    });
+
+    this.workspaces.forEach((workspace) => {
+      workspace.getForest().treeMap.forEach((treeContainer) => {
+        if (treeContainer.writeable) {
+          const treeDiagnostics = this.typeInferenceDiagnostics.createDiagnostics(
+            treeContainer,
+            workspace,
+          );
+
+          this.updateDiagnostics(
+            treeContainer.uri,
+            DiagnosticKind.TypeInference,
+            treeDiagnostics,
+          );
+
+          if (!this.clientSettings.disableElmLSDiagnostics) {
             this.updateDiagnostics(
               treeContainer.uri,
-              DiagnosticKind.TypeInference,
-              treeDiagnostics,
+              DiagnosticKind.ElmLS,
+              this.elmDiagnostics.createDiagnostics(
+                treeContainer.tree,
+                treeContainer.uri,
+                workspace,
+              ),
             );
           }
-        });
+        }
       });
 
       astProvider.onTreeChange(({ treeContainer }) => {
@@ -135,6 +179,18 @@ export class DiagnosticsProvider {
             workspace,
           ),
         );
+
+        if (!this.clientSettings.disableElmLSDiagnostics) {
+          this.updateDiagnostics(
+            treeContainer.uri,
+            DiagnosticKind.ElmLS,
+            this.elmDiagnostics.createDiagnostics(
+              treeContainer.tree,
+              treeContainer.uri,
+              workspace,
+            ),
+          );
+        }
       });
     });
   }

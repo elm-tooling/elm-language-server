@@ -132,6 +132,7 @@ This server contributes the following settings:
 - `elmLS.elmFormatPath`: The path to your `elm-format` executable. Should be empty by default, in that case it will assume the name and try to first get it from a local npm installation or a global one. If you set it manually it will not try to load from the npm folder.
 - `elmLS.elmTestPath`: The path to your `elm-test` executable. Should be empty by default, in that case it will assume the name and try to first get it from a local npm installation or a global one. If you set it manually it will not try to load from the npm folder.
 - `elmLS.elmAnalyseTrigger`: `elm-analyse` executed on `'change'`, `'save'` or `'never'` (default: `'never'`)
+- `elmLS.disableElmLSDiagnostics`: Enable/Disable linting diagnostics from the language server.
 
 Settings may need a restart to be applied.
 
@@ -174,10 +175,7 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format` with the 
     "elmLS": {
       "command": "elm-language-server",
       "filetypes": ["elm"],
-      "rootPatterns": ["elm.json"],
-      "initializationOptions": {
-        "elmAnalyseTrigger": "never"
-      }
+      "rootPatterns": ["elm.json"]
     }
   },
   // If you use neovim you can enable codelenses with this
@@ -267,9 +265,6 @@ Then, assuming installation of `elm-language-server`, `elm-format`, and `elm-tes
 filetypes = ["elm"]
 roots = ["elm.json"]
 command = "elm-language-server"
-
-[language.elm.initialization_options]
-elmAnalyseTrigger = "never"
 ```
 
 ### Emacs
