@@ -281,12 +281,19 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     const uri = treeContainer.uri;
     const nodeText = nodeAtPosition.text;
     const nodeParent = nodeAtPosition.parent;
+
+    if (!nodeParent) {
+      return;
+    }
+
+    const nodeParentType = nodeParent.type;
+
     const rootSymbols = treeContainer.symbolLinks?.get(
       treeContainer.tree.rootNode,
     );
 
     if (
-      nodeParent?.type === "upper_case_qid" &&
+      nodeParentType === "upper_case_qid" &&
       nodeParent.previousNamedSibling?.type === "module"
     ) {
       const moduleNode = nodeParent.parent;
@@ -299,16 +306,16 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         };
       }
     } else if (
-      nodeParent?.type === "upper_case_qid" &&
+      nodeParentType === "upper_case_qid" &&
       nodeParent.previousNamedSibling?.type === "import"
     ) {
       const upperCaseQid = nodeParent;
       const upperCaseQidText = upperCaseQid.text;
       return findImportOfType(treeContainer, upperCaseQidText, "Module");
     } else if (
-      (nodeParent?.type === "exposed_value" &&
+      (nodeParentType === "exposed_value" &&
         nodeParent.parent?.parent?.type === "module_declaration") ||
-      nodeParent?.type === "type_annotation"
+      nodeParentType === "type_annotation"
     ) {
       const definitionNode = rootSymbols?.get(nodeText);
 
@@ -320,7 +327,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         };
       }
     } else if (
-      (nodeParent?.type === "exposed_type" &&
+      (nodeParentType === "exposed_type" &&
         nodeParent.parent?.parent?.type === "module_declaration") ||
       nodeAtPosition.previousNamedSibling?.type === "type" ||
       nodeAtPosition.previousNamedSibling?.type === "alias"
@@ -335,12 +342,12 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         };
       }
     } else if (
-      (nodeParent?.type === "exposed_value" ||
-        nodeParent?.type === "exposed_type") &&
+      (nodeParentType === "exposed_value" ||
+        nodeParentType === "exposed_type") &&
       nodeParent.parent?.parent?.type === "import_clause"
     ) {
       return findImport(treeContainer, nodeText);
-    } else if (nodeParent?.type === "union_variant") {
+    } else if (nodeParentType === "union_variant") {
       const definitionNode = nodeParent;
       return {
         node: definitionNode,
@@ -437,18 +444,18 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         return definitionFromOtherFile;
       }
     } else if (
-      nodeParent?.type === "lower_pattern" &&
+      nodeParentType === "lower_pattern" &&
       nodeParent.parent?.type === "record_pattern"
     ) {
       const type = findType(nodeParent.parent, uri);
       return TreeUtils.findFieldReference(type, nodeText);
     } else if (
-      nodeParent?.type === "value_qid" ||
-      nodeParent?.type === "lower_pattern" ||
-      nodeParent?.type === "record_base_identifier"
+      nodeParentType === "value_qid" ||
+      nodeParentType === "lower_pattern" ||
+      nodeParentType === "record_base_identifier"
     ) {
       let nodeAtPositionText = nodeText;
-      if (nodeParent.type === "value_qid") {
+      if (nodeParentType === "value_qid") {
         nodeAtPositionText = nodeParent.text;
       }
 
@@ -543,7 +550,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
           return definitionFromOtherFile;
         }
       }
-    } else if (nodeParent?.type === "field_access_expr") {
+    } else if (nodeParentType === "field_access_expr") {
       let target = nodeParent?.childForFieldName("target");
 
       // Adjust for parenthesis expr. Will need to change when we handle it better in inference
@@ -557,14 +564,14 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       }
     } else if (
       nodeAtPosition.type === "lower_case_identifier" &&
-      nodeParent?.type === "field" &&
+      nodeParentType === "field" &&
       nodeParent.parent?.type === "record_expr"
     ) {
       const type = findType(nodeParent.parent, uri);
       return TreeUtils.findFieldReference(type, nodeText);
     } else if (
       nodeAtPosition.type === "lower_case_identifier" &&
-      nodeParent?.type === "field_accessor_function_expr"
+      nodeParentType === "field_accessor_function_expr"
     ) {
       const type = findType(nodeParent, uri);
 
@@ -575,7 +582,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       }
     } else if (
       nodeAtPosition.type === "lower_case_identifier" &&
-      nodeParent?.type === "field_type"
+      nodeParentType === "field_type"
     ) {
       return {
         node: nodeParent,
@@ -584,7 +591,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       };
     } else if (
       nodeAtPosition.type === "upper_case_identifier" &&
-      nodeParent?.type === "ERROR"
+      nodeParentType === "ERROR"
     ) {
       let fullModuleName = nodeText;
 

@@ -19,6 +19,10 @@ import * as path from "path";
 import { argv } from "process";
 import { Settings } from "../src/util/settings";
 import Parser from "web-tree-sitter";
+import {
+  replaceTime,
+  resetReplaceTime,
+} from "../src/util/types/typeReplacement";
 
 container.register("Connection", {
   useValue: {
@@ -74,11 +78,13 @@ export async function runPerformanceTests(uri: string): Promise<void> {
     addTime("IMPORTS   :", importsTime);
     addTime("MAPPING   :", mappingTime);
     addTime("DEFINITION:", definitionTime);
+    addTime("REPLACE   :", replaceTime);
 
     resetBindTime();
     resetInferTime();
     resetImportsTime();
     resetDefinitionAndMappingTime();
+    resetReplaceTime();
 
     process.stdout.clearLine(-1);
     process.stdout.cursorTo(0);
