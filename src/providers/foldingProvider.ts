@@ -43,11 +43,9 @@ export class FoldingRangeProvider {
     ): SyntaxNode => {
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        if (
-          node.nextNamedSibling &&
-          node.nextNamedSibling.type === "import_clause"
-        ) {
-          node = node.nextNamedSibling;
+        const nextSibling = node.nextNamedSibling;
+        if (nextSibling?.type === "import_clause") {
+          node = nextSibling;
         } else {
           return node;
         }
@@ -55,11 +53,12 @@ export class FoldingRangeProvider {
     };
 
     const traverse: (node: SyntaxNode) => void = (node: SyntaxNode): void => {
-      if (node.parent && node.parent.lastChild && node.isNamed) {
+      if (node.parent?.lastChild && node.isNamed) {
         if ("import_clause" === node.type) {
+          const previousSibling = node.previousNamedSibling;
           if (
-            node.previousNamedSibling === null ||
-            node.previousNamedSibling.type !== "import_clause"
+            previousSibling === null ||
+            previousSibling.type !== "import_clause"
           ) {
             const lastNode = findLastIdenticalNamedSibling(node);
             folds.push({

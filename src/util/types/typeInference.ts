@@ -1473,7 +1473,13 @@ export class InferenceScope {
       expr,
     );
 
-    if (!fieldIdentifier || fieldIdentifier.text === "") {
+    if (!fieldIdentifier) {
+      return TUnknown;
+    }
+
+    const fieldIdentifierText = fieldIdentifier.text;
+
+    if (fieldIdentifierText === "") {
       return TUnknown;
     }
 
@@ -1492,19 +1498,19 @@ export class InferenceScope {
       const type = TVar("b");
       this.trackReplacement(
         targetType,
-        TMutableRecord({ [fieldIdentifier.text]: type }, TVar("a")),
+        TMutableRecord({ [fieldIdentifierText]: type }, TVar("a")),
       );
       this.expressionTypes.set(expr, type);
       return type;
     }
 
     if (targetTy?.nodeType === "MutableRecord") {
-      let type = targetTy.fields[fieldIdentifier.text];
+      let type = targetTy.fields[fieldIdentifierText];
       if (!type) {
-        targetTy.fields[fieldIdentifier.text] = TVar(
+        targetTy.fields[fieldIdentifierText] = TVar(
           nthVarName(Object.keys(targetTy.fields).length),
         );
-        type = targetTy.fields[fieldIdentifier.text];
+        type = targetTy.fields[fieldIdentifierText];
       }
 
       this.expressionTypes.set(expr, type);
@@ -1525,15 +1531,15 @@ export class InferenceScope {
       return TUnknown;
     }
 
-    if (!Object.keys(targetTy.fields).includes(fieldIdentifier.text)) {
+    if (!Object.keys(targetTy.fields).includes(fieldIdentifierText)) {
       if (!targetTy.baseType) {
         this.diagnostics.push(
-          recordFieldError(fieldIdentifier, fieldIdentifier.text),
+          recordFieldError(fieldIdentifier, fieldIdentifierText),
         );
       }
     }
 
-    const type = targetTy.fields[fieldIdentifier.text] ?? TUnknown;
+    const type = targetTy.fields[fieldIdentifierText] ?? TUnknown;
     this.expressionTypes.set(expr, type);
     addTime("inferFieldAccess", performance.now() - start);
     return type;
@@ -1644,18 +1650,19 @@ export class InferenceScope {
     }
 
     fields.forEach((type, field) => {
-      const expected = baseFields[field.text];
+      const fieldText = field.text;
+      const expected = baseFields[fieldText];
       if (!expected) {
         if (baseType.nodeType === "Record") {
           if (!baseType.baseType) {
-            this.diagnostics.push(recordFieldError(field, field.text));
+            this.diagnostics.push(recordFieldError(field, fieldText));
             this.recordDiffs.set(
               record,
               this.calculateRecordDiff(TRecord(mappedFields), baseType),
             );
           }
         } else if (baseType.nodeType === "MutableRecord") {
-          baseType.fields[field.text] = type;
+          baseType.fields[fieldText] = type;
         }
       } else {
         this.isAssignable(field, type, expected);

@@ -279,16 +279,17 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     treeContainer: ITreeContainer,
   ): DefinitionResult | undefined {
     const uri = treeContainer.uri;
-    const tree = treeContainer.tree;
+    const nodeText = nodeAtPosition.text;
+    const nodeParent = nodeAtPosition.parent;
     const rootSymbols = treeContainer.symbolLinks?.get(
       treeContainer.tree.rootNode,
     );
 
     if (
-      nodeAtPosition.parent?.type === "upper_case_qid" &&
-      nodeAtPosition.parent.previousNamedSibling?.type === "module"
+      nodeParent?.type === "upper_case_qid" &&
+      nodeParent.previousNamedSibling?.type === "module"
     ) {
-      const moduleNode = nodeAtPosition.parent.parent;
+      const moduleNode = nodeParent.parent;
 
       if (moduleNode) {
         return {
@@ -298,17 +299,18 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         };
       }
     } else if (
-      nodeAtPosition.parent?.type === "upper_case_qid" &&
-      nodeAtPosition.parent.previousNamedSibling?.type === "import"
+      nodeParent?.type === "upper_case_qid" &&
+      nodeParent.previousNamedSibling?.type === "import"
     ) {
-      const upperCaseQid = nodeAtPosition.parent;
-      return findImportOfType(treeContainer, upperCaseQid.text, "Module");
+      const upperCaseQid = nodeParent;
+      const upperCaseQidText = upperCaseQid.text;
+      return findImportOfType(treeContainer, upperCaseQidText, "Module");
     } else if (
-      (nodeAtPosition.parent?.type === "exposed_value" &&
-        nodeAtPosition.parent.parent?.parent?.type === "module_declaration") ||
-      nodeAtPosition.parent?.type === "type_annotation"
+      (nodeParent?.type === "exposed_value" &&
+        nodeParent.parent?.parent?.type === "module_declaration") ||
+      nodeParent?.type === "type_annotation"
     ) {
-      const definitionNode = rootSymbols?.get(nodeAtPosition.text);
+      const definitionNode = rootSymbols?.get(nodeText);
 
       if (definitionNode && definitionNode.type === "Function") {
         return {
@@ -318,12 +320,12 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         };
       }
     } else if (
-      (nodeAtPosition.parent?.type === "exposed_type" &&
-        nodeAtPosition.parent.parent?.parent?.type === "module_declaration") ||
+      (nodeParent?.type === "exposed_type" &&
+        nodeParent.parent?.parent?.type === "module_declaration") ||
       nodeAtPosition.previousNamedSibling?.type === "type" ||
       nodeAtPosition.previousNamedSibling?.type === "alias"
     ) {
-      const definitionNode = rootSymbols?.get(nodeAtPosition.text);
+      const definitionNode = rootSymbols?.get(nodeText);
 
       if (definitionNode) {
         return {
@@ -333,23 +335,21 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         };
       }
     } else if (
-      (nodeAtPosition.parent?.type === "exposed_value" ||
-        nodeAtPosition.parent?.type === "exposed_type") &&
-      nodeAtPosition.parent.parent?.parent?.type === "import_clause"
+      (nodeParent?.type === "exposed_value" ||
+        nodeParent?.type === "exposed_type") &&
+      nodeParent.parent?.parent?.type === "import_clause"
     ) {
-      return findImport(treeContainer, nodeAtPosition.text);
-    } else if (nodeAtPosition.parent?.type === "union_variant") {
-      const definitionNode = nodeAtPosition.parent;
+      return findImport(treeContainer, nodeText);
+    } else if (nodeParent?.type === "union_variant") {
+      const definitionNode = nodeParent;
       return {
         node: definitionNode,
         nodeType: "UnionConstructor",
         uri,
       };
-    } else if (
-      nodeAtPosition.parent &&
-      nodeAtPosition.parent.type === "upper_case_qid"
-    ) {
-      const upperCaseQid = nodeAtPosition.parent;
+    } else if (nodeParent && nodeParent.type === "upper_case_qid") {
+      const upperCaseQid = nodeParent;
+      const upperCaseQidText = upperCaseQid.text;
 
       // Usage is either a type or a constructor
       // A type can only be used as a type
@@ -360,7 +360,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         upperCaseQid.parent?.type === "exposed_type";
       const isConstructorUsage = upperCaseQid.parent?.type === "value_expr";
 
-      const definitionNode = rootSymbols?.get(upperCaseQid.text, (symbol) =>
+      const definitionNode = rootSymbols?.get(upperCaseQidText, (symbol) =>
         isTypeUsage
           ? symbol.type === "Type" || symbol.type === "TypeAlias"
           : isConstructorUsage
@@ -380,14 +380,9 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
       // Make sure the next node is a dot, or else it isn't a Module
       if (TreeUtils.nextNode(nodeAtPosition)?.type === "dot") {
-        const endPos =
-          upperCaseQid.text.indexOf(nodeAtPosition.text) +
-          nodeAtPosition.text.length;
+        const endPos = upperCaseQidText.indexOf(nodeText) + nodeText.length;
 
-        const moduleNameOrAlias = nodeAtPosition.parent.text.substring(
-          0,
-          endPos,
-        );
+        const moduleNameOrAlias = nodeParent.text.substring(0, endPos);
         const moduleName =
           findImportModuleNameNode(moduleNameOrAlias, treeContainer)?.text ??
           moduleNameOrAlias;
@@ -405,7 +400,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       if (isTypeUsage) {
         definitionFromOtherFile = findImportOfType(
           treeContainer,
-          upperCaseQid.text,
+          upperCaseQidText,
           "Type",
         );
         if (definitionFromOtherFile) {
@@ -414,7 +409,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       } else {
         definitionFromOtherFile = findImportOfType(
           treeContainer,
-          upperCaseQid.text,
+          upperCaseQidText,
           "UnionConstructor",
         );
         if (definitionFromOtherFile) {
@@ -424,7 +419,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
       definitionFromOtherFile = findImportOfType(
         treeContainer,
-        upperCaseQid.text,
+        upperCaseQidText,
         "TypeAlias",
       );
       if (definitionFromOtherFile) {
@@ -433,8 +428,8 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
       definitionFromOtherFile = findImportOfType(
         treeContainer,
-        findImportModuleNameNode(upperCaseQid.text, treeContainer)?.text ??
-          upperCaseQid.text,
+        findImportModuleNameNode(upperCaseQidText, treeContainer)?.text ??
+          upperCaseQidText,
         "Module",
       );
 
@@ -442,19 +437,19 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         return definitionFromOtherFile;
       }
     } else if (
-      nodeAtPosition.parent?.type === "lower_pattern" &&
-      nodeAtPosition.parent.parent?.type === "record_pattern"
+      nodeParent?.type === "lower_pattern" &&
+      nodeParent.parent?.type === "record_pattern"
     ) {
-      const type = findType(nodeAtPosition.parent.parent, uri);
-      return TreeUtils.findFieldReference(type, nodeAtPosition.text);
+      const type = findType(nodeParent.parent, uri);
+      return TreeUtils.findFieldReference(type, nodeText);
     } else if (
-      nodeAtPosition.parent?.type === "value_qid" ||
-      nodeAtPosition.parent?.type === "lower_pattern" ||
-      nodeAtPosition.parent?.type === "record_base_identifier"
+      nodeParent?.type === "value_qid" ||
+      nodeParent?.type === "lower_pattern" ||
+      nodeParent?.type === "record_base_identifier"
     ) {
-      let nodeAtPositionText = nodeAtPosition.text;
-      if (nodeAtPosition.parent.type === "value_qid") {
-        nodeAtPositionText = nodeAtPosition.parent.text;
+      let nodeAtPositionText = nodeText;
+      if (nodeParent.type === "value_qid") {
+        nodeAtPositionText = nodeParent.text;
       }
 
       // Traverse the parents and find a binding
@@ -483,13 +478,9 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         };
       } else {
         // Get the full module name and handle an import alias if there is one
-        const endPos =
-          nodeAtPosition.parent.text.indexOf(nodeAtPosition.text) +
-          nodeAtPosition.text.length;
-        const moduleNameOrAlias = nodeAtPosition.parent.text.substring(
-          0,
-          endPos,
-        );
+        const nodeParentText = nodeParent.text;
+        const endPos = nodeParentText.indexOf(nodeText) + nodeText.length;
+        const moduleNameOrAlias = nodeParentText.substring(0, endPos);
         const moduleName =
           findImportModuleNameNode(moduleNameOrAlias, treeContainer)?.text ??
           moduleNameOrAlias;
@@ -506,7 +497,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
         const portDefinitionFromOtherFile = findImportOfType(
           treeContainer,
-          nodeAtPosition.parent.text,
+          nodeParentText,
           "Port",
         );
 
@@ -516,7 +507,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
         const functionDefinitionFromOtherFile = findImportOfType(
           treeContainer,
-          nodeAtPosition.parent.text,
+          nodeParentText,
           "Function",
         );
 
@@ -526,37 +517,34 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       }
     } else if (nodeAtPosition.type === "operator_identifier") {
       const operatorsCache = workspace.getOperatorsCache();
-      const cached = operatorsCache.get(nodeAtPosition.text);
+      const cached = operatorsCache.get(nodeText);
       if (cached) {
         return cached;
       }
 
-      const definitionNode = TreeUtils.findOperator(
-        treeContainer,
-        nodeAtPosition.text,
-      );
+      const definitionNode = TreeUtils.findOperator(treeContainer, nodeText);
       if (definitionNode) {
         const result: DefinitionResult = {
           node: definitionNode,
           uri,
           nodeType: "Operator",
         };
-        operatorsCache.set(nodeAtPosition.text, result);
+        operatorsCache.set(nodeText, result);
         return result;
       } else {
         const definitionFromOtherFile = findImportOfType(
           treeContainer,
-          nodeAtPosition.text,
+          nodeText,
           "Operator",
         );
 
         if (definitionFromOtherFile) {
-          operatorsCache.set(nodeAtPosition.text, definitionFromOtherFile);
+          operatorsCache.set(nodeText, definitionFromOtherFile);
           return definitionFromOtherFile;
         }
       }
-    } else if (nodeAtPosition.parent?.type === "field_access_expr") {
-      let target = nodeAtPosition.parent?.childForFieldName("target");
+    } else if (nodeParent?.type === "field_access_expr") {
+      let target = nodeParent?.childForFieldName("target");
 
       // Adjust for parenthesis expr. Will need to change when we handle it better in inference
       if (target?.type === "parenthesized_expr") {
@@ -565,43 +553,43 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
       if (target) {
         const type = findType(target, uri);
-        return TreeUtils.findFieldReference(type, nodeAtPosition.text);
+        return TreeUtils.findFieldReference(type, nodeText);
       }
     } else if (
       nodeAtPosition.type === "lower_case_identifier" &&
-      nodeAtPosition.parent?.type === "field" &&
-      nodeAtPosition.parent.parent?.type === "record_expr"
+      nodeParent?.type === "field" &&
+      nodeParent.parent?.type === "record_expr"
     ) {
-      const type = findType(nodeAtPosition.parent.parent, uri);
-      return TreeUtils.findFieldReference(type, nodeAtPosition.text);
+      const type = findType(nodeParent.parent, uri);
+      return TreeUtils.findFieldReference(type, nodeText);
     } else if (
       nodeAtPosition.type === "lower_case_identifier" &&
-      nodeAtPosition.parent?.type === "field_accessor_function_expr"
+      nodeParent?.type === "field_accessor_function_expr"
     ) {
-      const type = findType(nodeAtPosition.parent, uri);
+      const type = findType(nodeParent, uri);
 
       if (type.nodeType === "Function") {
         const paramType = type.params[0];
 
-        return TreeUtils.findFieldReference(paramType, nodeAtPosition.text);
+        return TreeUtils.findFieldReference(paramType, nodeText);
       }
     } else if (
       nodeAtPosition.type === "lower_case_identifier" &&
-      nodeAtPosition.parent?.type === "field_type"
+      nodeParent?.type === "field_type"
     ) {
       return {
-        node: nodeAtPosition.parent,
+        node: nodeParent,
         nodeType: "FieldType",
         uri,
       };
     } else if (
       nodeAtPosition.type === "upper_case_identifier" &&
-      nodeAtPosition.parent?.type === "ERROR"
+      nodeParent?.type === "ERROR"
     ) {
-      let fullModuleName = nodeAtPosition.text;
+      let fullModuleName = nodeText;
 
       // Get fully qualified module name
-      // Ex: nodeAtPosition.text is Attributes, we need to get Html.Attributes manually
+      // Ex: nodeText is Attributes, we need to get Html.Attributes manually
       let currentNode = nodeAtPosition.previousNamedSibling;
       while (
         currentNode?.type === "dot" &&
@@ -648,9 +636,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         ? allAnnotations.flatMap(callback)
         : flatMap(allAnnotations, callback);
 
-      const firstMatching = allTypeVariables.find(
-        (t) => t.text === nodeAtPosition.text,
-      );
+      const firstMatching = allTypeVariables.find((t) => t.text === nodeText);
 
       if (firstMatching) {
         return {
@@ -665,9 +651,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         parentType,
       );
 
-      const firstMatching = allTypeNames?.find(
-        (t) => t.text === nodeAtPosition.text,
-      );
+      const firstMatching = allTypeNames?.find((t) => t.text === nodeText);
 
       if (firstMatching) {
         return {

@@ -85,10 +85,10 @@ export class ASTProvider {
       ])
       .map(([startNode, endNode]) => [
         startNode
-          ? TreeUtils.findParentOfType("value_declaration", startNode)
+          ? TreeUtils.findParentOfType("value_declaration", startNode, true)
           : undefined,
         endNode
-          ? TreeUtils.findParentOfType("value_declaration", endNode)
+          ? TreeUtils.findParentOfType("value_declaration", endNode, true)
           : undefined,
       ])
       .forEach(([startNode, endNode]) => {
