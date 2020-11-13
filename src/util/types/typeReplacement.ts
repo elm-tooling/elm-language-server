@@ -1,3 +1,4 @@
+import { performance } from "perf_hooks";
 import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
 import {
   TVar,
@@ -11,20 +12,18 @@ import {
   TMutableRecord,
 } from "./typeInference";
 
-export class TypeReplacement {
-  private replacements: Map<TVar, [boolean, Type]>;
+export let replaceTime = 0;
+export function resetReplaceTime(): void {
+  replaceTime = 0;
+}
 
+export class TypeReplacement {
   constructor(
-    replacements: Map<TVar, Type>,
+    private replacements: Map<TVar, Type | [boolean, Type]>,
     private freshen: boolean,
     private keepRecordsMutable: boolean,
     private varsToRemainRigid?: TVar[],
-  ) {
-    this.replacements = new Map<TVar, [boolean, Type]>();
-    replacements.forEach((value, key) => {
-      this.replacements.set(key, [false, value]);
-    });
-  }
+  ) {}
 
   public static replace(
     type: Type,
@@ -32,16 +31,21 @@ export class TypeReplacement {
     keepRecordsMutable = false,
     varsToRemainRigid?: TVar[],
   ): Type {
-    if (!varsToRemainRigid && replacements.size === 0) {
-      return type;
-    }
+    const start = performance.now();
+    try {
+      if (!varsToRemainRigid && replacements.size === 0) {
+        return type;
+      }
 
-    return new TypeReplacement(
-      replacements,
-      false,
-      keepRecordsMutable,
-      varsToRemainRigid,
-    ).replace(type);
+      return new TypeReplacement(
+        replacements,
+        false,
+        keepRecordsMutable,
+        varsToRemainRigid,
+      ).replace(type);
+    } finally {
+      replaceTime += performance.now() - start;
+    }
   }
 
   public static freshenVars(type: Type): Type {
@@ -234,8 +238,14 @@ export class TypeReplacement {
       return undefined;
     }
 
-    const hasBeenAccessed = replacement[0];
-    const storedType = replacement[1];
+    let hasBeenAccessed = false;
+    let storedType;
+    if (Array.isArray(replacement)) {
+      hasBeenAccessed = replacement[0];
+      storedType = replacement[1];
+    } else {
+      storedType = replacement;
+    }
 
     if (hasBeenAccessed) {
       return storedType;
