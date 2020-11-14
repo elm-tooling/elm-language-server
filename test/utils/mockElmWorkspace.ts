@@ -15,7 +15,7 @@ import { TreeUtils } from "../../src/util/treeUtils";
 import {
   IPossibleImportsCache,
   PossibleImportsCache,
-} from "../../src/providers";
+} from "../../src/util/possibleImportsCache";
 
 export const baseUri = Path.join(__dirname, "../sources/src/");
 

@@ -8,9 +8,11 @@ import { IConnection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { Forest, IForest } from "./forest";
-import { IPossibleImportsCache, PossibleImportsCache } from "./providers";
 import * as utils from "./util/elmUtils";
-import { execCmd } from "./util/elmUtils";
+import {
+  IPossibleImportsCache,
+  PossibleImportsCache,
+} from "./util/possibleImportsCache";
 import { Settings } from "./util/settings";
 import { TypeCache } from "./util/types/typeCache";
 import {
@@ -152,21 +154,6 @@ export class ElmWorkspace implements IElmWorkspace {
         `Could not figure out elm version, this will impact how good the server works. \n ${e.stack}`,
       );
     }
-
-    // const options = {
-    //   cmdArguments: ["make"],
-    //   notFoundText:
-    //     "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.",
-    // };
-
-    // // Run `elm make` on init to download dependencies
-    // await execCmd(
-    //   clientSettings.elmPath,
-    //   "elm",
-    //   options,
-    //   this.rootPath.toString(),
-    //   this.connection,
-    // );
 
     const pathToElmJson = path.join(this.rootPath.fsPath, "elm.json");
     this.connection.console.info(`Reading elm.json from ${pathToElmJson}`);

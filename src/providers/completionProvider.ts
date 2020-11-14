@@ -43,33 +43,6 @@ interface ICompletionOptions {
   filterText?: string;
 }
 
-export interface IPossibleImportsCache {
-  get(uri: string): IPossibleImport[] | undefined;
-  set(uri: string, possibleImports: IPossibleImport[]): void;
-  clear(): void;
-}
-
-export class PossibleImportsCache implements IPossibleImportsCache {
-  private uri: string | undefined;
-  private possibleImports: IPossibleImport[] | undefined;
-
-  public get(uri: string): IPossibleImport[] | undefined {
-    if (uri === this.uri) {
-      return this.possibleImports;
-    }
-  }
-
-  public set(uri: string, possibleImports: IPossibleImport[]): void {
-    this.uri = uri;
-    this.possibleImports = possibleImports;
-  }
-
-  public clear(): void {
-    this.uri = undefined;
-    this.possibleImports = undefined;
-  }
-}
-
 export class CompletionProvider {
   private qidRegex = /[a-zA-Z0-9.]+/;
   private connection: IConnection;
@@ -543,7 +516,7 @@ export class CompletionProvider {
   ): CompletionItem[] {
     const completions: CompletionItem[] = [];
 
-    checker.getAllImports(treeContainer).forEach((element) => {
+    checker.getAllImports(treeContainer).forEach((element): void => {
       const markdownDocumentation = HintHelper.createHint(element.node);
       let sortPrefix = "d";
       if (element.maintainerAndPackageName) {
@@ -1078,7 +1051,7 @@ export class CompletionProvider {
       // Then sort by startsWith filter text, then matches filter text
       return possibleImports
         .filter(
-          (possibleImport) =>
+          (possibleImport): boolean =>
             !allImportedValues.get(
               possibleImport.valueToImport ?? possibleImport.value,
               (imp) => imp.fromModuleName === possibleImport.module,
