@@ -35,6 +35,10 @@ jobs:
       - name: Install Elm
         run: |
           npm install -g elm
+      - name: Elm make
+        run: |
+          cd ./ianmackenzie/elm-geometry
+          elm make ./src/Arc2d.elm
       - name: Run performance test
         run: |
           npx ts-node ./test/performance.ts ./ianmackenzie/elm-geometry
