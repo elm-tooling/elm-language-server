@@ -447,7 +447,7 @@ export class TreeUtils {
   }
 
   /**
-   * @deprecated Should not use do to performance. Use bindings instead
+   * @deprecated Should not be used due to performance. Use bindings instead
    */
   public static findImportClauseByName(
     tree: Tree,
@@ -989,7 +989,7 @@ export class TreeUtils {
   }
 
   /**
-   * @deprecated Should not use do to performance. Use bindings instead
+   * @deprecated Should not be used due to performance. Use bindings instead
    */
   public static findAllImportClauseNodes(tree: Tree): SyntaxNode[] | undefined {
     const result = tree.rootNode.children.filter(
