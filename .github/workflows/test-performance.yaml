@@ -1,0 +1,45 @@
+name: Test Performance
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        node-version: [10, 12, 14]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Checkout test target
+        uses: actions/checkout@v2
+        with:
+          # Repository name with owner. For example, actions/checkout
+          # Default: ${{ github.repository }}
+          repository: "Chadtech/elm-vector"
+
+          # Relative path under $GITHUB_WORKSPACE to place the repository
+          path: "Chadtech/elm-vector"
+      - name: Setup for ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: npm ci
+        run: |
+          npm ci
+      - name: Compile
+        run: |
+          npm run compile
+      - name: LS
+        run: |
+          pwd
+      - name: LS
+        run: |
+          ls ./Chadtech/elm-vector
+          cd ./Chadtech/elm-vector
+          pwd
+      - name: Run performance test
+        run: |
+          npx ts-node ./test/performance.ts ./Chadtech/elm-vector

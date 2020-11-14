@@ -27,14 +27,14 @@ import {
 container.register("Connection", {
   useValue: {
     console: {
-      info: (): void => {
-        //
+      info: (a: string): void => {
+        console.log(a);
       },
-      warn: (): void => {
-        //
+      warn: (a: string): void => {
+        console.log(a);
       },
-      error: (): void => {
-        //
+      error: (a: string): void => {
+        console.log(a);
       },
     },
   },
@@ -54,6 +54,9 @@ async function initParser(): Promise<void> {
 }
 
 export async function runPerformanceTests(uri: string): Promise<void> {
+  const pathUri = URI.file(uri);
+  console.log(`Running with uri: ${pathUri.fsPath}`);
+
   await initParser();
 
   const times: { [name: string]: number } = {};
@@ -64,7 +67,7 @@ export async function runPerformanceTests(uri: string): Promise<void> {
   const numTimes = 10;
 
   for (let i = 0; i < numTimes; i++) {
-    const elmWorkspace = new ElmWorkspace(URI.file(uri));
+    const elmWorkspace = new ElmWorkspace(pathUri);
     await elmWorkspace.init(() => {
       //
     });
@@ -86,8 +89,6 @@ export async function runPerformanceTests(uri: string): Promise<void> {
     resetDefinitionAndMappingTime();
     resetReplaceTime();
 
-    process.stdout.clearLine(-1);
-    process.stdout.cursorTo(0);
     process.stdout.write(`Finished run ${i + 1}/${numTimes}\n`);
   }
 
