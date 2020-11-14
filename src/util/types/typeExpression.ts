@@ -27,6 +27,9 @@ import {
   ERecordType,
   ETypeAliasDeclaration,
   EPortAnnotation,
+  mapTypeDeclaration,
+  mapTypeAliasDeclaration,
+  mapTypeAnnotation,
 } from "./expressionTree";
 import { TreeUtils } from "../treeUtils";
 import { TypeReplacement } from "./typeReplacement";
@@ -63,6 +66,7 @@ export class TypeExpression {
     workspace: IElmWorkspace,
   ): InferenceResult {
     const setter = (): InferenceResult => {
+      mapTypeDeclaration(e); // Fill in values only when needed
       const inferenceResult = new TypeExpression(
         e,
         uri,
@@ -96,6 +100,7 @@ export class TypeExpression {
     activeAliases = new Set<ETypeAliasDeclaration>(),
   ): InferenceResult {
     const setter = (): InferenceResult => {
+      mapTypeAliasDeclaration(e);
       const inferenceResult = new TypeExpression(
         e,
         uri,
@@ -129,11 +134,8 @@ export class TypeExpression {
     workspace: IElmWorkspace,
     rigid = true,
   ): InferenceResult | undefined {
-    if (!e.typeExpression) {
-      return;
-    }
-
     const setter = (): InferenceResult => {
+      mapTypeAnnotation(e);
       const inferenceResult = new TypeExpression(
         e,
         uri,
@@ -148,12 +150,8 @@ export class TypeExpression {
     };
 
     const result = !workspace.getForest().getByUri(uri)?.writeable
-      ? workspace
-          .getTypeCache()
-          .getOrSet("PACKAGE_TYPE_ANNOTATION", e.typeExpression, setter)
-      : workspace
-          .getTypeCache()
-          .getOrSet("PROJECT_TYPE_ANNOTATION", e.typeExpression, setter);
+      ? workspace.getTypeCache().getOrSet("PACKAGE_TYPE_ANNOTATION", e, setter)
+      : workspace.getTypeCache().getOrSet("PROJECT_TYPE_ANNOTATION", e, setter);
 
     if (!rigid) {
       result.type = TypeReplacement.flexify(result.type);
@@ -214,6 +212,7 @@ export class TypeExpression {
     const declaration = mapSyntaxNodeToExpression(
       TreeUtils.findParentOfType("type_declaration", unionVariant),
     );
+    mapTypeDeclaration(declaration as ETypeDeclaration);
 
     const declarationType: Type =
       declaration && declaration.nodeType === "TypeDeclaration"
@@ -345,11 +344,15 @@ export class TypeExpression {
     }
 
     const annotation = mapSyntaxNodeToExpression(
-      TreeUtils.getAllAncestorsOfType("type_annotation", definition.expr)[0],
+      TreeUtils.findParentOfType("type_annotation", definition.expr),
     );
 
+    if (annotation) {
+      mapTypeAnnotation(annotation as ETypeAnnotation);
+    }
+
     const expr = annotation
-      ? TreeUtils.findFirstNamedChildOfType("type_expression", annotation)
+      ? annotation.childForFieldName("typeExpression")
       : undefined;
 
     // If the definition is not in a type annotation or it is to a
@@ -494,7 +497,12 @@ export class TypeExpression {
       this.getTypeVar(name),
     );
 
-    return TUnion(typeDeclaration.moduleName, typeDeclaration.name, params);
+    return TUnion(
+      this.workspace.getForest().getByUri(typeDeclaration.tree.uri)
+        ?.moduleName ?? "",
+      typeDeclaration.name,
+      params,
+    );
   }
 
   private getTypeVar(e: Expression): TVar {

@@ -1,22 +1,33 @@
 import { SyntaxNode, Tree } from "web-tree-sitter";
+import { IRootFolder } from "./elmWorkspace";
+import { Imports } from "./imports";
 import { IExposing, TreeUtils } from "./util/treeUtils";
+import * as path from "path";
+import { existsSync } from "fs";
+import { URI } from "vscode-uri";
+import { SyntaxNodeMap } from "./util/types/syntaxNodeMap";
+import { SymbolMap } from "./util/types/binder";
 
 export interface ITreeContainer {
   uri: string;
   writeable: boolean;
   referenced: boolean;
-  moduleName?: string;
   maintainerAndPackageName?: string;
-  exposing?: IExposing[]; // This file exposes
   tree: Tree;
   isExposed: boolean; // Is this file exposed by the elm.json
+
+  // These are resolved in the synchronize step and are cached until the file is changed
+  moduleName?: string;
+  resolvedModules?: Map<string, string>; // Map of modules to uris
+
+  // Resolved during binding
+  exposing?: IExposing;
+  symbolLinks?: SyntaxNodeMap<SyntaxNode, SymbolMap>;
 }
 
 export interface IForest {
-  treeIndex: ITreeContainer[];
+  treeMap: Map<string, ITreeContainer>;
   getTree(uri: string): Tree | undefined;
-  getExposingByModuleName(moduleName: string): IExposing[] | undefined;
-  getTreeByModuleName(moduleName: string): Tree | undefined;
   getByModuleName(moduleName: string): ITreeContainer | undefined;
   getByUri(uri: string): ITreeContainer | undefined;
   setTree(
@@ -26,47 +37,36 @@ export interface IForest {
     tree: Tree,
     isExposed: boolean,
     packageName?: string,
-  ): void;
+  ): ITreeContainer;
   removeTree(uri: string): void;
-  getUriOfNode(node: SyntaxNode): string | undefined;
+  synchronize(): void;
+  invalidateResolvedModules(): void;
 }
 
 export class Forest implements IForest {
-  public treeIndex: ITreeContainer[] = [];
+  public treeMap: Map<string, ITreeContainer> = new Map<
+    string,
+    ITreeContainer
+  >();
+  public moduleToUrisMap: Map<string, string[]> = new Map<string, string[]>();
+
+  constructor(private elmFolders: IRootFolder[]) {}
 
   public getTree(uri: string): Tree | undefined {
-    const result = this.treeIndex.find((tree) => tree.uri === uri);
-
-    return result && result.tree;
-  }
-
-  public getExposingByModuleName(moduleName: string): IExposing[] | undefined {
-    const result = this.treeIndex
-      .filter((tree) => tree.moduleName === moduleName)
-      .sort((x, y) => {
-        return x.isExposed === y.isExposed ? 0 : x.isExposed ? -1 : 1;
-      })[0];
-    return result && result.exposing;
-  }
-
-  public getTreeByModuleName(moduleName: string): Tree | undefined {
-    const result = this.treeIndex.find(
-      (tree) => tree.moduleName === moduleName,
-    );
-
-    return result && result.tree;
+    return this.getByUri(uri)?.tree;
   }
 
   public getByModuleName(moduleName: string): ITreeContainer | undefined {
-    return this.treeIndex
-      .filter((tree) => tree.moduleName === moduleName)
+    return this.moduleToUrisMap
+      .get(moduleName)
+      ?.map(this.getByUri.bind(this))
       .sort((x, y) => {
-        return x.isExposed === y.isExposed ? 0 : x.isExposed ? -1 : 1;
+        return x?.isExposed === y?.isExposed ? 0 : x?.isExposed ? -1 : 1;
       })[0];
   }
 
   public getByUri(uri: string): ITreeContainer | undefined {
-    return this.treeIndex.find((tree) => tree.uri === uri);
+    return this.treeMap.get(uri);
   }
 
   public setTree(
@@ -76,20 +76,11 @@ export class Forest implements IForest {
     tree: Tree,
     isExposed: boolean,
     maintainerAndPackageName?: string,
-  ): void {
-    const moduleResult = TreeUtils.getModuleNameAndExposing(tree);
-    let moduleName: string | undefined;
-    let exposing: IExposing[] | undefined;
-    if (moduleResult) {
-      ({ moduleName, exposing } = moduleResult);
-    }
+  ): ITreeContainer {
+    tree.uri = uri;
 
-    const existingTree = this.treeIndex.findIndex((a) => a.uri === uri);
-
-    const treeContainer = {
-      exposing,
+    const treeContainer: ITreeContainer = {
       maintainerAndPackageName,
-      moduleName,
       referenced,
       tree,
       uri,
@@ -97,22 +88,108 @@ export class Forest implements IForest {
       isExposed,
     };
 
-    if (existingTree === -1) {
-      this.treeIndex.push(treeContainer);
-    } else {
-      this.treeIndex[existingTree] = treeContainer;
-    }
+    this.treeMap.set(uri, treeContainer);
+
+    return treeContainer;
   }
 
   public removeTree(uri: string): void {
-    // Not sure this is the best way to do this...
-    this.treeIndex = this.treeIndex.filter((tree) => tree.uri !== uri);
+    const existing = this.getByUri(uri);
+    if (existing && existing.moduleName) {
+      this.deleteModuleFromUriMap(existing.moduleName, uri);
+    }
+
+    this.treeMap.delete(uri);
   }
 
-  getUriOfNode(node: SyntaxNode): string | undefined {
-    return this.treeIndex.find(
-      (treeContainer) =>
-        treeContainer.tree.rootNode.id === node.tree.rootNode.id,
-    )?.uri;
+  public synchronize(): void {
+    this.treeMap.forEach((treeContainer, uri) => {
+      // Resolve import modules
+      if (!treeContainer.resolvedModules) {
+        treeContainer.resolvedModules = this.resolveModules(treeContainer);
+      }
+
+      if (!treeContainer.moduleName) {
+        const moduleName = TreeUtils.getModuleNameNode(treeContainer.tree)
+          ?.text;
+
+        if (moduleName) {
+          treeContainer.moduleName = moduleName;
+          this.addModuleToUriMap(moduleName, uri);
+        }
+      }
+    });
+  }
+
+  public invalidateResolvedModules(): void {
+    this.treeMap.forEach((treeContainer) => {
+      treeContainer.resolvedModules = undefined;
+    });
+  }
+
+  private resolveModules(treeContainer: ITreeContainer): Map<string, string> {
+    const importClauses = [
+      ...Imports.getVirtualImports(),
+      ...(TreeUtils.findAllImportClauseNodes(treeContainer.tree) ?? []),
+    ];
+
+    const resolvedModules = new Map<string, string>();
+
+    // It should be faster to look directly at elmFolders instead of traversing the forest
+    importClauses.forEach((importClause) => {
+      const moduleName = TreeUtils.findFirstNamedChildOfType(
+        "upper_case_qid",
+        importClause,
+      )?.text;
+
+      if (moduleName) {
+        const modulePath = moduleName.split(".").join("/") + ".elm";
+        const found = this.elmFolders.find((folder) =>
+          existsSync(
+            path.join(
+              !folder.writeable ? folder.uri + "/src" : folder.uri,
+              modulePath,
+            ),
+          ),
+        );
+
+        if (treeContainer.writeable && !found) {
+          // TODO: Diagnostics for unresolved imports
+          console.log(`Could not resolve import for ${moduleName}`);
+        } else if (found) {
+          resolvedModules.set(
+            moduleName,
+            URI.file(
+              path.join(
+                !found.writeable ? found.uri + "/src" : found.uri,
+                modulePath,
+              ),
+            ).toString(),
+          );
+        }
+      }
+    });
+
+    return resolvedModules;
+  }
+
+  private addModuleToUriMap(module: string, uri: string): void {
+    const existing = this.moduleToUrisMap.get(module);
+
+    if (existing) {
+      if (!existing.includes(uri)) {
+        existing.push(uri);
+      }
+    } else {
+      this.moduleToUrisMap.set(module, [uri]);
+    }
+  }
+
+  private deleteModuleFromUriMap(module: string, uri: string): void {
+    const existing = this.moduleToUrisMap.get(module);
+
+    if (existing) {
+      existing.splice(existing.indexOf(uri), 1);
+    }
   }
 }

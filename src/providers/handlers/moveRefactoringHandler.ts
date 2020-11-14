@@ -40,7 +40,7 @@ export class MoveRefactoringHandler {
   ): IMoveDestinationsResponse {
     const forest = elmWorkspace.getForest();
 
-    const destinations: IMoveDestination[] = forest.treeIndex
+    const destinations: IMoveDestination[] = Array.from(forest.treeMap.values())
       .filter((tree) => tree.writeable && tree.uri !== params.sourceUri)
       .map((tree) => {
         let uri = URI.parse(tree.uri).fsPath;

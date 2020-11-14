@@ -1,8 +1,10 @@
-import { IElmWorkspace } from "src/elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
+import { ITreeContainer } from "../forest";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IReferenceNode } from "./referenceNode";
 import { TreeUtils } from "./treeUtils";
 import { Utils } from "./utils";
+import { Imports } from "../imports";
 
 export class References {
   public static find(
@@ -12,12 +14,17 @@ export class References {
     const references: { node: SyntaxNode; uri: string }[] = [];
 
     const forest = elmWorkspace.getForest();
-    const imports = elmWorkspace.getImports();
+    const checker = elmWorkspace.getTypeChecker();
 
     if (definitionNode) {
       const refSourceTree = forest.getByUri(definitionNode.uri);
 
       if (refSourceTree) {
+        const imports: { [uri: string]: Imports } = {};
+        forest.treeMap.forEach((treeContainer) => {
+          imports[treeContainer.uri] = checker.getAllImports(treeContainer);
+        });
+
         const moduleNameNode = TreeUtils.getModuleNameNode(refSourceTree.tree);
         switch (definitionNode.nodeType) {
           case "Function":
@@ -64,12 +71,11 @@ export class References {
                   );
                 }
 
-                if (
-                  TreeUtils.isExposedFunction(
-                    refSourceTree.tree,
-                    functionNameNode.text,
-                  )
-                ) {
+                const isExposedFunction = TreeUtils.isExposedFunction(
+                  refSourceTree.tree,
+                  functionNameNode.text,
+                );
+                if (isExposedFunction) {
                   const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
                     refSourceTree.tree,
                   );
@@ -87,53 +93,55 @@ export class References {
                     }
                   }
 
-                  if (moduleNameNode) {
-                    for (const uri in imports.imports) {
-                      if (imports.imports.hasOwnProperty(uri)) {
-                        const element = imports.imports[uri];
-                        const needsToBeChecked = element.filter(
-                          (a) =>
-                            uri !== definitionNode.uri &&
-                            a.fromModuleName === moduleNameNode.text &&
-                            a.type === "Function" &&
-                            (a.alias.endsWith(`.${functionNameNode.text}`) ||
-                              a.alias === functionNameNode.text),
+                  if (isExposedFunction && moduleNameNode) {
+                    for (const uri in imports) {
+                      if (uri === definitionNode.uri) {
+                        continue;
+                      }
+
+                      const element = imports[uri];
+                      const found =
+                        element.get(functionNameNode.text) ??
+                        element.get(
+                          `${moduleNameNode.text}.${functionNameNode.text}`,
                         );
-                        if (needsToBeChecked.length > 0) {
-                          const treeToCheck = forest.getByUri(uri);
 
-                          if (treeToCheck && treeToCheck.writeable) {
-                            const importClauseNode = TreeUtils.findImportClauseByName(
-                              treeToCheck.tree,
-                              moduleNameNode.text,
+                      const needsToBeChecked =
+                        found?.fromModuleName === moduleNameNode.text &&
+                        found.type === "Function";
+
+                      if (needsToBeChecked && found) {
+                        const treeToCheck = forest.getByUri(uri);
+
+                        if (treeToCheck && treeToCheck.writeable) {
+                          const importClauseNode = TreeUtils.findImportClauseByName(
+                            treeToCheck.tree,
+                            moduleNameNode.text,
+                          );
+                          if (importClauseNode) {
+                            const exposedNode = TreeUtils.findExposedFunctionNode(
+                              importClauseNode,
+                              functionNameNode.text,
                             );
-                            if (importClauseNode) {
-                              const exposedNode = TreeUtils.findExposedFunctionNode(
-                                importClauseNode,
-                                functionNameNode.text,
-                              );
 
-                              if (exposedNode) {
-                                references.push({
-                                  node: exposedNode,
-                                  uri,
-                                });
-                              }
+                            if (exposedNode) {
+                              references.push({
+                                node: exposedNode,
+                                uri,
+                              });
                             }
+                          }
 
-                            needsToBeChecked.forEach((a) => {
-                              const functions = this.findFunctionCalls(
-                                treeToCheck.tree.rootNode,
-                                a.alias,
-                              );
-                              if (functions) {
-                                references.push(
-                                  ...functions.map((node) => {
-                                    return { node, uri };
-                                  }),
-                                );
-                              }
-                            });
+                          const functions = this.findFunctionCalls(
+                            treeToCheck.tree.rootNode,
+                            found?.alias,
+                          );
+                          if (functions) {
+                            references.push(
+                              ...functions.map((node) => {
+                                return { node, uri };
+                              }),
+                            );
                           }
                         }
                       }
@@ -171,12 +179,11 @@ export class References {
                   );
                 }
 
-                if (
-                  TreeUtils.isExposedTypeOrTypeAlias(
-                    refSourceTree.tree,
-                    typeOrTypeAliasNameNode.text,
-                  )
-                ) {
+                const isExposed = TreeUtils.isExposedTypeOrTypeAlias(
+                  refSourceTree.tree,
+                  typeOrTypeAliasNameNode.text,
+                );
+                if (isExposed) {
                   const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
                     refSourceTree.tree,
                   );
@@ -194,55 +201,55 @@ export class References {
                     }
                   }
 
-                  if (moduleNameNode) {
-                    for (const uri in imports.imports) {
-                      if (imports.imports.hasOwnProperty(uri)) {
-                        const element = imports.imports[uri];
-                        const needsToBeChecked = element.filter(
-                          (a) =>
-                            uri !== definitionNode.uri &&
-                            a.fromModuleName === moduleNameNode.text &&
-                            (a.type === "Type" || a.type === "TypeAlias") &&
-                            (a.alias.endsWith(
-                              `.${typeOrTypeAliasNameNode.text}`,
-                            ) ||
-                              a.alias === typeOrTypeAliasNameNode.text),
+                  if (isExposed && moduleNameNode) {
+                    for (const uri in imports) {
+                      if (uri === definitionNode.uri) {
+                        continue;
+                      }
+
+                      const element = imports[uri];
+                      const found =
+                        element.get(typeOrTypeAliasNameNode.text) ??
+                        element.get(
+                          `${moduleNameNode.text}.${typeOrTypeAliasNameNode.text}`,
                         );
-                        if (needsToBeChecked.length > 0) {
-                          const treeToCheck = forest.getByUri(uri);
 
-                          if (treeToCheck && treeToCheck.writeable) {
-                            const importClauseNode = TreeUtils.findImportClauseByName(
-                              treeToCheck.tree,
-                              moduleNameNode.text,
+                      const needsToBeChecked =
+                        found?.fromModuleName === moduleNameNode.text &&
+                        (found.type === "Type" || found.type === "TypeAlias");
+
+                      if (needsToBeChecked && found) {
+                        const treeToCheck = forest.getByUri(uri);
+
+                        if (treeToCheck && treeToCheck.writeable) {
+                          const importClauseNode = TreeUtils.findImportClauseByName(
+                            treeToCheck.tree,
+                            moduleNameNode.text,
+                          );
+                          if (importClauseNode) {
+                            const exposedNode = TreeUtils.findExposedTypeOrTypeAliasNode(
+                              importClauseNode,
+                              typeOrTypeAliasNameNode.text,
                             );
-                            if (importClauseNode) {
-                              const exposedNode = TreeUtils.findExposedTypeOrTypeAliasNode(
-                                importClauseNode,
-                                typeOrTypeAliasNameNode.text,
-                              );
 
-                              if (exposedNode) {
-                                references.push({
-                                  node: exposedNode,
-                                  uri,
-                                });
-                              }
+                            if (exposedNode) {
+                              references.push({
+                                node: exposedNode,
+                                uri,
+                              });
                             }
+                          }
 
-                            needsToBeChecked.forEach((a) => {
-                              const typeOrTypeAliasCalls = TreeUtils.findTypeOrTypeAliasCalls(
-                                treeToCheck.tree,
-                                a.alias,
-                              );
-                              if (typeOrTypeAliasCalls) {
-                                references.push(
-                                  ...typeOrTypeAliasCalls.map((node) => {
-                                    return { node, uri };
-                                  }),
-                                );
-                              }
-                            });
+                          const typeOrTypeAliasCalls = TreeUtils.findTypeOrTypeAliasCalls(
+                            treeToCheck.tree,
+                            found.alias,
+                          );
+                          if (typeOrTypeAliasCalls) {
+                            references.push(
+                              ...typeOrTypeAliasCalls.map((node) => {
+                                return { node, uri };
+                              }),
+                            );
                           }
                         }
                       }
@@ -263,35 +270,26 @@ export class References {
                 });
               }
 
-              for (const uri in imports.imports) {
-                if (imports.imports.hasOwnProperty(uri)) {
-                  const element = imports.imports[uri];
-                  const needsToBeChecked = element.filter(
-                    (a) =>
-                      uri !== definitionNode.uri &&
-                      a.fromModuleName === moduleNameNode.text,
-                  );
-                  if (needsToBeChecked.length > 0) {
-                    const treeToCheck = forest.getByUri(uri);
+              for (const uri in imports) {
+                if (uri === definitionNode.uri) {
+                  continue;
+                }
 
-                    if (treeToCheck && treeToCheck.writeable) {
-                      needsToBeChecked.forEach((a) => {
-                        switch (a.type) {
-                          case "Module": {
-                            const importNameNode = TreeUtils.findImportNameNode(
-                              treeToCheck.tree,
-                              a.alias,
-                            );
-                            if (importNameNode) {
-                              references.push({ node: importNameNode, uri });
-                            }
-                            break;
-                          }
-                          default:
-                            break;
-                        }
-                      });
+                const element = imports[uri];
+                const found = element.get(moduleNameNode.text);
+
+                if (found) {
+                  const treeToCheck = forest.getByUri(uri);
+
+                  if (treeToCheck && treeToCheck.writeable) {
+                    const importNameNode = checker.findImportModuleNameNode(
+                      found.alias,
+                      treeToCheck,
+                    );
+                    if (importNameNode) {
+                      references.push({ node: importNameNode, uri });
                     }
+                    break;
                   }
                 }
               }
@@ -416,31 +414,33 @@ export class References {
                 }
               }
 
-              for (const uri in imports.imports) {
-                if (imports.imports.hasOwnProperty(uri)) {
-                  const element = imports.imports[uri];
-                  const needsToBeChecked = element.filter(
-                    (a) =>
-                      uri !== definitionNode.uri &&
-                      a.fromModuleName === moduleNameNode.text &&
-                      a.type === "UnionConstructor" &&
-                      (a.alias.endsWith(`.${nameNode.text}`) ||
-                        a.alias === nameNode.text),
-                  );
-                  if (needsToBeChecked.length > 0) {
-                    const treeToCheck = forest.getByUri(uri);
-                    if (treeToCheck && treeToCheck.writeable) {
-                      const unionConstructorCallsFromOtherFiles = TreeUtils.findUnionConstructorCalls(
-                        treeToCheck.tree,
-                        nameNode.text,
+              for (const uri in imports) {
+                if (uri === definitionNode.uri) {
+                  continue;
+                }
+
+                const element = imports[uri];
+                const found =
+                  element.get(nameNode.text) ??
+                  element.get(`${moduleNameNode.text}.${nameNode.text}`);
+
+                const needsToBeChecked =
+                  found?.fromModuleName === moduleNameNode.text &&
+                  found.type === "UnionConstructor";
+
+                if (needsToBeChecked) {
+                  const treeToCheck = forest.getByUri(uri);
+                  if (treeToCheck && treeToCheck.writeable) {
+                    const unionConstructorCallsFromOtherFiles = TreeUtils.findUnionConstructorCalls(
+                      treeToCheck.tree,
+                      nameNode.text,
+                    );
+                    if (unionConstructorCallsFromOtherFiles) {
+                      references.push(
+                        ...unionConstructorCallsFromOtherFiles.map((node) => {
+                          return { node, uri };
+                        }),
                       );
-                      if (unionConstructorCallsFromOtherFiles) {
-                        references.push(
-                          ...unionConstructorCallsFromOtherFiles.map((node) => {
-                            return { node, uri };
-                          }),
-                        );
-                      }
                     }
                   }
                 }
@@ -462,20 +462,21 @@ export class References {
                   ...this.getFieldReferences(
                     fieldName.text,
                     definitionNode,
-                    refSourceTree.tree,
-                    definitionNode.uri,
+                    refSourceTree,
                     elmWorkspace,
                   ),
                 );
 
-                for (const uri in imports.imports) {
-                  const element = imports.imports[uri];
-                  const needsToBeChecked = element.filter(
-                    (a) =>
-                      uri !== definitionNode.uri &&
-                      a.fromModuleName === moduleNameNode?.text,
-                  );
-                  if (needsToBeChecked.length > 0) {
+                for (const uri in imports) {
+                  if (uri === definitionNode.uri) {
+                    continue;
+                  }
+
+                  const needsToBeChecked = forest
+                    .getByUri(uri)
+                    ?.resolvedModules?.get(moduleNameNode?.text ?? "");
+
+                  if (needsToBeChecked) {
                     const treeToCheck = forest.getByUri(uri);
 
                     if (treeToCheck && treeToCheck.writeable) {
@@ -483,8 +484,7 @@ export class References {
                         ...this.getFieldReferences(
                           fieldName.text,
                           definitionNode,
-                          treeToCheck.tree,
-                          uri,
+                          treeToCheck,
                           elmWorkspace,
                         ),
                       );
@@ -503,20 +503,23 @@ export class References {
     return references;
   }
 
-  public static findOperator(node: SyntaxNode): SyntaxNode | undefined {
+  public static findOperator(
+    node: SyntaxNode,
+    elmWorkspace: IElmWorkspace,
+  ): SyntaxNode | undefined {
     const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(node);
 
     if (functionNameNode) {
-      const infixRef = this.findFunctionCalls(
-        node.tree.rootNode,
-        functionNameNode.text,
-      )?.find(
-        (ref) => ref.parent?.parent?.parent?.type === "infix_declaration",
-      );
+      const infixRef = elmWorkspace
+        .getForest()
+        .getByUri(node.tree.uri)
+        ?.symbolLinks?.get(node.tree.rootNode)
+        ?.get(
+          functionNameNode.text,
+          (s) => s.node.type === "infix_declaration",
+        );
 
-      if (infixRef?.parent?.parent?.parent) {
-        return infixRef.parent.parent.parent;
-      }
+      return infixRef?.node;
     }
   }
 
@@ -618,26 +621,25 @@ export class References {
   private static getFieldReferences(
     fieldName: string,
     definition: { node: SyntaxNode; uri: string },
-    tree: Tree,
-    uri: string,
+    treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
   ): { node: SyntaxNode; uri: string }[] {
     const references: { node: SyntaxNode; uri: string }[] = [];
 
-    const fieldUsages = References.findFieldUsages(tree, fieldName);
+    const fieldUsages = References.findFieldUsages(
+      treeContainer.tree,
+      fieldName,
+    );
 
     fieldUsages.forEach((field) => {
-      const fieldDef = TreeUtils.findDefinitionNodeByReferencingNode(
-        field,
-        uri,
-        tree,
-        elmWorkspace,
-      );
+      const fieldDef = elmWorkspace
+        .getTypeChecker()
+        .findDefinition(field, treeContainer);
 
       if (fieldDef?.node.id === definition.node.id) {
         references.push({
           node: field,
-          uri,
+          uri: treeContainer.uri,
         });
       }
     });

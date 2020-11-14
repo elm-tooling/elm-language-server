@@ -1,0 +1,44 @@
+name: Test Performance
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        node-version: [10, 12, 14]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Checkout test target
+        uses: actions/checkout@v2
+        with:
+          # Repository name with owner. For example, actions/checkout
+          # Default: ${{ github.repository }}
+          repository: "ianmackenzie/elm-geometry"
+
+          # Relative path under $GITHUB_WORKSPACE to place the repository
+          path: "ianmackenzie/elm-geometry"
+      - name: Setup for ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: npm ci
+        run: |
+          npm ci
+      - name: Compile
+        run: |
+          npm run compile
+      - name: Install Elm
+        run: |
+          npm install -g elm
+      - name: Elm make
+        run: |
+          cd ./ianmackenzie/elm-geometry
+          elm make ./src/Arc2d.elm
+      - name: Run performance test
+        run: |
+          npx ts-node ./test/performance.ts ./ianmackenzie/elm-geometry

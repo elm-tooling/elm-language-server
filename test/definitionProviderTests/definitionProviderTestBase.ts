@@ -51,6 +51,9 @@ export class DefinitionProviderTestBase {
 
       case "resolvesToDifferentFile":
         {
+          const workspace = this.treeParser.getWorkspace(
+            determinedTestType.sources,
+          );
           const definition = this.definitionProvider.handleDefinition(
             {
               textDocument: {
@@ -58,7 +61,7 @@ export class DefinitionProviderTestBase {
               },
               position: determinedTestType.invokePosition,
             },
-            this.treeParser.getWorkspace(determinedTestType.sources),
+            workspace,
           );
 
           expect(definition).toBeDefined();
@@ -71,10 +74,8 @@ export class DefinitionProviderTestBase {
               baseUri + determinedTestType.targetFile,
             ).toString();
 
-            const rootNode = this.treeParser
-              .getWorkspace(determinedTestType.sources)
-              .getForest()
-              .treeIndex.find((a) => a.uri === targetUri)!.tree.rootNode;
+            const rootNode = workspace.getForest().treeMap.get(targetUri)!.tree
+              .rootNode;
             const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
               rootNode,
               determinedTestType.targetPosition,
@@ -111,7 +112,7 @@ export class DefinitionProviderTestBase {
           const rootNode = this.treeParser
             .getWorkspace(determinedTestType.sources)
             .getForest()
-            .treeIndex.find((a) => a.uri === invokeUri)!.tree.rootNode;
+            .treeMap.get(invokeUri)!.tree.rootNode;
           const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
             rootNode,
             determinedTestType.targetPosition,

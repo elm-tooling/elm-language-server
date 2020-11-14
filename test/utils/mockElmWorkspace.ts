@@ -1,4 +1,4 @@
-import * as Path from "path";
+import path, * as Path from "path";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../../src/elmWorkspace";
@@ -6,18 +6,28 @@ import { Forest, IForest } from "../../src/forest";
 import { Imports } from "../../src/imports";
 import { container } from "tsyringe";
 import { TypeCache } from "../../src/util/types/typeCache";
+import {
+  createTypeChecker,
+  DefinitionResult,
+  TypeChecker,
+} from "../../src/util/types/typeChecker";
+import { TreeUtils } from "../../src/util/treeUtils";
+import {
+  IPossibleImportsCache,
+  PossibleImportsCache,
+} from "../../src/util/possibleImportsCache";
 
 export const baseUri = Path.join(__dirname, "../sources/src/");
 
 export class MockElmWorkspace implements IElmWorkspace {
-  private imports: Imports;
-  private forest: IForest = new Forest();
+  private forest: IForest = new Forest([]);
   private parser: Parser;
   private typeCache = new TypeCache();
+  private possibleImportsCache = new PossibleImportsCache();
+  private operatorsCache = new Map<string, DefinitionResult>();
 
   constructor(sources: { [K: string]: string }) {
     this.parser = container.resolve("Parser");
-    this.imports = new Imports();
 
     for (const key in sources) {
       if (Object.prototype.hasOwnProperty.call(sources, key)) {
@@ -25,16 +35,11 @@ export class MockElmWorkspace implements IElmWorkspace {
       }
     }
 
-    for (const key in sources) {
-      if (Object.prototype.hasOwnProperty.call(sources, key)) {
-        const uri = URI.file(baseUri + key).toString();
-        const tree = this.forest.getTree(uri);
+    this.forest.treeMap.forEach((treeContainer) => {
+      treeContainer.resolvedModules = this.resolveModules(treeContainer.tree);
+    });
 
-        if (tree) {
-          this.imports.updateImports(uri, tree, this.forest);
-        }
-      }
-    }
+    this.forest.synchronize();
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -57,12 +62,8 @@ export class MockElmWorkspace implements IElmWorkspace {
     return;
   }
 
-  getForest(): Forest {
+  getForest(): IForest {
     return this.forest;
-  }
-
-  getImports(): Imports {
-    return this.imports;
   }
 
   getRootPath(): URI {
@@ -71,6 +72,22 @@ export class MockElmWorkspace implements IElmWorkspace {
 
   getTypeCache(): TypeCache {
     return this.typeCache;
+  }
+
+  getTypeChecker(): TypeChecker {
+    return createTypeChecker(this);
+  }
+
+  markAsDirty(): void {
+    return;
+  }
+
+  getPossibleImportsCache(): IPossibleImportsCache {
+    return this.possibleImportsCache;
+  }
+
+  getOperatorsCache(): Map<string, DefinitionResult> {
+    return this.operatorsCache;
   }
 
   private parseAndAddToForest(fileName: string, source: string): void {
@@ -82,5 +99,36 @@ export class MockElmWorkspace implements IElmWorkspace {
       tree,
       true,
     );
+  }
+
+  private resolveModules(tree: Tree): Map<string, string> {
+    const importClauses = [
+      ...Imports.getVirtualImports(),
+      ...(TreeUtils.findAllImportClauseNodes(tree) ?? []),
+    ];
+
+    const resolvedModules = new Map<string, string>();
+
+    // It should be faster to look directly at elmFolders instead of traversing the forest
+    importClauses.forEach((importClause) => {
+      const moduleName = TreeUtils.findFirstNamedChildOfType(
+        "upper_case_qid",
+        importClause,
+      )?.text;
+
+      if (moduleName) {
+        const modulePath = moduleName.split(".").join("/") + ".elm";
+        const uri = URI.file(path.join(baseUri, modulePath)).toString();
+        const found = this.forest.getByUri(uri);
+
+        if (!found) {
+          // TODO: Diagnostics for unresolved imports
+        } else {
+          resolvedModules.set(moduleName, uri);
+        }
+      }
+    });
+
+    return resolvedModules;
   }
 }

@@ -408,8 +408,7 @@ export class ElmMakeDiagnostics {
 
         const typeDeclarationNode = TreeUtils.getTypeAliasOfCase(
           valueNode.namedChildren[1].firstNamedChild!.firstNamedChild!,
-          sourceTree!.tree,
-          uri,
+          sourceTree!,
           elmWorkspace,
         );
 

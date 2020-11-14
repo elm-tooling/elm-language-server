@@ -35,6 +35,7 @@ import {
   ERecordExpr,
   EFieldAccessExpr,
   ENegateExpr,
+  ETypeAnnotation,
 } from "./expressionTree";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { TypeExpression } from "./typeExpression";
@@ -42,9 +43,18 @@ import { IElmWorkspace } from "src/elmWorkspace";
 import { Sequence } from "../sequence";
 import { Utils } from "../utils";
 import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
-import { TypeRenderer } from "./typeRenderer";
-import { container } from "tsyringe";
-import { IConnection } from "vscode-languageserver";
+import { TypeChecker } from "./typeChecker";
+import { performance } from "perf_hooks";
+
+export let inferTime = 0;
+export function resetInferTime(): void {
+  inferTime = 0;
+}
+
+export const inferTimes: { [func: string]: number } = {};
+function addTime(f: string, t: number): void {
+  inferTimes[f] = (inferTimes[f] ?? 0) + t;
+}
 
 export interface Alias {
   module: string;
@@ -362,6 +372,7 @@ export function nthVarName(n: number): string {
 }
 
 function typeMismatchError(
+  checker: TypeChecker,
   node: SyntaxNode,
   found: Type,
   expected: Type,
@@ -369,8 +380,8 @@ function typeMismatchError(
   patternBinding = false,
   recordDiff?: RecordDiff,
 ): Diagnostic {
-  const foundText = TypeRenderer.typeToString(found);
-  const expectedText = TypeRenderer.typeToString(expected);
+  const foundText = checker.typeToString(found);
+  const expectedText = checker.typeToString(expected);
 
   const message = patternBinding
     ? `Invalid pattern error\nExpected: ${expectedText}\nFound: ${foundText}`
@@ -380,21 +391,21 @@ function typeMismatchError(
     let s = "";
 
     if (diff.extra.size > 0) {
-      s += `\nExtra fields: ${TypeRenderer.typeToString(
+      s += `\nExtra fields: ${checker.typeToString(
         TRecord(Object.fromEntries(diff.extra.entries())),
       )}`;
     }
     if (diff.missing.size > 0) {
-      s += `\nMissing fields: ${TypeRenderer.typeToString(
+      s += `\nMissing fields: ${checker.typeToString(
         TRecord(Object.fromEntries(diff.missing.entries())),
       )}`;
     }
     if (diff.mismatched.size > 0) {
       s += `\nMismatched fields: `;
       diff.mismatched.forEach(([expected, found], field) => {
-        s += `\n Field ${field} expected ${TypeRenderer.typeToString(
+        s += `\n Field ${field} expected ${checker.typeToString(
           expected,
-        )}, found ${TypeRenderer.typeToString(found)}`;
+        )}, found ${checker.typeToString(found)}`;
       });
     }
 
@@ -504,21 +515,29 @@ function recordFieldError(node: SyntaxNode, field: string): Diagnostic {
   };
 }
 
-function recordBaseIdError(node: SyntaxNode, type: Type): Diagnostic {
+function recordBaseIdError(
+  checker: TypeChecker,
+  node: SyntaxNode,
+  type: Type,
+): Diagnostic {
   return {
     node,
     endNode: node,
-    message: `Type must be a record, instead found: ${TypeRenderer.typeToString(
+    message: `Type must be a record, instead found: ${checker.typeToString(
       type,
     )}`,
   };
 }
 
-function fieldAccessOnNonRecordError(node: SyntaxNode, type: Type): Diagnostic {
+function fieldAccessOnNonRecordError(
+  checker: TypeChecker,
+  node: SyntaxNode,
+  type: Type,
+): Diagnostic {
   return {
     node,
     endNode: node,
-    message: `Cannot access fields on non-record type: ${TypeRenderer.typeToString(
+    message: `Cannot access fields on non-record type: ${checker.typeToString(
       type,
     )}`,
   };
@@ -643,14 +662,19 @@ export class InferenceScope {
         /* recursionAllowed */ false,
       ).inferDeclaration(declaration, true);
 
-    if (!elmWorkspace.getForest().getByUri(uri)?.writeable) {
-      return elmWorkspace
-        .getTypeCache()
-        .getOrSet("PACKAGE_VALUE_DECLARATION", declaration, setter);
-    } else {
-      return elmWorkspace
-        .getTypeCache()
-        .getOrSet("PROJECT_VALUE_DECLARATION", declaration, setter);
+    const start = performance.now();
+    try {
+      if (!elmWorkspace.getForest().getByUri(uri)?.writeable) {
+        return elmWorkspace
+          .getTypeCache()
+          .getOrSet("PACKAGE_VALUE_DECLARATION", declaration, setter);
+      } else {
+        return elmWorkspace
+          .getTypeCache()
+          .getOrSet("PROJECT_VALUE_DECLARATION", declaration, setter);
+      }
+    } finally {
+      inferTime += performance.now() - start;
     }
   }
 
@@ -670,7 +694,10 @@ export class InferenceScope {
 
     let bodyType: Type = TUnknown;
     if (declaration.body) {
-      bodyType = this.infer(declaration.body);
+      const mappedBody = mapSyntaxNodeToExpression(
+        declaration.body,
+      ) as Expression;
+      bodyType = this.infer(mappedBody);
 
       // Make sure the returned type is what is annotated
       if (binding.bindingType === "Annotated") {
@@ -679,9 +706,9 @@ export class InferenceScope {
           bindingType.nodeType === "Function"
             ? curryFunction(bindingType, binding.count)
             : bindingType;
-        this.isAssignable(declaration.body, bodyType, expected);
+        this.isAssignable(mappedBody, bodyType, expected);
       } else {
-        this.checkTopLevelCaseBranches(declaration.body, bodyType);
+        this.checkTopLevelCaseBranches(mappedBody, bodyType);
       }
     }
 
@@ -709,10 +736,7 @@ export class InferenceScope {
     );
 
     const functionDeclaration = mapSyntaxNodeToExpression(
-      TreeUtils.findFirstNamedChildOfType(
-        "function_declaration_left",
-        declaration,
-      ),
+      declaration.childForFieldName("functionDeclarationLeft"),
     );
     if (
       isRecursive &&
@@ -1099,6 +1123,7 @@ export class InferenceScope {
     declaration: EValueDeclaration | undefined,
     referenceUri: string,
   ): Type {
+    const start = performance.now();
     if (!declaration) {
       return TUnknown;
     }
@@ -1115,7 +1140,9 @@ export class InferenceScope {
     // Get the type annotation if there is one
     if (declaration.typeAnnotation) {
       type = TypeExpression.typeAnnotationInference(
-        declaration.typeAnnotation,
+        mapSyntaxNodeToExpression(
+          declaration.typeAnnotation,
+        ) as ETypeAnnotation,
         referenceUri,
         this.elmWorkspace,
         false,
@@ -1146,6 +1173,7 @@ export class InferenceScope {
             .type;
     }
 
+    addTime("inferReferenceValueDeclaration", performance.now() - start);
     this.resolvedDeclarations.set(declaration, type);
     return type;
   }
@@ -1153,6 +1181,7 @@ export class InferenceScope {
   private inferFunctionCallExpr(e: EFunctionCallExpr): Type {
     const targetType = this.infer(e.target);
     const argTypes = e.args.map((arg) => this.infer(arg));
+    const start = performance.now();
 
     const argCountError = (
       expr: Expression,
@@ -1229,6 +1258,7 @@ export class InferenceScope {
         );
       }
 
+      addTime("inferFunctionCall", performance.now() - start);
       this.expressionTypes.set(e, appliedType);
       return appliedType;
     }
@@ -1241,6 +1271,7 @@ export class InferenceScope {
         )
       : TUnknown;
 
+    addTime("inferFunctionCall", performance.now() - start);
     this.expressionTypes.set(e, resultType);
     return resultType;
   }
@@ -1250,6 +1281,7 @@ export class InferenceScope {
       Expression,
       IOperatorPrecedence
     >();
+    const start = performance.now();
     const operatorTypes = new SyntaxNodeMap<Expression, TFunction>();
 
     let lastPrecedence: IOperatorPrecedence | undefined;
@@ -1332,27 +1364,36 @@ export class InferenceScope {
 
     this.expressionTypes.set(e, result.type);
 
+    addTime("inferBinOpExpr", performance.now() - start);
     return result.type;
   }
 
   private inferOperand(e: Expression): Type {
-    if (e.nodeType === "FunctionCallExpr") {
-      return this.inferFunctionCallExpr(e);
-    }
+    const start = performance.now();
+    try {
+      if (e.nodeType === "FunctionCallExpr") {
+        return this.inferFunctionCallExpr(e);
+      }
 
-    return this.infer(e);
+      return this.infer(e);
+    } finally {
+      addTime("inferOperand", performance.now() - start);
+    }
   }
 
   private inferOperatorAndPrecedence(
     e: EOperator,
   ): [Type, IOperatorPrecedence] {
+    const start = performance.now();
     // Find operator reference
     const definition = findDefinition(e, this.uri, this.elmWorkspace);
 
     const opDeclaration = mapSyntaxNodeToExpression(definition?.expr.parent);
 
     const infixDeclarationExpr = mapSyntaxNodeToExpression(
-      opDeclaration ? References.findOperator(opDeclaration) : undefined,
+      opDeclaration
+        ? References.findOperator(opDeclaration, this.elmWorkspace)
+        : undefined,
     );
 
     if (
@@ -1368,6 +1409,7 @@ export class InferenceScope {
       definition.uri,
     );
 
+    addTime("inferOperatorAndPrecedence", performance.now() - start);
     this.expressionTypes.set(e, type);
     return [
       type,
@@ -1423,6 +1465,7 @@ export class InferenceScope {
   }
 
   private inferFieldAccess(expr: EFieldAccessExpr): Type {
+    const start = performance.now();
     const targetType = this.inferFieldAccessTarget(expr.target);
     const targetTy = this.replacements.get(targetType);
     const fieldIdentifier = TreeUtils.findFirstNamedChildOfType(
@@ -1430,32 +1473,44 @@ export class InferenceScope {
       expr,
     );
 
-    if (!fieldIdentifier || fieldIdentifier.text === "") {
+    if (!fieldIdentifier) {
+      return TUnknown;
+    }
+
+    const fieldIdentifierText = fieldIdentifier.text;
+
+    if (fieldIdentifierText === "") {
       return TUnknown;
     }
 
     if (targetTy?.nodeType === "Var") {
       if (targetTy.rigid) {
-        this.diagnostics.push(recordBaseIdError(expr.target, targetTy));
+        this.diagnostics.push(
+          recordBaseIdError(
+            this.elmWorkspace.getTypeChecker(),
+            expr.target,
+            targetTy,
+          ),
+        );
         return TUnknown;
       }
 
       const type = TVar("b");
       this.trackReplacement(
         targetType,
-        TMutableRecord({ [fieldIdentifier.text]: type }, TVar("a")),
+        TMutableRecord({ [fieldIdentifierText]: type }, TVar("a")),
       );
       this.expressionTypes.set(expr, type);
       return type;
     }
 
     if (targetTy?.nodeType === "MutableRecord") {
-      let type = targetTy.fields[fieldIdentifier.text];
+      let type = targetTy.fields[fieldIdentifierText];
       if (!type) {
-        targetTy.fields[fieldIdentifier.text] = TVar(
+        targetTy.fields[fieldIdentifierText] = TVar(
           nthVarName(Object.keys(targetTy.fields).length),
         );
-        type = targetTy.fields[fieldIdentifier.text];
+        type = targetTy.fields[fieldIdentifierText];
       }
 
       this.expressionTypes.set(expr, type);
@@ -1466,22 +1521,27 @@ export class InferenceScope {
     if (targetTy?.nodeType !== "Record") {
       if (targetTy?.nodeType !== "Unknown" && targetTy) {
         this.diagnostics.push(
-          fieldAccessOnNonRecordError(expr.target, targetTy),
+          fieldAccessOnNonRecordError(
+            this.elmWorkspace.getTypeChecker(),
+            expr.target,
+            targetTy,
+          ),
         );
       }
       return TUnknown;
     }
 
-    if (!Object.keys(targetTy.fields).includes(fieldIdentifier.text)) {
+    if (!Object.keys(targetTy.fields).includes(fieldIdentifierText)) {
       if (!targetTy.baseType) {
         this.diagnostics.push(
-          recordFieldError(fieldIdentifier, fieldIdentifier.text),
+          recordFieldError(fieldIdentifier, fieldIdentifierText),
         );
       }
     }
 
-    const type = targetTy.fields[fieldIdentifier.text] ?? TUnknown;
+    const type = targetTy.fields[fieldIdentifierText] ?? TUnknown;
     this.expressionTypes.set(expr, type);
+    addTime("inferFieldAccess", performance.now() - start);
     return type;
   }
 
@@ -1518,6 +1578,7 @@ export class InferenceScope {
   }
 
   private inferCase(caseOfExpr: ECaseOfExpr): Type {
+    const start = performance.now();
     const caseOfExprType = this.infer(caseOfExpr.expr);
 
     let type: Type | undefined;
@@ -1536,10 +1597,13 @@ export class InferenceScope {
       }
     });
 
+    addTime("inferCase", performance.now() - start);
+
     return type ?? TUnknown;
   }
 
   private inferRecord(record: ERecordExpr): Type {
+    const start = performance.now();
     const fields = new Map(
       record.fields.map((field) => [field.name, this.infer(field.expression)]),
     );
@@ -1550,6 +1614,7 @@ export class InferenceScope {
     const recordIdentifier = record.baseRecord as Expression;
 
     if (!recordIdentifier) {
+      addTime("inferRecord", performance.now() - start);
       return TRecord(mappedFields);
     }
 
@@ -1585,24 +1650,26 @@ export class InferenceScope {
     }
 
     fields.forEach((type, field) => {
-      const expected = baseFields[field.text];
+      const fieldText = field.text;
+      const expected = baseFields[fieldText];
       if (!expected) {
         if (baseType.nodeType === "Record") {
           if (!baseType.baseType) {
-            this.diagnostics.push(recordFieldError(field, field.text));
+            this.diagnostics.push(recordFieldError(field, fieldText));
             this.recordDiffs.set(
               record,
               this.calculateRecordDiff(TRecord(mappedFields), baseType),
             );
           }
         } else if (baseType.nodeType === "MutableRecord") {
-          baseType.fields[field.text] = type;
+          baseType.fields[fieldText] = type;
         }
       } else {
         this.isAssignable(field, type, expected);
       }
     });
 
+    addTime("inferRecord", performance.now() - start);
     return baseType;
   }
 
@@ -1622,10 +1689,7 @@ export class InferenceScope {
     valueDeclaration: EValueDeclaration,
   ): ParameterBindingResult {
     const functionDeclarationLeft = mapSyntaxNodeToExpression(
-      TreeUtils.findFirstNamedChildOfType(
-        "function_declaration_left",
-        valueDeclaration,
-      ),
+      valueDeclaration.childForFieldName("functionDeclarationLeft"),
     ) as EFunctionDeclarationLeft;
 
     if (functionDeclarationLeft) {
@@ -1638,7 +1702,7 @@ export class InferenceScope {
     if (valueDeclaration.pattern) {
       this.bindPatternDeclarationParameters(
         valueDeclaration,
-        valueDeclaration.pattern,
+        mapSyntaxNodeToExpression(valueDeclaration.pattern) as EPattern,
       );
       return { bindingType: "Other", count: 0 };
     }
@@ -1652,7 +1716,9 @@ export class InferenceScope {
   ): ParameterBindingResult {
     const typeRefType = valueDeclaration.typeAnnotation
       ? TypeExpression.typeAnnotationInference(
-          valueDeclaration.typeAnnotation,
+          mapSyntaxNodeToExpression(
+            valueDeclaration.typeAnnotation,
+          ) as ETypeAnnotation,
           this.uri,
           this.elmWorkspace,
           true,
@@ -1714,7 +1780,9 @@ export class InferenceScope {
     );
 
     const bodyType: Type = valueDeclaration.body
-      ? this.infer(valueDeclaration.body)
+      ? this.infer(
+          mapSyntaxNodeToExpression(valueDeclaration.body) as Expression,
+        )
       : TUnknown;
     this.bindPattern(pattern, bodyType, false);
 
@@ -1733,6 +1801,7 @@ export class InferenceScope {
     type: Type,
     isParameter: boolean,
   ): void {
+    const start = performance.now();
     const ty = this.replacements.get(type) ?? type;
     switch (pattern.nodeType) {
       case "AnythingPattern":
@@ -1758,12 +1827,7 @@ export class InferenceScope {
       case "Pattern":
         {
           const child = mapSyntaxNodeToExpression(
-            pattern.namedChildren.find(
-              (c) =>
-                c.type.endsWith("pattern") ||
-                c.type.includes("constant") ||
-                c.type === "unit_expr",
-            ),
+            pattern.childForFieldName("child"),
           );
           if (!child) {
             throw new Error("Missing pattern child");
@@ -1797,6 +1861,8 @@ export class InferenceScope {
       default:
         throw new Error("Unexpected pattern type: " + pattern.nodeType);
     }
+
+    addTime("bindPattern", performance.now() - start);
   }
 
   private bindTuplePattern(
@@ -1817,7 +1883,14 @@ export class InferenceScope {
       if (ty.nodeType !== "Unknown") {
         const actualType = TTuple(this.uniqueVars(patterns.length));
         this.diagnostics.push(
-          typeMismatchError(tuplePattern, actualType, ty, tuplePattern, true),
+          typeMismatchError(
+            this.elmWorkspace.getTypeChecker(),
+            tuplePattern,
+            actualType,
+            ty,
+            tuplePattern,
+            true,
+          ),
         );
       }
       return;
@@ -1916,6 +1989,7 @@ export class InferenceScope {
       if (ty.nodeType !== "Unknown") {
         this.diagnostics.push(
           typeMismatchError(
+            this.elmWorkspace.getTypeChecker(),
             listPattern,
             TList(TVar("a")),
             ty,
@@ -1977,7 +2051,15 @@ export class InferenceScope {
             : undefined;
 
         this.diagnostics.push(
-          typeMismatchError(pattern, actualTy, ty, undefined, true, recordDiff),
+          typeMismatchError(
+            this.elmWorkspace.getTypeChecker(),
+            pattern,
+            actualTy,
+            ty,
+            undefined,
+            true,
+            recordDiff,
+          ),
         );
 
         if (recordDiff) {
@@ -2039,7 +2121,14 @@ export class InferenceScope {
 
       const errorExpr = expr.nodeType === "LetInExpr" ? expr.body : expr;
       this.diagnostics.push(
-        typeMismatchError(errorExpr, t1, t2, errorExpr, patternBinding),
+        typeMismatchError(
+          this.elmWorkspace.getTypeChecker(),
+          errorExpr,
+          t1,
+          t2,
+          errorExpr,
+          patternBinding,
+        ),
       );
 
       if (diff && expr.nodeType === "RecordExpr") {
@@ -2474,112 +2563,4 @@ interface Unannotated extends ParameterBindingResult {
 }
 interface Other extends ParameterBindingResult {
   bindingType: "Other";
-}
-
-export function findType(
-  node: SyntaxNode,
-  uri: string,
-  workspace: IElmWorkspace,
-): Type {
-  try {
-    const declaration = mapSyntaxNodeToExpression(
-      TreeUtils.findParentOfType("value_declaration", node, true),
-    );
-
-    const findTypeOrParentType = (
-      expr: SyntaxNode | undefined,
-      inferenceResult: InferenceResult,
-    ): Type | undefined => {
-      const found = expr
-        ? inferenceResult.expressionTypes.get(expr as Expression)
-        : undefined;
-
-      if (found) {
-        return found;
-      }
-
-      // Check if the parent is the same text and position
-      if (
-        expr &&
-        expr.text === expr.parent?.text &&
-        expr.startIndex === expr.parent?.startIndex &&
-        expr.endIndex === expr.parent?.endIndex
-      ) {
-        return findTypeOrParentType(expr.parent, inferenceResult);
-      }
-    };
-
-    if (declaration && declaration.nodeType === "ValueDeclaration") {
-      const inferenceResult = InferenceScope.valueDeclarationInference(
-        declaration,
-        uri,
-        workspace,
-        new Set<EValueDeclaration>(),
-      );
-
-      if (node?.type === "function_declaration_left") {
-        const declaration = TreeUtils.findParentOfType(
-          "value_declaration",
-          node,
-        );
-
-        if (declaration) {
-          return (
-            inferenceResult.expressionTypes.get(declaration as Expression) ??
-            inferenceResult.type
-          );
-        } else {
-          return TUnknown;
-        }
-      } else if (node.type === "value_declaration") {
-        return (
-          inferenceResult.expressionTypes.get(node as Expression) ??
-          inferenceResult.type
-        );
-      }
-
-      return findTypeOrParentType(node, inferenceResult) ?? TUnknown;
-    }
-
-    const typeAliasDeclaration = mapSyntaxNodeToExpression(
-      TreeUtils.findParentOfType("type_alias_declaration", node),
-    );
-
-    if (
-      typeAliasDeclaration &&
-      typeAliasDeclaration.nodeType === "TypeAliasDeclaration"
-    ) {
-      const inferenceResult = TypeExpression.typeAliasDeclarationInference(
-        typeAliasDeclaration,
-        uri,
-        workspace,
-      );
-
-      if (node.type === "type_alias_declaration") {
-        return inferenceResult.type;
-      }
-
-      return findTypeOrParentType(node, inferenceResult) ?? TUnknown;
-    }
-
-    const typeDeclaration = mapSyntaxNodeToExpression(
-      TreeUtils.findParentOfType("type_alias_declaration", node),
-    );
-
-    if (typeDeclaration && typeDeclaration.nodeType === "TypeDeclaration") {
-      const inferenceResult = TypeExpression.typeDeclarationInference(
-        typeDeclaration,
-        uri,
-        workspace,
-      );
-
-      return findTypeOrParentType(node, inferenceResult) ?? TUnknown;
-    }
-
-    return TUnknown;
-  } catch (error) {
-    const connection = container.resolve<IConnection>("Connection");
-    connection.console.warn(`Error while trying to infer a type. ${error}`);
-    return TUnknown;
-  }
 }

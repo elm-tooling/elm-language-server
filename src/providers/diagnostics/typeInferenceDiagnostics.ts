@@ -9,14 +9,14 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { IElmWorkspace } from "../../elmWorkspace";
-import { findType } from "../../util/types/typeInference";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { SyntaxNode } from "web-tree-sitter";
 import { PositionUtil } from "../../positionUtil";
 import { TreeUtils } from "../../util/treeUtils";
 import { Utils } from "../../util/utils";
 import { URI } from "vscode-uri";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { TypeRenderer } from "../../util/types/typeRenderer";
+import { ITreeContainer } from "../../forest";
 
 export class TypeInferenceDiagnostics {
   TYPE_INFERENCE = "Type Inference";
@@ -28,15 +28,16 @@ export class TypeInferenceDiagnostics {
   }
 
   public createDiagnostics = (
-    tree: Tree,
-    uri: string,
+    treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
   ): Diagnostic[] => {
     let diagnostics: Diagnostic[] = [];
 
     const allTopLevelFunctions = TreeUtils.findAllTopLevelFunctionDeclarationsWithoutTypeAnnotation(
-      tree,
+      treeContainer.tree,
     );
+
+    const checker = elmWorkspace.getTypeChecker();
 
     if (allTopLevelFunctions) {
       const inferencedTypes = allTopLevelFunctions
@@ -44,11 +45,9 @@ export class TypeInferenceDiagnostics {
         .map((func) => func.firstChild)
         .filter(Utils.notUndefinedOrNull.bind(this))
         .map((node) => {
-          const typeString: string = TypeRenderer.typeToString(
-            findType(node, uri, elmWorkspace),
-            node.tree,
-            uri,
-            elmWorkspace.getImports(),
+          const typeString: string = checker.typeToString(
+            checker.findType(node, treeContainer.uri),
+            treeContainer,
           );
 
           if (typeString && typeString !== "Unknown" && node.firstNamedChild) {
@@ -96,8 +95,8 @@ export class TypeInferenceDiagnostics {
     );
 
     const forest = elmWorkspace.getForest();
-
     const treeContainer = forest.getByUri(uri);
+    const checker = elmWorkspace.getTypeChecker();
 
     if (treeContainer) {
       diagnostics.forEach((diagnostic) => {
@@ -107,11 +106,9 @@ export class TypeInferenceDiagnostics {
         );
 
         if (nodeAtPosition.parent) {
-          const typeString: string = TypeRenderer.typeToString(
-            findType(nodeAtPosition.parent, uri, elmWorkspace),
-            nodeAtPosition.tree,
-            uri,
-            elmWorkspace.getImports(),
+          const typeString: string = checker.typeToString(
+            checker.findType(nodeAtPosition.parent, uri),
+            treeContainer,
           );
 
           result.push(

@@ -28,7 +28,7 @@ export class WorkspaceSymbolProvider {
     >();
 
     this.elmWorkspaces.forEach((elmWorkspace) => {
-      elmWorkspace.getForest().treeIndex.forEach((tree) => {
+      elmWorkspace.getForest().treeMap.forEach((tree) => {
         const traverse: (node: SyntaxNode) => void = (
           node: SyntaxNode,
         ): void => {

@@ -6,6 +6,10 @@ declare module "web-tree-sitter" {
     id: number;
   }
 
+  export interface Tree {
+    uri: string;
+  }
+
   interface QueryResult {
     pattern: number;
     captures: { name: string; node: SyntaxNode }[];

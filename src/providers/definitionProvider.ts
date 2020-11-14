@@ -37,19 +37,18 @@ export class DefinitionProvider {
   ): DefinitionResult => {
     this.connection.console.info(`A definition was requested`);
     const forest = elmWorkspace.getForest();
-    const tree: Tree | undefined = forest.getTree(param.textDocument.uri);
+    const checker = elmWorkspace.getTypeChecker();
+    const treeContainer = forest.getByUri(param.textDocument.uri);
 
-    if (tree) {
+    if (treeContainer) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        tree.rootNode,
+        treeContainer.tree.rootNode,
         param.position,
       );
 
-      const definitionNode = TreeUtils.findDefinitionNodeByReferencingNode(
+      const definitionNode = checker.findDefinition(
         nodeAtPosition,
-        param.textDocument.uri,
-        tree,
-        elmWorkspace,
+        treeContainer,
       );
 
       if (definitionNode) {

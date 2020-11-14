@@ -5,7 +5,6 @@ import {
   SymbolKind,
 } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "./treeUtils";
 
 export class SymbolInformationTranslator {
   public static translateNodeToSymbolInformation(
@@ -16,17 +15,20 @@ export class SymbolInformationTranslator {
       case "file":
         return this.createSymbolInformation("file", node, SymbolKind.File, uri);
       case "value_declaration":
-        return this.createSymbolInformation(
-          node.children[0].children[0].text,
-          node,
-          SymbolKind.Function,
-          uri,
-        );
+        {
+          const functionName = node.firstChild?.firstChild?.text;
+          if (functionName) {
+            return this.createSymbolInformation(
+              functionName,
+              node,
+              SymbolKind.Function,
+              uri,
+            );
+          }
+        }
+        break;
       case "module_declaration": {
-        const nameNodeModule = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_qid",
-          node,
-        );
+        const nameNodeModule = node.childForFieldName("name");
         if (nameNodeModule) {
           return this.createSymbolInformation(
             nameNodeModule.text,
@@ -39,10 +41,7 @@ export class SymbolInformationTranslator {
         }
       }
       case "type_declaration": {
-        const nameNodeTypeDec = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
-          node,
-        );
+        const nameNodeTypeDec = node.childForFieldName("name");
         if (nameNodeTypeDec) {
           return this.createSymbolInformation(
             nameNodeTypeDec.text,
@@ -55,10 +54,7 @@ export class SymbolInformationTranslator {
         }
       }
       case "type_alias_declaration": {
-        const nameNodeAliasDec = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
-          node,
-        );
+        const nameNodeAliasDec = node.childForFieldName("name");
         if (nameNodeAliasDec) {
           return this.createSymbolInformation(
             nameNodeAliasDec.text,
