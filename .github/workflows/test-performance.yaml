@@ -18,10 +18,10 @@ jobs:
         with:
           # Repository name with owner. For example, actions/checkout
           # Default: ${{ github.repository }}
-          repository: "Chadtech/elm-vector"
+          repository: "ianmackenzie/elm-geometry"
 
           # Relative path under $GITHUB_WORKSPACE to place the repository
-          path: "Chadtech/elm-vector"
+          path: "ianmackenzie/elm-geometry"
       - name: Setup for ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
@@ -35,12 +35,6 @@ jobs:
       - name: Install Elm
         run: |
           npm install -g elm
-      - name: LS
-        run: |
-          ls ./Chadtech/elm-vector
-          cd ./Chadtech/elm-vector
-          elm make
-          pwd
       - name: Run performance test
         run: |
-          npx ts-node ./test/performance.ts ./Chadtech/elm-vector
+          npx ts-node ./test/performance.ts ./ianmackenzie/elm-geometry
