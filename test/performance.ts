@@ -28,13 +28,13 @@ container.register("Connection", {
   useValue: {
     console: {
       info: (a: string): void => {
-        console.log(a);
+        // console.log(a);
       },
       warn: (a: string): void => {
-        console.log(a);
+        // console.log(a);
       },
       error: (a: string): void => {
-        console.log(a);
+        // console.log(a);
       },
     },
     window: {
