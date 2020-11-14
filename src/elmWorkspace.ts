@@ -10,6 +10,7 @@ import Parser, { Tree } from "web-tree-sitter";
 import { Forest, IForest } from "./forest";
 import { IPossibleImportsCache, PossibleImportsCache } from "./providers";
 import * as utils from "./util/elmUtils";
+import { execCmd } from "./util/elmUtils";
 import { Settings } from "./util/settings";
 import { TypeCache } from "./util/types/typeCache";
 import {
@@ -137,11 +138,12 @@ export class ElmWorkspace implements IElmWorkspace {
   private async initWorkspace(
     progressCallback: (percent: number) => void,
   ): Promise<void> {
+    const clientSettings = await this.settings.getClientSettings();
     let progress = 0;
     let elmVersion;
     try {
       elmVersion = await utils.getElmVersion(
-        await this.settings.getClientSettings(),
+        clientSettings,
         this.rootPath,
         this.connection,
       );
@@ -150,6 +152,22 @@ export class ElmWorkspace implements IElmWorkspace {
         `Could not figure out elm version, this will impact how good the server works. \n ${e.stack}`,
       );
     }
+
+    // const options = {
+    //   cmdArguments: ["make"],
+    //   notFoundText:
+    //     "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.",
+    // };
+
+    // // Run `elm make` on init to download dependencies
+    // await execCmd(
+    //   clientSettings.elmPath,
+    //   "elm",
+    //   options,
+    //   this.rootPath.toString(),
+    //   this.connection,
+    // );
+
     const pathToElmJson = path.join(this.rootPath.fsPath, "elm.json");
     this.connection.console.info(`Reading elm.json from ${pathToElmJson}`);
     try {

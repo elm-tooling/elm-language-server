@@ -37,6 +37,11 @@ container.register("Connection", {
         console.log(a);
       },
     },
+    window: {
+      showErrorMessage: (a: string): void => {
+        console.log(a);
+      },
+    },
   },
 });
 container.register("Settings", {

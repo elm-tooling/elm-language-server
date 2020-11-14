@@ -32,13 +32,14 @@ jobs:
       - name: Compile
         run: |
           npm run compile
-      - name: LS
+      - name: Install Elm
         run: |
-          pwd
+          npm install -g elm
       - name: LS
         run: |
           ls ./Chadtech/elm-vector
           cd ./Chadtech/elm-vector
+          elm make
           pwd
       - name: Run performance test
         run: |
