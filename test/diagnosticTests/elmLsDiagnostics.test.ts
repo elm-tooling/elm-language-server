@@ -1528,5 +1528,28 @@ foo = 1
 
       await testDiagnostics(source, "unused_value_constructor", []);
     });
+
+    it("used in case expr", async () => {
+      const source = `
+module Bar exposing (text)
+
+type Language
+    = Italian
+    | English
+
+
+text : String -> String -> Html msg
+text en it language =
+    Html.text <|
+        case language of
+            English ->
+                en
+
+            Italian ->
+                it
+			`;
+
+      await testDiagnostics(source, "unused_value_constructor", []);
+    });
   });
 });

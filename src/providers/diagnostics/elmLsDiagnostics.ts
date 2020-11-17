@@ -42,6 +42,7 @@ export class ElmLsDiagnostics {
   private readonly operatorFunctionsQuery: Query;
   private readonly typeAliasesQuery: Query;
   private readonly unionVariantsQuery: Query;
+  private readonly patternReferencesQuery: Query;
 
   constructor() {
     this.language = container.resolve<Parser>("Parser").getLanguage();
@@ -64,10 +65,10 @@ export class ElmLsDiagnostics {
 
     this.moduleImportsQuery = this.language.query(
       `
-          (import_clause
-            (upper_case_qid) @moduleName
-          )
-          `,
+        (import_clause
+          (upper_case_qid) @moduleName
+        )
+    `,
     );
 
     this.moduleReferencesQuery = this.language.query(
@@ -84,226 +85,245 @@ export class ElmLsDiagnostics {
             (dot)
           )* @module.reference
         )
-        `,
+      `,
     );
 
     this.importModuleAliasesQuery = this.language.query(
       `
-          (import_clause
-            (as_clause
-              (upper_case_identifier) @moduleAlias
-            )
+        (import_clause
+          (as_clause
+            (upper_case_identifier) @moduleAlias
           )
-          `,
+        )
+      `,
     );
 
     this.moduleAliasReferencesQuery = this.language.query(
       `
-            (value_qid
-              (
-                (upper_case_identifier)
-                (dot)
-              )* @module.reference
-            )
-            (upper_case_qid
-              (
-                (upper_case_identifier)
-                (dot)
-              )* @module.reference
-            )
-            `,
+        (value_qid
+          (
+            (upper_case_identifier)
+            (dot)
+          )* @module.reference
+        )
+        (upper_case_qid
+          (
+            (upper_case_identifier)
+            (dot)
+          )* @module.reference
+        )
+      `,
     );
 
     this.patternsQuery = this.language.query(
       `
-          (value_declaration
-            (function_declaration_left
-              [
-                (pattern)
-                (record_pattern)
-                (lower_pattern)
-              ] @pattern
-            )
-          ) @patternScope
-  
-          ; For some reason, we can match on the let_in_expr
-          (value_declaration
+        (value_declaration
+          (function_declaration_left
             [
               (pattern)
               (record_pattern)
+              (lower_pattern)
             ] @pattern
-          ) @patternScope
-  
-          ; For let expr variables
-          (value_declaration
-            (function_declaration_left
-              (lower_case_identifier) @pattern
-            )
-          ) @patternScope
-  
-          (case_of_branch
-            (pattern) @pattern
-          ) @patternScope
-  
-          (anonymous_function_expr
-            (pattern) @pattern
-          ) @patternScope
-          `,
+          )
+        ) @patternScope
+
+        ; For some reason, we can match on the let_in_expr
+        (value_declaration
+          [
+            (pattern)
+            (record_pattern)
+          ] @pattern
+        ) @patternScope
+
+        ; For let expr variables
+        (value_declaration
+          (function_declaration_left
+            (lower_case_identifier) @pattern
+          )
+        ) @patternScope
+
+        (case_of_branch
+          (pattern) @pattern
+        ) @patternScope
+
+        (anonymous_function_expr
+          (pattern) @pattern
+        ) @patternScope
+      `,
     );
 
     this.caseBranchesQuery = this.language.query(
       `
-          (
-            (case_of_branch
-              (pattern) @casePattern
-              (value_expr) @caseValue
-            ) @caseBranch
-            (#eq? @casePattern "Nothing")
-            (#eq? @caseValue "Nothing")
-          )
-        `,
+        (
+          (case_of_branch
+            (pattern) @casePattern
+            (value_expr) @caseValue
+          ) @caseBranch
+          (#eq? @casePattern "Nothing")
+          (#eq? @caseValue "Nothing")
+        )
+      `,
     );
 
     this.booleanCaseExpressionsQuery = this.language.query(
       `
-          (
-            (case_of_branch
-              pattern: (pattern) @casePattern1
-              (#match? @casePattern1 "^(True|False)$")
-            ) @caseBranch
-            (case_of_branch
-              pattern: (pattern) @casePattern2
-              (#match? @casePattern2 "^(True|False|_)$")
-            )
+        (
+          (case_of_branch
+            pattern: (pattern) @casePattern1
+            (#match? @casePattern1 "^(True|False)$")
+          ) @caseBranch
+          (case_of_branch
+            pattern: (pattern) @casePattern2
+            (#match? @casePattern2 "^(True|False|_)$")
           )
-          `,
+        )
+      `,
     );
 
     this.concatOfListsQuery = this.language.query(
       `
-          (
-            (list_expr) @startList
-            .
-            (operator
-              (operator_identifier
-                "++"
-              )
+        (
+          (list_expr) @startList
+          .
+          (operator
+            (operator_identifier
+              "++"
             )
-            .
-            (list_expr) @endList
           )
-          `,
+          .
+          (list_expr) @endList
+        )
+      `,
     );
 
     this.consOfItemAndListQuery = this.language.query(
       `
-          (bin_op_expr
-            (_) @itemExpr
-            .
-            (operator
-              (operator_identifier
-                "::"
-              )
+        (bin_op_expr
+          (_) @itemExpr
+          .
+          (operator
+            (operator_identifier
+              "::"
             )
-            .
-            (list_expr) @listExpr
           )
-        `,
+          .
+          (list_expr) @listExpr
+        )
+      `,
     );
 
     this.useConsOverConcatQuery = this.language.query(
       `
-          (bin_op_expr
-            (list_expr
-              (left_square_bracket)
-              .
-              (_)
-              .
-              (right_square_bracket)
-            ) @firstPart
+        (bin_op_expr
+          (list_expr
+            (left_square_bracket)
             .
-            (operator
-              (operator_identifier
-                "++"
-              )
+            (_)
+            .
+            (right_square_bracket)
+          ) @firstPart
+          .
+          (operator
+            (operator_identifier
+              "++"
             )
-            .
-            (_) @lastPart
           )
-        `,
+          .
+          (_) @lastPart
+        )
+      `,
     );
 
     this.singleFieldRecordTypesQuery = this.language.query(
       `
-          (record_type
-            (left_brace)
-            .
-            (_)
-            .
-            (right_brace)
-          ) @recordType
-        `,
+        (record_type
+          (left_brace)
+          .
+          (_)
+          .
+          (right_brace)
+        ) @recordType
+      `,
     );
 
     this.unnecessaryListConcatQuery = this.language.query(
       `
-          (
-            (function_call_expr
-              target: (_) @target
-              arg: (list_expr
-                (left_square_bracket)
-                .
-                (list_expr)
-                .
-                ((comma) . (list_expr))*
-                .
-                (right_square_bracket)
-              )
-            ) @functionCall
-            (#eq? @target "List.concat")
-          )
-          `,
+        (
+          (function_call_expr
+            target: (_) @target
+            arg: (list_expr
+              (left_square_bracket)
+              .
+              (list_expr)
+              .
+              ((comma) . (list_expr))*
+              .
+              (right_square_bracket)
+            )
+          ) @functionCall
+          (#eq? @target "List.concat")
+        )
+      `,
     );
 
     this.unusedPortModuleQuery = this.language.query(
       `
-          (module_declaration
-            (port)
-          ) @portModule
-  
-          (port_annotation) @portAnnotation
-          `,
+        (module_declaration
+          (port)
+        ) @portModule
+
+        (port_annotation) @portAnnotation
+        `,
     );
 
     this.operatorFunctionsQuery = this.language.query(
       `
-          (function_call_expr
-            target: (operator_as_function_expr)
-            .
-            (_) @arg1
-            .
-            (_) @arg2
-          ) @functionCall
-          `,
+        (function_call_expr
+          target: (operator_as_function_expr)
+          .
+          (_) @arg1
+          .
+          (_) @arg2
+        ) @functionCall
+        `,
     );
 
     this.typeAliasesQuery = this.language.query(
       `
-          (type_alias_declaration
-            (upper_case_identifier) @typeAlias
-          )
-          `,
+        (type_alias_declaration
+          (upper_case_identifier) @typeAlias
+        )
+        `,
     );
 
     this.unionVariantsQuery = this.language.query(
       `
-          (type_declaration
-            (upper_case_identifier) @typeName
-            (union_variant
-              (upper_case_identifier) @unionVariant
-            )
+        (type_declaration
+          (upper_case_identifier) @typeName
+          (union_variant
+            (upper_case_identifier) @unionVariant
           )
-          `,
+        )
+        `,
+    );
+
+    this.patternReferencesQuery = this.language.query(
+      `
+        (
+          [
+            (value_expr)
+            (record_base_identifier)
+            (exposed_value)
+          ] @patternVariable.reference
+        )
+        (
+          (module_declaration
+            (exposing_list
+              (double_dot)
+            ) @exposingAll
+          )
+        )
+        `,
     );
   }
 
@@ -599,28 +619,14 @@ export class ElmLsDiagnostics {
       })
       .reduce((a, b) => a.concat(b), [])
       .forEach(({ scope, pattern }) => {
-        const references = this.language
-          .query(
-            `
-            (
-              [
-                (value_expr)
-                (record_base_identifier)
-                (exposed_value)
-              ] @patternVariable.reference
-              (#eq? @patternVariable.reference "${pattern.text}")
-            )
-            (
-              (module_declaration
-                (exposing_list
-                  (double_dot)
-                ) @exposingAll
-              )
-            )
-            `,
-          )
+        const references = this.patternReferencesQuery
           .matches(scope)
-          .filter(Utils.notUndefined.bind(this));
+          .filter(Utils.notUndefined.bind(this))
+          .filter(
+            (result) =>
+              result.captures[0].name !== "patternVariable.reference" ||
+              result.captures[0].node.text === pattern.text,
+          );
 
         if (scope.type === "file") {
           let outsideRef = false;
@@ -960,6 +966,10 @@ export class ElmLsDiagnostics {
           ((type_ref
             (upper_case_qid) @type.reference)
             (#eq? @type.reference "${unionVariant.text}")
+          )
+          ((case_of_branch
+            (pattern) @variant.reference)
+            (#eq? @variant.reference "${unionVariant.text}")
           )
           `,
         )

@@ -566,4 +566,37 @@ func =
 `;
     await testTypeInference(basicsSources + source, "String");
   });
+
+  test("function return with aliased type", async () => {
+    const source = `
+--@ Module.elm
+module Module exposing (..)
+
+type Language
+    = Italian
+    | English
+
+type alias Html a =
+    Language -> number
+
+text : number -> number -> Html msg
+text en it language =
+    case language of
+        English ->
+            en
+
+        Italian ->
+            it
+
+--@ Test.elm
+module Test exposing (..)
+
+import Module exposing (Html, text)
+
+world =
+--^
+    text 1 2
+`;
+    await testTypeInference(basicsSources + source, "Html msg");
+  });
 });
