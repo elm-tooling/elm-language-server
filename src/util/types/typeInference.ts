@@ -318,7 +318,7 @@ export function curryFunction(func: TFunction, count: number): Type {
  * @param func The function type to uncurry
  */
 export function uncurryFunction(func: TFunction): TFunction {
-  if (func.return.nodeType === "Function") {
+  if (func.return.nodeType === "Function" && !func.return.alias) {
     return TFunction(
       [...func.params, ...func.return.params],
       func.return.return,
