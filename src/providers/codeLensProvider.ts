@@ -3,7 +3,7 @@ import {
   CodeLens,
   CodeLensParams,
   Command,
-  IConnection,
+  Connection,
   Location,
   Position,
   Range,
@@ -20,11 +20,11 @@ type CodeLensType = "exposed" | "referenceCounter";
 type CodeLensResult = CodeLens[] | null | undefined;
 
 export class CodeLensProvider {
-  private readonly connection: IConnection;
+  private readonly connection: Connection;
   private readonly settings: Settings;
 
   constructor() {
-    this.connection = container.resolve<IConnection>("Connection");
+    this.connection = container.resolve<Connection>("Connection");
     this.settings = container.resolve<Settings>("Settings");
     this.connection.onCodeLens(
       new ElmWorkspaceMatcher((param: CodeLensParams) =>

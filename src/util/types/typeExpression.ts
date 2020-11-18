@@ -36,7 +36,7 @@ import { TypeReplacement } from "./typeReplacement";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { Utils } from "../utils";
 import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
-import { IElmWorkspace } from "src/elmWorkspace";
+import { IElmWorkspace } from "../../elmWorkspace";
 
 export class TypeExpression {
   // All the type variables we've seen

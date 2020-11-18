@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
+import { ITreeContainer } from "../../forest";
 import { container } from "tsyringe";
 import {
   CodeAction,
@@ -328,10 +329,11 @@ export class ElmLsDiagnostics {
   }
 
   public createDiagnostics = (
-    tree: Tree,
-    uri: string,
+    treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
   ): Diagnostic[] => {
+    const tree = treeContainer.tree;
+    const uri = treeContainer.uri;
     try {
       return [
         ...this.getUnusedImportDiagnostics(tree),

@@ -1,6 +1,6 @@
 import { container } from "tsyringe";
 import {
-  IConnection,
+  Connection,
   SymbolInformation,
   WorkspaceSymbolParams,
 } from "vscode-languageserver";
@@ -9,12 +9,12 @@ import { IElmWorkspace } from "../elmWorkspace";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 
 export class WorkspaceSymbolProvider {
-  private readonly connection: IConnection;
+  private readonly connection: Connection;
   private readonly elmWorkspaces: IElmWorkspace[];
 
   constructor() {
     this.elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
-    this.connection = container.resolve<IConnection>("Connection");
+    this.connection = container.resolve<Connection>("Connection");
     this.connection.onWorkspaceSymbol(this.workspaceSymbolRequest);
   }
 

@@ -1,10 +1,12 @@
 import { container, injectable } from "tsyringe";
 import {
+  CancellationToken,
   DocumentFormattingParams,
-  IConnection,
+  Connection,
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import { DiagnosticsProvider } from ".";
 import { IElmWorkspace } from "../elmWorkspace";
 import * as Diff from "../util/diff";
 import { execCmd } from "../util/elmUtils";
@@ -17,17 +19,21 @@ type DocumentFormattingResult = Promise<TextEdit[] | undefined>;
 @injectable()
 export class DocumentFormattingProvider {
   private events: TextDocumentEvents;
-  private connection: IConnection;
+  private connection: Connection;
   private settings: Settings;
+  private diagnostics: DiagnosticsProvider;
 
   constructor() {
     this.settings = container.resolve<Settings>("Settings");
-    this.connection = container.resolve<IConnection>("Connection");
+    this.connection = container.resolve<Connection>("Connection");
     this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
-    this.connection.onDocumentFormatting(
-      new ElmWorkspaceMatcher((params: DocumentFormattingParams) =>
-        URI.parse(params.textDocument.uri),
-      ).handlerForWorkspace(this.handleFormattingRequest),
+    this.diagnostics = container.resolve(DiagnosticsProvider);
+    this.connection.onDocumentFormatting((params) =>
+      this.diagnostics.interuptDiagnostics(() =>
+        new ElmWorkspaceMatcher((params: DocumentFormattingParams) =>
+          URI.parse(params.textDocument.uri),
+        ).handlerForWorkspace(this.handleFormattingRequest)(params),
+      ),
     );
   }
 

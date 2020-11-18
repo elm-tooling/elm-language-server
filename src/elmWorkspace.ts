@@ -4,7 +4,7 @@ import os from "os";
 import path from "path";
 import { container } from "tsyringe";
 import util from "util";
-import { IConnection } from "vscode-languageserver";
+import { Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { Forest, IForest } from "./forest";
@@ -55,7 +55,7 @@ export class ElmWorkspace implements IElmWorkspace {
   private elmFolders: IRootFolder[] = [];
   private forest: IForest = new Forest([]);
   private parser: Parser;
-  private connection: IConnection;
+  private connection: Connection;
   private settings: Settings;
   private typeCache: TypeCache;
   private typeChecker: TypeChecker | undefined;

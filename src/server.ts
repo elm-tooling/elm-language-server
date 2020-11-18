@@ -2,11 +2,11 @@ import globby from "globby";
 import path from "path";
 import { container } from "tsyringe";
 import {
-  IConnection,
+  Connection,
   InitializeParams,
   InitializeResult,
+  WorkDoneProgressReporter,
 } from "vscode-languageserver";
-import { WorkDoneProgress } from "vscode-languageserver/lib/progress";
 import { URI } from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { ElmWorkspace, IElmWorkspace } from "./elmWorkspace";
@@ -19,7 +19,6 @@ import {
   DiagnosticsProvider,
   DocumentFormattingProvider,
   DocumentSymbolProvider,
-  ElmAnalyseDiagnostics,
   ElmMakeDiagnostics,
   FoldingRangeProvider,
   HoverProvider,
@@ -39,9 +38,12 @@ export interface ILanguageServer {
 }
 
 export class Server implements ILanguageServer {
-  private connection: IConnection;
+  private connection: Connection;
 
-  constructor(params: InitializeParams, private progress: WorkDoneProgress) {
+  constructor(
+    params: InitializeParams,
+    private progress: WorkDoneProgressReporter,
+  ) {
     this.connection = container.resolve("Connection");
 
     const uri = this.getWorkspaceUri(params);
@@ -123,6 +125,20 @@ export class Server implements ILanguageServer {
     // We can now query the client for up to date settings
     settings.initFinished();
 
+    const clientSettings = await settings.getClientSettings();
+
+    container.register("ClientSettings", {
+      useValue: clientSettings,
+    });
+
+    container.register(ASTProvider, {
+      useValue: new ASTProvider(),
+    });
+
+    container.register(DiagnosticsProvider, {
+      useValue: new DiagnosticsProvider(),
+    });
+
     // these register calls rely on settings having been setup
     container.register(DocumentFormattingProvider, {
       useValue: new DocumentFormattingProvider(),
@@ -139,25 +155,6 @@ export class Server implements ILanguageServer {
     container.register(ElmLsDiagnostics, {
       useValue: new ElmLsDiagnostics(),
     });
-
-    const clientSettings = await settings.getClientSettings();
-
-    container.register("ClientSettings", {
-      useValue: clientSettings,
-    });
-
-    container.register(ElmAnalyseDiagnostics, {
-      useValue:
-        clientSettings.elmAnalyseTrigger !== "never"
-          ? new ElmAnalyseDiagnostics()
-          : null,
-    });
-
-    container.register(ASTProvider, {
-      useValue: new ASTProvider(),
-    });
-
-    new DiagnosticsProvider();
 
     new CodeActionProvider();
 

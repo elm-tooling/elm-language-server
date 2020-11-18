@@ -1,12 +1,13 @@
 import { container } from "tsyringe";
 import {
   Hover,
-  IConnection,
+  Connection,
   MarkupKind,
   TextDocumentPositionParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
+import { DiagnosticsProvider } from ".";
 import { IElmWorkspace } from "../elmWorkspace";
 import { getEmptyTypes } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
@@ -16,14 +17,18 @@ import { NodeType, TreeUtils } from "../util/treeUtils";
 type HoverResult = Hover | null | undefined;
 
 export class HoverProvider {
-  private connection: IConnection;
+  private connection: Connection;
+  private diagnostics: DiagnosticsProvider;
 
   constructor() {
-    this.connection = container.resolve<IConnection>("Connection");
-    this.connection.onHover(
-      new ElmWorkspaceMatcher((param: TextDocumentPositionParams) =>
-        URI.parse(param.textDocument.uri),
-      ).handlerForWorkspace(this.handleHoverRequest),
+    this.connection = container.resolve<Connection>("Connection");
+    this.diagnostics = container.resolve(DiagnosticsProvider);
+    this.connection.onHover((params) =>
+      this.diagnostics.interuptDiagnostics(() =>
+        new ElmWorkspaceMatcher((params: TextDocumentPositionParams) =>
+          URI.parse(params.textDocument.uri),
+        ).handlerForWorkspace(this.handleHoverRequest)(params),
+      ),
     );
   }
 

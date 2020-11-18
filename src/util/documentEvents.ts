@@ -4,7 +4,7 @@ import {
   DidCloseTextDocumentParams,
   DidOpenTextDocumentParams,
   DidSaveTextDocumentParams,
-  IConnection,
+  Connection,
 } from "vscode-languageserver";
 import { injectable, container } from "tsyringe";
 
@@ -23,7 +23,7 @@ export interface IDocumentEvents {
 @injectable()
 export class DocumentEvents extends EventEmitter implements IDocumentEvents {
   constructor() {
-    const connection = container.resolve<IConnection>("Connection");
+    const connection = container.resolve<Connection>("Connection");
     super();
 
     connection.onDidChangeTextDocument((e) => this.emit("change", e));

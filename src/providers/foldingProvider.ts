@@ -2,8 +2,8 @@ import { container } from "tsyringe";
 import {
   FoldingRange,
   FoldingRangeKind,
-  FoldingRangeRequestParam,
-  IConnection,
+  Connection,
+  FoldingRangeParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
@@ -19,18 +19,18 @@ export class FoldingRangeProvider {
     "record_expr",
     "case_of_branch",
   ]);
-  private connection: IConnection;
+  private connection: Connection;
   constructor() {
-    this.connection = container.resolve<IConnection>("Connection");
+    this.connection = container.resolve<Connection>("Connection");
     this.connection.onFoldingRanges(
-      new ElmWorkspaceMatcher((param: FoldingRangeRequestParam) =>
+      new ElmWorkspaceMatcher((param: FoldingRangeParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.handleFoldingRange),
     );
   }
 
   protected handleFoldingRange = (
-    param: FoldingRangeRequestParam,
+    param: FoldingRangeParams,
     elmWorkspace: IElmWorkspace,
   ): FoldingRange[] => {
     this.connection.console.info(`Folding ranges were requested`);

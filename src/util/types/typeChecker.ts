@@ -9,7 +9,7 @@ import {
 } from "./expressionTree";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { container } from "tsyringe";
-import { IConnection } from "vscode-languageserver";
+import { Connection } from "vscode-languageserver";
 import {
   Type,
   TUnknown,
@@ -25,6 +25,7 @@ import { bindTreeContainer } from "./binder";
 import { Sequence } from "../sequence";
 import { Utils } from "../utils";
 import { TypeExpression } from "./typeExpression";
+import { ICancellationToken } from "../../cancellation";
 
 export let bindTime = 0;
 export function resetBindTime(): void {
@@ -55,7 +56,14 @@ export interface TypeChecker {
     name: string,
   ) => string | undefined;
   typeToString: (t: Type, treeContainer?: ITreeContainer) => string;
-  getDiagnostics: (treeContainer: ITreeContainer) => Diagnostic[];
+  getDiagnostics: (
+    treeContainer: ITreeContainer,
+    cancellationToken?: ICancellationToken,
+  ) => Diagnostic[];
+  getDiagnosticsFromDeclaration: (
+    valueDeclaration: SyntaxNode,
+    cancellationToken?: ICancellationToken,
+  ) => Diagnostic[];
   findImportModuleNameNode: (
     moduleNameOrAlias: string,
     treeContainer: ITreeContainer,
@@ -80,6 +88,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     getQualifierForName,
     typeToString,
     getDiagnostics,
+    getDiagnosticsFromDeclaration,
     findImportModuleNameNode,
   };
 
@@ -183,13 +192,16 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
       return TUnknown;
     } catch (error) {
-      const connection = container.resolve<IConnection>("Connection");
+      const connection = container.resolve<Connection>("Connection");
       connection.console.warn(`Error while trying to infer a type. ${error}`);
       return TUnknown;
     }
   }
 
-  function getDiagnostics(treeContainer: ITreeContainer): Diagnostic[] {
+  function getDiagnostics(
+    treeContainer: ITreeContainer,
+    cancellationToken?: ICancellationToken,
+  ): Diagnostic[] {
     const allTopLevelFunctions = TreeUtils.findAllTopLevelFunctionDeclarations(
       treeContainer.tree,
     );
@@ -197,22 +209,38 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     return (
       allTopLevelFunctions
         ?.map((valueDeclaration) => {
-          try {
-            return InferenceScope.valueDeclarationInference(
-              mapSyntaxNodeToExpression(valueDeclaration) as EValueDeclaration,
-              treeContainer.uri,
-              workspace,
-              new Set(),
-            ).diagnostics;
-          } catch {
-            return [];
-          }
+          return getDiagnosticsFromDeclaration(
+            valueDeclaration,
+            cancellationToken,
+          );
         })
         .reduce((a, b) => a.concat(b), [])
         .filter(
           (diagnostic) => diagnostic.node.tree.uri === treeContainer.uri,
         ) ?? []
     );
+  }
+
+  function getDiagnosticsFromDeclaration(
+    valueDeclaration: SyntaxNode,
+    cancellationToken?: ICancellationToken,
+  ): Diagnostic[] {
+    if (valueDeclaration.type !== "value_declaration") {
+      throw new Error(
+        "getDiagnosticsFromDeclaration must take a node of type value_declaraion",
+      );
+    }
+    try {
+      return InferenceScope.valueDeclarationInference(
+        mapSyntaxNodeToExpression(valueDeclaration) as EValueDeclaration,
+        valueDeclaration.tree.uri,
+        workspace,
+        new Set(),
+        cancellationToken,
+      ).diagnostics;
+    } catch {
+      return [];
+    }
   }
 
   function getAllImports(treeContainer: ITreeContainer): Imports {

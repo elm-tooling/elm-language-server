@@ -1,11 +1,9 @@
 import { container } from "tsyringe";
 import {
-  ApplyWorkspaceEditResponse,
   CodeAction,
   CodeActionKind,
   CodeActionParams,
-  ExecuteCommandParams,
-  IConnection,
+  Connection,
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -15,7 +13,6 @@ import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { IClientSettings, Settings } from "../util/settings";
 import { TreeUtils } from "../util/treeUtils";
-import { ElmAnalyseDiagnostics } from "./diagnostics/elmAnalyseDiagnostics";
 import { ElmLsDiagnostics } from "./diagnostics/elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
 import { TypeInferenceDiagnostics } from "./diagnostics/typeInferenceDiagnostics";
@@ -23,9 +20,8 @@ import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 
 export class CodeActionProvider {
-  private connection: IConnection;
+  private connection: Connection;
   private settings: Settings;
-  private elmAnalyse: ElmAnalyseDiagnostics | null = null;
   private elmMake: ElmMakeDiagnostics;
   private functionTypeAnnotationDiagnostics: TypeInferenceDiagnostics;
   private elmDiagnostics: ElmLsDiagnostics;
@@ -34,26 +30,19 @@ export class CodeActionProvider {
   constructor() {
     this.settings = container.resolve("Settings");
     this.clientSettings = container.resolve("ClientSettings");
-    if (this.clientSettings.elmAnalyseTrigger !== "never") {
-      this.elmAnalyse = container.resolve<ElmAnalyseDiagnostics | null>(
-        ElmAnalyseDiagnostics,
-      );
-    }
-    this.elmMake = container.resolve<ElmMakeDiagnostics>(ElmMakeDiagnostics);
-    this.functionTypeAnnotationDiagnostics = container.resolve<
-      TypeInferenceDiagnostics
-    >(TypeInferenceDiagnostics);
-    this.elmDiagnostics = container.resolve<ElmLsDiagnostics>(ElmLsDiagnostics);
-    this.connection = container.resolve<IConnection>("Connection");
+    this.elmMake = container.resolve(ElmMakeDiagnostics);
+    this.functionTypeAnnotationDiagnostics = container.resolve(
+      TypeInferenceDiagnostics,
+    );
+    this.elmDiagnostics = container.resolve(ElmLsDiagnostics);
+    this.connection = container.resolve<Connection>("Connection");
 
     this.onCodeAction = this.onCodeAction.bind(this);
-    this.onExecuteCommand = this.onExecuteCommand.bind(this);
     this.connection.onCodeAction(
       new ElmWorkspaceMatcher((param: CodeActionParams) =>
         URI.parse(param.textDocument.uri),
       ).handlerForWorkspace(this.onCodeAction.bind(this)),
     );
-    this.connection.onExecuteCommand(this.onExecuteCommand.bind(this));
 
     if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
       new MoveRefactoringHandler();
@@ -67,8 +56,6 @@ export class CodeActionProvider {
     elmWorkspace: IElmWorkspace,
   ): CodeAction[] {
     this.connection.console.info("A code action was requested");
-    const analyse =
-      (this.elmAnalyse && this.elmAnalyse.onCodeAction(params)) ?? [];
     const make = this.elmMake.onCodeAction(params);
     const typeAnnotation = this.functionTypeAnnotationDiagnostics.onCodeAction(
       params,
@@ -77,18 +64,10 @@ export class CodeActionProvider {
     return [
       ...this.getRefactorCodeActions(params, elmWorkspace),
       ...this.getTypeAnnotationCodeActions(params, elmWorkspace),
-      ...analyse,
       ...make,
       ...typeAnnotation,
       ...elmDiagnostics,
     ];
-  }
-
-  private async onExecuteCommand(
-    params: ExecuteCommandParams,
-  ): Promise<ApplyWorkspaceEditResponse | null | undefined> {
-    this.connection.console.info("A command execution was requested");
-    return this.elmAnalyse && this.elmAnalyse.onExecuteCommand(params);
   }
 
   private getTypeAnnotationCodeActions(

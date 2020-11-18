@@ -85,4 +85,8 @@ export class TextDocumentEvents extends EventEmitter {
   public get(uri: string): TextDocument | undefined {
     return this._documents[uri];
   }
+
+  public getManagedUris(): string[] {
+    return Object.keys(this._documents);
+  }
 }

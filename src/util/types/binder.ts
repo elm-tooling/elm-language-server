@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { ITreeContainer } from "src/forest";
+import { ITreeContainer } from "../../forest";
 import { SyntaxNode } from "web-tree-sitter";
 import { MultiMap } from "../multiMap";
 import { IExposed, IExposing, NodeType, TreeUtils } from "../treeUtils";
@@ -80,6 +80,8 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
         break;
       case "import_clause":
         bindImportClause(node);
+        break;
+      case "ERROR":
         break;
       default:
         forEachChild(bind);

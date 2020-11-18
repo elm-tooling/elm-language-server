@@ -1,14 +1,19 @@
-import { IClientSettings, Settings } from "src/util/settings";
-import { debounce } from "ts-debounce";
 import { container, injectable } from "tsyringe";
-import { Diagnostic, FileChangeType, IConnection } from "vscode-languageserver";
+import {
+  CancellationToken,
+  CancellationTokenSource,
+  Connection,
+  Diagnostic,
+  FileChangeType,
+} from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { ElmAnalyseDiagnostics } from "..";
 import { IElmWorkspace } from "../../elmWorkspace";
+import { GetDiagnosticsRequest } from "../../protocol";
+import { Delayer } from "../../util/delayer";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { NoWorkspaceContainsError } from "../../util/noWorkspaceContainsError";
-import { ElmAnalyseTrigger } from "../../util/settings";
+import { MultistepOperation } from "../../util/multistepOperation";
+import { IClientSettings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { ASTProvider } from "../astProvider";
 import { ElmLsDiagnostics } from "./elmLsDiagnostics";
@@ -31,56 +36,70 @@ export interface IElmIssue {
   file: string;
 }
 
+class PendingDiagnostics extends Map<string, number> {
+  public getOrderedFiles(): string[] {
+    return Array.from(this.entries())
+      .sort((a, b) => a[1] - b[1])
+      .map((a) => a[0]);
+  }
+}
+
+interface IPendingRequest {
+  token: CancellationTokenSource;
+  files: string[];
+}
+
 @injectable()
 export class DiagnosticsProvider {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
-  private elmAnalyseDiagnostics: ElmAnalyseDiagnostics | null = null;
   private typeInferenceDiagnostics: TypeInferenceDiagnostics;
-  private elmDiagnostics: ElmLsDiagnostics;
-  private elmWorkspaceMatcher: ElmWorkspaceMatcher<{ uri: string }>;
+  private elmLsDiagnostics: ElmLsDiagnostics;
   private currentDiagnostics: Map<string, FileDiagnostics>;
   private events: TextDocumentEvents;
-  private connection: IConnection;
-  private settings: Settings;
+  private connection: Connection;
   private clientSettings: IClientSettings;
   private workspaces: IElmWorkspace[];
+  private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
+  private documentEvents: TextDocumentEvents;
+
+  private pendingRequest: IPendingRequest | undefined;
+  private pendingDiagnostics: PendingDiagnostics;
+  private diagnosticsDelayer: Delayer<any>;
+  private diagnosticsOperation: MultistepOperation;
+  private changeSeq = 0;
 
   constructor() {
-    this.settings = container.resolve("Settings");
     this.clientSettings = container.resolve("ClientSettings");
-    if (this.clientSettings.elmAnalyseTrigger !== "never") {
-      this.elmAnalyseDiagnostics = container.resolve<ElmAnalyseDiagnostics | null>(
-        ElmAnalyseDiagnostics,
-      );
-    }
-    this.elmMakeDiagnostics = container.resolve<ElmMakeDiagnostics>(
-      ElmMakeDiagnostics,
-    );
-    this.typeInferenceDiagnostics = container.resolve<TypeInferenceDiagnostics>(
-      TypeInferenceDiagnostics,
-    );
-    this.elmDiagnostics = container.resolve<ElmLsDiagnostics>(ElmLsDiagnostics);
-    this.connection = container.resolve<IConnection>("Connection");
-    this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
-    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((doc) =>
-      URI.parse(doc.uri),
-    );
+
+    this.elmMakeDiagnostics = container.resolve(ElmMakeDiagnostics);
+    this.typeInferenceDiagnostics = container.resolve(TypeInferenceDiagnostics);
+    this.elmLsDiagnostics = container.resolve(ElmLsDiagnostics);
+    this.documentEvents = container.resolve(TextDocumentEvents);
+
+    this.connection = container.resolve("Connection");
+    this.events = container.resolve(TextDocumentEvents);
+    this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
+    this.diagnosticsOperation = new MultistepOperation(this.connection);
+
     this.workspaces = container.resolve("ElmWorkspaces");
 
-    const astProvider = container.resolve<ASTProvider>(ASTProvider);
+    const astProvider = container.resolve(ASTProvider);
 
     this.currentDiagnostics = new Map<string, FileDiagnostics>();
-    // register onChange listener if settings are not on-save only
+    this.pendingDiagnostics = new PendingDiagnostics();
+    this.diagnosticsDelayer = new Delayer(300);
 
-    const elmAnalyseTrigger = this.clientSettings.elmAnalyseTrigger;
     this.events.on(
       "open",
-      (d) => void this.getDiagnostics(d, true, elmAnalyseTrigger),
+      (d: { document: TextDocument }) =>
+        void this.getElmMakeDiagnostics(d.document.uri),
     );
     this.events.on(
       "save",
-      (d) => void this.getDiagnostics(d, true, elmAnalyseTrigger),
+      (d: { document: TextDocument }) =>
+        void this.getElmMakeDiagnostics(d.document.uri),
     );
+
     this.connection.onDidChangeWatchedFiles((event) => {
       const newDeleteEvents = event.changes
         .filter((a) => a.type === FileChangeType.Deleted)
@@ -89,16 +108,16 @@ export class DiagnosticsProvider {
         this.deleteDiagnostics(uri);
       });
     });
-    if (this.elmAnalyseDiagnostics) {
-      this.elmAnalyseDiagnostics.on(
-        "new-diagnostics",
-        this.newElmAnalyseDiagnostics.bind(this),
-      );
-    }
-    if (elmAnalyseTrigger === "change") {
-      this.events.on(
-        "change",
-        (d) => void this.getDiagnostics(d, false, elmAnalyseTrigger),
+
+    const clientInitiatedDiagnostics =
+      this.clientSettings.extendedCapabilities?.clientInitiatedDiagnostics ??
+      false;
+
+    if (clientInitiatedDiagnostics) {
+      this.connection.onRequest(
+        GetDiagnosticsRequest,
+        (params, cancellationToken) =>
+          this.getDiagnostics(params.files, params.delay, cancellationToken),
       );
     }
 
@@ -116,9 +135,8 @@ export class DiagnosticsProvider {
               this.updateDiagnostics(
                 treeContainer.uri,
                 DiagnosticKind.ElmLS,
-                this.elmDiagnostics.createDiagnostics(
-                  treeContainer.tree,
-                  treeContainer.uri,
+                this.elmLsDiagnostics.createDiagnostics(
+                  treeContainer,
                   workspace,
                 ),
               );
@@ -128,81 +146,91 @@ export class DiagnosticsProvider {
       }
     });
 
-    this.workspaces.forEach((workspace) => {
-      workspace.getForest().treeMap.forEach((treeContainer) => {
-        if (treeContainer.writeable) {
-          const treeDiagnostics = this.typeInferenceDiagnostics.createDiagnostics(
-            treeContainer,
-            workspace,
-          );
+    if (!clientInitiatedDiagnostics) {
+      this.requestAllDiagnostics();
+    }
 
-          this.updateDiagnostics(
-            treeContainer.uri,
-            DiagnosticKind.TypeInference,
-            treeDiagnostics,
-          );
-
-          if (!this.clientSettings.disableElmLSDiagnostics) {
-            this.updateDiagnostics(
-              treeContainer.uri,
-              DiagnosticKind.ElmLS,
-              this.elmDiagnostics.createDiagnostics(
-                treeContainer.tree,
-                treeContainer.uri,
-                workspace,
-              ),
-            );
-          }
-        }
-      });
-
-      astProvider.onTreeChange(({ treeContainer }) => {
-        let workspace;
-        try {
-          workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor({
-            uri: treeContainer.uri,
-          });
-        } catch (error) {
-          if (error instanceof NoWorkspaceContainsError) {
-            this.connection.console.info(error.message);
-            return; // ignore file that doesn't correspond to a workspace
-          }
-
-          throw error;
+    astProvider.onTreeChange(({ treeContainer, declaration }) => {
+      if (!clientInitiatedDiagnostics) {
+        if (this.pendingRequest) {
+          this.pendingRequest.token.cancel();
         }
 
-        this.updateDiagnostics(
-          treeContainer.uri,
-          DiagnosticKind.TypeInference,
-          this.typeInferenceDiagnostics.createDiagnostics(
-            treeContainer,
-            workspace,
-          ),
-        );
+        this.requestDiagnostics(treeContainer.uri);
+      }
+    });
 
-        if (!this.clientSettings.disableElmLSDiagnostics) {
-          this.updateDiagnostics(
-            treeContainer.uri,
-            DiagnosticKind.ElmLS,
-            this.elmDiagnostics.createDiagnostics(
-              treeContainer.tree,
-              treeContainer.uri,
-              workspace,
-            ),
-          );
-        }
-      });
+    this.documentEvents.on("change", () => {
+      this.change();
+      this.typeInferenceDiagnostics.change();
     });
   }
 
-  private newElmAnalyseDiagnostics(
-    diagnostics: Map<string, Diagnostic[]>,
-  ): void {
-    this.resetDiagnostics(diagnostics, DiagnosticKind.ElmAnalyse);
+  private requestDiagnostics(uri: string): void {
+    this.pendingDiagnostics.set(uri, Date.now());
+    this.triggerDiagnostics();
+  }
 
-    diagnostics.forEach((diagnostics, uri) => {
-      this.updateDiagnostics(uri, DiagnosticKind.ElmAnalyse, diagnostics);
+  private requestAllDiagnostics(): void {
+    this.workspaces.forEach((workspace) => {
+      workspace.getForest().treeMap.forEach(({ uri, writeable }) => {
+        if (writeable) {
+          this.pendingDiagnostics.set(uri, Date.now());
+        }
+      });
     });
+
+    this.triggerDiagnostics();
+  }
+
+  public interuptDiagnostics<T>(f: () => T): T {
+    if (!this.pendingRequest) {
+      return f();
+    }
+
+    this.pendingRequest.token.cancel();
+    this.pendingRequest = undefined;
+    const result = f();
+
+    this.triggerDiagnostics();
+    return result;
+  }
+
+  private triggerDiagnostics(delay = 200): void {
+    const sendPendingDiagnostics = (): void => {
+      const orderedFiles = this.pendingDiagnostics.getOrderedFiles();
+
+      if (this.pendingRequest) {
+        this.pendingRequest.token.cancel();
+
+        this.pendingRequest.files.forEach((file) => {
+          if (!orderedFiles.includes(file)) {
+            orderedFiles.push(file);
+          }
+        });
+
+        this.pendingRequest = undefined;
+      }
+
+      // Add all open files to request
+      const openFiles = this.events.getManagedUris();
+      openFiles.forEach((file) => {
+        if (!orderedFiles.includes(file)) {
+          orderedFiles.push(file);
+        }
+      });
+
+      if (orderedFiles.length) {
+        this.pendingRequest = {
+          token: this.getDiagnosticsWithCancellation(orderedFiles, 0),
+          files: orderedFiles,
+        };
+      }
+
+      this.pendingDiagnostics.clear();
+    };
+
+    void this.diagnosticsDelayer.trigger(sendPendingDiagnostics, delay);
   }
 
   private updateDiagnostics(
@@ -224,17 +252,11 @@ export class DiagnosticsProvider {
     }
 
     if (didUpdate) {
-      const sendDiagnostics = (uri: string): void => {
-        const fileDiagnostics = this.currentDiagnostics.get(uri);
-        this.connection.sendDiagnostics({
-          uri,
-          diagnostics: fileDiagnostics ? fileDiagnostics.get() : [],
-        });
-      };
-
-      const sendDiagnosticsDebounced = debounce(sendDiagnostics, 50);
-
-      sendDiagnosticsDebounced(uri);
+      const fileDiagnostics = this.currentDiagnostics.get(uri);
+      this.connection.sendDiagnostics({
+        uri,
+        diagnostics: fileDiagnostics ? fileDiagnostics.get() : [],
+      });
     }
   }
 
@@ -246,51 +268,108 @@ export class DiagnosticsProvider {
     });
   }
 
-  private async getDiagnostics(
-    { document }: { document: TextDocument },
-    isSaveOrOpen: boolean,
-    elmAnalyseTrigger: ElmAnalyseTrigger,
-  ): Promise<void> {
-    this.connection.console.info(
-      `Diagnostics were requested due to a file ${
-        isSaveOrOpen ? "open or save" : "change"
-      }`,
+  private getDiagnosticsWithCancellation(
+    files: string[],
+    delay: number,
+  ): CancellationTokenSource {
+    const cancellationToken = new CancellationTokenSource();
+
+    this.getDiagnostics(files, delay, cancellationToken.token);
+
+    return cancellationToken;
+  }
+
+  private getDiagnostics(
+    files: string[],
+    delay: number,
+    cancellationToken: CancellationToken,
+  ): void {
+    const followMs = Math.min(delay, 200);
+
+    this.diagnosticsOperation.startNew(
+      cancellationToken,
+      (next) => {
+        const seq = this.changeSeq;
+
+        let index = 0;
+        const goNext = (): void => {
+          index++;
+          if (files.length > index) {
+            next.delay(followMs, checkOne);
+          }
+        };
+
+        const checkOne = async (): Promise<void> => {
+          if (this.changeSeq !== seq) {
+            return;
+          }
+
+          const uri = files[index];
+          const workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(
+            URI.parse(uri),
+          );
+
+          const treeContainer = workspace.getForest().getByUri(uri);
+
+          if (!treeContainer) {
+            goNext();
+            return;
+          }
+
+          this.updateDiagnostics(
+            uri,
+            DiagnosticKind.TypeInference,
+            await this.typeInferenceDiagnostics.getDiagnosticsForFile(
+              treeContainer,
+              workspace,
+              cancellationToken,
+            ),
+          );
+
+          if (this.changeSeq !== seq) {
+            return;
+          }
+
+          next.immediate(() => {
+            this.updateDiagnostics(
+              uri,
+              DiagnosticKind.ElmLS,
+              this.elmLsDiagnostics.createDiagnostics(treeContainer, workspace),
+            );
+            goNext();
+          });
+        };
+
+        if (files.length > 0 && this.changeSeq === seq) {
+          next.delay(delay, checkOne);
+        }
+      },
+      () => {
+        //
+      },
+    );
+  }
+
+  public async getElmMakeDiagnostics(uri: string): Promise<void> {
+    const elmMakeDiagnostics = await this.elmMakeDiagnostics.createDiagnostics(
+      URI.parse(uri),
     );
 
-    const uri = URI.parse(document.uri);
+    this.resetDiagnostics(elmMakeDiagnostics, DiagnosticKind.ElmMake);
 
-    const text = document.getText();
-
-    if (isSaveOrOpen) {
-      const elmMakeDiagnostics = await this.elmMakeDiagnostics.createDiagnostics(
-        uri,
+    elmMakeDiagnostics.forEach((diagnostics, diagnosticsUri) => {
+      this.updateDiagnostics(
+        diagnosticsUri,
+        DiagnosticKind.ElmMake,
+        diagnostics,
       );
+    });
 
-      this.resetDiagnostics(elmMakeDiagnostics, DiagnosticKind.ElmMake);
-
-      elmMakeDiagnostics.forEach((diagnostics, diagnosticsUri) => {
-        this.updateDiagnostics(
-          diagnosticsUri,
-          DiagnosticKind.ElmMake,
-          diagnostics,
-        );
-      });
-    }
-
-    const elmMakeDiagnosticsForCurrentFile =
-      this.currentDiagnostics
-        .get(uri.toString())
-        ?.getForKind(DiagnosticKind.ElmMake) ?? [];
-
-    if (
-      this.elmAnalyseDiagnostics &&
-      elmAnalyseTrigger !== "never" &&
-      (!elmMakeDiagnosticsForCurrentFile ||
-        (elmMakeDiagnosticsForCurrentFile &&
-          elmMakeDiagnosticsForCurrentFile.length === 0))
-    ) {
-      await this.elmAnalyseDiagnostics.updateFile(uri, text);
-    }
+    this.currentDiagnostics.forEach((_, uri) => {
+      if (!elmMakeDiagnostics.has(uri)) {
+        this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
+      }
+    });
   }
 
   private resetDiagnostics(
@@ -305,5 +384,9 @@ export class DiagnosticsProvider {
         diagnosticList.set(diagnosticsUri, []);
       }
     });
+  }
+
+  private change(): void {
+    this.changeSeq++;
   }
 }

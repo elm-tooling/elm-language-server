@@ -3,13 +3,13 @@ import { container } from "tsyringe";
 import {
   DidChangeTextDocumentParams,
   DidOpenTextDocumentParams,
-  IConnection,
   VersionedTextDocumentIdentifier,
   Event,
   Emitter,
+  Connection,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import Parser, { Tree, Edit, Point } from "web-tree-sitter";
+import Parser, { Tree, Edit, Point, SyntaxNode } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Position, Range } from "vscode-languageserver-textdocument";
@@ -19,20 +19,23 @@ import { TreeUtils } from "../util/treeUtils";
 import { ITreeContainer } from "../forest";
 
 export class ASTProvider {
-  private connection: IConnection;
+  private connection: Connection;
   private parser: Parser;
   private documentEvents: TextDocumentEvents;
 
-  private treeChangeEvent = new Emitter<{ treeContainer: ITreeContainer }>();
-  readonly onTreeChange: Event<{ treeContainer: ITreeContainer }> = this
-    .treeChangeEvent.event;
+  private treeChangeEvent = new Emitter<{
+    treeContainer: ITreeContainer;
+    declaration?: SyntaxNode;
+  }>();
+  readonly onTreeChange: Event<{
+    treeContainer: ITreeContainer;
+    declaration?: SyntaxNode;
+  }> = this.treeChangeEvent.event;
 
   constructor() {
     this.parser = container.resolve("Parser");
-    this.connection = container.resolve<IConnection>("Connection");
-    this.documentEvents = container.resolve<TextDocumentEvents>(
-      TextDocumentEvents,
-    );
+    this.connection = container.resolve("Connection");
+    this.documentEvents = container.resolve(TextDocumentEvents);
 
     new FileEventsHandler();
 
@@ -77,6 +80,8 @@ export class ASTProvider {
 
     const newTree = this.parser.parse(newText, tree);
 
+    let changedDeclaration: SyntaxNode | undefined;
+
     tree
       ?.getChangedRanges(newTree)
       .map((range) => [
@@ -98,6 +103,7 @@ export class ASTProvider {
           startNode.id === endNode.id &&
           TreeUtils.getTypeAnnotation(startNode)
         ) {
+          changedDeclaration = startNode;
           elmWorkspace.getTypeCache().invalidateValueDeclaration(startNode);
         } else {
           elmWorkspace.getTypeCache().invalidateProject();
@@ -120,7 +126,10 @@ export class ASTProvider {
 
       setImmediate(() => {
         if (tree) {
-          this.treeChangeEvent.fire({ treeContainer });
+          this.treeChangeEvent.fire({
+            treeContainer,
+            declaration: changedDeclaration,
+          });
         }
       });
     }

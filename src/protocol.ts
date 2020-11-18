@@ -1,16 +1,14 @@
 import { CodeActionParams, RequestType } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 
+// eslint-disable-next-line @typescript-eslint/no-namespace
 export const GetMoveDestinationRequest = new RequestType<
   IMoveParams,
   IMoveDestinationsResponse,
-  void,
   void
 >("elm/getMoveDestinations");
 
-export const MoveRequest = new RequestType<IMoveParams, void, void, void>(
-  "elm/move",
-);
+export const MoveRequest = new RequestType<IMoveParams, void, void>("elm/move");
 
 export interface IMoveParams {
   sourceUri: string;
@@ -28,12 +26,9 @@ export interface IMoveDestination {
   uri: string;
 }
 
-export const ExposeRequest = new RequestType<
-  IExposeUnexposeParams,
-  void,
-  void,
-  void
->("elm/expose");
+export const ExposeRequest = new RequestType<IExposeUnexposeParams, void, void>(
+  "elm/expose",
+);
 
 export interface IExposeUnexposeParams {
   uri: string;
@@ -42,7 +37,6 @@ export interface IExposeUnexposeParams {
 
 export const UnexposeRequest = new RequestType<
   IExposeUnexposeParams,
-  void,
   void,
   void
 >("elm/unexpose");
@@ -58,13 +52,22 @@ export interface IOnDidRenameFilesParams {
 export const OnDidCreateFilesRequest = new RequestType<
   IOnDidCreateFilesParams,
   void,
-  void,
   void
 >("elm/ondidCreateFiles");
 
 export const OnDidRenameFilesRequest = new RequestType<
   IOnDidRenameFilesParams,
   void,
-  void,
   void
 >("elm/ondidRenameFiles");
+
+export interface IGetDiagnosticsParams {
+  files: string[];
+  delay: number;
+}
+
+export const GetDiagnosticsRequest = new RequestType<
+  IGetDiagnosticsParams,
+  void,
+  void
+>("elm/getDiagnostics");

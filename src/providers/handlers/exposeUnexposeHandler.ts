@@ -1,5 +1,5 @@
 import { container } from "tsyringe";
-import { IConnection } from "vscode-languageserver";
+import { Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { IElmWorkspace } from "../../elmWorkspace";
 import {
@@ -11,7 +11,7 @@ import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 
 export class ExposeUnexposeHandler {
-  private connection: IConnection;
+  private connection: Connection;
 
   constructor() {
     this.connection = container.resolve("Connection");

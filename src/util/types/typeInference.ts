@@ -39,12 +39,13 @@ import {
 } from "./expressionTree";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { TypeExpression } from "./typeExpression";
-import { IElmWorkspace } from "src/elmWorkspace";
+import { IElmWorkspace } from "../../elmWorkspace";
 import { Sequence } from "../sequence";
 import { Utils } from "../utils";
 import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
 import { TypeChecker } from "./typeChecker";
 import { performance } from "perf_hooks";
+import { ICancellationToken } from "../../cancellation";
 
 export let inferTime = 0;
 export function resetInferTime(): void {
@@ -624,6 +625,7 @@ export class InferenceScope {
     private nonShadowableNames: Set<string>,
     private activeScopes: Set<EValueDeclaration>,
     private recursionAllowed: boolean,
+    private cancellationToken?: ICancellationToken,
     private parent?: InferenceScope,
   ) {
     this.replacements = parent?.replacements ?? new DisjointSet();
@@ -649,6 +651,7 @@ export class InferenceScope {
     uri: string,
     elmWorkspace: IElmWorkspace,
     activeScopes: Set<EValueDeclaration>,
+    cancellationToken?: ICancellationToken,
   ): InferenceResult {
     // TODO: Need a good way to get all visible values
     const shadowableNames = new Set<string>();
@@ -660,6 +663,7 @@ export class InferenceScope {
         shadowableNames,
         new Set(activeScopes.values()),
         /* recursionAllowed */ false,
+        cancellationToken,
       ).inferDeclaration(declaration, true);
 
     const start = performance.now();
@@ -788,6 +792,8 @@ export class InferenceScope {
 
   private infer(e: Expression): Type {
     let type: Type = TUnknown;
+
+    this.cancellationToken?.throwIfCancellationRequested();
 
     switch (e.nodeType) {
       case "AnonymousFunctionExpr":
@@ -918,6 +924,7 @@ export class InferenceScope {
         new Set(this.nonShadowableNames.values()),
         activeScopes,
         recursionAllowed,
+        this.cancellationToken,
         this,
       ),
     );
@@ -1168,6 +1175,7 @@ export class InferenceScope {
             referenceUri,
             this.elmWorkspace,
             this.activeScopes,
+            this.cancellationToken,
           ).type
         : parentScope.inferChildDeclaration(declaration, this.activeScopes)
             .type;
