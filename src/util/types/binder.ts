@@ -81,8 +81,6 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
       case "import_clause":
         bindImportClause(node);
         break;
-      case "ERROR":
-        break;
       default:
         forEachChild(bind);
     }

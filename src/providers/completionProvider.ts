@@ -347,10 +347,9 @@ export class CompletionProvider {
         }
 
         return this.getRecordCompletionsUsingInference(
+          checker,
           targetNode,
           replaceRange,
-          params.textDocument.uri,
-          elmWorkspace,
         );
       }
 
@@ -793,14 +792,12 @@ export class CompletionProvider {
   }
 
   private getRecordCompletionsUsingInference(
+    checker: TypeChecker,
     targetNode: SyntaxNode,
     replaceRange: Range,
-    uri: string,
-    elmWorkspace: IElmWorkspace,
   ): CompletionItem[] {
     const result = [];
-    const checker = elmWorkspace.getTypeChecker();
-    const foundType = checker.findType(targetNode, uri);
+    const foundType = checker.findType(targetNode);
 
     if (foundType.nodeType === "Record") {
       for (const field in foundType.fields) {

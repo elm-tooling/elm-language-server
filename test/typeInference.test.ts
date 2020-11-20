@@ -64,7 +64,7 @@ describe("test type inference", () => {
     }
 
     const checker = workspace.getTypeChecker();
-    const nodeType = checker.findType(declaration, testUri);
+    const nodeType = checker.findType(declaration);
 
     expect(checker.typeToString(nodeType, treeContainer)).toEqual(expectedType);
   }

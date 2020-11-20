@@ -39,8 +39,7 @@ export interface DefinitionResult {
 }
 
 export interface TypeChecker {
-  findType: (node: SyntaxNode, uri: string) => Type;
-  // getExposedForModule: (moduleName: string) => IExposing[];
+  findType: (node: SyntaxNode) => Type;
   findDefinition: (
     node: SyntaxNode,
     treeContainer: ITreeContainer,
@@ -94,11 +93,13 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
   return typeChecker;
 
-  function findType(node: SyntaxNode, uri: string): Type {
+  function findType(node: SyntaxNode): Type {
     try {
       const declaration = mapSyntaxNodeToExpression(
         TreeUtils.findParentOfType("value_declaration", node, true),
       );
+
+      const uri = node.tree.uri;
 
       const findTypeOrParentType = (
         expr: SyntaxNode | undefined,
@@ -475,7 +476,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       nodeParentType === "lower_pattern" &&
       nodeParent.parent?.type === "record_pattern"
     ) {
-      const type = findType(nodeParent.parent, uri);
+      const type = findType(nodeParent.parent);
       return TreeUtils.findFieldReference(type, nodeText);
     } else if (
       nodeParentType === "value_qid" ||
@@ -587,7 +588,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       }
 
       if (target) {
-        const type = findType(target, uri);
+        const type = findType(target);
         return TreeUtils.findFieldReference(type, nodeText);
       }
     } else if (
@@ -595,13 +596,13 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       nodeParentType === "field" &&
       nodeParent.parent?.type === "record_expr"
     ) {
-      const type = findType(nodeParent.parent, uri);
+      const type = findType(nodeParent.parent);
       return TreeUtils.findFieldReference(type, nodeText);
     } else if (
       nodeAtPosition.type === "lower_case_identifier" &&
       nodeParentType === "field_accessor_function_expr"
     ) {
-      const type = findType(nodeParent, uri);
+      const type = findType(nodeParent);
 
       if (type.nodeType === "Function") {
         const paramType = type.params[0];

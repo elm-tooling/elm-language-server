@@ -808,9 +808,7 @@ export class ElmLsDiagnostics {
     recordTypes.forEach((recordType) => {
       let isSingleField = true;
       if (recordType.parent?.type === "type_ref" && recordType.parent.parent) {
-        const type = elmWorkspace
-          .getTypeChecker()
-          .findType(recordType.parent, uri);
+        const type = elmWorkspace.getTypeChecker().findType(recordType.parent);
 
         const singleField = recordType.descendantsOfType(
           "lower_case_identifier",

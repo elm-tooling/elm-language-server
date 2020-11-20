@@ -127,7 +127,7 @@ export class TypeInferenceDiagnostics {
 
     if (!valueDeclaration.typeAnnotation) {
       const typeString: string = checker.typeToString(
-        checker.findType(declaration, treeContainer.uri),
+        checker.findType(declaration),
         treeContainer,
       );
 
@@ -188,7 +188,7 @@ export class TypeInferenceDiagnostics {
 
         if (nodeAtPosition.parent) {
           const typeString: string = checker.typeToString(
-            checker.findType(nodeAtPosition.parent, uri),
+            checker.findType(nodeAtPosition.parent),
             treeContainer,
           );
 

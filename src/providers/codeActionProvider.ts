@@ -96,7 +96,7 @@ export class CodeActionProvider {
         !TreeUtils.getTypeAnnotation(nodeAtPosition.parent.parent)
       ) {
         const typeString: string = checker.typeToString(
-          checker.findType(nodeAtPosition.parent, params.textDocument.uri),
+          checker.findType(nodeAtPosition.parent),
           treeContainer,
         );
 
@@ -304,7 +304,7 @@ export class CodeActionProvider {
         );
 
         const typeString: string = checker.typeToString(
-          checker.findType(nodeAtPosition, params.textDocument.uri),
+          checker.findType(nodeAtPosition),
           treeContainer,
         );
 
