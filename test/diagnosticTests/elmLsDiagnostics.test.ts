@@ -35,7 +35,7 @@ describe("ElmLsDiagnostics", () => {
     }
 
     const diagnostics = elmDiagnostics
-      .createDiagnostics(treeContainer.tree, uri, workspace)
+      .createDiagnostics(treeContainer, workspace)
       .filter((diagnostic) => diagnostic.code === code);
 
     const diagnosticsEqual = Utils.arrayEquals(

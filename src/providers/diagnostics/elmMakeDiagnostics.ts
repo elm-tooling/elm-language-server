@@ -9,7 +9,7 @@ import {
   CodeActionKind,
   CodeActionParams,
   Diagnostic,
-  IConnection,
+  Connection,
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -25,7 +25,7 @@ import { Utils } from "../../util/utils";
 import { IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
-import { IElmWorkspace } from "src/elmWorkspace";
+import { IElmWorkspace } from "../../elmWorkspace";
 
 const ELM_MAKE = "Elm";
 const NAMING_ERROR = "NAMING ERROR";
@@ -112,11 +112,11 @@ export class ElmMakeDiagnostics {
     { moduleName: string; valueName?: string; diagnostic: Diagnostic }[]
   >();
   private settings: Settings;
-  private connection: IConnection;
+  private connection: Connection;
 
   constructor() {
     this.settings = container.resolve("Settings");
-    this.connection = container.resolve<IConnection>("Connection");
+    this.connection = container.resolve<Connection>("Connection");
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
   }
 

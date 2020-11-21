@@ -1,5 +1,5 @@
 import { container } from "tsyringe";
-import { IConnection, Position, Range, TextEdit } from "vscode-languageserver";
+import { Connection, Position, Range, TextEdit } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { IElmWorkspace } from "../../elmWorkspace";
 import {
@@ -15,7 +15,7 @@ import { References } from "../../util/references";
 import { TreeUtils } from "../../util/treeUtils";
 
 export class MoveRefactoringHandler {
-  private connection: IConnection;
+  private connection: Connection;
 
   constructor() {
     this.connection = container.resolve("Connection");

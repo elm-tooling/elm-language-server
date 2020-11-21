@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
+import { ITreeContainer } from "../../forest";
 import { container } from "tsyringe";
 import {
   CodeAction,
@@ -328,10 +329,11 @@ export class ElmLsDiagnostics {
   }
 
   public createDiagnostics = (
-    tree: Tree,
-    uri: string,
+    treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
   ): Diagnostic[] => {
+    const tree = treeContainer.tree;
+    const uri = treeContainer.uri;
     try {
       return [
         ...this.getUnusedImportDiagnostics(tree),
@@ -806,9 +808,7 @@ export class ElmLsDiagnostics {
     recordTypes.forEach((recordType) => {
       let isSingleField = true;
       if (recordType.parent?.type === "type_ref" && recordType.parent.parent) {
-        const type = elmWorkspace
-          .getTypeChecker()
-          .findType(recordType.parent, uri);
+        const type = elmWorkspace.getTypeChecker().findType(recordType.parent);
 
         const singleField = recordType.descendantsOfType(
           "lower_case_identifier",

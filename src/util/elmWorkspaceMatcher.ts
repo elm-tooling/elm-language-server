@@ -1,4 +1,5 @@
 import { container } from "tsyringe";
+import { CancellationToken } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { IElmWorkspace } from "../elmWorkspace";
 import { NoWorkspaceContainsError } from "./noWorkspaceContainsError";
@@ -16,10 +17,14 @@ export class ElmWorkspaceMatcher<ParamType> {
   }
 
   public handlerForWorkspace<ResultType>(
-    handler: (param: ParamType, elmWorkspace: IElmWorkspace) => ResultType,
-  ): (param: ParamType) => ResultType {
-    return (param: ParamType): ResultType => {
-      return handler(param, this.getElmWorkspaceFor(param));
+    handler: (
+      param: ParamType,
+      elmWorkspace: IElmWorkspace,
+      token?: CancellationToken,
+    ) => ResultType,
+  ): (param: ParamType, token?: CancellationToken) => ResultType {
+    return (param: ParamType, token?: CancellationToken): ResultType => {
+      return handler(param, this.getElmWorkspaceFor(param), token);
     };
   }
 

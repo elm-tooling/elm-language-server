@@ -1,6 +1,6 @@
 import { container } from "tsyringe";
 import {
-  IConnection,
+  Connection,
   Location,
   LocationLink,
   Position,
@@ -21,9 +21,9 @@ export type DefinitionResult =
   | undefined;
 
 export class DefinitionProvider {
-  private connection: IConnection;
+  private connection: Connection;
   constructor() {
-    this.connection = container.resolve<IConnection>("Connection");
+    this.connection = container.resolve<Connection>("Connection");
     this.connection.onDefinition(
       new ElmWorkspaceMatcher((param: TextDocumentPositionParams) =>
         URI.parse(param.textDocument.uri),

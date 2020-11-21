@@ -23,6 +23,13 @@ import {
   replaceTime,
   resetReplaceTime,
 } from "../src/util/types/typeReplacement";
+import {
+  getCancellationFilePath,
+  FileBasedCancellationTokenSource,
+  getCancellationFolderPath,
+  ThrottledCancellationToken,
+} from "../src/cancellation";
+import { randomBytes } from "crypto";
 
 container.register("Connection", {
   useValue: {
@@ -77,9 +84,20 @@ export async function runPerformanceTests(uri: string): Promise<void> {
       //
     });
 
+    const cancellationToken = new FileBasedCancellationTokenSource(
+      getCancellationFilePath(
+        getCancellationFolderPath(randomBytes(21).toString("hex")),
+        "1",
+      ),
+    );
+
+    const token = new ThrottledCancellationToken(cancellationToken.token);
+
     elmWorkspace
       .getForest()
-      .treeMap.forEach(elmWorkspace.getTypeChecker().getDiagnostics);
+      .treeMap.forEach((treeContainer) =>
+        elmWorkspace.getTypeChecker().getDiagnostics(treeContainer, token),
+      );
 
     addTime("BINDING   :", bindTime);
     addTime("INFER     :", inferTime);

@@ -1,4 +1,4 @@
-import { ClientCapabilities, IConnection } from "vscode-languageserver";
+import { ClientCapabilities, Connection } from "vscode-languageserver";
 import { injectable, container } from "tsyringe";
 
 export interface IClientSettings {
@@ -14,6 +14,7 @@ export interface IClientSettings {
 export interface IExtendedCapabilites {
   moveFunctionRefactoringSupport: boolean;
   exposeUnexposeSupport: boolean;
+  clientInitiatedDiagnostics: boolean;
 }
 
 export type ElmAnalyseTrigger = "change" | "save" | "never";
@@ -28,7 +29,7 @@ export class Settings {
     trace: { server: "off" },
     disableElmLSDiagnostics: false,
   };
-  private connection: IConnection;
+  private connection: Connection;
 
   private initDone = false;
 
@@ -36,7 +37,7 @@ export class Settings {
     config: IClientSettings,
     private clientCapabilities: ClientCapabilities,
   ) {
-    this.connection = container.resolve<IConnection>("Connection");
+    this.connection = container.resolve<Connection>("Connection");
     this.updateSettings(config);
   }
 

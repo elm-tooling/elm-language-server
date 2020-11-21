@@ -26,7 +26,6 @@ type exactCompletions = "exactMatch" | "partialMatch";
 type dotCompletions = "triggeredByDot" | "normal";
 
 describe("CompletionProvider", () => {
-  const completionProvider = new MockCompletionProvider();
   const treeParser = new SourceTreeParser();
 
   const debug = process.argv.find((arg) => arg === "--debug");
@@ -46,6 +45,7 @@ describe("CompletionProvider", () => {
     testDotCompletion: dotCompletions = "normal",
   ) {
     await treeParser.init();
+    const completionProvider = new MockCompletionProvider();
 
     const { newSources, position, fileWithCaret } = getCaretPositionFromSource(
       source,

@@ -1,5 +1,6 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-use-before-define */
 import {
+  CancellationToken,
   CodeAction,
   CodeActionKind,
   CodeActionParams,
@@ -8,64 +9,144 @@ import {
   Range,
   TextEdit,
 } from "vscode-languageserver";
-import { IElmWorkspace } from "../../elmWorkspace";
 import { SyntaxNode } from "web-tree-sitter";
 import { PositionUtil } from "../../positionUtil";
 import { TreeUtils } from "../../util/treeUtils";
-import { Utils } from "../../util/utils";
 import { URI } from "vscode-uri";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { TypeRenderer } from "../../util/types/typeRenderer";
+import { mapSyntaxNodeToExpression } from "../../util/types/expressionTree";
+import { MultistepOperation } from "../../util/multistepOperation";
+import { TypeChecker } from "../../util/types/typeChecker";
 import { ITreeContainer } from "../../forest";
+import { IElmWorkspace } from "../../elmWorkspace";
+import {
+  ICancellationToken,
+  ThrottledCancellationToken,
+} from "../../cancellation";
+import { container } from "tsyringe";
 
 export class TypeInferenceDiagnostics {
   TYPE_INFERENCE = "Type Inference";
 
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
+  private changeSeq = 0;
+
+  private operation: MultistepOperation;
 
   constructor() {
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
+    this.operation = new MultistepOperation(container.resolve("Connection"));
   }
 
-  public createDiagnostics = (
+  public change(): void {
+    this.changeSeq++;
+  }
+
+  public getDiagnosticsForFile(
     treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
-  ): Diagnostic[] => {
-    let diagnostics: Diagnostic[] = [];
-
-    const allTopLevelFunctions = TreeUtils.findAllTopLevelFunctionDeclarationsWithoutTypeAnnotation(
-      treeContainer.tree,
-    );
-
+    cancellationToken: CancellationToken,
+  ): Promise<Diagnostic[]> {
     const checker = elmWorkspace.getTypeChecker();
 
-    if (allTopLevelFunctions) {
-      const inferencedTypes = allTopLevelFunctions
-        .filter(Utils.notUndefinedOrNull.bind(this))
-        .map((func) => func.firstChild)
-        .filter(Utils.notUndefinedOrNull.bind(this))
-        .map((node) => {
-          const typeString: string = checker.typeToString(
-            checker.findType(node, treeContainer.uri),
-            treeContainer,
-          );
+    const diagnostics: Diagnostic[] = [];
 
-          if (typeString && typeString !== "Unknown" && node.firstNamedChild) {
-            return {
-              range: this.getNodeRange(node.firstNamedChild),
-              message: `Missing type annotation: \`${typeString}\``,
-              severity: DiagnosticSeverity.Information,
-              source: this.TYPE_INFERENCE,
-            };
+    const allTopLevelFunctions =
+      TreeUtils.findAllTopLevelFunctionDeclarations(treeContainer.tree) ?? [];
+
+    return new Promise((resolve) => {
+      this.operation.startNew(
+        cancellationToken,
+        (next) => {
+          const seq = this.changeSeq;
+
+          let index = 0;
+          const goNext = (): void => {
+            index++;
+            if (allTopLevelFunctions.length > index) {
+              next.immediate(checkOne);
+            }
+          };
+
+          const checkOne = (): void => {
+            if (this.changeSeq !== seq) {
+              return;
+            }
+
+            diagnostics.push(
+              ...this.getDiagnosticsForDeclaration(
+                checker,
+                allTopLevelFunctions[index],
+                treeContainer,
+                new ThrottledCancellationToken(cancellationToken),
+              ),
+            );
+
+            goNext();
+          };
+
+          if (allTopLevelFunctions.length > 0 && this.changeSeq === seq) {
+            next.immediate(checkOne);
           }
-        })
-        .filter(Utils.notUndefined.bind(this));
+        },
+        () => resolve(diagnostics),
+      );
+    });
+  }
 
-      diagnostics = inferencedTypes ?? [];
+  public getDiagnosticsForDeclaration(
+    checker: TypeChecker,
+    declaration: SyntaxNode,
+    treeContainer: ITreeContainer,
+    cancellationToken: ICancellationToken,
+  ): Diagnostic[] {
+    const valueDeclaration = mapSyntaxNodeToExpression(declaration);
+    if (valueDeclaration?.nodeType !== "ValueDeclaration") {
+      return [];
+    }
+
+    const diagnostics: Diagnostic[] = [];
+
+    checker
+      .getDiagnosticsFromDeclaration(valueDeclaration, cancellationToken)
+      .forEach((diagnostic) => {
+        const nodeUri = diagnostic.node.tree.uri;
+
+        if (nodeUri === treeContainer.uri) {
+          diagnostics.push({
+            range: {
+              start: this.getNodeRange(diagnostic.node).start,
+              end: this.getNodeRange(diagnostic.endNode).end,
+            },
+            message: diagnostic.message,
+            severity: DiagnosticSeverity.Error,
+            source: this.TYPE_INFERENCE,
+          });
+        }
+      });
+
+    if (!valueDeclaration.typeAnnotation) {
+      const typeString: string = checker.typeToString(
+        checker.findType(declaration),
+        treeContainer,
+      );
+
+      if (
+        typeString &&
+        typeString !== "unknown" &&
+        declaration.firstNamedChild?.firstNamedChild
+      ) {
+        diagnostics.push({
+          range: this.getNodeRange(declaration.firstNamedChild.firstNamedChild),
+          message: `Missing type annotation: \`${typeString}\``,
+          severity: DiagnosticSeverity.Information,
+          source: this.TYPE_INFERENCE,
+        });
+      }
     }
 
     return diagnostics;
-  };
+  }
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
     const { uri } = params.textDocument;
@@ -107,7 +188,7 @@ export class TypeInferenceDiagnostics {
 
         if (nodeAtPosition.parent) {
           const typeString: string = checker.typeToString(
-            checker.findType(nodeAtPosition.parent, uri),
+            checker.findType(nodeAtPosition.parent),
             treeContainer,
           );
 

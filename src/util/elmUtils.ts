@@ -1,6 +1,6 @@
 import execa, { ExecaReturnValue } from "execa";
 import * as path from "path";
-import { IConnection, CompletionItemKind } from "vscode-languageserver";
+import { Connection, CompletionItemKind } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { IClientSettings } from "./settings";
 
@@ -23,7 +23,7 @@ export async function execCmd(
   cmdStatic: string,
   options: IExecCmdOptions = {},
   cwd: string,
-  connection: IConnection,
+  connection: Connection,
   input?: string,
 ): Promise<ExecaReturnValue<string>> {
   const cmd = cmdFromUser === "" ? cmdStatic : cmdFromUser;
@@ -86,7 +86,7 @@ export function getEmptyTypes(): {
 export async function getElmVersion(
   settings: IClientSettings,
   elmWorkspaceFolder: URI,
-  connection: IConnection,
+  connection: Connection,
 ): Promise<string> {
   const options = {
     cmdArguments: ["--version"],

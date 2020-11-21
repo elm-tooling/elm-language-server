@@ -4,7 +4,6 @@ export * from "./codeLensProvider";
 export * from "./completionProvider";
 export * from "./definitionProvider";
 export * from "./diagnostics/diagnosticsProvider";
-export * from "./diagnostics/elmAnalyseDiagnostics";
 export * from "./diagnostics/elmMakeDiagnostics";
 export * from "./diagnostics/typeInferenceDiagnostics";
 export * from "./documentFormatingProvider";

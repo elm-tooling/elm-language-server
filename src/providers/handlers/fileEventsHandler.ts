@@ -7,7 +7,7 @@ import {
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { container } from "tsyringe";
-import { IConnection } from "vscode-languageserver";
+import { CancellationToken, Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { RenameUtils } from "../../util/renameUtils";
 import { RenameProvider } from "../renameProvider";
@@ -15,10 +15,10 @@ import { TreeUtils } from "../../util/treeUtils";
 import { PositionUtil } from "../../positionUtil";
 
 export class FileEventsHandler {
-  private connection: IConnection;
+  private connection: Connection;
 
   constructor() {
-    this.connection = container.resolve<IConnection>("Connection");
+    this.connection = container.resolve<Connection>("Connection");
 
     this.connection.onRequest(OnDidCreateFilesRequest, async (params) => {
       for (const file of params.files) {

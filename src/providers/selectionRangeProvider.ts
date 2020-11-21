@@ -1,6 +1,6 @@
 import { container } from "tsyringe";
 import {
-  IConnection,
+  Connection,
   Position,
   Range,
   SelectionRange,
@@ -14,10 +14,10 @@ import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
 
 export class SelectionRangeProvider {
-  private connection: IConnection;
+  private connection: Connection;
 
   constructor() {
-    this.connection = container.resolve<IConnection>("Connection");
+    this.connection = container.resolve<Connection>("Connection");
     this.connection.onSelectionRanges(
       new ElmWorkspaceMatcher((param: SelectionRangeParams) =>
         URI.parse(param.textDocument.uri),

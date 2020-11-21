@@ -1,6 +1,7 @@
 import { container } from "tsyringe";
 import {
-  IConnection,
+  Connection,
+  OptionalVersionedTextDocumentIdentifier,
   Position,
   PrepareRenameParams,
   Range,
@@ -8,7 +9,6 @@ import {
   RenameParams,
   TextDocumentEdit,
   TextEdit,
-  VersionedTextDocumentIdentifier,
   WorkspaceEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -18,10 +18,10 @@ import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { RenameUtils } from "../util/renameUtils";
 
 export class RenameProvider {
-  private connection: IConnection;
+  private connection: Connection;
 
   constructor() {
-    this.connection = container.resolve<IConnection>("Connection");
+    this.connection = container.resolve<Connection>("Connection");
     this.connection.onPrepareRename(
       new ElmWorkspaceMatcher((params: PrepareRenameParams) =>
         URI.parse(params.textDocument.uri),
@@ -144,7 +144,7 @@ export class RenameProvider {
         const element = edits[key];
         textDocumentEdits.push(
           TextDocumentEdit.create(
-            VersionedTextDocumentIdentifier.create(key, null),
+            OptionalVersionedTextDocumentIdentifier.create(key, null),
             element,
           ),
         );

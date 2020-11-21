@@ -3,7 +3,7 @@ import { SyntaxNode, Tree } from "web-tree-sitter";
 import { ITreeContainer } from "../forest";
 import { comparePosition } from "../positionUtil";
 import { Type } from "./types/typeInference";
-import { IElmWorkspace } from "src/elmWorkspace";
+import { IElmWorkspace } from "../elmWorkspace";
 
 export type NodeType =
   | "Function"

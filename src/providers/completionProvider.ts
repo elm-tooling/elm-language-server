@@ -4,7 +4,7 @@ import {
   CompletionItemKind,
   CompletionList,
   CompletionParams,
-  IConnection,
+  Connection,
   InsertTextFormat,
   MarkupKind,
   Position,
@@ -23,8 +23,9 @@ import { ImportUtils, IPossibleImport } from "../util/importUtils";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { TreeUtils } from "../util/treeUtils";
 import RANKING_LIST from "./ranking";
+import { DiagnosticsProvider } from ".";
+import { TypeChecker } from "../util/types/typeChecker";
 import escapeStringRegexp from "escape-string-regexp";
-import { TypeChecker } from "src/util/types/typeChecker";
 
 export type CompletionResult =
   | CompletionItem[]
@@ -45,14 +46,18 @@ interface ICompletionOptions {
 
 export class CompletionProvider {
   private qidRegex = /[a-zA-Z0-9.]+/;
-  private connection: IConnection;
+  private connection: Connection;
+  private diagnostics: DiagnosticsProvider;
 
   constructor() {
-    this.connection = container.resolve<IConnection>("Connection");
-    this.connection.onCompletion(
-      new ElmWorkspaceMatcher((param: CompletionParams) =>
-        URI.parse(param.textDocument.uri),
-      ).handlerForWorkspace(this.handleCompletionRequest),
+    this.connection = container.resolve<Connection>("Connection");
+    this.diagnostics = container.resolve(DiagnosticsProvider);
+    this.connection.onCompletion((params) =>
+      this.diagnostics.interuptDiagnostics(() =>
+        new ElmWorkspaceMatcher((params: CompletionParams) =>
+          URI.parse(params.textDocument.uri),
+        ).handlerForWorkspace(this.handleCompletionRequest)(params),
+      ),
     );
   }
 
@@ -342,10 +347,9 @@ export class CompletionProvider {
         }
 
         return this.getRecordCompletionsUsingInference(
+          checker,
           targetNode,
           replaceRange,
-          params.textDocument.uri,
-          elmWorkspace,
         );
       }
 
@@ -788,14 +792,12 @@ export class CompletionProvider {
   }
 
   private getRecordCompletionsUsingInference(
+    checker: TypeChecker,
     targetNode: SyntaxNode,
     replaceRange: Range,
-    uri: string,
-    elmWorkspace: IElmWorkspace,
   ): CompletionItem[] {
     const result = [];
-    const checker = elmWorkspace.getTypeChecker();
-    const foundType = checker.findType(targetNode, uri);
+    const foundType = checker.findType(targetNode);
 
     if (foundType.nodeType === "Record") {
       for (const field in foundType.fields) {

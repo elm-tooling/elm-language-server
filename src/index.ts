@@ -4,13 +4,14 @@ import * as Path from "path";
 import "reflect-metadata";
 import { container } from "tsyringe"; //must be after reflect-metadata
 import {
-  createConnection,
-  IConnection,
+  Connection,
   InitializeParams,
   InitializeResult,
   ProposedFeatures,
 } from "vscode-languageserver";
+import { createConnection } from "vscode-languageserver/node";
 import Parser from "web-tree-sitter";
+import { getCancellationStrategyFromArgv } from "./cancellation";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { ILanguageServer } from "./server";
 import { DocumentEvents } from "./util/documentEvents";
@@ -30,8 +31,10 @@ if (process.argv.length === 2) {
 }
 
 // Composition root - be aware, there are some register calls that need to be done later
-container.register<IConnection>("Connection", {
-  useValue: createConnection(ProposedFeatures.all),
+container.register<Connection>("Connection", {
+  useValue: createConnection(ProposedFeatures.all, {
+    cancellationStrategy: getCancellationStrategyFromArgv(process.argv),
+  }),
 });
 container.registerSingleton<Parser>("Parser", Parser);
 
@@ -40,7 +43,7 @@ container.register(TextDocumentEvents, {
   useValue: new TextDocumentEvents(),
 });
 
-const connection = container.resolve<IConnection>("Connection");
+const connection = container.resolve<Connection>("Connection");
 
 let server: ILanguageServer;
 
@@ -62,6 +65,7 @@ connection.onInitialize(
     container.register(CapabilityCalculator, {
       useValue: new CapabilityCalculator(params.capabilities),
     });
+
     const initializationOptions = params.initializationOptions ?? {};
 
     container.register("Settings", {
