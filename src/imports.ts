@@ -45,11 +45,7 @@ export class Imports extends MultiMap<string, IImport> {
     ];
 
     importNodes.forEach((importNode) => {
-      const moduleName = TreeUtils.findFirstNamedChildOfType(
-        "upper_case_qid",
-        importNode,
-      )?.text;
-
+      const moduleName = importNode.childForFieldName("moduleName")?.text;
       if (moduleName) {
         const uri = treeContainer.resolvedModules?.get(moduleName);
 
@@ -83,16 +79,10 @@ export class Imports extends MultiMap<string, IImport> {
                 foundModule.maintainerAndPackageName,
               ).forEach((imp) => result.set(imp.alias, imp));
 
-              const exposingList = TreeUtils.findFirstNamedChildOfType(
-                "exposing_list",
-                importNode,
-              );
+              const exposingList = importNode.childForFieldName("exposing");
 
               if (exposingList) {
-                const doubleDot = TreeUtils.findFirstNamedChildOfType(
-                  "double_dot",
-                  exposingList,
-                );
+                const doubleDot = exposingList.childForFieldName("doubleDot");
                 if (doubleDot) {
                   this.getAllExposedCompletions(
                     exposedFromRemoteModule,
