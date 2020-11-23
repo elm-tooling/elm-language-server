@@ -1024,11 +1024,8 @@ export class InferenceScope {
 
   private inferReferenceElement(e: Expression): Type {
     const definition =
-      findDefinition(
-        e.firstNamedChild?.lastNamedChild,
-        this.uri,
-        this.elmWorkspace,
-      ) ?? findDefinition(e.firstNamedChild, this.uri, this.elmWorkspace);
+      findDefinition(e.firstNamedChild?.lastNamedChild, this.elmWorkspace) ??
+      findDefinition(e.firstNamedChild, this.elmWorkspace);
 
     if (!definition) {
       this.diagnostics.push(missingValueError(e));
@@ -1394,7 +1391,7 @@ export class InferenceScope {
   ): [Type, IOperatorPrecedence] {
     const start = performance.now();
     // Find operator reference
-    const definition = findDefinition(e, this.uri, this.elmWorkspace);
+    const definition = findDefinition(e, this.elmWorkspace);
 
     const opDeclaration = mapSyntaxNodeToExpression(definition?.expr.parent);
 
@@ -1456,7 +1453,6 @@ export class InferenceScope {
     // Find operator reference
     const definition = findDefinition(
       operatorFunction.operator,
-      this.uri,
       this.elmWorkspace,
     );
 
@@ -1916,12 +1912,13 @@ export class InferenceScope {
   ): void {
     const variant = findDefinition(
       unionPattern.constructor.lastNamedChild,
-      this.uri,
       this.elmWorkspace,
     );
 
     if (variant?.expr.nodeType !== "UnionVariant") {
-      throw new Error("Could not find UnionVariant for " + unionPattern.text);
+      throw new Error(
+        "Could not find UnionVariant for " + unionPattern.constructor.text,
+      );
     }
 
     const variantType = TypeExpression.unionVariantInference(
