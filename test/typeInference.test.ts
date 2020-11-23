@@ -615,6 +615,6 @@ func a =
     else
         add a 1
 `;
-    await testTypeInference(basicsSources + source, "Int -> Int");
+    await testTypeInference(basicsSources + source, "number -> number");
   });
 });
