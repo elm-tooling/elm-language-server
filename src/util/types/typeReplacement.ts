@@ -18,8 +18,10 @@ export function resetReplaceTime(): void {
 }
 
 export class TypeReplacement {
+  private cachedReplacements = new Map<TVar, Type>();
+
   constructor(
-    private replacements: Map<TVar, Type | [boolean, Type]>,
+    private replacements: ReadonlyMap<TVar, Type>,
     private freshen: boolean,
     private keepRecordsMutable: boolean,
     private varsToRemainRigid?: TVar[],
@@ -219,6 +221,12 @@ export class TypeReplacement {
   }
 
   private getReplacement(key: TVar): Type | undefined {
+    const cachedReplacement = this.cachedReplacements.get(key);
+
+    if (cachedReplacement) {
+      return cachedReplacement;
+    }
+
     const replacement = this.replacements.get(key);
 
     if (!replacement) {
@@ -230,7 +238,7 @@ export class TypeReplacement {
           return undefined;
         } else {
           const newVar = TVar(key.name);
-          this.replacements.set(key, [true, newVar]);
+          this.cachedReplacements.set(key, newVar);
           return newVar;
         }
       }
@@ -238,21 +246,8 @@ export class TypeReplacement {
       return undefined;
     }
 
-    let hasBeenAccessed = false;
-    let storedType;
-    if (Array.isArray(replacement)) {
-      hasBeenAccessed = replacement[0];
-      storedType = replacement[1];
-    } else {
-      storedType = replacement;
-    }
-
-    if (hasBeenAccessed) {
-      return storedType;
-    }
-
-    const replacedType = this.replace(storedType);
-    this.replacements.set(key, [true, replacedType]);
+    const replacedType = this.replace(replacement);
+    this.cachedReplacements.set(key, replacedType);
     return replacedType;
   }
 }

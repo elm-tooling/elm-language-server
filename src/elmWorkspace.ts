@@ -31,6 +31,46 @@ interface IFolder {
   isExposed: boolean;
 }
 
+type ElmJson = IElmApplicationJson | IElmPackageJson;
+
+interface IElmApplicationJson {
+  type: "application";
+  "source-directories": string[];
+  "elm-version": string;
+  dependencies: {
+    direct: {
+      [module: string]: string;
+    };
+    indirect: {
+      [module: string]: string;
+    };
+  };
+  "test-dependencies": {
+    direct: {
+      [module: string]: string;
+    };
+    indirect: {
+      [module: string]: string;
+    };
+  };
+}
+
+interface IElmPackageJson {
+  type: "package";
+  name: string;
+  summary: string;
+  license: string;
+  version: string;
+  "exposed-modules": string[];
+  "elm-version": string;
+  dependencies: {
+    [module: string]: string;
+  };
+  "test-dependencies": {
+    [module: string]: string;
+  };
+}
+
 export interface IElmWorkspace {
   init(progressCallback: (percent: number) => void): void;
   hasDocument(uri: URI): boolean;
@@ -46,14 +86,13 @@ export interface IElmWorkspace {
 }
 
 export interface IRootFolder {
-  uri: string;
   writeable: boolean;
   maintainerAndPackageName?: string;
 }
 
 export class ElmWorkspace implements IElmWorkspace {
-  private elmFolders: IRootFolder[] = [];
-  private forest: IForest = new Forest([]);
+  private elmFolders = new Map<string, IRootFolder>();
+  private forest: IForest = new Forest(new Map());
   private parser: Parser;
   private connection: Connection;
   private settings: Settings;
@@ -91,9 +130,9 @@ export class ElmWorkspace implements IElmWorkspace {
   }
 
   public getPath(uri: URI): string | undefined {
-    return this.elmFolders
-      .map((f) => f.uri)
-      .find((elmFolder) => uri.fsPath.startsWith(elmFolder));
+    return Array.from(this.elmFolders.keys()).find((elmFolder) =>
+      uri.fsPath.startsWith(elmFolder),
+    );
   }
 
   public getForest(synchronize = true): IForest {
@@ -159,30 +198,26 @@ export class ElmWorkspace implements IElmWorkspace {
     this.connection.console.info(`Reading elm.json from ${pathToElmJson}`);
     try {
       // Find elm files and feed them to tree sitter
-      const elmJson = require(pathToElmJson);
-      const type = elmJson.type;
-      if (type === "application") {
+      const elmJson = require(pathToElmJson) as ElmJson;
+      if (elmJson.type === "application") {
         elmJson["source-directories"].forEach((folder: string) => {
-          this.elmFolders.push({
+          this.elmFolders.set(path.resolve(this.rootPath.fsPath, folder), {
             maintainerAndPackageName: undefined,
-            uri: path.resolve(this.rootPath.fsPath, folder),
             writeable: true,
           });
         });
       } else {
-        this.elmFolders.push({
+        this.elmFolders.set(path.join(this.rootPath.fsPath, "src"), {
           maintainerAndPackageName: undefined,
-          uri: path.join(this.rootPath.fsPath, "src"),
           writeable: true,
         });
       }
-      this.elmFolders.push({
+      this.elmFolders.set(path.join(this.rootPath.fsPath, "tests"), {
         maintainerAndPackageName: undefined,
-        uri: path.join(this.rootPath.fsPath, "tests"),
         writeable: true,
       });
       this.connection.console.info(
-        `${this.elmFolders.length} source-dirs and test folders found`,
+        `${this.elmFolders.size} source-dirs and test folders found`,
       );
 
       const elmHome = this.findElmHome();
@@ -190,60 +225,30 @@ export class ElmWorkspace implements IElmWorkspace {
         elmVersion,
       )}/`;
       const dependencies: { [index: string]: string } =
-        type === "application"
+        elmJson.type === "application"
           ? {
               ...elmJson.dependencies.direct,
               ...elmJson.dependencies.indirect,
               ...elmJson["test-dependencies"].direct,
+              ...elmJson["test-dependencies"].indirect,
             }
           : { ...elmJson.dependencies, ...elmJson["test-dependencies"] };
-      if (type === "application") {
+      if (elmJson.type === "application") {
         for (const key in dependencies) {
           if (Object.prototype.hasOwnProperty.call(dependencies, key)) {
             const maintainer = key.substring(0, key.indexOf("/"));
             const packageName = key.substring(key.indexOf("/") + 1, key.length);
 
             const pathToPackageWithVersion = `${packagesRoot}${maintainer}/${packageName}/${dependencies[key]}`;
-            this.elmFolders.push({
+            this.elmFolders.set(pathToPackageWithVersion, {
               maintainerAndPackageName: `${maintainer}/${packageName}`,
-              uri: pathToPackageWithVersion,
               writeable: false,
             });
           }
         }
       } else {
-        for (const key in dependencies) {
-          if (Object.prototype.hasOwnProperty.call(dependencies, key)) {
-            const maintainer = key.substring(0, key.indexOf("/"));
-            const packageName = key.substring(key.indexOf("/") + 1, key.length);
-
-            const pathToPackage = `${packagesRoot}${maintainer}/${packageName}/`;
-            const readDir = await readdir(pathToPackage, "utf8");
-
-            const allVersionFolders = readDir.map((folderName) => {
-              return {
-                version: folderName,
-                versionPath: `${pathToPackage}${folderName}`,
-              };
-            });
-
-            const matchedFolder = utils.findDepVersion(
-              allVersionFolders,
-              dependencies[key],
-            );
-            const pathToPackageWithVersion = matchedFolder
-              ? `${matchedFolder.versionPath}`
-              : `${
-                  allVersionFolders[allVersionFolders.length - 1].versionPath
-                }`;
-
-            this.elmFolders.push({
-              maintainerAndPackageName: `${maintainer}/${packageName}`,
-              uri: pathToPackageWithVersion,
-              writeable: false,
-            });
-          }
-        }
+        // Resolve dependency tree recursively
+        await this.resolveDependencies(dependencies, packagesRoot);
       }
 
       const elmFilePaths = await this.findElmFilesInFolders(this.elmFolders);
@@ -282,17 +287,56 @@ export class ElmWorkspace implements IElmWorkspace {
     }
   }
 
+  private async resolveDependencies(
+    dependencies: { [index: string]: string },
+    packagesRoot: string,
+  ): Promise<void> {
+    for (const key in dependencies) {
+      const maintainer = key.substring(0, key.indexOf("/"));
+      const packageName = key.substring(key.indexOf("/") + 1, key.length);
+
+      const pathToPackage = `${packagesRoot}${maintainer}/${packageName}/`;
+      const readDir = await readdir(pathToPackage, "utf8");
+
+      const allVersionFolders = readDir.map((folderName) => {
+        return {
+          version: folderName,
+          versionPath: `${pathToPackage}${folderName}`,
+        };
+      });
+
+      const matchedFolder = utils.findDepVersion(
+        allVersionFolders,
+        dependencies[key],
+      );
+      const pathToPackageWithVersion = matchedFolder
+        ? `${matchedFolder.versionPath}`
+        : `${allVersionFolders[allVersionFolders.length - 1].versionPath}`;
+
+      if (!this.elmFolders.has(pathToPackageWithVersion)) {
+        this.elmFolders.set(pathToPackageWithVersion, {
+          maintainerAndPackageName: `${maintainer}/${packageName}`,
+          writeable: false,
+        });
+      }
+
+      // Resolve all dependencies for this dependency
+      const elmJsonPath = path.join(pathToPackageWithVersion, "elm.json");
+      const elmJson = require(elmJsonPath) as ElmJson;
+
+      if (elmJson.type === "package") {
+        await this.resolveDependencies(elmJson.dependencies, packagesRoot);
+      }
+    }
+  }
+
   private async findElmFilesInFolders(
-    elmFolders: {
-      uri: string;
-      writeable: boolean;
-      maintainerAndPackageName?: string;
-    }[],
+    elmFolders: Map<string, IRootFolder>,
   ): Promise<IFolder[]> {
     let elmFilePathPromises: Promise<IFolder[]>[] = [];
-    for (const element of elmFolders) {
+    for (const [uri, element] of elmFolders) {
       elmFilePathPromises = elmFilePathPromises.concat(
-        this.findElmFilesInFolder(element),
+        this.findElmFilesInFolder({ uri, ...element }),
       );
     }
     return (await Promise.all(elmFilePathPromises)).reduce(

@@ -54,7 +54,7 @@ export class TypeInferenceDiagnostics {
     const allTopLevelFunctions =
       TreeUtils.findAllTopLevelFunctionDeclarations(treeContainer.tree) ?? [];
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       this.operation.startNew(
         cancellationToken,
         (next) => {
@@ -70,7 +70,7 @@ export class TypeInferenceDiagnostics {
 
           const checkOne = (): void => {
             if (this.changeSeq !== seq) {
-              return;
+              reject();
             }
 
             diagnostics.push(
@@ -89,7 +89,13 @@ export class TypeInferenceDiagnostics {
             next.immediate(checkOne);
           }
         },
-        () => resolve(diagnostics),
+        () => {
+          if (diagnostics.length === 0) {
+            console.log();
+          }
+          resolve(diagnostics);
+        },
+        reject,
       );
     });
   }

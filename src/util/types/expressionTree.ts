@@ -345,6 +345,7 @@ export function mapSyntaxNodeToExpression(
             functionCallExpr.target = target;
             functionCallExpr.args = node.children
               .slice(1)
+              .filter((n) => !n.type.includes("comment"))
               .map(mapSyntaxNodeToExpression) as Expression[];
 
             addTime("functionCallExpr", performance.now() - start);
@@ -823,14 +824,13 @@ export function mapTypeAnnotation(typeAnnotation: ETypeAnnotation): void {
 
 export function findDefinition(
   e: SyntaxNode | undefined | null,
-  uri: string,
   elmWorkspace: IElmWorkspace,
 ): { expr: Expression; uri: string } | undefined {
   if (!e) {
     return;
   }
 
-  const treeContainer = elmWorkspace.getForest().getByUri(uri);
+  const treeContainer = elmWorkspace.getForest().getByUri(e.tree.uri);
 
   if (!treeContainer) {
     return;

@@ -15,6 +15,7 @@ export class MultistepOperation implements INextStep {
   private immediateId: NodeJS.Immediate | undefined;
   private cancellationToken: CancellationToken | undefined;
   private done: (() => void) | undefined;
+  private cancelled: (() => void) | undefined;
 
   constructor(private connection: Connection) {}
 
@@ -22,19 +23,22 @@ export class MultistepOperation implements INextStep {
     cancellationToken: CancellationToken,
     action: (next: INextStep) => void,
     done: () => void,
+    cancelled?: () => void,
   ): void {
     this.complete();
     this.cancellationToken = cancellationToken;
     this.done = done;
+    this.cancelled = cancelled;
     this.executeAction(action);
   }
 
   private complete(): void {
     if (this.done !== undefined) {
       this.done();
-      this.cancellationToken = undefined;
       this.done = undefined;
     }
+
+    this.cancellationToken = undefined;
     this.setTimerHandle(undefined);
     this.setImmediateId(undefined);
   }
@@ -59,19 +63,30 @@ export class MultistepOperation implements INextStep {
 
   private executeAction(action: (next: INextStep) => void): void {
     let stop = false;
+    let cancelled = false;
     try {
       if (this.cancellationToken?.isCancellationRequested) {
         stop = true;
+        cancelled = true;
       } else {
         action(this);
       }
     } catch (e) {
-      stop = true;
       // ignore cancellation request
       if (!(e instanceof OperationCanceledException)) {
         this.connection.console.error(`${e} delayed processing of request`);
       }
+
+      stop = true;
+      cancelled = true;
     }
+
+    if (cancelled && this.cancelled) {
+      this.cancelled();
+      this.cancelled = undefined;
+      return;
+    }
+
     if (stop || !this.hasPendingWork()) {
       this.complete();
     }

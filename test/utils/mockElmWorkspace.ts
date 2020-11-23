@@ -20,7 +20,7 @@ import {
 export const baseUri = Path.join(__dirname, "../sources/src/");
 
 export class MockElmWorkspace implements IElmWorkspace {
-  private forest: IForest = new Forest([]);
+  private forest: IForest = new Forest(new Map());
   private parser: Parser;
   private typeCache = new TypeCache();
   private possibleImportsCache = new PossibleImportsCache();

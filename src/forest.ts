@@ -50,7 +50,13 @@ export class Forest implements IForest {
   >();
   public moduleToUrisMap: Map<string, string[]> = new Map<string, string[]>();
 
-  constructor(private elmFolders: IRootFolder[]) {}
+  private elmFolders: { uri: string; writeable: boolean }[] = [];
+
+  constructor(elmFolders: ReadonlyMap<string, IRootFolder>) {
+    elmFolders.forEach(({ writeable }, uri) =>
+      this.elmFolders.push({ writeable, uri }),
+    );
+  }
 
   public getTree(uri: string): Tree | undefined {
     return this.getByUri(uri)?.tree;

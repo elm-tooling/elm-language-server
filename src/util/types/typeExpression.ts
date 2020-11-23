@@ -326,7 +326,6 @@ export class TypeExpression {
   private typeVariableType(typeVariable: ETypeVariable): Type {
     const definition = findDefinition(
       typeVariable.firstNamedChild,
-      this.uri,
       this.workspace,
     );
 
@@ -397,11 +396,8 @@ export class TypeExpression {
       fieldExpressions,
     );
 
-    const baseTypeDefinition = findDefinition(
-      record.baseType,
-      this.uri,
-      this.workspace,
-    )?.expr;
+    const baseTypeDefinition = findDefinition(record.baseType, this.workspace)
+      ?.expr;
 
     const baseType = baseTypeDefinition
       ? this.getTypeVar(baseTypeDefinition)
@@ -433,7 +429,6 @@ export class TypeExpression {
 
     const definition = findDefinition(
       typeRef.firstNamedChild?.lastNamedChild,
-      this.uri,
       this.workspace,
     );
 
