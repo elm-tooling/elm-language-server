@@ -599,4 +599,22 @@ world =
 `;
     await testTypeInference(basicsSources + source, "Html msg");
   });
+
+  test("var accessed multiple times", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+add a b =
+    a + b
+
+func a =
+--^
+    if a == 1 then
+        a + 1
+    else
+        add a 1
+`;
+    await testTypeInference(basicsSources + source, "Int -> Int");
+  });
 });
