@@ -942,11 +942,11 @@ export class InferenceScope {
 
   private inferChildDeclaration(
     declaration: EValueDeclaration,
-    activeScopes = new Set(this.activeScopes.values()),
+    activeScopes = this.activeScopes,
   ): InferenceResult {
     const result = this.inferChild(
       (inference) => inference.inferDeclaration(declaration, false),
-      activeScopes,
+      new Set(activeScopes.values()),
     );
 
     this.resolvedDeclarations.set(declaration, result.type);
@@ -1580,8 +1580,8 @@ export class InferenceScope {
   private inferLambda(lambaExpr: EAnonymousFunctionExpr): Type {
     return this.inferChild(
       (inference) => inference.lambdaInference(lambaExpr),
-      undefined,
-      true,
+      /* activeScopes */ undefined,
+      /* recursionAllowed */ true,
     ).type;
   }
 
