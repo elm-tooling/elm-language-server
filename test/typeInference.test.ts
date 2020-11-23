@@ -617,4 +617,24 @@ func a =
 `;
     await testTypeInference(basicsSources + source, "number -> number");
   });
+
+  test("effect module", async () => {
+    const source = `
+--@ Effect.elm
+effect module Effect where { command = MyCmd } exposing (func)
+
+func a b =
+    a + b
+
+--@ Test.elm
+module Test exposing (..)
+
+import Effect
+
+func a =
+--^
+    Effect.func a 1
+`;
+    await testTypeInference(basicsSources + source, "number -> number");
+  });
 });
