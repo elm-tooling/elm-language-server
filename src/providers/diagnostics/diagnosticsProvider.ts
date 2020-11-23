@@ -1,7 +1,6 @@
 import { container, injectable } from "tsyringe";
 import {
   CancellationToken,
-  CancellationTokenSource,
   Connection,
   Diagnostic,
   FileChangeType,
@@ -16,6 +15,7 @@ import { MultistepOperation } from "../../util/multistepOperation";
 import { IClientSettings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { ASTProvider } from "../astProvider";
+import { DiagnosticsRequest } from "./diagnosticsRequest";
 import { ElmLsDiagnostics } from "./elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics";
@@ -44,11 +44,6 @@ class PendingDiagnostics extends Map<string, number> {
   }
 }
 
-interface IPendingRequest {
-  token: CancellationTokenSource;
-  files: string[];
-}
-
 @injectable()
 export class DiagnosticsProvider {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
@@ -62,7 +57,7 @@ export class DiagnosticsProvider {
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
   private documentEvents: TextDocumentEvents;
 
-  private pendingRequest: IPendingRequest | undefined;
+  private pendingRequest: DiagnosticsRequest | undefined;
   private pendingDiagnostics: PendingDiagnostics;
   private diagnosticsDelayer: Delayer<any>;
   private diagnosticsOperation: MultistepOperation;
@@ -153,7 +148,8 @@ export class DiagnosticsProvider {
     astProvider.onTreeChange(({ treeContainer, declaration }) => {
       if (!clientInitiatedDiagnostics) {
         if (this.pendingRequest) {
-          this.pendingRequest.token.cancel();
+          this.pendingRequest.cancel();
+          this.pendingRequest = undefined;
         }
 
         this.requestDiagnostics(treeContainer.uri);
@@ -188,7 +184,7 @@ export class DiagnosticsProvider {
       return f();
     }
 
-    this.pendingRequest.token.cancel();
+    this.pendingRequest.cancel();
     this.pendingRequest = undefined;
     const result = f();
 
@@ -201,7 +197,7 @@ export class DiagnosticsProvider {
       const orderedFiles = this.pendingDiagnostics.getOrderedFiles();
 
       if (this.pendingRequest) {
-        this.pendingRequest.token.cancel();
+        this.pendingRequest.cancel();
 
         this.pendingRequest.files.forEach((file) => {
           if (!orderedFiles.includes(file)) {
@@ -221,10 +217,15 @@ export class DiagnosticsProvider {
       });
 
       if (orderedFiles.length) {
-        this.pendingRequest = {
-          token: this.getDiagnosticsWithCancellation(orderedFiles, 0),
-          files: orderedFiles,
-        };
+        const request = (this.pendingRequest = DiagnosticsRequest.execute(
+          this.getDiagnostics.bind(this),
+          orderedFiles,
+          () => {
+            if (request === this.pendingRequest) {
+              this.pendingRequest = undefined;
+            }
+          },
+        ));
       }
 
       this.pendingDiagnostics.clear();
@@ -268,85 +269,77 @@ export class DiagnosticsProvider {
     });
   }
 
-  private getDiagnosticsWithCancellation(
-    files: string[],
-    delay: number,
-  ): CancellationTokenSource {
-    const cancellationToken = new CancellationTokenSource();
-
-    this.getDiagnostics(files, delay, cancellationToken.token);
-
-    return cancellationToken;
-  }
-
   private getDiagnostics(
     files: string[],
     delay: number,
     cancellationToken: CancellationToken,
-  ): void {
+  ): Promise<void> {
     const followMs = Math.min(delay, 200);
 
-    this.diagnosticsOperation.startNew(
-      cancellationToken,
-      (next) => {
-        const seq = this.changeSeq;
+    return new Promise((resolve) =>
+      this.diagnosticsOperation.startNew(
+        cancellationToken,
+        (next) => {
+          const seq = this.changeSeq;
 
-        let index = 0;
-        const goNext = (): void => {
-          index++;
-          if (files.length > index) {
-            next.delay(followMs, checkOne);
-          }
-        };
+          let index = 0;
+          const goNext = (): void => {
+            index++;
+            if (files.length > index) {
+              next.delay(followMs, checkOne);
+            }
+          };
 
-        const checkOne = async (): Promise<void> => {
-          if (this.changeSeq !== seq) {
-            return;
-          }
+          const checkOne = async (): Promise<void> => {
+            if (this.changeSeq !== seq) {
+              return;
+            }
 
-          const uri = files[index];
-          const workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(
-            URI.parse(uri),
-          );
+            const uri = files[index];
+            const workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(
+              URI.parse(uri),
+            );
 
-          const treeContainer = workspace.getForest().getByUri(uri);
+            const treeContainer = workspace.getForest().getByUri(uri);
 
-          if (!treeContainer) {
-            goNext();
-            return;
-          }
+            if (!treeContainer) {
+              goNext();
+              return;
+            }
 
-          this.updateDiagnostics(
-            uri,
-            DiagnosticKind.TypeInference,
-            await this.typeInferenceDiagnostics.getDiagnosticsForFile(
-              treeContainer,
-              workspace,
-              cancellationToken,
-            ),
-          );
-
-          if (this.changeSeq !== seq) {
-            return;
-          }
-
-          next.immediate(() => {
             this.updateDiagnostics(
               uri,
-              DiagnosticKind.ElmLS,
-              this.elmLsDiagnostics.createDiagnostics(treeContainer, workspace),
+              DiagnosticKind.TypeInference,
+              await this.typeInferenceDiagnostics.getDiagnosticsForFile(
+                treeContainer,
+                workspace,
+                cancellationToken,
+              ),
             );
-            goNext();
-          });
-        };
 
-        if (files.length > 0 && this.changeSeq === seq) {
-          next.delay(delay, checkOne);
-        }
-      },
-      () => {
-        //
-      },
+            if (this.changeSeq !== seq) {
+              return;
+            }
+
+            next.immediate(() => {
+              this.updateDiagnostics(
+                uri,
+                DiagnosticKind.ElmLS,
+                this.elmLsDiagnostics.createDiagnostics(
+                  treeContainer,
+                  workspace,
+                ),
+              );
+              goNext();
+            });
+          };
+
+          if (files.length > 0 && this.changeSeq === seq) {
+            next.delay(delay, checkOne);
+          }
+        },
+        resolve,
+      ),
     );
   }
 

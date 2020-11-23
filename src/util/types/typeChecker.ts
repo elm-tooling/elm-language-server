@@ -231,17 +231,14 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         "getDiagnosticsFromDeclaration must take a node of type value_declaraion",
       );
     }
-    try {
-      return InferenceScope.valueDeclarationInference(
-        mapSyntaxNodeToExpression(valueDeclaration) as EValueDeclaration,
-        valueDeclaration.tree.uri,
-        workspace,
-        new Set(),
-        cancellationToken,
-      ).diagnostics;
-    } catch {
-      return [];
-    }
+
+    return InferenceScope.valueDeclarationInference(
+      mapSyntaxNodeToExpression(valueDeclaration) as EValueDeclaration,
+      valueDeclaration.tree.uri,
+      workspace,
+      new Set(),
+      cancellationToken,
+    ).diagnostics;
   }
 
   function getAllImports(treeContainer: ITreeContainer): Imports {

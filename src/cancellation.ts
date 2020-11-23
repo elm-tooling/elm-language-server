@@ -207,7 +207,12 @@ export class ThrottledCancellationToken implements ICancellationToken {
     if (duration >= this.throttleWaitMilliseconds) {
       // Check no more than once every throttle wait milliseconds
       this.lastCancellationCheckTime = time;
-      return this.cancellationToken.isCancellationRequested;
+
+      try {
+        return this.cancellationToken.isCancellationRequested;
+      } catch {
+        //
+      }
     }
 
     return false;
