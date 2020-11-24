@@ -617,7 +617,9 @@ export function mapSyntaxNodeToExpression(
           .slice(1)
           .filter(
             (node) =>
-              node.type.includes("pattern") || node.type.includes("constant"),
+              node.type.includes("pattern") ||
+              node.type.includes("constant") ||
+              node.type === "unit_expr",
           )
           .map(
             (node) => mapSyntaxNodeToExpression(node) ?? node,
