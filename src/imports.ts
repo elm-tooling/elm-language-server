@@ -101,7 +101,7 @@ export class Imports extends MultiMap<string, IImport> {
                     );
                     if (foundNode) {
                       this.exposedNodesToImports(
-                        [foundNode],
+                        foundNode,
                         moduleName,
                         foundModule,
                       ).forEach((imp) => result.set(imp.alias, imp));
@@ -118,7 +118,7 @@ export class Imports extends MultiMap<string, IImport> {
                     );
                     if (foundNode) {
                       this.exposedNodesToImports(
-                        [foundNode],
+                        foundNode,
                         moduleName,
                         foundModule,
                       ).forEach((imp) => result.set(imp.alias, imp));
@@ -136,13 +136,19 @@ export class Imports extends MultiMap<string, IImport> {
                       exposedType,
                     )?.text;
 
+                    const exposedUnionConstructors = !!TreeUtils.findFirstNamedChildOfType(
+                      "exposed_union_constructors",
+                      exposedType,
+                    );
+
                     if (typeName) {
                       const foundNode = exposedFromRemoteModule.get(typeName);
                       if (foundNode) {
                         this.exposedNodesToImports(
-                          [foundNode],
+                          foundNode,
                           moduleName,
                           foundModule,
+                          exposedUnionConstructors,
                         ).forEach((imp) => result.set(imp.alias, imp));
                       }
                     }
@@ -311,24 +317,24 @@ export class Imports extends MultiMap<string, IImport> {
   }
 
   private static exposedNodesToImports(
-    exposedNodes: IExposed[],
+    exposedNode: IExposed,
     moduleName: string,
     foundModule: ITreeContainer,
+    includeUnionConstructors = false,
   ): IImport[] {
-    return exposedNodes
-      .map((a) => {
-        return [
-          {
-            alias: a.name,
-            fromModuleName: moduleName,
-            fromUri: foundModule.uri,
-            maintainerAndPackageName: foundModule.maintainerAndPackageName,
-            node: a.syntaxNode,
-            type: a.type,
-            explicitlyExposed: true,
-          },
-        ].concat(
-          a.exposedUnionConstructors?.map((b) => {
+    return [
+      {
+        alias: exposedNode.name,
+        fromModuleName: moduleName,
+        fromUri: foundModule.uri,
+        maintainerAndPackageName: foundModule.maintainerAndPackageName,
+        node: exposedNode.syntaxNode,
+        type: exposedNode.type,
+        explicitlyExposed: true,
+      },
+    ].concat(
+      includeUnionConstructors
+        ? exposedNode.exposedUnionConstructors?.map((b) => {
             return {
               alias: b.name,
               fromModuleName: moduleName,
@@ -338,9 +344,8 @@ export class Imports extends MultiMap<string, IImport> {
               type: "UnionConstructor",
               explicitlyExposed: false,
             };
-          }) ?? [],
-        );
-      })
-      .reduce((a, b) => a.concat(b), []);
+          }) ?? []
+        : [],
+    );
   }
 }
