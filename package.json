@@ -16,7 +16,6 @@
     "url": "https://github.com/elm-tooling/elm-language-server"
   },
   "dependencies": {
-    "elm-analyse": "github:elm-tooling/elm-analyse#7f4000cce5ef024fe5e82c7ee1725feef95a9daf",
     "escape-string-regexp": "^4.0.0",
     "execa": "^4.1.0",
     "fast-diff": "^1.2.0",
