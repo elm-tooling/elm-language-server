@@ -15,7 +15,6 @@ This is the language server implementation for the Elm programming language.
 - [Configuration](#configuration)
 - [Features](#features)
 - [Server Settings](#server-settings)
-  - [Elm-Analyse Configuration](#elm-analyse-configuration)
 - [Editor Support](#editor-support)
   - [VSCode](#vscode)
   - [Vim](#vim)
@@ -110,7 +109,7 @@ Supports Elm 0.19 and up
 
 | Feature          | Description                                                                                                                                          |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| diagnostics      | Provided via `elm`, `elm-test` and `elm-analyse`                                                                                                     |
+| diagnostics      | Provided via `elm`, `elm-test` and our own type inference and linter                                                                                 |
 | formatting       | Provided via `elm-format` and post-processed to only return a diff of changes. This way it should not be as intrusive as running `elm-format` normal |
 | codeLenses       | Currently only shows if a type alias, custom type or function is exposed from that module                                                            |
 | completions      | Show completions for the current file and snippets                                                                                                   |
@@ -131,15 +130,9 @@ This server contributes the following settings:
 - `elmLS.elmPath`: The path to your `elm` executable. Should be empty by default, in that case it will assume the name and try to first get it from a local npm installation or a global one. If you set it manually it will not try to load from the npm folder.
 - `elmLS.elmFormatPath`: The path to your `elm-format` executable. Should be empty by default, in that case it will assume the name and try to first get it from a local npm installation or a global one. If you set it manually it will not try to load from the npm folder.
 - `elmLS.elmTestPath`: The path to your `elm-test` executable. Should be empty by default, in that case it will assume the name and try to first get it from a local npm installation or a global one. If you set it manually it will not try to load from the npm folder.
-- `elmLS.elmAnalyseTrigger`: `elm-analyse` executed on `'change'`, `'save'` or `'never'` (default: `'never'`)
 - `elmLS.disableElmLSDiagnostics`: Enable/Disable linting diagnostics from the language server.
 
 Settings may need a restart to be applied.
-
-### Elm-Analyse Configuration
-
-`elm-analyse` is used for static code analysis. All checks are enabled by default. An (optional) `elm-analyse.json` configuration file will be respected, if added to your project.
-See its documentation for details regarding [`configuration`](https://stil4m.github.io/elm-analyse/#/configuration) and [`checks`](https://stil4m.github.io/elm-analyse/#/messages).
 
 ## Editor Support
 
@@ -212,7 +205,6 @@ If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The conf
 ```
 let g:ale_elm_ls_use_global = 1
 let g:ale_elm_ls_executable = "/path/to/elm-language-server"
-let g:ale_elm_ls_elm_analyse_trigger = 'change'
 let g:ale_elm_ls_elm_path = "/path/to/elm"
 let g:ale_elm_ls_elm_format_path = "/path/to/elm-format"
 let g:ale_elm_ls_elm_test_path = "/path/to/elm-test"
@@ -318,7 +310,6 @@ You should now be able to use the integrations from Sublime. You might want to r
 
 ## Awesome libraries this is based on
 
-- [elm-analyse](https://github.com/stil4m/elm-analyse)
 - [elm-format](https://github.com/avh4/elm-format)
 - [elm-test](https://github.com/rtfeldman/node-test-runner)
 - [tree-sitter-elm](https://github.com/Razzeee/tree-sitter-elm)
