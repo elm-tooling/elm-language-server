@@ -292,9 +292,8 @@ type alias Model =
 view : Model -> Model
 view model =
   let
-    var : String
     var = 
-      model.{-caret-}
+      model.p{-caret-}
 
   in
     model
@@ -1337,5 +1336,19 @@ func model =
 `;
 
     await testCompletions(source, ["field1", "field2"], "exactMatch");
+  });
+
+  it("Record completions in function params", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type Maybe a = Just { prop1: String, prop2: Int } | Nothing
+
+func model =
+    Just { p{-caret-} }
+`;
+
+    await testCompletions(source, ["prop1", "prop2"], "exactMatch");
   });
 });
