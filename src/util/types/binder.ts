@@ -81,6 +81,13 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
       case "import_clause":
         bindImportClause(node);
         break;
+      case "ERROR":
+        treeContainer.parseDiagnostics.push({
+          node,
+          endNode: node,
+          message: `Parsing error`,
+        });
+        break;
       default:
         forEachChild(bind);
     }

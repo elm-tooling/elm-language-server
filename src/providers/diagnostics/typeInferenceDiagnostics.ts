@@ -24,6 +24,7 @@ import {
   ThrottledCancellationToken,
 } from "../../cancellation";
 import { container } from "tsyringe";
+import { Diagnostic as InternalDiagnostic } from "../../util/types/typeInference";
 
 export class TypeInferenceDiagnostics {
   TYPE_INFERENCE = "Type Inference";
@@ -50,6 +51,10 @@ export class TypeInferenceDiagnostics {
     const checker = elmWorkspace.getTypeChecker();
 
     const diagnostics: Diagnostic[] = [];
+
+    diagnostics.push(
+      ...treeContainer.parseDiagnostics.map(this.convertDiagnostic.bind(this)),
+    );
 
     const allTopLevelFunctions =
       TreeUtils.findAllTopLevelFunctionDeclarations(treeContainer.tree) ?? [];
@@ -119,15 +124,7 @@ export class TypeInferenceDiagnostics {
         const nodeUri = diagnostic.node.tree.uri;
 
         if (nodeUri === treeContainer.uri) {
-          diagnostics.push({
-            range: {
-              start: this.getNodeRange(diagnostic.node).start,
-              end: this.getNodeRange(diagnostic.endNode).end,
-            },
-            message: diagnostic.message,
-            severity: DiagnosticSeverity.Error,
-            source: this.TYPE_INFERENCE,
-          });
+          diagnostics.push(this.convertDiagnostic(diagnostic));
         }
       });
 
@@ -152,6 +149,18 @@ export class TypeInferenceDiagnostics {
     }
 
     return diagnostics;
+  }
+
+  private convertDiagnostic(diagnostic: InternalDiagnostic): Diagnostic {
+    return {
+      range: {
+        start: this.getNodeRange(diagnostic.node).start,
+        end: this.getNodeRange(diagnostic.endNode).end,
+      },
+      message: diagnostic.message,
+      severity: DiagnosticSeverity.Error,
+      source: this.TYPE_INFERENCE,
+    };
   }
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
