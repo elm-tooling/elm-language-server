@@ -7,6 +7,7 @@ import { existsSync } from "fs";
 import { URI } from "vscode-uri";
 import { SyntaxNodeMap } from "./util/types/syntaxNodeMap";
 import { SymbolMap } from "./util/types/binder";
+import { Diagnostic } from "./util/types/typeInference";
 
 export interface ITreeContainer {
   uri: string;
@@ -15,6 +16,8 @@ export interface ITreeContainer {
   maintainerAndPackageName?: string;
   tree: Tree;
   isExposed: boolean; // Is this file exposed by the elm.json
+
+  parseDiagnostics: Diagnostic[];
 
   // These are resolved in the synchronize step and are cached until the file is changed
   moduleName?: string;
@@ -92,6 +95,7 @@ export class Forest implements IForest {
       uri,
       writeable,
       isExposed,
+      parseDiagnostics: [],
     };
 
     this.treeMap.set(uri, treeContainer);

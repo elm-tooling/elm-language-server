@@ -290,7 +290,7 @@ export class DiagnosticsProvider {
             }
           };
 
-          const checkOne = async (): Promise<void> => {
+          const checkOne = (): void => {
             if (this.changeSeq !== seq) {
               return;
             }
@@ -307,15 +307,26 @@ export class DiagnosticsProvider {
               return;
             }
 
-            this.updateDiagnostics(
-              uri,
-              DiagnosticKind.TypeInference,
-              await this.typeInferenceDiagnostics.getDiagnosticsForFile(
+            this.typeInferenceDiagnostics
+              .getDiagnosticsForFile(
                 treeContainer,
                 workspace,
                 cancellationToken,
-              ),
-            );
+              )
+              .then((diagnostics) => {
+                if (this.changeSeq !== seq) {
+                  return;
+                }
+
+                this.updateDiagnostics(
+                  uri,
+                  DiagnosticKind.TypeInference,
+                  diagnostics,
+                );
+              })
+              .catch(() => {
+                // Cancelled
+              });
 
             if (this.changeSeq !== seq) {
               return;

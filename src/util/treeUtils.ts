@@ -2,8 +2,12 @@ import { Position } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { ITreeContainer } from "../forest";
 import { comparePosition } from "../positionUtil";
-import { Type } from "./types/typeInference";
+import { TRecord, Type } from "./types/typeInference";
 import { IElmWorkspace } from "../elmWorkspace";
+import {
+  EFunctionCallExpr,
+  mapSyntaxNodeToExpression,
+} from "./types/expressionTree";
 
 export type NodeType =
   | "Function"
@@ -512,50 +516,30 @@ export class TreeUtils {
     }
   }
 
-  public static getTypeOrTypeAliasOfFunctionRecordParameter(
+  public static getRecordTypeOfFunctionRecordParameter(
     node: SyntaxNode | undefined,
-    treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
-  ): SyntaxNode | undefined {
+  ): TRecord | undefined {
     const checker = elmWorkspace.getTypeChecker();
     if (
       node?.parent?.type === "function_call_expr" &&
       node.parent.firstNamedChild
     ) {
+      const functionCallExpr = mapSyntaxNodeToExpression(
+        node.parent,
+      ) as EFunctionCallExpr;
+
       const parameterIndex =
-        node.parent.namedChildren.map((c) => c.text).indexOf(node.text) - 1;
+        functionCallExpr.namedChildren.map((c) => c.text).indexOf(node.text) -
+        1;
 
-      const functionName = TreeUtils.descendantsOfType(
-        node.parent.firstNamedChild,
-        "lower_case_identifier",
-      );
+      const foundType = checker.findType(functionCallExpr.target);
 
-      const functionDefinition = checker.findDefinition(
-        functionName[functionName.length - 1],
-        treeContainer,
-      );
+      if (foundType.nodeType === "Function") {
+        const paramType = foundType.params[parameterIndex];
 
-      if (functionDefinition?.node.previousNamedSibling?.lastNamedChild) {
-        const typeAnnotationNodes = TreeUtils.findAllNamedChildrenOfType(
-          ["type_ref", "record_type"],
-          functionDefinition.node.previousNamedSibling.lastNamedChild,
-        );
-
-        if (typeAnnotationNodes) {
-          const typeNode = typeAnnotationNodes[parameterIndex];
-
-          if (typeNode?.type === "type_ref") {
-            const typeNodes = TreeUtils.descendantsOfType(
-              typeNode,
-              "upper_case_identifier",
-            );
-
-            if (typeNodes.length > 0) {
-              return checker.findDefinition(typeNodes[0], treeContainer)?.node;
-            }
-          } else {
-            return typeNode || undefined;
-          }
+        if (paramType.nodeType === "Record") {
+          return paramType;
         }
       }
     }

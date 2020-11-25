@@ -475,4 +475,25 @@ quux = 99
 `;
     await testBase.testDefinition(source);
   });
+
+  it(`test union constructor resolves to the exposed one`, async () => {
+    const source = `
+--@ main.elm
+import App exposing (Page)
+import OtherApp exposing (Page2(..))
+
+func = Home
+       --^OtherApp.elm
+
+--@ App.elm
+module App exposing (..)
+type Page = Home
+
+--@ OtherApp.elm
+module OtherApp exposing (..)
+type Page2 = Home
+            --X
+`;
+    await testBase.testDefinition(source);
+  });
 });
