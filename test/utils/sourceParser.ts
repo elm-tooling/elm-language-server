@@ -40,26 +40,30 @@ export type TestType =
   | IResolvedTest
   | IResolvesToDifferentFileTest;
 
-interface IUnresolvedTest {
+interface IInvokeTest {
+  sources: { [K: string]: string };
+  invokePosition: Position;
+  invokeFile: string;
+}
+
+interface IUnresolvedTest extends IInvokeTest {
   kind: "unresolved";
-  invokePosition: Position;
-  sources: { [K: string]: string };
-  invokeFile: string;
 }
-interface IResolvedTest {
+interface IResolvedTest extends IInvokeTest {
   kind: "resolves";
-  invokePosition: Position;
   targetPosition: Position;
-  sources: { [K: string]: string };
-  invokeFile: string;
 }
-interface IResolvesToDifferentFileTest {
+interface IResolvesToDifferentFileTest extends IInvokeTest {
   kind: "resolvesToDifferentFile";
-  invokePosition: Position;
   targetFile: string;
-  sources: { [K: string]: string };
-  invokeFile: string;
   targetPosition?: Position;
+}
+
+interface IReferencesTest extends IInvokeTest {
+  references: {
+    referenceFile: string;
+    referencePosition: Position;
+  }[];
 }
 
 export function getInvokeAndTargetPositionFromSource(source: string): TestType {
@@ -179,6 +183,59 @@ export function getTargetPositionFromSource(
     return {
       position,
       sources,
+    };
+  }
+}
+
+export function getReferencesTestFromSource(
+  source: string,
+): IReferencesTest | undefined {
+  const sources = getSourceFiles(source);
+
+  let invokePosition: Position | undefined;
+  let invokeFile = "";
+  const references: {
+    referenceFile: string;
+    referencePosition: Position;
+  }[] = [];
+
+  for (const fileName in sources) {
+    sources[fileName].split("\n").forEach((s, line) => {
+      const invokeCharacter = s.search(/--(\^)/);
+
+      if (invokeCharacter >= 0) {
+        invokePosition = {
+          line: line - 1,
+          character: invokeCharacter + 2,
+        };
+        invokeFile = fileName;
+      }
+
+      const regex = new RegExp(/--(X)/, "g");
+
+      let result: RegExpExecArray | null;
+      do {
+        result = regex.exec(s);
+        const referenceCharacter = result?.index;
+        if (referenceCharacter && referenceCharacter >= 0) {
+          references.push({
+            referencePosition: {
+              line: line - 1,
+              character: referenceCharacter + 2,
+            },
+            referenceFile: fileName,
+          });
+        }
+      } while (result);
+    });
+  }
+
+  if (invokePosition) {
+    return {
+      invokeFile,
+      invokePosition,
+      sources,
+      references,
     };
   }
 }

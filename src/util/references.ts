@@ -4,7 +4,7 @@ import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IReferenceNode } from "./referenceNode";
 import { TreeUtils } from "./treeUtils";
 import { Utils } from "./utils";
-import { Imports } from "../imports";
+import { IImport, Imports } from "../imports";
 
 export class References {
   public static find(
@@ -43,6 +43,7 @@ export class References {
                 definitionNode.node,
               );
               if (functionNameNode) {
+                const functionName = functionNameNode.text;
                 if (refSourceTree.writeable) {
                   references.push({
                     node: functionNameNode,
@@ -56,11 +57,11 @@ export class References {
                   definitionNode.node.parent?.parent.lastNamedChild
                     ? this.findFunctionCalls(
                         definitionNode.node.parent.parent.lastNamedChild,
-                        functionNameNode.text,
+                        functionName,
                       )
                     : this.findFunctionCalls(
                         refSourceTree.tree.rootNode,
-                        functionNameNode.text,
+                        functionName,
                       );
 
                 if (localFunctions && refSourceTree.writeable) {
@@ -73,7 +74,7 @@ export class References {
 
                 const isExposedFunction = TreeUtils.isExposedFunction(
                   refSourceTree.tree,
-                  functionNameNode.text,
+                  functionName,
                 );
                 if (isExposedFunction) {
                   const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
@@ -82,7 +83,7 @@ export class References {
                   if (moduleDeclarationNode) {
                     const exposedNode = TreeUtils.findExposedFunctionNode(
                       moduleDeclarationNode,
-                      functionNameNode.text,
+                      functionName,
                     );
 
                     if (exposedNode && refSourceTree.writeable) {
@@ -94,34 +95,52 @@ export class References {
                   }
 
                   if (isExposedFunction && moduleNameNode) {
+                    const moduleName = moduleNameNode.text;
+
                     for (const uri in imports) {
                       if (uri === definitionNode.uri) {
                         continue;
                       }
 
+                      const otherTreeContainer = forest.getByUri(uri);
+
+                      if (!otherTreeContainer) {
+                        continue;
+                      }
+
+                      const importedModuleAlias =
+                        TreeUtils.findImportAliasOfModule(
+                          moduleName,
+                          otherTreeContainer.tree,
+                        ) ?? moduleName;
+
                       const element = imports[uri];
+                      const filter = (imp: IImport): boolean =>
+                        imp.type === "Function" &&
+                        imp.fromModuleName === moduleName;
+
+                      // Find the function in the other module's imports
                       const found =
-                        element.get(functionNameNode.text) ??
+                        element.get(functionName, filter) ??
                         element.get(
-                          `${moduleNameNode.text}.${functionNameNode.text}`,
+                          `${importedModuleAlias}.${functionName}`,
+                          filter,
                         );
 
-                      const needsToBeChecked =
-                        found?.fromModuleName === moduleNameNode.text &&
-                        found.type === "Function";
+                      if (found) {
+                        if (
+                          otherTreeContainer &&
+                          otherTreeContainer.writeable
+                        ) {
+                          const importClause = otherTreeContainer.symbolLinks
+                            ?.get(otherTreeContainer.tree.rootNode)
+                            ?.get(importedModuleAlias);
 
-                      if (needsToBeChecked && found) {
-                        const treeToCheck = forest.getByUri(uri);
-
-                        if (treeToCheck && treeToCheck.writeable) {
-                          const importClauseNode = TreeUtils.findImportClauseByName(
-                            treeToCheck.tree,
-                            moduleNameNode.text,
-                          );
-                          if (importClauseNode) {
+                          // Add node from exposing list
+                          if (importClause?.type === "Import") {
                             const exposedNode = TreeUtils.findExposedFunctionNode(
-                              importClauseNode,
-                              functionNameNode.text,
+                              importClause.node,
+                              functionName,
                             );
 
                             if (exposedNode) {
@@ -132,8 +151,9 @@ export class References {
                             }
                           }
 
+                          // Find all function calls in the other tree
                           const functions = this.findFunctionCalls(
-                            treeToCheck.tree.rootNode,
+                            otherTreeContainer.tree.rootNode,
                             found?.alias,
                           );
                           if (functions) {
@@ -160,6 +180,7 @@ export class References {
               );
 
               if (typeOrTypeAliasNameNode) {
+                const typeOrTypeAliasName = typeOrTypeAliasNameNode.text;
                 if (refSourceTree.writeable) {
                   references.push({
                     node: typeOrTypeAliasNameNode,
@@ -169,7 +190,7 @@ export class References {
 
                 const localFunctions = TreeUtils.findTypeOrTypeAliasCalls(
                   refSourceTree.tree,
-                  typeOrTypeAliasNameNode.text,
+                  typeOrTypeAliasName,
                 );
                 if (localFunctions && refSourceTree.writeable) {
                   references.push(
@@ -181,7 +202,7 @@ export class References {
 
                 const isExposed = TreeUtils.isExposedTypeOrTypeAlias(
                   refSourceTree.tree,
-                  typeOrTypeAliasNameNode.text,
+                  typeOrTypeAliasName,
                 );
                 if (isExposed) {
                   const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
@@ -190,7 +211,7 @@ export class References {
                   if (moduleDeclarationNode) {
                     const exposedNode = TreeUtils.findExposedTypeOrTypeAliasNode(
                       moduleDeclarationNode,
-                      typeOrTypeAliasNameNode.text,
+                      typeOrTypeAliasName,
                     );
 
                     if (exposedNode && refSourceTree.writeable) {
@@ -202,33 +223,49 @@ export class References {
                   }
 
                   if (isExposed && moduleNameNode) {
+                    const moduleName = moduleNameNode.text;
                     for (const uri in imports) {
                       if (uri === definitionNode.uri) {
                         continue;
                       }
 
+                      const otherTreeContainer = forest.getByUri(uri);
+
+                      if (!otherTreeContainer) {
+                        continue;
+                      }
+
+                      const importedModuleAlias =
+                        TreeUtils.findImportAliasOfModule(
+                          moduleName,
+                          otherTreeContainer.tree,
+                        ) ?? moduleName;
+
                       const element = imports[uri];
+                      const filter = (imp: IImport): boolean =>
+                        (imp.type === "Type" || imp.type === "TypeAlias") &&
+                        imp.fromModuleName === moduleName;
+
+                      // Find the type or type alias in the other module's imports
                       const found =
-                        element.get(typeOrTypeAliasNameNode.text) ??
+                        element.get(typeOrTypeAliasName, filter) ??
                         element.get(
-                          `${moduleNameNode.text}.${typeOrTypeAliasNameNode.text}`,
+                          `${importedModuleAlias}.${typeOrTypeAliasName}`,
+                          filter,
                         );
 
-                      const needsToBeChecked =
-                        found?.fromModuleName === moduleNameNode.text &&
-                        (found.type === "Type" || found.type === "TypeAlias");
+                      if (found) {
+                        if (
+                          otherTreeContainer &&
+                          otherTreeContainer.writeable
+                        ) {
+                          const importClause = otherTreeContainer.symbolLinks
+                            ?.get(otherTreeContainer.tree.rootNode)
+                            ?.get(importedModuleAlias);
 
-                      if (needsToBeChecked && found) {
-                        const treeToCheck = forest.getByUri(uri);
-
-                        if (treeToCheck && treeToCheck.writeable) {
-                          const importClauseNode = TreeUtils.findImportClauseByName(
-                            treeToCheck.tree,
-                            moduleNameNode.text,
-                          );
-                          if (importClauseNode) {
+                          if (importClause?.type === "Import") {
                             const exposedNode = TreeUtils.findExposedTypeOrTypeAliasNode(
-                              importClauseNode,
+                              importClause.node,
                               typeOrTypeAliasNameNode.text,
                             );
 
@@ -241,7 +278,7 @@ export class References {
                           }
 
                           const typeOrTypeAliasCalls = TreeUtils.findTypeOrTypeAliasCalls(
-                            treeToCheck.tree,
+                            otherTreeContainer.tree,
                             found.alias,
                           );
                           if (typeOrTypeAliasCalls) {

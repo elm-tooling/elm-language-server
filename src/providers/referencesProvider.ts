@@ -7,13 +7,12 @@ import {
   ReferenceParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
 import { TreeUtils } from "../util/treeUtils";
 
-type ReferenceResult = Location[] | null | undefined;
+export type ReferenceResult = Location[] | null | undefined;
 
 export class ReferencesProvider {
   private connection: Connection;
