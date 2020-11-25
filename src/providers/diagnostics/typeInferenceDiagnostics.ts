@@ -95,9 +95,6 @@ export class TypeInferenceDiagnostics {
           }
         },
         () => {
-          if (diagnostics.length === 0) {
-            console.log();
-          }
           resolve(diagnostics);
         },
         reject,
