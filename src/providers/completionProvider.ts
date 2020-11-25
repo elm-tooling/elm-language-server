@@ -26,6 +26,7 @@ import RANKING_LIST from "./ranking";
 import { DiagnosticsProvider } from ".";
 import { TypeChecker } from "../util/types/typeChecker";
 import escapeStringRegexp from "escape-string-regexp";
+import { TRecord } from "../util/types/typeInference";
 
 export type CompletionResult =
   | CompletionItem[]
@@ -744,6 +745,8 @@ export class CompletionProvider {
     range: Range,
     elmWorkspace: IElmWorkspace,
   ): CompletionItem[] {
+    const checker = elmWorkspace.getTypeChecker();
+
     const result: CompletionItem[] = [];
     let typeDeclarationNode = TreeUtils.getTypeAliasOfRecord(
       node,
@@ -759,22 +762,58 @@ export class CompletionProvider {
       )?.node;
     }
 
+    let recordType: TRecord | undefined;
     if (!typeDeclarationNode && node.parent?.parent) {
-      typeDeclarationNode = TreeUtils.getTypeOrTypeAliasOfFunctionRecordParameter(
+      recordType = TreeUtils.getRecordTypeOfFunctionRecordParameter(
         node.parent.parent,
-        treeContainer,
         elmWorkspace,
       );
+    }
+
+    if (
+      !typeDeclarationNode &&
+      !recordType &&
+      node.parent?.parent?.type === "record_expr"
+    ) {
+      const recordExpr = node.parent.parent;
+
+      const foundType = checker.findType(recordExpr);
+
+      if (foundType.nodeType === "Record") {
+        recordType = foundType;
+      }
+    }
+
+    if (recordType) {
+      if (recordType.baseType?.nodeType === "Record") {
+        for (const field in recordType.baseType.fields) {
+          const hint = HintHelper.createHintForTypeAliasReference(
+            checker.typeToString(recordType.fields[field]),
+            field,
+            recordType.alias?.name ?? "",
+          );
+
+          result.push(
+            this.createFieldOrParameterCompletion(hint, field, range),
+          );
+        }
+      }
+      for (const field in recordType.fields) {
+        const hint = HintHelper.createHintForTypeAliasReference(
+          checker.typeToString(recordType.fields[field]),
+          field,
+          recordType.alias?.name ?? "",
+        );
+
+        result.push(this.createFieldOrParameterCompletion(hint, field, range));
+      }
     }
 
     if (typeDeclarationNode) {
       const fields = TreeUtils.getAllFieldsFromTypeAlias(typeDeclarationNode);
 
       const typeName =
-        TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
-          typeDeclarationNode,
-        )?.text ?? "";
+        typeDeclarationNode.childForFieldName("name")?.text ?? "";
 
       fields?.forEach((element) => {
         const hint = HintHelper.createHintForTypeAliasReference(
