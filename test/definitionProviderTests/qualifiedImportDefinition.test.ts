@@ -154,4 +154,23 @@ type User = User { data : String }
 `;
     await testBase.testDefinition(source);
   });
+
+  it(`test import of a value that ends in the same letter as the module`, async () => {
+    const source = `
+--@ main.elm
+import Svg
+
+func =
+    Svg.g
+      --^Svg.elm
+
+--@ Svg.elm
+module Svg exposing (g)
+
+g =
+X--
+    ""
+`;
+    await testBase.testDefinition(source);
+  });
 });

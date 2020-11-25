@@ -512,7 +512,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       } else {
         // Get the full module name and handle an import alias if there is one
         const nodeParentText = nodeParent.text;
-        const endPos = nodeParentText.indexOf(nodeText) + nodeText.length;
+        const endPos = nodeParentText.lastIndexOf(nodeText) + nodeText.length;
         const moduleNameOrAlias = nodeParentText.substring(0, endPos);
         const moduleName =
           findImportModuleNameNode(moduleNameOrAlias, treeContainer)?.text ??
