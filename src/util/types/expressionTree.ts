@@ -723,11 +723,12 @@ export function mapSyntaxNodeToExpression(
         recordExpr.baseRecord = node.childForFieldName(
           "baseRecord",
         ) as SyntaxNode;
-        recordExpr.fields = TreeUtils.findAllNamedChildrenOfType("field", node)
-          ?.map(mapSyntaxNodeToExpression)
-          .filter(
-            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
-          ) as EField[];
+        recordExpr.fields =
+          (TreeUtils.findAllNamedChildrenOfType("field", node)
+            ?.map(mapSyntaxNodeToExpression)
+            .filter(
+              Utils.notUndefined.bind(mapSyntaxNodeToExpression),
+            ) as EField[]) ?? [];
         addTime("recordExpr", performance.now() - start);
         return recordExpr;
       }
