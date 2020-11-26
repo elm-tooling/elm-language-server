@@ -5,26 +5,16 @@ import {
   CodeActionKind,
   CodeActionParams,
   Diagnostic,
-  DiagnosticSeverity,
-  Range,
   TextEdit,
 } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
-import { PositionUtil } from "../../positionUtil";
 import { TreeUtils } from "../../util/treeUtils";
 import { URI } from "vscode-uri";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { mapSyntaxNodeToExpression } from "../../util/types/expressionTree";
 import { MultistepOperation } from "../../util/multistepOperation";
-import { TypeChecker } from "../../util/types/typeChecker";
 import { ITreeContainer } from "../../forest";
 import { IElmWorkspace } from "../../elmWorkspace";
-import {
-  ICancellationToken,
-  ThrottledCancellationToken,
-} from "../../cancellation";
+import { ThrottledCancellationToken } from "../../cancellation";
 import { container } from "tsyringe";
-import { Diagnostics, error } from "../../util/types/diagnostics";
 
 export class TypeInferenceDiagnostics {
   TYPE_INFERENCE = "Type Inference";
@@ -77,8 +67,7 @@ export class TypeInferenceDiagnostics {
             }
 
             diagnostics.push(
-              ...this.getDiagnosticsForDeclaration(
-                checker,
+              ...checker.getDiagnosticsFromDeclaration(
                 allTopLevelFunctions[index],
                 treeContainer,
                 new ThrottledCancellationToken(cancellationToken),
@@ -101,53 +90,6 @@ export class TypeInferenceDiagnostics {
         reject,
       );
     });
-  }
-
-  public getDiagnosticsForDeclaration(
-    checker: TypeChecker,
-    declaration: SyntaxNode,
-    treeContainer: ITreeContainer,
-    cancellationToken: ICancellationToken,
-  ): Diagnostic[] {
-    const valueDeclaration = mapSyntaxNodeToExpression(declaration);
-    if (valueDeclaration?.nodeType !== "ValueDeclaration") {
-      return [];
-    }
-
-    const diagnostics: Diagnostic[] = [];
-
-    checker
-      .getDiagnosticsFromDeclaration(valueDeclaration, cancellationToken)
-      .forEach((diagnostic) => {
-        const nodeUri = (<any>diagnostic.data).uri;
-
-        if (nodeUri === treeContainer.uri) {
-          diagnostics.push(diagnostic);
-        }
-      });
-
-    if (!valueDeclaration.typeAnnotation) {
-      const typeString: string = checker.typeToString(
-        checker.findType(declaration),
-        treeContainer,
-      );
-
-      if (
-        typeString &&
-        typeString !== "unknown" &&
-        declaration.firstNamedChild?.firstNamedChild
-      ) {
-        diagnostics.push(
-          error(
-            declaration.firstNamedChild.firstNamedChild,
-            Diagnostics.MissingTypeAnnotation,
-            typeString,
-          ),
-        );
-      }
-    }
-
-    return diagnostics;
   }
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
@@ -233,17 +175,6 @@ export class TypeInferenceDiagnostics {
       edit: { changes: map },
       kind: CodeActionKind.QuickFix,
       title,
-    };
-  }
-
-  private getNodeRange(node: SyntaxNode): Range {
-    const end = PositionUtil.FROM_TS_POSITION(node.endPosition).toVSPosition();
-    return {
-      start: PositionUtil.FROM_TS_POSITION(node.startPosition).toVSPosition(),
-      end: {
-        ...end,
-        character: end.character,
-      },
     };
   }
 }
