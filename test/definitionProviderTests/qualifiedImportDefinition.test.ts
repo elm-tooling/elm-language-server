@@ -157,7 +157,7 @@ type User = User { data : String }
 
   it(`test import of a value that ends in the same letter as the module`, async () => {
     const source = `
---@ main.elm
+  --@ main.elm
 import Svg
 
 func =
@@ -168,7 +168,7 @@ func =
 module Svg exposing (g)
 
 g =
-X--
+--<X
     ""
 `;
     await testBase.testDefinition(source);

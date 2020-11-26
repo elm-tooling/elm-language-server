@@ -80,7 +80,8 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
       const invokeUnresolvedCharacter = s.search(/--(\^unresolved)/);
       const invokeFileCharacter = s.search(/--\^([A-Z][a-zA-Z0-9_/]*\.elm)/);
       const invokeCharacter = s.search(/--(\^)/);
-      let targetCharacter = s.search(/--(X)/);
+      const targetCharacter = s.search(/--(X)/);
+      const targetCharacter2 = s.search(/--<(X)/);
 
       // +2 is the offset for the --prefixing the ^
       if (invokeUnresolvedCharacter >= 0) {
@@ -111,14 +112,11 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
           line: line - 1,
           character: targetCharacter + 2,
         };
-      } else {
-        targetCharacter = s.search(/(X)--/);
-        if (targetCharacter >= 0) {
-          targetPosition = {
-            line: line - 1,
-            character: targetCharacter,
-          };
-        }
+      } else if (targetCharacter2 >= 0) {
+        targetPosition = {
+          line: line - 1,
+          character: targetCharacter,
+        };
       }
     });
   }
