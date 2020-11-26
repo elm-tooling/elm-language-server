@@ -406,7 +406,9 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         upperCaseQid.parent?.type === "exposed_type";
       const isConstructorUsage = upperCaseQid.parent?.type === "value_expr";
       const isFunctionUsage =
-        upperCaseQid.parent?.parent?.type === "function_call_expr";
+        upperCaseQid.parent?.parent?.type === "function_call_expr" &&
+        upperCaseQid.parent.parent.childForFieldName("target")?.id ===
+          upperCaseQid.parent.id;
 
       const definitionNode = rootSymbols?.get(upperCaseQidText, (symbol) =>
         isTypeUsage
