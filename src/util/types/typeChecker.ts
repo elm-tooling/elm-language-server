@@ -25,7 +25,6 @@ import { Sequence } from "../sequence";
 import { Utils } from "../utils";
 import { TypeExpression } from "./typeExpression";
 import { ICancellationToken } from "../../cancellation";
-import { Diagnostics, error } from "./diagnostics";
 
 export let bindTime = 0;
 export function resetBindTime(): void {
@@ -61,7 +60,6 @@ export interface TypeChecker {
   ) => Diagnostic[];
   getDiagnosticsFromDeclaration: (
     valueDeclaration: SyntaxNode,
-    treeContainer: ITreeContainer,
     cancellationToken?: ICancellationToken,
   ) => Diagnostic[];
   findImportModuleNameNode: (
@@ -213,7 +211,6 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         ?.map((valueDeclaration) => {
           return getDiagnosticsFromDeclaration(
             valueDeclaration,
-            treeContainer,
             cancellationToken,
           );
         })
@@ -227,7 +224,6 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
   function getDiagnosticsFromDeclaration(
     valueDeclaration: SyntaxNode,
-    treeContainer: ITreeContainer,
     cancellationToken?: ICancellationToken,
   ): Diagnostic[] {
     if (valueDeclaration.type !== "value_declaration") {
@@ -236,49 +232,13 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       );
     }
 
-    const declaration = mapSyntaxNodeToExpression(valueDeclaration);
-    if (declaration?.nodeType !== "ValueDeclaration") {
-      return [];
-    }
-
-    const diagnostics: Diagnostic[] = [];
-
-    InferenceScope.valueDeclarationInference(
+    return InferenceScope.valueDeclarationInference(
       mapSyntaxNodeToExpression(valueDeclaration) as EValueDeclaration,
       valueDeclaration.tree.uri,
       workspace,
       new Set(),
       cancellationToken,
-    ).diagnostics.forEach((diagnostic) => {
-      const nodeUri = (<any>diagnostic.data).uri;
-
-      if (nodeUri === treeContainer.uri) {
-        diagnostics.push(diagnostic);
-      }
-    });
-
-    if (!declaration.typeAnnotation) {
-      const typeString: string = typeToString(
-        findType(declaration),
-        treeContainer,
-      );
-
-      if (
-        typeString &&
-        typeString !== "unknown" &&
-        declaration.firstNamedChild?.firstNamedChild
-      ) {
-        diagnostics.push(
-          error(
-            declaration.firstNamedChild.firstNamedChild,
-            Diagnostics.MissingTypeAnnotation,
-            typeString,
-          ),
-        );
-      }
-    }
-
-    return diagnostics;
+    ).diagnostics;
   }
 
   function getAllImports(treeContainer: ITreeContainer): Imports {
