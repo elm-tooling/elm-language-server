@@ -567,7 +567,7 @@ func =
     await testTypeInference(basicsSources + source, "String");
   });
 
-  test("function return with aliased type", async () => {
+  xtest("function return with aliased type", async () => {
     const source = `
 --@ Module.elm
 module Module exposing (..)
