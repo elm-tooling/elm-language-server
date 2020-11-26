@@ -46,6 +46,8 @@ import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
 import { TypeChecker } from "./typeChecker";
 import { performance } from "perf_hooks";
 import { ICancellationToken } from "../../cancellation";
+import { Diagnostics, error, errorWithEndNode } from "./diagnostics";
+import { Diagnostic } from "vscode-languageserver";
 
 export let inferTime = 0;
 export function resetInferTime(): void {
@@ -384,9 +386,9 @@ function typeMismatchError(
   const foundText = checker.typeToString(found);
   const expectedText = checker.typeToString(expected);
 
-  const message = patternBinding
-    ? `Invalid pattern error\nExpected: ${expectedText}\nFound: ${foundText}`
-    : `Type mismatch error\nExpected: ${expectedText}\nFound: ${foundText}`;
+  const diagnostic = patternBinding
+    ? error(node, Diagnostics.InvalidPattern, expectedText, foundText)
+    : error(node, Diagnostics.TypeMismatch, expectedText, foundText);
 
   const recordDiffText = (diff: RecordDiff): string => {
     let s = "";
@@ -413,11 +415,11 @@ function typeMismatchError(
     return s;
   };
 
-  return {
-    node,
-    endNode: endNode ?? node,
-    message: message + (recordDiff ? recordDiffText(recordDiff) : ""),
-  };
+  if (recordDiff) {
+    diagnostic.message += recordDiffText(recordDiff);
+  }
+
+  return diagnostic;
 }
 
 function parameterCountError(
@@ -428,15 +430,15 @@ function parameterCountError(
   isType = false,
 ): Diagnostic {
   const name = node.firstNamedChild?.text ?? "";
-  return {
+  return errorWithEndNode(
     node,
+    Diagnostics.ParameterCountError,
     endNode,
-    message: `The ${
-      isType ? "type" : "function"
-    } \`${name}\` expects ${expected} argument${
-      expected !== 1 ? `s` : ``
-    }, but got ${actual} instead`,
-  };
+    isType ? "type" : "function",
+    name,
+    expected,
+    actual,
+  );
 }
 
 function argumentCountError(
@@ -448,116 +450,16 @@ function argumentCountError(
 ): Diagnostic {
   if (expected === 0 && !isType) {
     const name = node.firstNamedChild?.text;
-    return {
+    return errorWithEndNode(
       node,
+      Diagnostics.ArgumentCount,
       endNode,
-      message: `${
-        name ? `\`${name}\`` : "This value"
-      } is not a function, but it was given ${actual} argument${
-        actual !== 1 ? `s` : ``
-      }`,
-    };
+      name ? `\`${name}\`` : "This value",
+      actual,
+    );
   } else {
     return parameterCountError(node, endNode, actual, expected, isType);
   }
-}
-
-function redefinitionError(node: SyntaxNode): Diagnostic {
-  return {
-    node,
-    endNode: node,
-    message: `A value named \`${node.text}\` is already defined`,
-  };
-}
-
-export function badRecursionError(node: SyntaxNode): Diagnostic {
-  return {
-    node,
-    endNode: node,
-    message: `Infinite recursion`,
-  };
-}
-
-function cyclicDefinitionError(node: SyntaxNode): Diagnostic {
-  return {
-    node,
-    endNode: node,
-    message: `Value cannot be defined in terms of itself`,
-  };
-}
-
-function partialPatternError(node: SyntaxNode): Diagnostic {
-  return {
-    node,
-    endNode: node,
-    message: `Pattern does not cover all posiblities`,
-  };
-}
-
-export function typeArgumentCountError(
-  node: SyntaxNode,
-  actual: number,
-  expected: number,
-): Diagnostic {
-  return {
-    node,
-    endNode: node,
-    message: `The type expected ${expected} argument${
-      expected !== 1 ? "s" : ""
-    }, but got ${actual} instead`,
-  };
-}
-
-function recordFieldError(node: SyntaxNode, field: string): Diagnostic {
-  return {
-    node,
-    endNode: node,
-    message: `The record does not have a \`${field}\` field`,
-  };
-}
-
-function recordBaseIdError(
-  checker: TypeChecker,
-  node: SyntaxNode,
-  type: Type,
-): Diagnostic {
-  return {
-    node,
-    endNode: node,
-    message: `Type must be a record, instead found: ${checker.typeToString(
-      type,
-    )}`,
-  };
-}
-
-function fieldAccessOnNonRecordError(
-  checker: TypeChecker,
-  node: SyntaxNode,
-  type: Type,
-): Diagnostic {
-  return {
-    node,
-    endNode: node,
-    message: `Cannot access fields on non-record type: ${checker.typeToString(
-      type,
-    )}`,
-  };
-}
-
-function missingFunctionError(node: SyntaxNode): Diagnostic {
-  return {
-    node,
-    endNode: node,
-    message: `No function definition found for \`${node.text}\``,
-  };
-}
-
-function missingValueError(node: SyntaxNode): Diagnostic {
-  return {
-    node,
-    endNode: node,
-    message: `No definition found for \`${node.text}\``,
-  };
 }
 
 interface RecordDiff {
@@ -579,12 +481,6 @@ const RecordDiff = (
     isEmpty: extra.size === 0 && missing.size === 0 && mismatched.size === 0,
   };
 };
-
-export interface Diagnostic {
-  node: SyntaxNode;
-  endNode: SyntaxNode;
-  message: string;
-}
 
 export interface InferenceResult {
   expressionTypes: SyntaxNodeMap<Expression, Type>;
@@ -619,6 +515,8 @@ export class InferenceScope {
     RecordDiff
   > = new SyntaxNodeMap();
 
+  private typeChecker: TypeChecker;
+
   constructor(
     private uri: string,
     private elmWorkspace: IElmWorkspace,
@@ -638,6 +536,8 @@ export class InferenceScope {
       this,
       (scope: InferenceScope) => scope.parent,
     );
+
+    this.typeChecker = elmWorkspace.getTypeChecker();
   }
 
   private getBinding(e: Expression): Type | undefined {
@@ -748,7 +648,7 @@ export class InferenceScope {
       (functionDeclaration?.nodeType !== "FunctionDeclarationLeft" ||
         !functionDeclaration.params[0])
     ) {
-      this.diagnostics.push(badRecursionError(declaration));
+      this.diagnostics.push(error(declaration, Diagnostics.InfiniteRecursion));
     }
 
     return isRecursive;
@@ -1028,7 +928,7 @@ export class InferenceScope {
       findDefinition(e.firstNamedChild, this.elmWorkspace);
 
     if (!definition) {
-      this.diagnostics.push(missingValueError(e));
+      this.diagnostics.push(error(e, Diagnostics.MissingValue, e.text));
       return TVar("a");
     }
 
@@ -1036,7 +936,7 @@ export class InferenceScope {
 
     if (binding) {
       if (binding.nodeType === "InProgressBinding") {
-        this.diagnostics.push(cyclicDefinitionError(e));
+        this.diagnostics.push(error(e, Diagnostics.CyclicDefinition));
         return TUnknown;
       } else {
         return binding;
@@ -1302,11 +1202,7 @@ export class InferenceScope {
           precedence.associativity === "NON" &&
           lastPrecedence?.associativity === "NON"
         ) {
-          this.diagnostics.push({
-            node: e,
-            endNode: e,
-            message: "NonAssociativeOperatorError",
-          });
+          this.diagnostics.push(error(e, Diagnostics.NonAssociativeOperator));
           return TUnknown;
         }
 
@@ -1489,12 +1385,11 @@ export class InferenceScope {
 
     if (targetTy?.nodeType === "Var") {
       if (targetTy.rigid) {
+        const typeString = this.elmWorkspace
+          .getTypeChecker()
+          .typeToString(targetTy);
         this.diagnostics.push(
-          recordBaseIdError(
-            this.elmWorkspace.getTypeChecker(),
-            expr.target,
-            targetTy,
-          ),
+          error(expr.target, Diagnostics.RecordBaseId, typeString),
         );
         return TUnknown;
       }
@@ -1525,10 +1420,10 @@ export class InferenceScope {
     if (targetTy?.nodeType !== "Record") {
       if (targetTy?.nodeType !== "Unknown" && targetTy) {
         this.diagnostics.push(
-          fieldAccessOnNonRecordError(
-            this.elmWorkspace.getTypeChecker(),
+          error(
             expr.target,
-            targetTy,
+            Diagnostics.FieldAccessOnNonRecord,
+            this.typeChecker.typeToString(targetTy),
           ),
         );
       }
@@ -1538,7 +1433,7 @@ export class InferenceScope {
     if (!Object.keys(targetTy.fields).includes(fieldIdentifierText)) {
       if (!targetTy.baseType) {
         this.diagnostics.push(
-          recordFieldError(fieldIdentifier, fieldIdentifierText),
+          error(fieldIdentifier, Diagnostics.RecordField, fieldIdentifierText),
         );
       }
     }
@@ -1645,11 +1540,13 @@ export class InferenceScope {
     ) {
       baseFields = baseType.fields;
     } else {
-      this.diagnostics.push({
-        node: recordIdentifier,
-        endNode: recordIdentifier,
-        message: "RecordBaseIdError",
-      });
+      this.diagnostics.push(
+        error(
+          recordIdentifier,
+          Diagnostics.RecordBaseId,
+          this.typeChecker.typeToString(baseType),
+        ),
+      );
       return TUnknown;
     }
 
@@ -1659,7 +1556,9 @@ export class InferenceScope {
       if (!expected) {
         if (baseType.nodeType === "Record") {
           if (!baseType.baseType) {
-            this.diagnostics.push(recordFieldError(field, fieldText));
+            this.diagnostics.push(
+              error(field, Diagnostics.RecordField, fieldText),
+            );
             this.recordDiffs.set(
               record,
               this.calculateRecordDiff(TRecord(mappedFields), baseType),
@@ -1680,7 +1579,7 @@ export class InferenceScope {
   private setBinding(expr: Expression, type: Type): void {
     const exprName = expr.text;
     if (this.nonShadowableNames.has(exprName)) {
-      this.diagnostics.push(redefinitionError(expr));
+      this.diagnostics.push(error(expr, Diagnostics.Redefinition, expr.text));
     }
 
     this.nonShadowableNames.add(exprName);
@@ -1812,7 +1711,7 @@ export class InferenceScope {
         break;
       case "ConsPattern":
         if (isParameter) {
-          this.diagnostics.push(partialPatternError(pattern));
+          this.diagnostics.push(error(pattern, Diagnostics.PartialPattern));
           this.bindConsPattern(pattern, TUnknown);
         } else {
           this.bindConsPattern(pattern, ty);
@@ -1859,7 +1758,7 @@ export class InferenceScope {
       case "NumberConstant":
       case "CharConstantExpr":
         if (isParameter) {
-          this.diagnostics.push(partialPatternError(pattern));
+          this.diagnostics.push(error(pattern, Diagnostics.PartialPattern));
         }
         break;
       default:
@@ -2107,11 +2006,9 @@ export class InferenceScope {
     try {
       assignable = this.assignable(type1, type2);
     } catch (e) {
-      this.diagnostics.push({
-        node: expr,
-        endNode: endExpr ?? expr,
-        message: e.message,
-      });
+      this.diagnostics.push(
+        errorWithEndNode(expr, Diagnostics.General, endExpr, e.message),
+      );
       return false;
     }
 

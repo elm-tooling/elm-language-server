@@ -9,12 +9,11 @@ import {
 } from "./expressionTree";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { container } from "tsyringe";
-import { Connection } from "vscode-languageserver";
+import { Connection, Diagnostic } from "vscode-languageserver";
 import {
   Type,
   TUnknown,
   InferenceScope,
-  Diagnostic,
   InferenceResult,
 } from "./typeInference";
 import { ITreeContainer } from "../../forest";
@@ -217,7 +216,8 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         })
         .reduce((a, b) => a.concat(b), [])
         .filter(
-          (diagnostic) => diagnostic.node.tree.uri === treeContainer.uri,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          (diagnostic) => (<any>diagnostic.data).uri === treeContainer.uri,
         ) ?? []
     );
   }

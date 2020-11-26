@@ -3,7 +3,6 @@ import {
   TVar,
   uncurryFunction,
   InferenceResult,
-  Diagnostic,
   TUnit,
   TUnknown,
   TFunction,
@@ -12,7 +11,6 @@ import {
   TList,
   TRecord,
   Alias,
-  typeArgumentCountError,
 } from "./typeInference";
 import {
   Expression,
@@ -37,6 +35,8 @@ import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { Utils } from "../utils";
 import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
 import { IElmWorkspace } from "../../elmWorkspace";
+import { Diagnostic } from "vscode-languageserver";
+import { Diagnostics, error } from "./diagnostics";
 
 export class TypeExpression {
   // All the type variables we've seen
@@ -242,11 +242,7 @@ export class TypeExpression {
     declaration: ETypeAliasDeclaration,
   ): InferenceResult {
     if (this.activeAliases.has(declaration)) {
-      this.diagnostics.push({
-        node: declaration,
-        endNode: declaration,
-        message: "BadRecursionError",
-      });
+      this.diagnostics.push(error(declaration, Diagnostics.InfiniteRecursion));
       return this.toResult(TUnknown);
     }
 
@@ -467,7 +463,12 @@ export class TypeExpression {
 
     if (declaredType.nodeType !== "Unknown" && params.length !== args.length) {
       this.diagnostics.push(
-        typeArgumentCountError(typeRef, args.length, params.length),
+        error(
+          typeRef,
+          Diagnostics.TypeArgumentCount,
+          params.length,
+          args.length,
+        ),
       );
       return TUnknown;
     }

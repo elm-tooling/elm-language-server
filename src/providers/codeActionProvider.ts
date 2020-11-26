@@ -75,7 +75,6 @@ export class CodeActionProvider {
     elmWorkspace: IElmWorkspace,
   ): CodeAction[] {
     // Top level annotation are handled by diagnostics
-
     const codeActions: CodeAction[] = [];
 
     const forest = elmWorkspace.getForest();
