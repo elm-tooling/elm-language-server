@@ -88,6 +88,14 @@ export class HintHelper {
           declaration = declaration.parent ? declaration.parent : declaration;
         }
       }
+
+      if (
+        declaration.parent &&
+        declaration.type === "function_declaration_left"
+      ) {
+        declaration = declaration.parent;
+      }
+
       if (declaration.previousNamedSibling) {
         if (declaration.previousNamedSibling.type === "type_annotation") {
           annotation = declaration.previousNamedSibling.text;
