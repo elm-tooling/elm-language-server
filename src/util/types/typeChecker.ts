@@ -176,8 +176,21 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         return findTypeOrParentType(node, inferenceResult) ?? TUnknown;
       }
 
+      const unionVariant =
+        node.type === "union_variant"
+          ? mapSyntaxNodeToExpression(node)
+          : undefined;
+
+      if (unionVariant && unionVariant.nodeType === "UnionVariant") {
+        return TypeExpression.unionVariantInference(
+          unionVariant,
+          uri,
+          workspace,
+        ).type;
+      }
+
       const typeDeclaration = mapSyntaxNodeToExpression(
-        TreeUtils.findParentOfType("type_alias_declaration", node),
+        TreeUtils.findParentOfType("type_declaration", node),
       );
 
       if (typeDeclaration && typeDeclaration.nodeType === "TypeDeclaration") {
@@ -392,6 +405,8 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         TreeUtils.findParentOfType("type_ref", upperCaseQid) ||
         upperCaseQid.parent?.type === "exposed_type";
       const isConstructorUsage = upperCaseQid.parent?.type === "value_expr";
+      const isFunctionUsage =
+        upperCaseQid.parent?.parent?.type === "function_call_expr";
 
       const definitionNode = rootSymbols?.get(upperCaseQidText, (symbol) =>
         isTypeUsage
@@ -402,11 +417,24 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       );
 
       if (definitionNode) {
-        return {
-          node: definitionNode.node,
-          nodeType: definitionNode.type,
-          uri,
-        };
+        let type: Type = TUnknown;
+        if (isConstructorUsage && isFunctionUsage) {
+          type = findType(definitionNode.node);
+        }
+
+        // If it is a constructor function usage, the type of the definition must be a function or record
+        if (
+          !isConstructorUsage ||
+          !isFunctionUsage ||
+          type.nodeType === "Function" ||
+          type.nodeType === "Record"
+        ) {
+          return {
+            node: definitionNode.node,
+            nodeType: definitionNode.type,
+            uri,
+          };
+        }
       }
 
       let definitionFromOtherFile;
