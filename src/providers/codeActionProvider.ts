@@ -4,6 +4,7 @@ import {
   CodeActionKind,
   CodeActionParams,
   Connection,
+  Diagnostic,
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -11,11 +12,10 @@ import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
-import { IClientSettings, Settings } from "../util/settings";
+import { Settings } from "../util/settings";
 import { TreeUtils } from "../util/treeUtils";
 import { ElmLsDiagnostics } from "./diagnostics/elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
-import { TypeInferenceDiagnostics } from "./diagnostics/typeInferenceDiagnostics";
 import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 
@@ -23,17 +23,11 @@ export class CodeActionProvider {
   private connection: Connection;
   private settings: Settings;
   private elmMake: ElmMakeDiagnostics;
-  private functionTypeAnnotationDiagnostics: TypeInferenceDiagnostics;
   private elmDiagnostics: ElmLsDiagnostics;
-  private clientSettings: IClientSettings;
 
   constructor() {
     this.settings = container.resolve("Settings");
-    this.clientSettings = container.resolve("ClientSettings");
     this.elmMake = container.resolve(ElmMakeDiagnostics);
-    this.functionTypeAnnotationDiagnostics = container.resolve(
-      TypeInferenceDiagnostics,
-    );
     this.elmDiagnostics = container.resolve(ElmLsDiagnostics);
     this.connection = container.resolve<Connection>("Connection");
 
@@ -57,15 +51,16 @@ export class CodeActionProvider {
   ): CodeAction[] {
     this.connection.console.info("A code action was requested");
     const make = this.elmMake.onCodeAction(params);
-    const typeAnnotation = this.functionTypeAnnotationDiagnostics.onCodeAction(
-      params,
-    );
     const elmDiagnostics = this.elmDiagnostics.onCodeAction(params);
     return [
+      ...this.convertDiagnosticsToCodeActions(
+        params.context.diagnostics,
+        elmWorkspace,
+        params.textDocument.uri,
+      ),
       ...this.getRefactorCodeActions(params, elmWorkspace),
       ...this.getTypeAnnotationCodeActions(params, elmWorkspace),
       ...make,
-      ...typeAnnotation,
       ...elmDiagnostics,
     ];
   }
@@ -329,5 +324,71 @@ export class CodeActionProvider {
     }
 
     return codeActions;
+  }
+
+  private convertDiagnosticsToCodeActions(
+    diagnostics: Diagnostic[],
+    elmWorkspace: IElmWorkspace,
+    uri: string,
+  ): CodeAction[] {
+    const result: CodeAction[] = [];
+
+    const forest = elmWorkspace.getForest();
+    const treeContainer = forest.getByUri(uri);
+    const checker = elmWorkspace.getTypeChecker();
+
+    if (treeContainer) {
+      diagnostics.forEach((diagnostic) => {
+        switch (diagnostic.code) {
+          case "missing_type_annotation":
+            {
+              const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
+                treeContainer.tree.rootNode,
+                diagnostic.range.start,
+              );
+
+              if (nodeAtPosition.parent) {
+                const typeString: string = checker.typeToString(
+                  checker.findType(nodeAtPosition.parent),
+                  treeContainer,
+                );
+
+                result.push(
+                  this.insertQuickFixAtStart(
+                    uri,
+                    `${nodeAtPosition.text} : ${typeString}\n`,
+                    diagnostic,
+                    "Add inferred annotation",
+                  ),
+                );
+              }
+            }
+            break;
+        }
+      });
+    }
+
+    return result;
+  }
+
+  private insertQuickFixAtStart(
+    uri: string,
+    replaceWith: string,
+    diagnostic: Diagnostic,
+    title: string,
+  ): CodeAction {
+    const map: {
+      [uri: string]: TextEdit[];
+    } = {};
+    if (!map[uri]) {
+      map[uri] = [];
+    }
+    map[uri].push(TextEdit.insert(diagnostic.range.start, replaceWith));
+    return {
+      diagnostics: [diagnostic],
+      edit: { changes: map },
+      kind: CodeActionKind.QuickFix,
+      title,
+    };
   }
 }
