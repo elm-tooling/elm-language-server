@@ -52,7 +52,7 @@ function diag(
 export const Diagnostics = {
   ArgumentCount: diag(
     "argument_count",
-    "{0} is not a function, but it was given {1} arguments.",
+    "`{0}` is not a function, but it was given {1} arguments.",
     DiagnosticSeverity.Error,
   ),
   CyclicDefinition: diag(
@@ -62,7 +62,7 @@ export const Diagnostics = {
   ),
   FieldAccessOnNonRecord: diag(
     "field_access_on_non_record",
-    "Cannot access fields on non-record type: {0}",
+    "Cannot access fields on non-record type: `{0}`.",
     DiagnosticSeverity.Error,
   ),
   General: diag("general", "General error: {0}", DiagnosticSeverity.Error),
@@ -73,7 +73,7 @@ export const Diagnostics = {
   ),
   InvalidPattern: diag(
     "invalid_pattern",
-    "Invalid pattern error\nExpected: {0}\nFound: {1}",
+    "Invalid pattern error.\nExpected: `{0}`\nFound: `{1}`",
     DiagnosticSeverity.Error,
   ),
   MissingTypeAnnotation: diag(
@@ -83,12 +83,12 @@ export const Diagnostics = {
   ),
   MissingValue: diag(
     "missing_value",
-    "No definition found for `{0}`",
+    "No definition found for `{0}`.",
     DiagnosticSeverity.Error,
   ),
   NonAssociativeOperator: diag(
     "non_associative_operator",
-    "NonAssociativeOperator.",
+    "Non associative operator.",
     DiagnosticSeverity.Error,
   ),
   ParameterCountError: diag(
@@ -99,12 +99,12 @@ export const Diagnostics = {
   Parsing: diag("parsing", "Parsing error.", DiagnosticSeverity.Error),
   PartialPattern: diag(
     "partial_pattern",
-    "Pattern does not cover all posiblities.",
+    "Pattern does not cover all possibilities.",
     DiagnosticSeverity.Error,
   ),
   RecordBaseId: diag(
     "record_base_id",
-    "Type must be a record, instead found: {0}.",
+    "Type must be a record, instead found: `{0}`.",
     DiagnosticSeverity.Error,
   ),
   RecordField: diag(
@@ -124,7 +124,7 @@ export const Diagnostics = {
   ),
   TypeMismatch: diag(
     "type_mismatch",
-    "Type mismatch error\nExpected: {0}\nFound: {1}",
+    "Type mismatch error.\nExpected: `{0}`\nFound: `{1}`",
     DiagnosticSeverity.Error,
   ),
 };
