@@ -525,7 +525,11 @@ export class ElmLsDiagnostics {
       const references = this.language
         .query(
           `
-          ((value_expr) @value.reference
+          (
+            [
+              (value_expr)
+              (record_base_identifier)
+            ] @value.reference
             (#eq? @value.reference "${exposedValueOrType.text}")
           )
           ((type_ref

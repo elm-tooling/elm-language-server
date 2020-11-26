@@ -107,4 +107,13 @@ outer =
 `;
     await testBase.testDefinition(source);
   });
+
+  it(`test function resolves to itself`, async () => {
+    const source = `
+function a =
+--^ --X
+    a + 1
+`;
+    await testBase.testDefinition(source);
+  });
 });

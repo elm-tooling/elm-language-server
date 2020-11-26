@@ -9,12 +9,11 @@ import {
 } from "./expressionTree";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { container } from "tsyringe";
-import { Connection } from "vscode-languageserver";
+import { Connection, Diagnostic } from "vscode-languageserver";
 import {
   Type,
   TUnknown,
   InferenceScope,
-  Diagnostic,
   InferenceResult,
 } from "./typeInference";
 import { ITreeContainer } from "../../forest";
@@ -217,7 +216,8 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         })
         .reduce((a, b) => a.concat(b), [])
         .filter(
-          (diagnostic) => diagnostic.node.tree.uri === treeContainer.uri,
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          (diagnostic) => (<any>diagnostic.data).uri === treeContainer.uri,
         ) ?? []
     );
   }
@@ -476,6 +476,19 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       const type = findType(nodeParent.parent);
       return TreeUtils.findFieldReference(type, nodeText);
     } else if (
+      nodeAtPosition.type === "lower_case_identifier" &&
+      nodeParentType === "function_declaration_left" &&
+      nodeParent.parent?.type === "value_declaration"
+    ) {
+      // The function name should resolve to itself
+      if (nodeParent.firstNamedChild?.text === nodeText) {
+        return {
+          node: nodeParent.parent,
+          nodeType: "Function",
+          uri: treeContainer.uri,
+        };
+      }
+    } else if (
       nodeParentType === "value_qid" ||
       nodeParentType === "lower_pattern" ||
       nodeParentType === "record_base_identifier"
@@ -512,7 +525,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       } else {
         // Get the full module name and handle an import alias if there is one
         const nodeParentText = nodeParent.text;
-        const endPos = nodeParentText.indexOf(nodeText) + nodeText.length;
+        const endPos = nodeParentText.lastIndexOf(nodeText) + nodeText.length;
         const moduleNameOrAlias = nodeParentText.substring(0, endPos);
         const moduleName =
           findImportModuleNameNode(moduleNameOrAlias, treeContainer)?.text ??

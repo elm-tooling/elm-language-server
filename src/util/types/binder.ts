@@ -5,6 +5,7 @@ import { MultiMap } from "../multiMap";
 import { IExposed, IExposing, NodeType, TreeUtils } from "../treeUtils";
 import { Utils } from "../utils";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
+import { Diagnostics, error } from "./diagnostics";
 
 export type SymbolMap = MultiMap<string, ISymbol>;
 function createSymbolMap(): SymbolMap {
@@ -82,11 +83,7 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
         bindImportClause(node);
         break;
       case "ERROR":
-        treeContainer.parseDiagnostics.push({
-          node,
-          endNode: node,
-          message: `Parsing error`,
-        });
+        treeContainer.parseDiagnostics.push(error(node, Diagnostics.Parsing));
         break;
       default:
         forEachChild(bind);

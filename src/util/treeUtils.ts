@@ -1035,4 +1035,19 @@ export class TreeUtils {
       }
     }
   }
+
+  public static findImportAliasOfModule(
+    moduleName: string,
+    tree: Tree,
+  ): string | undefined {
+    const importClause = TreeUtils.findImportClauseByName(tree, moduleName);
+
+    const asClause = importClause?.childForFieldName("asClause");
+
+    if (asClause) {
+      return asClause.childForFieldName("name")?.text;
+    } else {
+      return importClause?.childForFieldName("moduleName")?.text;
+    }
+  }
 }

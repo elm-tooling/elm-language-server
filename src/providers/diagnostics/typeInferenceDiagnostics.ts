@@ -24,7 +24,7 @@ import {
   ThrottledCancellationToken,
 } from "../../cancellation";
 import { container } from "tsyringe";
-import { Diagnostic as InternalDiagnostic } from "../../util/types/typeInference";
+import { Diagnostics, error } from "../../util/types/diagnostics";
 
 export class TypeInferenceDiagnostics {
   TYPE_INFERENCE = "Type Inference";
@@ -52,9 +52,7 @@ export class TypeInferenceDiagnostics {
 
     const diagnostics: Diagnostic[] = [];
 
-    diagnostics.push(
-      ...treeContainer.parseDiagnostics.map(this.convertDiagnostic.bind(this)),
-    );
+    diagnostics.push(...treeContainer.parseDiagnostics);
 
     const allTopLevelFunctions =
       TreeUtils.findAllTopLevelFunctionDeclarations(treeContainer.tree) ?? [];
@@ -118,10 +116,10 @@ export class TypeInferenceDiagnostics {
     checker
       .getDiagnosticsFromDeclaration(valueDeclaration, cancellationToken)
       .forEach((diagnostic) => {
-        const nodeUri = diagnostic.node.tree.uri;
+        const nodeUri = (<any>diagnostic.data).uri;
 
         if (nodeUri === treeContainer.uri) {
-          diagnostics.push(this.convertDiagnostic(diagnostic));
+          diagnostics.push(diagnostic);
         }
       });
 
@@ -136,117 +134,16 @@ export class TypeInferenceDiagnostics {
         typeString !== "unknown" &&
         declaration.firstNamedChild?.firstNamedChild
       ) {
-        diagnostics.push({
-          range: this.getNodeRange(declaration.firstNamedChild.firstNamedChild),
-          message: `Missing type annotation: \`${typeString}\``,
-          severity: DiagnosticSeverity.Information,
-          source: this.TYPE_INFERENCE,
-        });
+        diagnostics.push(
+          error(
+            declaration.firstNamedChild.firstNamedChild,
+            Diagnostics.MissingTypeAnnotation,
+            typeString,
+          ),
+        );
       }
     }
 
     return diagnostics;
-  }
-
-  private convertDiagnostic(diagnostic: InternalDiagnostic): Diagnostic {
-    return {
-      range: {
-        start: this.getNodeRange(diagnostic.node).start,
-        end: this.getNodeRange(diagnostic.endNode).end,
-      },
-      message: diagnostic.message,
-      severity: DiagnosticSeverity.Error,
-      source: this.TYPE_INFERENCE,
-    };
-  }
-
-  public onCodeAction(params: CodeActionParams): CodeAction[] {
-    const { uri } = params.textDocument;
-    const typeInferenceDiagnostics: Diagnostic[] = this.filterTypeInferenceDiagnostics(
-      params.context.diagnostics,
-    );
-
-    return this.convertDiagnosticsToCodeActions(typeInferenceDiagnostics, uri);
-  }
-
-  private filterTypeInferenceDiagnostics(
-    diagnostics: Diagnostic[],
-  ): Diagnostic[] {
-    return diagnostics.filter(
-      (diagnostic) => diagnostic.source === this.TYPE_INFERENCE,
-    );
-  }
-
-  private convertDiagnosticsToCodeActions(
-    diagnostics: Diagnostic[],
-    uri: string,
-  ): CodeAction[] {
-    const result: CodeAction[] = [];
-
-    const elmWorkspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(
-      URI.parse(uri),
-    );
-
-    const forest = elmWorkspace.getForest();
-    const treeContainer = forest.getByUri(uri);
-    const checker = elmWorkspace.getTypeChecker();
-
-    if (treeContainer) {
-      diagnostics.forEach((diagnostic) => {
-        const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-          treeContainer.tree.rootNode,
-          diagnostic.range.start,
-        );
-
-        if (nodeAtPosition.parent) {
-          const typeString: string = checker.typeToString(
-            checker.findType(nodeAtPosition.parent),
-            treeContainer,
-          );
-
-          result.push(
-            this.insertQuickFixAtStart(
-              uri,
-              `${nodeAtPosition.text} : ${typeString}\n`,
-              diagnostic,
-              "Add inferred annotation",
-            ),
-          );
-        }
-      });
-    }
-    return result;
-  }
-
-  private insertQuickFixAtStart(
-    uri: string,
-    replaceWith: string,
-    diagnostic: Diagnostic,
-    title: string,
-  ): CodeAction {
-    const map: {
-      [uri: string]: TextEdit[];
-    } = {};
-    if (!map[uri]) {
-      map[uri] = [];
-    }
-    map[uri].push(TextEdit.insert(diagnostic.range.start, replaceWith));
-    return {
-      diagnostics: [diagnostic],
-      edit: { changes: map },
-      kind: CodeActionKind.QuickFix,
-      title,
-    };
-  }
-
-  private getNodeRange(node: SyntaxNode): Range {
-    const end = PositionUtil.FROM_TS_POSITION(node.endPosition).toVSPosition();
-    return {
-      start: PositionUtil.FROM_TS_POSITION(node.startPosition).toVSPosition(),
-      end: {
-        ...end,
-        character: end.character,
-      },
-    };
   }
 }

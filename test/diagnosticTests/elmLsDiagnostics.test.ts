@@ -532,6 +532,19 @@ addUsedVariable x =
       await testDiagnostics(source, "unused_imported_value", []);
     });
 
+    it("used imported value as record update", async () => {
+      const source = `
+module Bar exposing (..)
+
+import Foo exposing (empty)
+
+addUsedVariable =
+    { empty | name = "John" }
+			`;
+
+      await testDiagnostics(source, "unused_imported_value", []);
+    });
+
     it("used variable in case expression", async () => {
       const source = `
 module Bar exposing (..)
