@@ -54,11 +54,6 @@ export function resetInferTime(): void {
   inferTime = 0;
 }
 
-export const inferTimes: { [func: string]: number } = {};
-function addTime(f: string, t: number): void {
-  inferTimes[f] = (inferTimes[f] ?? 0) + t;
-}
-
 export interface Alias {
   module: string;
   name: string;
@@ -321,7 +316,7 @@ export function curryFunction(func: TFunction, count: number): Type {
  * @param func The function type to uncurry
  */
 export function uncurryFunction(func: TFunction): TFunction {
-  if (func.return.nodeType === "Function" && !func.return.alias) {
+  if (func.return.nodeType === "Function") {
     return TFunction(
       [...func.params, ...func.return.params],
       func.return.return,
@@ -1027,7 +1022,6 @@ export class InferenceScope {
     declaration: EValueDeclaration | undefined,
     referenceUri: string,
   ): Type {
-    const start = performance.now();
     if (!declaration) {
       return TUnknown;
     }
@@ -1078,7 +1072,6 @@ export class InferenceScope {
             .type;
     }
 
-    addTime("inferReferenceValueDeclaration", performance.now() - start);
     this.resolvedDeclarations.set(declaration, type);
     return type;
   }
@@ -1086,7 +1079,6 @@ export class InferenceScope {
   private inferFunctionCallExpr(e: EFunctionCallExpr): Type {
     const targetType = this.infer(e.target);
     const argTypes = e.args.map((arg) => this.infer(arg));
-    const start = performance.now();
 
     const argCountError = (
       expr: Expression,
@@ -1163,7 +1155,6 @@ export class InferenceScope {
         );
       }
 
-      addTime("inferFunctionCall", performance.now() - start);
       this.expressionTypes.set(e, appliedType);
       return appliedType;
     }
@@ -1176,7 +1167,6 @@ export class InferenceScope {
         )
       : TUnknown;
 
-    addTime("inferFunctionCall", performance.now() - start);
     this.expressionTypes.set(e, resultType);
     return resultType;
   }
@@ -1186,7 +1176,6 @@ export class InferenceScope {
       Expression,
       IOperatorPrecedence
     >();
-    const start = performance.now();
     const operatorTypes = new SyntaxNodeMap<Expression, TFunction>();
 
     let lastPrecedence: IOperatorPrecedence | undefined;
@@ -1265,27 +1254,20 @@ export class InferenceScope {
 
     this.expressionTypes.set(e, result.type);
 
-    addTime("inferBinOpExpr", performance.now() - start);
     return result.type;
   }
 
   private inferOperand(e: Expression): Type {
-    const start = performance.now();
-    try {
-      if (e.nodeType === "FunctionCallExpr") {
-        return this.inferFunctionCallExpr(e);
-      }
-
-      return this.infer(e);
-    } finally {
-      addTime("inferOperand", performance.now() - start);
+    if (e.nodeType === "FunctionCallExpr") {
+      return this.inferFunctionCallExpr(e);
     }
+
+    return this.infer(e);
   }
 
   private inferOperatorAndPrecedence(
     e: EOperator,
   ): [Type, IOperatorPrecedence] {
-    const start = performance.now();
     // Find operator reference
     const definition = findDefinition(e, this.elmWorkspace);
 
@@ -1310,7 +1292,6 @@ export class InferenceScope {
       definition.uri,
     );
 
-    addTime("inferOperatorAndPrecedence", performance.now() - start);
     this.expressionTypes.set(e, type);
     return [
       type,
@@ -1365,7 +1346,6 @@ export class InferenceScope {
   }
 
   private inferFieldAccess(expr: EFieldAccessExpr): Type {
-    const start = performance.now();
     const targetType = this.inferFieldAccessTarget(expr.target);
     const targetTy = this.replacements.get(targetType);
     const fieldIdentifier = TreeUtils.findFirstNamedChildOfType(
@@ -1440,7 +1420,6 @@ export class InferenceScope {
 
     const type = targetTy.fields[fieldIdentifierText] ?? TUnknown;
     this.expressionTypes.set(expr, type);
-    addTime("inferFieldAccess", performance.now() - start);
     return type;
   }
 
@@ -1477,7 +1456,6 @@ export class InferenceScope {
   }
 
   private inferCase(caseOfExpr: ECaseOfExpr): Type {
-    const start = performance.now();
     const caseOfExprType = this.infer(caseOfExpr.expr);
 
     let type: Type | undefined;
@@ -1496,13 +1474,10 @@ export class InferenceScope {
       }
     });
 
-    addTime("inferCase", performance.now() - start);
-
     return type ?? TUnknown;
   }
 
   private inferRecord(record: ERecordExpr): Type {
-    const start = performance.now();
     const fields = new Map(
       record.fields.map((field) => [field.name, this.infer(field.expression)]),
     );
@@ -1513,7 +1488,6 @@ export class InferenceScope {
     const recordIdentifier = record.baseRecord as Expression;
 
     if (!recordIdentifier) {
-      addTime("inferRecord", performance.now() - start);
       return TRecord(mappedFields);
     }
 
@@ -1572,7 +1546,6 @@ export class InferenceScope {
       }
     });
 
-    addTime("inferRecord", performance.now() - start);
     return baseType;
   }
 
@@ -1704,7 +1677,6 @@ export class InferenceScope {
     type: Type,
     isParameter: boolean,
   ): void {
-    const start = performance.now();
     const ty = this.replacements.get(type) ?? type;
     switch (pattern.nodeType) {
       case "AnythingPattern":
@@ -1764,8 +1736,6 @@ export class InferenceScope {
       default:
         throw new Error("Unexpected pattern type: " + pattern.nodeType);
     }
-
-    addTime("bindPattern", performance.now() - start);
   }
 
   private bindTuplePattern(
@@ -1815,9 +1785,14 @@ export class InferenceScope {
     );
 
     if (variant?.expr.nodeType !== "UnionVariant") {
-      throw new Error(
-        "Could not find UnionVariant for " + unionPattern.constructor.text,
+      this.diagnostics.push(
+        error(
+          unionPattern,
+          Diagnostics.MissingValue,
+          unionPattern.constructor.lastNamedChild?.text ?? "union variant",
+        ),
       );
+      return;
     }
 
     const variantType = TypeExpression.unionVariantInference(

@@ -496,4 +496,23 @@ type Page2 = Home
 `;
     await testBase.testDefinition(source);
   });
+
+  it(`test union constructor resolves to the imported one`, async () => {
+    const source = `
+--@ main.elm
+import App exposing (Model(..))
+
+type alias Model = 
+    App.Model
+
+func = Model {}
+       --^App.elm
+
+--@ App.elm
+module App exposing (Model(..))
+type Model = Model {}
+             --X
+`;
+    await testBase.testDefinition(source);
+  });
 });

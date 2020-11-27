@@ -177,4 +177,19 @@ User { data = "" }
 `;
     await testBase.testDefinition(source);
   });
+
+  it(`test union constructor resolves when used as function parameter`, async () => {
+    const source = `
+--@ main.elm
+
+type Page = 
+    Home
+   --X
+
+func = 
+    Just Home
+        --^
+`;
+    await testBase.testDefinition(source);
+  });
 });
