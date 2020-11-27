@@ -1815,9 +1815,14 @@ export class InferenceScope {
     );
 
     if (variant?.expr.nodeType !== "UnionVariant") {
-      throw new Error(
-        "Could not find UnionVariant for " + unionPattern.constructor.text,
+      this.diagnostics.push(
+        error(
+          unionPattern,
+          Diagnostics.MissingValue,
+          unionPattern.constructor.lastNamedChild?.text ?? "union variant",
+        ),
       );
+      return;
     }
 
     const variantType = TypeExpression.unionVariantInference(
