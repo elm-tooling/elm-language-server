@@ -54,7 +54,6 @@ export class TypeExpression {
 
   constructor(
     private root: Expression,
-    private uri: string,
     private workspace: IElmWorkspace,
     private rigidVars: boolean,
     private activeAliases: Set<ETypeAliasDeclaration> = new Set(),
@@ -69,7 +68,6 @@ export class TypeExpression {
       mapTypeDeclaration(e); // Fill in values only when needed
       const inferenceResult = new TypeExpression(
         e,
-        uri,
         workspace,
         false,
       ).inferTypeDeclaration(e);
@@ -103,7 +101,6 @@ export class TypeExpression {
       mapTypeAliasDeclaration(e);
       const inferenceResult = new TypeExpression(
         e,
-        uri,
         workspace,
         false,
         activeAliases,
@@ -138,7 +135,6 @@ export class TypeExpression {
       mapTypeAnnotation(e);
       const inferenceResult = new TypeExpression(
         e,
-        uri,
         workspace,
         true,
       ).inferTypeExpression(e.typeExpression!);
@@ -167,7 +163,6 @@ export class TypeExpression {
   ): InferenceResult {
     const inferenceResult = new TypeExpression(
       e,
-      uri,
       workspace,
       false,
     ).inferUnionConstructor(e);
@@ -186,7 +181,6 @@ export class TypeExpression {
   ): InferenceResult {
     const inferenceResult = new TypeExpression(
       e,
-      uri,
       workspace,
       false,
     ).inferPortAnnotation(e);
