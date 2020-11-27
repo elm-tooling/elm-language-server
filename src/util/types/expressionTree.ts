@@ -259,11 +259,6 @@ export interface ENullaryConstructorArgumentPattern extends SyntaxNode {
   nodeType: "NullaryConstructorArgumentPattern";
 }
 
-export const mappingTimes: { [func: string]: number } = {};
-function addTime(f: string, t: number): void {
-  mappingTimes[f] = (mappingTimes[f] ?? 0) + t;
-}
-
 export function mapSyntaxNodeToExpression(
   node: SyntaxNode | null | undefined,
 ): Expression | undefined {
@@ -286,7 +281,6 @@ export function mapSyntaxNodeToExpression(
           valueDeclaration.typeAnnotation = TreeUtils.getTypeAnnotation(node);
           valueDeclaration.pattern =
             node.childForFieldName("pattern") ?? undefined;
-          addTime("valueDeclaration", performance.now() - start);
 
           return valueDeclaration;
         }
@@ -295,7 +289,6 @@ export function mapSyntaxNodeToExpression(
         const valueExpr = node as EValueExpr;
         valueExpr.nodeType = "ValueExpr";
         valueExpr.name = node.text;
-        addTime("valueExpr", performance.now() - start);
         return valueExpr;
       }
 
@@ -306,7 +299,6 @@ export function mapSyntaxNodeToExpression(
           binOpExpr.parts = node.children
             .map(mapSyntaxNodeToExpression)
             .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
-          addTime("binOpExpr", performance.now() - start);
           return binOpExpr;
         }
       }
@@ -348,7 +340,6 @@ export function mapSyntaxNodeToExpression(
               .filter((n) => !n.type.includes("comment"))
               .map(mapSyntaxNodeToExpression) as Expression[];
 
-            addTime("functionCallExpr", performance.now() - start);
             return functionCallExpr;
           }
         }
@@ -357,7 +348,6 @@ export function mapSyntaxNodeToExpression(
       case "type_annotation": {
         const typeAnnotation = node as ETypeAnnotation;
         typeAnnotation.nodeType = "TypeAnnotation";
-        addTime("typeAnnotation", performance.now() - start);
         return typeAnnotation;
       }
 
@@ -367,7 +357,6 @@ export function mapSyntaxNodeToExpression(
         typeExpression.segments = node.children
           .map(mapSyntaxNodeToExpression)
           .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
-        addTime("typeExpression", performance.now() - start);
         return typeExpression;
       }
 
@@ -386,7 +375,6 @@ export function mapSyntaxNodeToExpression(
       case "type_declaration": {
         const typeDeclaration = node as ETypeDeclaration;
         typeDeclaration.nodeType = "TypeDeclaration";
-        addTime("typeDeclaration", performance.now() - start);
         return typeDeclaration;
       }
 
@@ -400,7 +388,6 @@ export function mapSyntaxNodeToExpression(
           (node
             .childForFieldName("associativity")
             ?.text.toUpperCase() as OperatorAssociativity) ?? "NON";
-        addTime("infixDeclaration", performance.now() - start);
         return infixDeclaration;
       }
 
@@ -413,7 +400,6 @@ export function mapSyntaxNodeToExpression(
           .filter(
             Utils.notUndefined.bind(mapSyntaxNodeToExpression),
           ) as Pattern[];
-        addTime("functionDeclarationLeft", performance.now() - start);
         return functionDeclarationLeft;
       }
 
@@ -450,7 +436,6 @@ export function mapSyntaxNodeToExpression(
           .slice(1)
           .map(mapSyntaxNodeToExpression)
           .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
-        addTime("unionVariant", performance.now() - start);
         return unionVariant;
       }
 
@@ -460,7 +445,6 @@ export function mapSyntaxNodeToExpression(
         ifElseExpr.exprList = node.namedChildren
           .map((n) => mapSyntaxNodeToExpression(n))
           .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
-        addTime("ifElseExpr", performance.now() - start);
         return ifElseExpr;
       }
 
@@ -474,7 +458,6 @@ export function mapSyntaxNodeToExpression(
         letInExpr.body = mapSyntaxNodeToExpression(
           node.lastNamedChild,
         ) as Expression;
-        addTime("letInExpr", performance.now() - start);
         return letInExpr;
       }
 
@@ -490,7 +473,6 @@ export function mapSyntaxNodeToExpression(
           .filter(
             Utils.notUndefined.bind(mapSyntaxNodeToExpression),
           ) as ECaseOfBranch[];
-        addTime("caseOfExpr", performance.now() - start);
         return caseOfExpr;
       }
 
@@ -503,7 +485,6 @@ export function mapSyntaxNodeToExpression(
         caseOfBranch.expr = mapSyntaxNodeToExpression(
           node.childForFieldName("expr"),
         ) as Expression;
-        addTime("caseOfBranch", performance.now() - start);
         return caseOfBranch;
       }
 
@@ -519,7 +500,6 @@ export function mapSyntaxNodeToExpression(
         anonymousFunctionExpr.expr = mapSyntaxNodeToExpression(
           node.lastNamedChild,
         ) as Expression;
-        addTime("anonymousFunctionExpr", performance.now() - start);
         return anonymousFunctionExpr;
       }
 
@@ -541,7 +521,6 @@ export function mapSyntaxNodeToExpression(
           )
           .map(mapSyntaxNodeToExpression)
           .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
-        addTime("tupleExpr", performance.now() - start);
         return tupleExpr;
       }
 
@@ -562,7 +541,6 @@ export function mapSyntaxNodeToExpression(
           .filter(
             Utils.notUndefined.bind(mapSyntaxNodeToExpression),
           ) as EPattern[];
-        addTime("tuplePattern", performance.now() - start);
         return tuplePattern;
       }
 
@@ -580,7 +558,6 @@ export function mapSyntaxNodeToExpression(
         tupleType.unitExpr = mapSyntaxNodeToExpression(
           node.childForFieldName("unitExpr"),
         ) as EUnitExpr;
-        addTime("tupleType", performance.now() - start);
         return tupleType;
       }
 
@@ -590,7 +567,6 @@ export function mapSyntaxNodeToExpression(
         listExpr.exprList = node.children
           .filter((n) => n.type.endsWith("expr"))
           .map(mapSyntaxNodeToExpression) as Expression[];
-        addTime("listExpr", performance.now() - start);
         return listExpr;
       }
 
@@ -601,7 +577,6 @@ export function mapSyntaxNodeToExpression(
           .filter((n) => n.type.includes("pattern"))
           .map(mapSyntaxNodeToExpression)
           .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
-        addTime("listPattern", performance.now() - start);
         return listPattern;
       }
 
@@ -624,7 +599,6 @@ export function mapSyntaxNodeToExpression(
           .map(
             (node) => mapSyntaxNodeToExpression(node) ?? node,
           ) as Expression[];
-        addTime("unionPattern", performance.now() - start);
         return unionPattern;
       }
 
@@ -651,7 +625,6 @@ export function mapSyntaxNodeToExpression(
           .filter(
             Utils.notUndefined.bind(mapSyntaxNodeToExpression),
           ) as EFieldType[];
-        addTime("recordType", performance.now() - start);
         return recordType;
       }
 
@@ -662,14 +635,12 @@ export function mapSyntaxNodeToExpression(
         fieldType.typeExpression = mapSyntaxNodeToExpression(
           node.childForFieldName("typeExpression"),
         ) as ETypeExpression;
-        addTime("fieldType", performance.now() - start);
         return fieldType;
       }
 
       case "type_alias_declaration": {
         const typeAliasDeclaration = node as ETypeAliasDeclaration;
         typeAliasDeclaration.nodeType = "TypeAliasDeclaration";
-        addTime("typeAliasDeclaration", performance.now() - start);
         return typeAliasDeclaration;
       }
 
@@ -682,7 +653,6 @@ export function mapSyntaxNodeToExpression(
         field.expression = mapSyntaxNodeToExpression(
           node.lastNamedChild,
         ) as Expression;
-        addTime("field", performance.now() - start);
         return field;
       }
 
@@ -692,7 +662,6 @@ export function mapSyntaxNodeToExpression(
         fieldAccessExpr.target = mapSyntaxNodeToExpression(
           node.firstNamedChild,
         ) as Expression;
-        addTime("fieldAccessExpr", performance.now() - start);
         return fieldAccessExpr;
       }
 
@@ -713,7 +682,6 @@ export function mapSyntaxNodeToExpression(
           .filter(
             Utils.notUndefined.bind(mapSyntaxNodeToExpression),
           ) as ELowerPattern[];
-        addTime("recordPattern", performance.now() - start);
         return recordPattern;
       }
 
@@ -729,7 +697,6 @@ export function mapSyntaxNodeToExpression(
             .filter(
               Utils.notUndefined.bind(mapSyntaxNodeToExpression),
             ) as EField[]) ?? [];
-        addTime("recordExpr", performance.now() - start);
         return recordExpr;
       }
 
@@ -787,7 +754,6 @@ export function mapSyntaxNodeToExpression(
 export function mapTypeAliasDeclaration(
   typeAliasDeclaration: ETypeAliasDeclaration,
 ): void {
-  const start = performance.now();
   typeAliasDeclaration.name = typeAliasDeclaration.childForFieldName(
     "name",
   ) as SyntaxNode;
@@ -801,28 +767,22 @@ export function mapTypeAliasDeclaration(
   typeAliasDeclaration.typeExpression = mapSyntaxNodeToExpression(
     typeAliasDeclaration.childForFieldName("typeExpression"),
   ) as ETypeExpression;
-  addTime("typeAliasDeclaration", performance.now() - start);
 }
 
 export function mapTypeDeclaration(typeDeclaration: ETypeDeclaration): void {
-  const start = performance.now();
   typeDeclaration.name = typeDeclaration.childForFieldName("name")?.text ?? "";
   typeDeclaration.typeNames =
     (TreeUtils.findAllNamedChildrenOfType(
       "lower_type_name",
       typeDeclaration,
     )?.map(mapSyntaxNodeToExpression) as Expression[]) ?? [];
-  mappingTime += performance.now() - start;
-  addTime("typeDeclaration", performance.now() - start);
 }
 
 export function mapTypeAnnotation(typeAnnotation: ETypeAnnotation): void {
-  const start = performance.now();
   typeAnnotation.name = typeAnnotation.firstNamedChild?.text ?? "";
   typeAnnotation.typeExpression = mapSyntaxNodeToExpression(
     typeAnnotation.childForFieldName("typeExpression"),
   ) as ETypeExpression;
-  addTime("typeAnnotation", performance.now() - start);
 }
 
 export function findDefinition(
