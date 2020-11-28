@@ -68,7 +68,7 @@ export const Diagnostics = {
   General: diag("general", "General error: {0}", DiagnosticSeverity.Error),
   ImportMissing: diag(
     "import_resolve",
-    "Could not find a module to import named {0} in `dependencies` or `source-directories`.",
+    "Could not find a module to import named `{0}` in `dependencies` or `source-directories`.",
     DiagnosticSeverity.Error,
   ),
   InfiniteRecursion: diag(
