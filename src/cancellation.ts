@@ -196,7 +196,6 @@ export class ServerCancellationToken implements ICancellationToken {
 
   public throwIfCancellationRequested(): void {
     if (this.isCancellationRequested()) {
-      console.log("throwing cancellation");
       throw new OperationCanceledException();
     }
   }
