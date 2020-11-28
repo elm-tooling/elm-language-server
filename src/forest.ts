@@ -147,10 +147,7 @@ export class Forest implements IForest {
 
     // It should be faster to look directly at elmFolders instead of traversing the forest
     importClauses.forEach((importClause) => {
-      const moduleName = TreeUtils.findFirstNamedChildOfType(
-        "upper_case_qid",
-        importClause,
-      )?.text;
+      const moduleName = importClause.childForFieldName("moduleName")?.text;
 
       if (moduleName) {
         const modulePath = moduleName.split(".").join("/") + ".elm";
@@ -163,10 +160,7 @@ export class Forest implements IForest {
           ),
         );
 
-        if (treeContainer.writeable && !found) {
-          // TODO: Diagnostics for unresolved imports
-          console.log(`Could not resolve import for ${moduleName}`);
-        } else if (found) {
+        if (found) {
           resolvedModules.set(
             moduleName,
             URI.file(
