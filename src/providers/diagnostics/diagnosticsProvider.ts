@@ -320,6 +320,7 @@ export class DiagnosticsProvider {
                 return;
               }
 
+              this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
               this.updateDiagnostics(
                 uri,
                 DiagnosticKind.TypeInference,
