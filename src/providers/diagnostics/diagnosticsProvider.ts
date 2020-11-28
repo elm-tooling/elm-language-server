@@ -147,18 +147,20 @@ export class DiagnosticsProvider {
 
     astProvider.onTreeChange(({ treeContainer, declaration }) => {
       if (!clientInitiatedDiagnostics) {
-        if (this.pendingRequest) {
-          this.pendingRequest.cancel();
-          this.pendingRequest = undefined;
-        }
-
         this.requestDiagnostics(treeContainer.uri);
       }
     });
 
     this.documentEvents.on("change", () => {
       this.change();
-      this.typeInferenceDiagnostics.change();
+
+      // We need to cancel the request as soon as possible
+      if (!clientInitiatedDiagnostics) {
+        if (this.pendingRequest) {
+          this.pendingRequest.cancel();
+          this.pendingRequest = undefined;
+        }
+      }
     });
   }
 
@@ -307,41 +309,34 @@ export class DiagnosticsProvider {
               return;
             }
 
-            this.typeInferenceDiagnostics
-              .getDiagnosticsForFile(
+            next.promise(async () => {
+              const diagnostics = await this.typeInferenceDiagnostics.getDiagnosticsForFileAsync(
                 treeContainer,
                 workspace,
                 cancellationToken,
-              )
-              .then((diagnostics) => {
-                if (this.changeSeq !== seq) {
-                  return;
-                }
+              );
 
-                this.updateDiagnostics(
-                  uri,
-                  DiagnosticKind.TypeInference,
-                  diagnostics,
-                );
-              })
-              .catch(() => {
-                // Cancelled
-              });
+              if (this.changeSeq !== seq) {
+                return;
+              }
 
-            if (this.changeSeq !== seq) {
-              return;
-            }
-
-            next.immediate(() => {
               this.updateDiagnostics(
                 uri,
-                DiagnosticKind.ElmLS,
-                this.elmLsDiagnostics.createDiagnostics(
-                  treeContainer,
-                  workspace,
-                ),
+                DiagnosticKind.TypeInference,
+                diagnostics,
               );
-              goNext();
+
+              next.immediate(() => {
+                this.updateDiagnostics(
+                  uri,
+                  DiagnosticKind.ElmLS,
+                  this.elmLsDiagnostics.createDiagnostics(
+                    treeContainer,
+                    workspace,
+                  ),
+                );
+                goNext();
+              });
             });
           };
 

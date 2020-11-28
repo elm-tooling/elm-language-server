@@ -25,6 +25,7 @@ import { Sequence } from "../sequence";
 import { Utils } from "../utils";
 import { TypeExpression } from "./typeExpression";
 import { ICancellationToken } from "../../cancellation";
+import { Diagnostics, error } from "./diagnostics";
 
 export let bindTime = 0;
 export function resetBindTime(): void {
@@ -35,6 +36,25 @@ export interface DefinitionResult {
   node: SyntaxNode;
   uri: string;
   nodeType: NodeType;
+}
+
+class DiagnosticsCollection extends Map<string, Diagnostic[]> {
+  public add(diagnostic: Diagnostic): void {
+    const uri = (<any>diagnostic.data).uri;
+
+    let diagnostics = super.get(uri);
+
+    if (!diagnostics) {
+      diagnostics = [];
+      super.set(uri, diagnostics);
+    }
+
+    diagnostics.push(diagnostic);
+  }
+
+  public get(uri: string): Diagnostic[] {
+    return super.get(uri) ?? [];
+  }
 }
 
 export interface TypeChecker {
@@ -58,10 +78,11 @@ export interface TypeChecker {
     treeContainer: ITreeContainer,
     cancellationToken?: ICancellationToken,
   ) => Diagnostic[];
-  getDiagnosticsFromDeclaration: (
-    valueDeclaration: SyntaxNode,
-    cancellationToken?: ICancellationToken,
-  ) => Diagnostic[];
+  getDiagnosticsAsync: (
+    treeContainer: ITreeContainer,
+    token?: ICancellationToken,
+    cancelCallback?: () => boolean,
+  ) => Promise<Diagnostic[]>;
   findImportModuleNameNode: (
     moduleNameOrAlias: string,
     treeContainer: ITreeContainer,
@@ -71,6 +92,9 @@ export interface TypeChecker {
 export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   const forest = workspace.getForest();
   const imports = new Map<string, Imports>();
+
+  const diagnostics = new DiagnosticsCollection();
+  let cancellationToken: ICancellationToken | undefined;
 
   const start = performance.now();
   forest.treeMap.forEach((treeContainer) => {
@@ -86,7 +110,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     getQualifierForName,
     typeToString,
     getDiagnostics,
-    getDiagnosticsFromDeclaration,
+    getDiagnosticsAsync,
     findImportModuleNameNode,
   };
 
@@ -213,45 +237,59 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
   function getDiagnostics(
     treeContainer: ITreeContainer,
-    cancellationToken?: ICancellationToken,
+    token?: ICancellationToken,
   ): Diagnostic[] {
-    const allTopLevelFunctions = TreeUtils.findAllTopLevelFunctionDeclarations(
-      treeContainer.tree,
-    );
+    try {
+      cancellationToken = token;
 
-    return (
-      allTopLevelFunctions
-        ?.map((valueDeclaration) => {
-          return getDiagnosticsFromDeclaration(
-            valueDeclaration,
-            cancellationToken,
-          );
-        })
-        .reduce((a, b) => a.concat(b), [])
-        .filter(
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          (diagnostic) => (<any>diagnostic.data).uri === treeContainer.uri,
-        ) ?? []
-    );
+      checkNode(treeContainer.tree.rootNode);
+
+      return diagnostics.get(treeContainer.uri);
+    } finally {
+      cancellationToken = undefined;
+    }
   }
 
-  function getDiagnosticsFromDeclaration(
-    valueDeclaration: SyntaxNode,
-    cancellationToken?: ICancellationToken,
-  ): Diagnostic[] {
-    if (valueDeclaration.type !== "value_declaration") {
-      throw new Error(
-        "getDiagnosticsFromDeclaration must take a node of type value_declaraion",
-      );
-    }
+  function getDiagnosticsAsync(
+    treeContainer: ITreeContainer,
+    token?: ICancellationToken,
+    cancelCallback?: () => boolean,
+  ): Promise<Diagnostic[]> {
+    cancellationToken = token;
 
-    return InferenceScope.valueDeclarationInference(
-      mapSyntaxNodeToExpression(valueDeclaration) as EValueDeclaration,
-      valueDeclaration.tree.uri,
-      workspace,
-      new Set(),
-      cancellationToken,
-    ).diagnostics;
+    return new Promise((resolve, reject) => {
+      const children = treeContainer.tree.rootNode.children;
+      let index = 0;
+
+      const goNext = (): void => {
+        index++;
+        if (children.length > index) {
+          setImmediate(checkOne);
+        } else {
+          cancellationToken = undefined;
+          resolve(diagnostics.get(treeContainer.uri));
+        }
+      };
+
+      const checkOne = (): void => {
+        if (cancelCallback && cancelCallback()) {
+          reject();
+          return;
+        }
+
+        try {
+          checkNode(children[index]);
+        } catch {
+          cancellationToken = undefined;
+          reject();
+          return;
+        }
+
+        goNext();
+      };
+
+      checkOne();
+    });
   }
 
   function getAllImports(treeContainer: ITreeContainer): Imports {
@@ -793,5 +831,44 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         ?.get(moduleNameOrAlias, (s) => s.type === "Import")
         ?.node.childForFieldName("moduleName") ?? undefined
     );
+  }
+
+  function checkNode(node: SyntaxNode): void {
+    cancellationToken?.throwIfCancellationRequested();
+
+    switch (node.type) {
+      case "file":
+        node.children.forEach(checkNode);
+        break;
+      case "value_declaration":
+        checkValueDeclaration(node);
+        break;
+      case "import_clause":
+        checkImportClause(node);
+        break;
+    }
+  }
+
+  function checkValueDeclaration(valueDeclaration: SyntaxNode): void {
+    InferenceScope.valueDeclarationInference(
+      mapSyntaxNodeToExpression(valueDeclaration) as EValueDeclaration,
+      valueDeclaration.tree.uri,
+      workspace,
+      new Set(),
+      cancellationToken,
+    ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
+  }
+
+  function checkImportClause(importClause: SyntaxNode): void {
+    const moduleNameNode = importClause.childForFieldName("moduleName");
+
+    if (moduleNameNode) {
+      const moduleName = moduleNameNode.text;
+      if (!workspace.getForest().getByModuleName(moduleName)) {
+        diagnostics.add(
+          error(moduleNameNode, Diagnostics.ImportMissing, moduleName),
+        );
+      }
+    }
   }
 }

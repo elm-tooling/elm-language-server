@@ -8,14 +8,15 @@ import { OperationCanceledException } from "../cancellation";
 interface INextStep {
   immediate(action: () => void): void;
   delay(ms: number, action: () => void): void;
+  promise(action: () => Promise<void>): void;
 }
 
 export class MultistepOperation implements INextStep {
   private timerHandle: NodeJS.Timeout | undefined;
   private immediateId: NodeJS.Immediate | undefined;
+  private savedPromise: Promise<void> | undefined;
   private cancellationToken: CancellationToken | undefined;
   private done: (() => void) | undefined;
-  private cancelled: (() => void) | undefined;
 
   constructor(private connection: Connection) {}
 
@@ -23,12 +24,10 @@ export class MultistepOperation implements INextStep {
     cancellationToken: CancellationToken,
     action: (next: INextStep) => void,
     done: () => void,
-    cancelled?: () => void,
   ): void {
     this.complete();
     this.cancellationToken = cancellationToken;
     this.done = done;
-    this.cancelled = cancelled;
     this.executeAction(action);
   }
 
@@ -41,6 +40,7 @@ export class MultistepOperation implements INextStep {
     this.cancellationToken = undefined;
     this.setTimerHandle(undefined);
     this.setImmediateId(undefined);
+    this.savedPromise = undefined;
   }
 
   public immediate(action: () => void): void {
@@ -61,13 +61,30 @@ export class MultistepOperation implements INextStep {
     );
   }
 
+  public promise(action: () => Promise<void>): void {
+    if (this.cancellationToken?.isCancellationRequested) {
+      this.complete();
+    } else {
+      this.savedPromise = action()
+        .then(() => {
+          if (!this.hasPendingWork()) {
+            this.complete();
+          }
+        })
+        .catch(() => {
+          this.complete();
+        })
+        .finally(() => {
+          this.savedPromise = undefined;
+        });
+    }
+  }
+
   private executeAction(action: (next: INextStep) => void): void {
     let stop = false;
-    let cancelled = false;
     try {
       if (this.cancellationToken?.isCancellationRequested) {
         stop = true;
-        cancelled = true;
       } else {
         action(this);
       }
@@ -78,13 +95,6 @@ export class MultistepOperation implements INextStep {
       }
 
       stop = true;
-      cancelled = true;
-    }
-
-    if (cancelled && this.cancelled) {
-      this.cancelled();
-      this.cancelled = undefined;
-      return;
     }
 
     if (stop || !this.hasPendingWork()) {
@@ -107,6 +117,6 @@ export class MultistepOperation implements INextStep {
   }
 
   private hasPendingWork(): boolean {
-    return !!this.timerHandle || !!this.immediateId;
+    return !!this.timerHandle || !!this.immediateId || !!this.savedPromise;
   }
 }

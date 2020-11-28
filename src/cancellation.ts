@@ -187,6 +187,21 @@ export interface ICancellationToken {
   throwIfCancellationRequested(): void;
 }
 
+export class ServerCancellationToken implements ICancellationToken {
+  constructor(private cancellationToken: CancellationToken) {}
+
+  public isCancellationRequested(): boolean {
+    return this.cancellationToken.isCancellationRequested;
+  }
+
+  public throwIfCancellationRequested(): void {
+    if (this.isCancellationRequested()) {
+      console.log("throwing cancellation");
+      throw new OperationCanceledException();
+    }
+  }
+}
+
 /**
  * ThrottledCancellationToken taken from Typescript: https://github.com/microsoft/TypeScript/blob/79ffd03f8b73010fa03cef624e5f1770bc9c975b/src/services/services.ts#L1152
  */
