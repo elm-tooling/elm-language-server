@@ -5,7 +5,6 @@ export interface IClientSettings {
   elmFormatPath: string;
   elmPath: string;
   elmTestPath: string;
-  elmAnalyseTrigger: ElmAnalyseTrigger;
   trace: { server: string };
   extendedCapabilities?: IExtendedCapabilites;
   disableElmLSDiagnostics: boolean;
@@ -17,12 +16,9 @@ export interface IExtendedCapabilites {
   clientInitiatedDiagnostics: boolean;
 }
 
-export type ElmAnalyseTrigger = "change" | "save" | "never";
-
 @injectable()
 export class Settings {
   private clientSettings: IClientSettings = {
-    elmAnalyseTrigger: "never",
     elmFormatPath: "",
     elmPath: "",
     elmTestPath: "",

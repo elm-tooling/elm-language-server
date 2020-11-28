@@ -3,7 +3,6 @@ import { Utils } from "../../util/utils";
 
 export const enum DiagnosticKind {
   ElmMake,
-  ElmAnalyse,
   ElmTest,
   TypeInference,
   ElmLS,
