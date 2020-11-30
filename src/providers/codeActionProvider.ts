@@ -10,20 +10,36 @@ import {
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
+import { ElmWorkspaceMatcher, IParams } from "../util/elmWorkspaceMatcher";
+import { MultiMap } from "../util/multiMap";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { Settings } from "../util/settings";
-import { TreeUtils } from "../util/treeUtils";
+import { flatMap, TreeUtils } from "../util/treeUtils";
+import { Diagnostics } from "../util/types/diagnostics";
 import { ElmLsDiagnostics } from "./diagnostics/elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
+import { diagnosticsEquals } from "./diagnostics/fileDiagnostics";
 import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
+
+export type ICodeActionParams = CodeActionParams & IParams;
+
+export interface ICodeActionRegistration {
+  errorCodes: string[];
+  getCodeActions(params: ICodeActionParams): CodeAction[] | undefined;
+  getFixAllCodeAction(params: ICodeActionParams): CodeAction | undefined;
+}
 
 export class CodeActionProvider {
   private connection: Connection;
   private settings: Settings;
   private elmMake: ElmMakeDiagnostics;
   private elmDiagnostics: ElmLsDiagnostics;
+
+  private static errorCodeToRegistrationMap = new MultiMap<
+    string,
+    ICodeActionRegistration
+  >();
 
   constructor() {
     this.settings = container.resolve("Settings");
@@ -35,7 +51,7 @@ export class CodeActionProvider {
     this.connection.onCodeAction(
       new ElmWorkspaceMatcher((param: CodeActionParams) =>
         URI.parse(param.textDocument.uri),
-      ).handlerForWorkspace(this.onCodeAction.bind(this)),
+      ).handle(this.onCodeAction.bind(this)),
     );
 
     if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
@@ -45,37 +61,144 @@ export class CodeActionProvider {
     new ExposeUnexposeHandler();
   }
 
-  private onCodeAction(
-    params: CodeActionParams,
-    elmWorkspace: IElmWorkspace,
-  ): CodeAction[] {
+  public static registerCodeAction(
+    registration: ICodeActionRegistration,
+  ): void {
+    registration.errorCodes.forEach((code) => {
+      CodeActionProvider.errorCodeToRegistrationMap.set(code, registration);
+    });
+  }
+
+  private static forEachDiagnostic(
+    params: ICodeActionParams,
+    errorCodes: string[],
+    callback: (diagnostic: Diagnostic) => void,
+  ): void {
+    params.program.getDiagnostics(params.sourceFile).forEach((diagnostic) => {
+      if (
+        typeof diagnostic.code === "string" &&
+        errorCodes.includes(diagnostic.code)
+      ) {
+        callback(diagnostic);
+      }
+    });
+  }
+
+  public static getCodeAction(
+    params: ICodeActionParams,
+    title: string,
+    edits: TextEdit[],
+  ): CodeAction {
+    const changes = { [params.sourceFile.uri]: edits };
+    return {
+      title,
+      kind: CodeActionKind.QuickFix,
+      edit: { changes },
+      isPreferred: true,
+    };
+  }
+
+  public static getFixAllCodeAction(
+    title: string,
+    params: ICodeActionParams,
+    errorCodes: string[],
+    callback: (edits: TextEdit[], diagnostic: Diagnostic) => void,
+  ): CodeAction {
+    const edits: TextEdit[] = [];
+    const changes = {
+      [params.sourceFile.uri]: edits,
+    };
+
+    const diagnostics: Diagnostic[] = [];
+    CodeActionProvider.forEachDiagnostic(params, errorCodes, (diagnostic) => {
+      diagnostics.push(diagnostic);
+      callback(edits, diagnostic);
+    });
+
+    return {
+      title,
+      kind: CodeActionKind.SourceFixAll,
+      diagnostics,
+      edit: { changes },
+    };
+  }
+
+  protected onCodeAction(params: ICodeActionParams): CodeAction[] | undefined {
     this.connection.console.info("A code action was requested");
     const make = this.elmMake.onCodeAction(params);
     const elmDiagnostics = this.elmDiagnostics.onCodeAction(params);
+
+    const results: CodeAction[] = [];
+
+    // For each diagnostic in the context, get the code action registration that
+    // handles the diagnostic error code and ask for the code actions for that error
+    // and the fix all code action for that error if there are other diagnostics with
+    // the same error code
+    params.context.diagnostics.forEach((diagnostic) => {
+      if (typeof diagnostic?.code === "string") {
+        const registrations = CodeActionProvider.errorCodeToRegistrationMap.getAll(
+          diagnostic.code,
+        );
+
+        // Set the params range to the diagnostic range so we get the correct nodes
+        params.range = diagnostic.range;
+
+        results.push(
+          ...flatMap(registrations, (reg) => {
+            const codeActions =
+              reg
+                .getCodeActions(params)
+                ?.map((codeAction) =>
+                  this.addDiagnosticToCodeAction(codeAction, diagnostic),
+                ) ?? [];
+
+            if (
+              codeActions.length > 0 &&
+              params.program
+                .getDiagnostics(params.sourceFile)
+                .some(
+                  (diag) =>
+                    !diagnosticsEquals(diag, diagnostic) &&
+                    diag.code === diagnostic.code,
+                )
+            ) {
+              const fixAllCodeAction = reg.getFixAllCodeAction(params);
+
+              if (fixAllCodeAction) {
+                codeActions?.push(fixAllCodeAction);
+              }
+            }
+
+            return codeActions;
+          }),
+        );
+      }
+    });
+
     return [
+      ...results,
       ...this.convertDiagnosticsToCodeActions(
         params.context.diagnostics,
-        elmWorkspace,
+        params.program,
         params.textDocument.uri,
       ),
-      ...this.getRefactorCodeActions(params, elmWorkspace),
-      ...this.getTypeAnnotationCodeActions(params, elmWorkspace),
+      ...this.getRefactorCodeActions(params),
+      ...this.getTypeAnnotationCodeActions(params),
       ...make,
       ...elmDiagnostics,
     ];
   }
 
   private getTypeAnnotationCodeActions(
-    params: CodeActionParams,
-    elmWorkspace: IElmWorkspace,
+    params: ICodeActionParams,
   ): CodeAction[] {
     // Top level annotation are handled by diagnostics
     const codeActions: CodeAction[] = [];
 
-    const forest = elmWorkspace.getForest();
+    const forest = params.program.getForest();
     const treeContainer = forest.getByUri(params.textDocument.uri);
     const tree = treeContainer?.tree;
-    const checker = elmWorkspace.getTypeChecker();
+    const checker = params.program.getTypeChecker();
 
     if (tree) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
@@ -119,13 +242,10 @@ export class CodeActionProvider {
     return codeActions;
   }
 
-  private getRefactorCodeActions(
-    params: CodeActionParams,
-    elmWorkspace: IElmWorkspace,
-  ): CodeAction[] {
+  private getRefactorCodeActions(params: ICodeActionParams): CodeAction[] {
     const codeActions: CodeAction[] = [];
 
-    const forest = elmWorkspace.getForest();
+    const forest = params.program.getForest();
     const tree = forest.getTree(params.textDocument.uri);
 
     if (tree) {
@@ -137,11 +257,7 @@ export class CodeActionProvider {
       codeActions.push(
         ...this.getFunctionCodeActions(params, tree, nodeAtPosition),
         ...this.getTypeAliasCodeActions(params, tree, nodeAtPosition),
-        ...this.getMakeDeclarationFromUsageCodeActions(
-          params,
-          elmWorkspace,
-          nodeAtPosition,
-        ),
+        ...this.getMakeDeclarationFromUsageCodeActions(params, nodeAtPosition),
       );
     }
 
@@ -168,7 +284,11 @@ export class CodeActionProvider {
           command: {
             title: "Refactor",
             command: "elm.refactor",
-            arguments: ["moveFunction", params, functionName],
+            arguments: [
+              "moveFunction",
+              { textDocument: params.textDocument, range: params.range },
+              functionName,
+            ],
           },
           kind: CodeActionKind.RefactorRewrite,
         });
@@ -265,8 +385,7 @@ export class CodeActionProvider {
   }
 
   private getMakeDeclarationFromUsageCodeActions(
-    params: CodeActionParams,
-    elmWorkspace: IElmWorkspace,
+    params: ICodeActionParams,
     nodeAtPosition: SyntaxNode,
   ): CodeAction[] {
     const codeActions: CodeAction[] = [];
@@ -279,14 +398,10 @@ export class CodeActionProvider {
     ) {
       const funcName = nodeAtPosition.text;
 
-      const treeContainer = elmWorkspace
-        .getForest()
-        .getByUri(params.textDocument.uri);
-      const tree = treeContainer?.tree;
-      const checker = elmWorkspace.getTypeChecker();
+      const tree = params.sourceFile.tree;
+      const checker = params.program.getTypeChecker();
 
       if (
-        tree &&
         !TreeUtils.findAllTopLevelFunctionDeclarations(tree)?.some(
           (a) =>
             a.firstChild?.text == funcName ||
@@ -299,7 +414,7 @@ export class CodeActionProvider {
 
         const typeString: string = checker.typeToString(
           checker.findType(nodeAtPosition),
-          treeContainer,
+          params.sourceFile,
         );
 
         const edit = RefactorEditUtils.createTopLevelFunction(
@@ -340,7 +455,7 @@ export class CodeActionProvider {
     if (treeContainer) {
       diagnostics.forEach((diagnostic) => {
         switch (diagnostic.code) {
-          case "missing_type_annotation":
+          case Diagnostics.MissingTypeAnnotation.code:
             {
               const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
                 treeContainer.tree.rootNode,
@@ -390,5 +505,13 @@ export class CodeActionProvider {
       kind: CodeActionKind.QuickFix,
       title,
     };
+  }
+
+  private addDiagnosticToCodeAction(
+    codeAction: CodeAction,
+    diagnostic: Diagnostic,
+  ): CodeAction {
+    codeAction.diagnostics = [diagnostic];
+    return codeAction;
   }
 }

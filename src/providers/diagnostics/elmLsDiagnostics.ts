@@ -373,9 +373,7 @@ export class ElmLsDiagnostics {
   ): CodeAction[] {
     const result: CodeAction[] = [];
 
-    const elmWorkspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(
-      URI.parse(uri),
-    );
+    const elmWorkspace = this.elmWorkspaceMatcher.getProgramFor(URI.parse(uri));
 
     const forest = elmWorkspace.getForest();
 

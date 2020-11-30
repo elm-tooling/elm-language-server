@@ -28,7 +28,7 @@ import execa = require("execa");
 import { IElmWorkspace } from "../../elmWorkspace";
 
 const ELM_MAKE = "Elm";
-const NAMING_ERROR = "NAMING ERROR";
+export const NAMING_ERROR = "NAMING ERROR";
 const RANDOM_ID = randomBytes(16).toString("hex");
 export const CODE_ACTION_ELM_MAKE = `elmLS.elmMakeFixer-${RANDOM_ID}`;
 const readFile = util.promisify(fs.readFile);
@@ -124,7 +124,7 @@ export class ElmMakeDiagnostics {
     filePath: URI,
   ): Promise<Map<string, Diagnostic[]>> => {
     const workspaceRootPath = this.elmWorkspaceMatcher
-      .getElmWorkspaceFor(filePath)
+      .getProgramFor(filePath)
       .getRootPath();
     const diagnostics = await this.checkForErrors(
       workspaceRootPath.fsPath,
@@ -136,9 +136,7 @@ export class ElmMakeDiagnostics {
     });
 
     // Handle import all
-    const forest = this.elmWorkspaceMatcher
-      .getElmWorkspaceFor(filePath)
-      .getForest();
+    const forest = this.elmWorkspaceMatcher.getProgramFor(filePath).getForest();
 
     const exposedValues = ImportUtils.getPossibleImports(
       forest,
@@ -215,95 +213,12 @@ export class ElmMakeDiagnostics {
   ): CodeAction[] {
     const result: CodeAction[] = [];
 
-    const elmWorkspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(
-      URI.parse(uri),
-    );
-
+    const elmWorkspace = this.elmWorkspaceMatcher.getProgramFor(URI.parse(uri));
     const forest = elmWorkspace.getForest();
-
-    const exposedValues = ImportUtils.getPossibleImports(forest, uri);
 
     const sourceTree = forest.getByUri(uri);
 
     diagnostics.forEach((diagnostic) => {
-      if (diagnostic.message.startsWith(NAMING_ERROR)) {
-        const valueNode = sourceTree?.tree.rootNode.namedDescendantForPosition(
-          {
-            column: diagnostic.range.start.character,
-            row: diagnostic.range.start.line,
-          },
-          {
-            column: diagnostic.range.end.character,
-            row: diagnostic.range.end.line,
-          },
-        );
-
-        let hasImportFix = false;
-
-        // Add import quick fixes
-        if (valueNode) {
-          exposedValues
-            .filter(
-              (exposed) =>
-                exposed.value === valueNode.text ||
-                ((valueNode.type === "upper_case_qid" ||
-                  valueNode.type === "value_qid") &&
-                  exposed.value ===
-                    valueNode.namedChildren[valueNode.namedChildren.length - 1]
-                      .text &&
-                  exposed.module ===
-                    valueNode.namedChildren
-                      .slice(0, valueNode.namedChildren.length - 2) // Dots are also namedNodes
-                      .map((a) => a.text)
-                      .join("")),
-            )
-            .forEach((exposed) => {
-              hasImportFix = true;
-              result.push(
-                this.createImportQuickFix(
-                  uri,
-                  diagnostic,
-                  exposed.module,
-                  valueNode.type !== "upper_case_qid" &&
-                    valueNode.type !== "value_qid"
-                    ? exposed.valueToImport
-                      ? exposed.valueToImport
-                      : exposed.value
-                    : undefined,
-                ),
-              );
-            });
-        }
-
-        // Add import all quick fix
-        const filteredImports =
-          this.neededImports
-            .get(uri)
-            ?.filter(
-              (data, i, array) =>
-                array.findIndex(
-                  (d) =>
-                    data.moduleName === d.moduleName &&
-                    data.valueName === d.valueName,
-                ) === i,
-            ) ?? [];
-
-        if (hasImportFix && filteredImports.length > 1) {
-          // Sort so that the first diagnostic is this one
-          this.neededImports
-            .get(uri)
-            ?.sort((a, b) =>
-              a.diagnostic.message === diagnostic.message
-                ? -1
-                : b.diagnostic.message === diagnostic.message
-                ? 1
-                : 0,
-            );
-
-          result.push(this.createImportAllQuickFix(uri));
-        }
-      }
-
       if (
         diagnostic.message.startsWith(NAMING_ERROR) ||
         diagnostic.message.startsWith("BAD IMPORT") ||
@@ -531,7 +446,7 @@ export class ElmMakeDiagnostics {
     }
 
     const tree = this.elmWorkspaceMatcher
-      .getElmWorkspaceFor(URI.parse(uri))
+      .getProgramFor(URI.parse(uri))
       .getForest()
       .getTree(uri);
 
@@ -551,37 +466,6 @@ export class ElmMakeDiagnostics {
         ? `Import '${nameToImport}' from module "${moduleName}"`
         : `Import module "${moduleName}"`,
       isPreferred: true,
-    };
-  }
-
-  private createImportAllQuickFix(uri: string): CodeAction {
-    const changes: {
-      [uri: string]: TextEdit[];
-    } = {};
-    if (!changes[uri]) {
-      changes[uri] = [];
-    }
-
-    const tree = this.elmWorkspaceMatcher
-      .getElmWorkspaceFor(URI.parse(uri))
-      .getForest()
-      .getTree(uri);
-
-    const imports = this.neededImports.get(uri);
-
-    if (tree && imports) {
-      const edit = RefactorEditUtils.addImports(tree, imports);
-
-      if (edit) {
-        changes[uri].push(edit);
-      }
-    }
-
-    return {
-      diagnostics: imports?.map((data) => data.diagnostic),
-      edit: { changes },
-      kind: CodeActionKind.QuickFix,
-      title: `Add all missing imports`,
     };
   }
 

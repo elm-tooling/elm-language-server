@@ -1,7 +1,9 @@
 import path from "path";
 import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import { Diagnostics } from "../../util/types/diagnostics";
 import { IElmIssue } from "./diagnosticsProvider";
+import { NAMING_ERROR } from "./elmMakeDiagnostics";
 
 export class ElmDiagnosticsHelper {
   public static issuesToDiagnosticMap(
@@ -50,11 +52,17 @@ export class ElmDiagnosticsHelper {
 
     const messagePrefix = issue.overview ? `${issue.overview} - ` : "";
 
+    let code = undefined;
+
+    if (issue.overview.startsWith(NAMING_ERROR)) {
+      code = Diagnostics.MissingValue.code;
+    }
+
     return Diagnostic.create(
       lineRange,
       `${messagePrefix}${issue.details.replace(/\[\d+m/g, "")}`,
       this.severityStringToDiagnosticSeverity(issue.type),
-      undefined,
+      code,
       "Elm",
     );
   }

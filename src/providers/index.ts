@@ -14,3 +14,4 @@ export * from "./hoverProvider";
 export * from "./referencesProvider";
 export * from "./renameProvider";
 export * from "./workspaceSymbolProvider";
+import "./codeAction";

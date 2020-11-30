@@ -164,6 +164,23 @@ export class DiagnosticsProvider {
     });
   }
 
+  public interuptDiagnostics<T>(f: () => T): T {
+    if (!this.pendingRequest) {
+      return f();
+    }
+
+    this.pendingRequest.cancel();
+    this.pendingRequest = undefined;
+    const result = f();
+
+    this.triggerDiagnostics();
+    return result;
+  }
+
+  public getCurrentDiagnostics(uri: string): Diagnostic[] {
+    return this.currentDiagnostics.get(uri)?.get() ?? [];
+  }
+
   private requestDiagnostics(uri: string): void {
     this.pendingDiagnostics.set(uri, Date.now());
     this.triggerDiagnostics();
@@ -180,20 +197,6 @@ export class DiagnosticsProvider {
 
     this.triggerDiagnostics();
   }
-
-  public interuptDiagnostics<T>(f: () => T): T {
-    if (!this.pendingRequest) {
-      return f();
-    }
-
-    this.pendingRequest.cancel();
-    this.pendingRequest = undefined;
-    const result = f();
-
-    this.triggerDiagnostics();
-    return result;
-  }
-
   private triggerDiagnostics(delay = 200): void {
     const sendPendingDiagnostics = (): void => {
       const orderedFiles = this.pendingDiagnostics.getOrderedFiles();
@@ -298,7 +301,7 @@ export class DiagnosticsProvider {
             }
 
             const uri = files[index];
-            const workspace = this.elmWorkspaceMatcher.getElmWorkspaceFor(
+            const workspace = this.elmWorkspaceMatcher.getProgramFor(
               URI.parse(uri),
             );
 
@@ -320,6 +323,7 @@ export class DiagnosticsProvider {
                 return;
               }
 
+              this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
               this.updateDiagnostics(
                 uri,
                 DiagnosticKind.TypeInference,
@@ -349,7 +353,7 @@ export class DiagnosticsProvider {
     );
   }
 
-  public async getElmMakeDiagnostics(uri: string): Promise<void> {
+  private async getElmMakeDiagnostics(uri: string): Promise<void> {
     const elmMakeDiagnostics = await this.elmMakeDiagnostics.createDiagnostics(
       URI.parse(uri),
     );
@@ -357,6 +361,7 @@ export class DiagnosticsProvider {
     this.resetDiagnostics(elmMakeDiagnostics, DiagnosticKind.ElmMake);
 
     elmMakeDiagnostics.forEach((diagnostics, diagnosticsUri) => {
+      this.updateDiagnostics(diagnosticsUri, DiagnosticKind.TypeInference, []);
       this.updateDiagnostics(
         diagnosticsUri,
         DiagnosticKind.ElmMake,

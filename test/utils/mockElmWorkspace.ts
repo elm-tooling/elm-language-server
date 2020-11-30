@@ -2,7 +2,7 @@ import path, * as Path from "path";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../../src/elmWorkspace";
-import { Forest, IForest } from "../../src/forest";
+import { Forest, IForest, ITreeContainer } from "../../src/forest";
 import { Imports } from "../../src/imports";
 import { container } from "tsyringe";
 import { TypeCache } from "../../src/util/types/typeCache";
@@ -16,6 +16,8 @@ import {
   IPossibleImportsCache,
   PossibleImportsCache,
 } from "../../src/util/possibleImportsCache";
+import { Diagnostic } from "vscode-languageserver";
+import { ICancellationToken } from "../../src/cancellation";
 
 export const baseUri = Path.join(__dirname, "../sources/src/");
 
@@ -25,6 +27,7 @@ export class MockElmWorkspace implements IElmWorkspace {
   private typeCache = new TypeCache();
   private possibleImportsCache = new PossibleImportsCache();
   private operatorsCache = new Map<string, DefinitionResult>();
+  private diagnosticsCache = new Map<string, Diagnostic[]>();
 
   constructor(sources: { [K: string]: string }) {
     this.parser = container.resolve("Parser");
@@ -47,19 +50,16 @@ export class MockElmWorkspace implements IElmWorkspace {
     return;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  hasDocument(uri: URI): boolean {
-    return false;
+  public hasDocument(uri: URI): boolean {
+    return !!this.forest.getTree(uri.toString());
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  hasPath(uri: URI): boolean {
-    return false;
+  public hasPath(uri: URI): boolean {
+    return !!this.getPath(uri);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  getPath(uri: URI): string | undefined {
-    return;
+  public getPath(uri: URI): string | undefined {
+    return baseUri;
   }
 
   getForest(): IForest {
@@ -88,6 +88,44 @@ export class MockElmWorkspace implements IElmWorkspace {
 
   getOperatorsCache(): Map<string, DefinitionResult> {
     return this.operatorsCache;
+  }
+
+  public getDiagnostics(
+    sourceFile: ITreeContainer,
+    cancellationToken?: ICancellationToken,
+  ): Diagnostic[] {
+    const cached = this.diagnosticsCache.get(sourceFile.uri);
+
+    if (cached) {
+      return cached;
+    }
+
+    const diagnostics = this.getTypeChecker().getDiagnostics(
+      sourceFile,
+      cancellationToken,
+    );
+
+    this.diagnosticsCache.set(sourceFile.uri, diagnostics);
+    return diagnostics;
+  }
+
+  public async getDiagnosticsAsync(
+    sourceFile: ITreeContainer,
+    cancellationToken?: ICancellationToken,
+  ): Promise<Diagnostic[]> {
+    const cached = this.diagnosticsCache.get(sourceFile.uri);
+
+    if (cached) {
+      return Promise.resolve(cached);
+    }
+
+    const diagnostics = await this.getTypeChecker().getDiagnosticsAsync(
+      sourceFile,
+      cancellationToken,
+    );
+
+    this.diagnosticsCache.set(sourceFile.uri, diagnostics);
+    return diagnostics;
   }
 
   private parseAndAddToForest(fileName: string, source: string): void {
