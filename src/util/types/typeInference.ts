@@ -449,7 +449,7 @@ function argumentCountError(
       node,
       Diagnostics.ArgumentCount,
       endNode,
-      name ? `\`${name}\`` : "This value",
+      name ?? "This value",
       actual,
     );
   } else {

@@ -14,10 +14,10 @@ export class TypeInferenceDiagnostics {
 
   public getDiagnosticsForFileAsync(
     treeContainer: ITreeContainer,
-    elmWorkspace: IElmWorkspace,
+    program: IElmWorkspace,
     cancellationToken: CancellationToken,
   ): Promise<Diagnostic[]> {
-    const checker = elmWorkspace.getTypeChecker();
+    const checker = program.getTypeChecker();
 
     const diagnostics: Diagnostic[] = [];
 
@@ -27,7 +27,7 @@ export class TypeInferenceDiagnostics {
       TreeUtils.findAllTopLevelFunctionDeclarations(treeContainer.tree) ?? [];
 
     return new Promise((resolve, reject) => {
-      checker
+      program
         .getDiagnosticsAsync(
           treeContainer,
           new ServerCancellationToken(cancellationToken),

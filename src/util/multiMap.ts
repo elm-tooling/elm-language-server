@@ -22,6 +22,16 @@ export class MultiMap<K, V> extends Map<K, V | V[]> {
     }
   }
 
+  public getAll(key: K): V[] | undefined {
+    const found = super.get(key);
+
+    if (Array.isArray(found)) {
+      return found;
+    } else if (found) {
+      return [found];
+    }
+  }
+
   public set(key: K, val: V): this {
     if (super.has(key)) {
       const existing = super.get(key);

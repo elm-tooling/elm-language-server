@@ -4,10 +4,11 @@ import os from "os";
 import path from "path";
 import { container } from "tsyringe";
 import util from "util";
-import { Connection } from "vscode-languageserver";
+import { Connection, Diagnostic } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
-import { Forest, IForest } from "./forest";
+import { ICancellationToken } from "./cancellation";
+import { Forest, IForest, ITreeContainer } from "./forest";
 import * as utils from "./util/elmUtils";
 import {
   IPossibleImportsCache,
@@ -83,6 +84,14 @@ export interface IElmWorkspace {
   markAsDirty(): void;
   getPossibleImportsCache(): IPossibleImportsCache;
   getOperatorsCache(): Map<string, DefinitionResult>;
+  getDiagnostics(
+    sourceFile: ITreeContainer,
+    cancellationToken?: ICancellationToken,
+  ): Diagnostic[];
+  getDiagnosticsAsync(
+    sourceFile: ITreeContainer,
+    cancellationToken?: ICancellationToken,
+  ): Promise<Diagnostic[]>;
 }
 
 export interface IRootFolder {
@@ -101,6 +110,7 @@ export class ElmWorkspace implements IElmWorkspace {
   private dirty = true;
   private possibleImportsCache: IPossibleImportsCache;
   private operatorsCache: Map<string, DefinitionResult>;
+  private diagnosticsCache: Map<string, Diagnostic[]>;
 
   constructor(private rootPath: URI) {
     this.settings = container.resolve("Settings");
@@ -113,6 +123,7 @@ export class ElmWorkspace implements IElmWorkspace {
     this.typeCache = new TypeCache();
     this.possibleImportsCache = new PossibleImportsCache();
     this.operatorsCache = new Map<string, DefinitionResult>();
+    this.diagnosticsCache = new Map<string, Diagnostic[]>();
   }
 
   public async init(
@@ -165,6 +176,7 @@ export class ElmWorkspace implements IElmWorkspace {
     if (!this.dirty) {
       this.dirty = true;
       this.typeChecker = undefined;
+      this.diagnosticsCache.clear();
     }
   }
 
@@ -174,6 +186,44 @@ export class ElmWorkspace implements IElmWorkspace {
 
   public getOperatorsCache(): Map<string, DefinitionResult> {
     return this.operatorsCache;
+  }
+
+  public getDiagnostics(
+    sourceFile: ITreeContainer,
+    cancellationToken?: ICancellationToken,
+  ): Diagnostic[] {
+    const cached = this.diagnosticsCache.get(sourceFile.uri);
+
+    if (cached) {
+      return cached;
+    }
+
+    const diagnostics = this.getTypeChecker().getDiagnostics(
+      sourceFile,
+      cancellationToken,
+    );
+
+    this.diagnosticsCache.set(sourceFile.uri, diagnostics);
+    return diagnostics;
+  }
+
+  public async getDiagnosticsAsync(
+    sourceFile: ITreeContainer,
+    cancellationToken?: ICancellationToken,
+  ): Promise<Diagnostic[]> {
+    const cached = this.diagnosticsCache.get(sourceFile.uri);
+
+    if (cached) {
+      return Promise.resolve(cached);
+    }
+
+    const diagnostics = await this.getTypeChecker().getDiagnosticsAsync(
+      sourceFile,
+      cancellationToken,
+    );
+
+    this.diagnosticsCache.set(sourceFile.uri, diagnostics);
+    return diagnostics;
   }
 
   private async initWorkspace(

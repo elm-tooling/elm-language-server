@@ -8,6 +8,7 @@ import {
   EFunctionCallExpr,
   mapSyntaxNodeToExpression,
 } from "./types/expressionTree";
+import { Range } from "vscode-languageserver-textdocument";
 
 export type NodeType =
   | "Function"
@@ -39,14 +40,16 @@ export interface IExposed {
 export type IExposing = Map<string, IExposed>;
 
 export function flatMap<T, U>(
-  array: T[],
-  callback: (value: T, index: number, array: T[]) => U[],
+  array: T[] | undefined,
+  callback: (value: T, index: number, array: T[]) => U[] | undefined,
 ): U[] {
   const flattend: U[] = [];
-  for (let i = 0; i < array.length; i++) {
-    const elementArray = callback(array[i], i, array);
-    for (const el of elementArray) {
-      flattend.push(el);
+  if (array) {
+    for (let i = 0; i < array.length; i++) {
+      const elementArray = callback(array[i], i, array);
+      if (elementArray) {
+        flattend.push(...elementArray);
+      }
     }
   }
   return flattend;
@@ -804,6 +807,22 @@ export class TreeUtils {
         },
       );
     }
+  }
+
+  public static getNamedDescendantForRange(
+    sourceFile: ITreeContainer,
+    range: Range,
+  ): SyntaxNode {
+    return sourceFile.tree.rootNode.namedDescendantForPosition(
+      {
+        column: range.start.character,
+        row: range.start.line,
+      },
+      {
+        column: range.end.character,
+        row: range.end.line,
+      },
+    );
   }
 
   public static findPreviousNode(

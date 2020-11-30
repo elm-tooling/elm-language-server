@@ -31,4 +31,23 @@ export class Utils {
       a.end.line === b.end.line
     );
   }
+
+  public static rangeOverlaps(a: Range, b: Range): boolean {
+    if (b.start.line < a.start.line || b.end.line < a.start.line) {
+      return false;
+    }
+    if (b.start.line > a.end.line || b.end.line > a.end.line) {
+      return false;
+    }
+    if (
+      b.start.line === a.start.line &&
+      b.start.character < a.start.character
+    ) {
+      return false;
+    }
+    if (b.end.line === a.end.line && b.end.character > a.end.character) {
+      return false;
+    }
+    return true;
+  }
 }

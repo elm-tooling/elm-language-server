@@ -69,25 +69,23 @@ describe("test elm diagnostics", () => {
 
     const testUri = URI.file(baseUri + "Test.elm").toString();
 
-    const workspace = treeParser.getWorkspace(result.sources);
-    const treeContainer = workspace.getForest().getByUri(testUri);
+    const program = treeParser.getWorkspace(result.sources);
+    const treeContainer = program.getForest().getByUri(testUri);
 
     if (!treeContainer) throw new Error("Getting tree failed");
 
-    const checker = workspace.getTypeChecker();
     const diagnostics: Diagnostic[] = [];
 
-    workspace.getForest().treeMap.forEach((treeContainer) => {
+    program.getForest().treeMap.forEach((treeContainer) => {
       if (!treeContainer.uri.includes("Basic")) {
-        diagnostics.push(...checker.getDiagnostics(treeContainer));
+        diagnostics.push(...program.getDiagnostics(treeContainer));
       }
     });
 
     let nodeAtPosition: SyntaxNode;
 
     if ("position" in result) {
-      const rootNode = workspace.getForest().treeMap.get(testUri)!.tree
-        .rootNode;
+      const rootNode = program.getForest().treeMap.get(testUri)!.tree.rootNode;
       nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
         rootNode,
         result.position,
