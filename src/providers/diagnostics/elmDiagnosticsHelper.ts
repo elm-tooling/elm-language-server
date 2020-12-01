@@ -62,7 +62,7 @@ export class ElmDiagnosticsHelper {
       range: lineRange,
       message: `${messagePrefix}${issue.details.replace(/\[\d+m/g, "")}`,
       severity: this.severityStringToDiagnosticSeverity(issue.type),
-      source: "elm",
+      source: "Elm",
       data: { uri: issue.file, code },
     };
   }
