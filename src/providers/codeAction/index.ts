@@ -1,1 +1,2 @@
 import "./importCodeAction";
+import "./makeDeclarationFromUsageCodeAction";

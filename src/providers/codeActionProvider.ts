@@ -28,6 +28,7 @@ export type ICodeActionParams = CodeActionParams & IParams;
 
 export interface ICodeActionRegistration {
   errorCodes: string[];
+  fixId: string;
   getCodeActions(params: ICodeActionParams): CodeAction[] | undefined;
   getFixAllCodeAction(params: ICodeActionParams): CodeAction | undefined;
 }
@@ -90,14 +91,13 @@ export class CodeActionProvider {
     params: ICodeActionParams,
     title: string,
     edits: TextEdit[],
-    isPreferred = false,
   ): CodeAction {
     const changes = { [params.sourceFile.uri]: edits };
     return {
       title,
       kind: CodeActionKind.QuickFix,
       edit: { changes },
-      isPreferred,
+      isPreferred: true,
     };
   }
 
@@ -105,6 +105,7 @@ export class CodeActionProvider {
     title: string,
     params: ICodeActionParams,
     errorCodes: string[],
+    fixId: string,
     callback: (edits: TextEdit[], diagnostic: Diagnostic) => void,
   ): CodeAction {
     const edits: TextEdit[] = [];
@@ -120,9 +121,10 @@ export class CodeActionProvider {
 
     return {
       title,
-      kind: CodeActionKind.SourceFixAll,
+      kind: CodeActionKind.QuickFix,
       diagnostics,
       edit: { changes },
+      data: fixId,
     };
   }
 
@@ -156,6 +158,10 @@ export class CodeActionProvider {
 
           if (
             codeActions.length > 0 &&
+            !results.some(
+              // Check if there is already a "fix all" code action for this fix
+              (codeAction) => /* fixId */ codeAction.data === reg.fixId,
+            ) &&
             params.program
               .getDiagnostics(params.sourceFile)
               .some(
@@ -260,7 +266,6 @@ export class CodeActionProvider {
       codeActions.push(
         ...this.getFunctionCodeActions(params, tree, nodeAtPosition),
         ...this.getTypeAliasCodeActions(params, tree, nodeAtPosition),
-        ...this.getMakeDeclarationFromUsageCodeActions(params, nodeAtPosition),
       );
     }
 
@@ -379,63 +384,6 @@ export class CodeActionProvider {
               },
             },
             kind: CodeActionKind.Refactor,
-          });
-        }
-      }
-    }
-
-    return codeActions;
-  }
-
-  private getMakeDeclarationFromUsageCodeActions(
-    params: ICodeActionParams,
-    nodeAtPosition: SyntaxNode,
-  ): CodeAction[] {
-    const codeActions: CodeAction[] = [];
-
-    if (
-      nodeAtPosition.type === "lower_case_identifier" &&
-      nodeAtPosition.parent?.parent?.type === "value_expr" &&
-      nodeAtPosition.parent?.parent?.parent &&
-      nodeAtPosition.previousSibling?.type !== "dot"
-    ) {
-      const funcName = nodeAtPosition.text;
-
-      const tree = params.sourceFile.tree;
-      const checker = params.program.getTypeChecker();
-
-      if (
-        !TreeUtils.findAllTopLevelFunctionDeclarations(tree)?.some(
-          (a) =>
-            a.firstChild?.text == funcName ||
-            a.firstChild?.firstChild?.text == funcName,
-        )
-      ) {
-        const insertLineNumber = RefactorEditUtils.findLineNumberAfterCurrentFunction(
-          nodeAtPosition,
-        );
-
-        const typeString: string = checker.typeToString(
-          checker.findType(nodeAtPosition),
-          params.sourceFile,
-        );
-
-        const edit = RefactorEditUtils.createTopLevelFunction(
-          insertLineNumber ?? tree.rootNode.endPosition.row,
-          funcName,
-          typeString,
-          TreeUtils.findParentOfType("function_call_expr", nodeAtPosition),
-        );
-
-        if (edit) {
-          codeActions.push({
-            title: `Create local function`,
-            edit: {
-              changes: {
-                [params.textDocument.uri]: [edit],
-              },
-            },
-            kind: CodeActionKind.QuickFix,
           });
         }
       }

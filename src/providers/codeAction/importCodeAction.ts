@@ -10,9 +10,11 @@ import { Diagnostics } from "../../util/types/diagnostics";
 import { CodeActionProvider, ICodeActionParams } from "../codeActionProvider";
 
 const errorCodes = [Diagnostics.MissingValue.code];
+const fixId = "import";
 
 CodeActionProvider.registerCodeAction({
   errorCodes,
+  fixId,
   getCodeActions: (params: ICodeActionParams): CodeAction[] | undefined => {
     const valueNode = TreeUtils.getNamedDescendantForRange(
       params.sourceFile,
@@ -42,6 +44,7 @@ CodeActionProvider.registerCodeAction({
       "Add all missing imports",
       params,
       errorCodes,
+      fixId,
       (edits, diagnostic) => {
         const firstPossibleImport = getPossibleImports(
           params,
