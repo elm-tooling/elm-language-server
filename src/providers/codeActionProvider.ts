@@ -9,18 +9,16 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { convertFromAnalyzerDiagnostic } from "./diagnostics/typeInferenceDiagnostics";
-import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher, IParams } from "../util/elmWorkspaceMatcher";
 import { MultiMap } from "../util/multiMap";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { Settings } from "../util/settings";
 import { flatMap, TreeUtils } from "../util/treeUtils";
-import { Diagnostics } from "../util/types/diagnostics";
 import { IDiagnostic } from "./diagnostics/diagnosticsProvider";
 import { ElmLsDiagnostics } from "./diagnostics/elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
 import { diagnosticsEquals } from "./diagnostics/fileDiagnostics";
+import { convertFromAnalyzerDiagnostic } from "./diagnostics/typeInferenceDiagnostics";
 import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 
@@ -186,11 +184,6 @@ export class CodeActionProvider {
 
     return [
       ...results,
-      ...this.convertDiagnosticsToCodeActions(
-        params.context.diagnostics,
-        params.program,
-        params.textDocument.uri,
-      ),
       ...this.getRefactorCodeActions(params),
       ...this.getTypeAnnotationCodeActions(params),
       ...make,
@@ -390,72 +383,6 @@ export class CodeActionProvider {
     }
 
     return codeActions;
-  }
-
-  private convertDiagnosticsToCodeActions(
-    diagnostics: Diagnostic[],
-    elmWorkspace: IElmWorkspace,
-    uri: string,
-  ): CodeAction[] {
-    const result: CodeAction[] = [];
-
-    const forest = elmWorkspace.getForest();
-    const treeContainer = forest.getByUri(uri);
-    const checker = elmWorkspace.getTypeChecker();
-
-    if (treeContainer) {
-      diagnostics.forEach((diagnostic) => {
-        switch (diagnostic.code) {
-          case Diagnostics.MissingTypeAnnotation.code:
-            {
-              const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-                treeContainer.tree.rootNode,
-                diagnostic.range.start,
-              );
-
-              if (nodeAtPosition.parent) {
-                const typeString: string = checker.typeToString(
-                  checker.findType(nodeAtPosition.parent),
-                  treeContainer,
-                );
-
-                result.push(
-                  this.insertQuickFixAtStart(
-                    uri,
-                    `${nodeAtPosition.text} : ${typeString}\n`,
-                    diagnostic,
-                    "Add inferred annotation",
-                  ),
-                );
-              }
-            }
-            break;
-        }
-      });
-    }
-
-    return result;
-  }
-
-  private insertQuickFixAtStart(
-    uri: string,
-    replaceWith: string,
-    diagnostic: Diagnostic,
-    title: string,
-  ): CodeAction {
-    const map: {
-      [uri: string]: TextEdit[];
-    } = {};
-    if (!map[uri]) {
-      map[uri] = [];
-    }
-    map[uri].push(TextEdit.insert(diagnostic.range.start, replaceWith));
-    return {
-      diagnostics: [diagnostic],
-      edit: { changes: map },
-      kind: CodeActionKind.QuickFix,
-      title,
-    };
   }
 
   private addDiagnosticToCodeAction(
