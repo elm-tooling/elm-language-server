@@ -1,10 +1,10 @@
 import {
-  Diagnostic,
   DiagnosticSeverity,
   DiagnosticTag,
   Range,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import { IDiagnostic } from "../../src/providers/diagnostics/diagnosticsProvider";
 import { ElmLsDiagnostics } from "../../src/providers/diagnostics/elmLsDiagnostics";
 import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics";
 import { Utils } from "../../src/util/utils";
@@ -17,17 +17,18 @@ describe("ElmLsDiagnostics", () => {
   const treeParser = new SourceTreeParser();
 
   const debug = process.argv.find((arg) => arg === "--debug");
+  const uri = URI.file(baseUri + "Main.elm").toString();
 
   async function testDiagnostics(
     source: string,
     code: string,
-    expectedDiagnostics: Diagnostic[],
+    expectedDiagnostics: IDiagnostic[],
   ) {
     await treeParser.init();
     elmDiagnostics = new ElmLsDiagnostics();
 
     const workspace = treeParser.getWorkspace(getSourceFiles(source));
-    const uri = URI.file(baseUri + "Main.elm").toString();
+
     const treeContainer = workspace.getForest().getByUri(uri);
 
     if (!treeContainer) {
@@ -36,7 +37,7 @@ describe("ElmLsDiagnostics", () => {
 
     const diagnostics = elmDiagnostics
       .createDiagnostics(treeContainer, workspace)
-      .filter((diagnostic) => diagnostic.code === code);
+      .filter((diagnostic) => diagnostic.data.code === code);
 
     const diagnosticsEqual = Utils.arrayEquals(
       diagnostics,
@@ -56,13 +57,16 @@ describe("ElmLsDiagnostics", () => {
   }
 
   describe("boolean case expressions", () => {
-    const diagnosticWithRange = (range: Range): Diagnostic => {
+    const diagnosticWithRange = (range: Range): IDiagnostic => {
       return {
-        code: "boolean_case_expr",
         message: "Use an if expression instead of a case expression.",
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
+        data: {
+          uri,
+          code: "boolean_case_expr",
+        },
       };
     };
 
@@ -123,14 +127,17 @@ foo x =
     const diagnosticWithRangeAndName = (
       range: Range,
       name: string,
-    ): Diagnostic => {
+    ): IDiagnostic => {
       return {
-        code: "unused_top_level",
         message: `Unused top level definition \`${name}\``,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
+        data: {
+          uri,
+          code: "unused_top_level",
+        },
       };
     };
 
@@ -296,14 +303,17 @@ getItemAtIndex index =
     const diagnosticWithRangeAndName = (
       range: Range,
       name: string,
-    ): Diagnostic => {
+    ): IDiagnostic => {
       return {
-        code: "unused_import",
         message: `Unused import \`${name}\``,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
+        data: {
+          uri,
+          code: "unused_import",
+        },
       };
     };
 
@@ -408,14 +418,17 @@ foo = 1
     const diagnosticWithRangeAndName = (
       range: Range,
       name: string,
-    ): Diagnostic => {
+    ): IDiagnostic => {
       return {
-        code: "unused_alias",
         message: `Unused import alias \`${name}\``,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
+        data: {
+          uri,
+          code: "unused_alias",
+        },
       };
     };
 
@@ -510,14 +523,17 @@ type alias Thing = { name : B.Name }
       range: Range,
       name: string,
       type: string,
-    ): Diagnostic => {
+    ): IDiagnostic => {
       return {
-        code: "unused_imported_value",
         message: `Unused imported ${type} \`${name}\``,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
+        data: {
+          uri,
+          code: "unused_imported_value",
+        },
       };
     };
 
@@ -702,14 +718,17 @@ x y =
     const diagnosticWithRangeAndName = (
       range: Range,
       name: string,
-    ): Diagnostic => {
+    ): IDiagnostic => {
       return {
-        code: "unused_pattern",
         message: `Unused pattern variable \`${name}\``,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
+        data: {
+          uri,
+          code: "unused_pattern",
+        },
       };
     };
 
@@ -876,13 +895,16 @@ x =
   });
 
   describe("drop cons of item and list", () => {
-    const diagnosticWithRange = (range: Range): Diagnostic => {
+    const diagnosticWithRange = (range: Range): IDiagnostic => {
       return {
-        code: "drop_cons_of_item_and_list",
         message: `If you cons an item to a literal list, then you can just put the item into the list.`,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
+        data: {
+          uri,
+          code: "drop_cons_of_item_and_list",
+        },
       };
     };
 
@@ -917,13 +939,16 @@ foo =
   });
 
   describe("map nothing to nothing", () => {
-    const diagnosticWithRange = (range: Range): Diagnostic => {
+    const diagnosticWithRange = (range: Range): IDiagnostic => {
       return {
-        code: "map_nothing_to_nothing",
         message: `\`Nothing\` mapped to \`Nothing\` in case expression. Use Maybe.map or Maybe.andThen instead.`,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
+        data: {
+          uri,
+          code: "map_nothing_to_nothing",
+        },
       };
     };
 
@@ -970,13 +995,16 @@ y = case x of
   });
 
   describe("drop concat of lists", () => {
-    const diagnosticWithRange = (range: Range): Diagnostic => {
+    const diagnosticWithRange = (range: Range): IDiagnostic => {
       return {
-        code: "drop_concat_of_lists",
         message: `If you concatenate two lists, then you can merge them into one list.`,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
+        data: {
+          uri,
+          code: "drop_concat_of_lists",
+        },
       };
     };
 
@@ -1028,13 +1056,16 @@ foo =
   });
 
   describe("use cons over concat", () => {
-    const diagnosticWithRange = (range: Range): Diagnostic => {
+    const diagnosticWithRange = (range: Range): IDiagnostic => {
       return {
-        code: "use_cons_over_concat",
         message: `If you concatenate two lists, but the first item is a single element list, then you should use the cons operator.`,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
+        data: {
+          uri,
+          code: "use_cons_over_concat",
+        },
       };
     };
 
@@ -1069,13 +1100,16 @@ foo =
   });
 
   describe("single field record", () => {
-    const diagnosticWithRange = (range: Range): Diagnostic => {
+    const diagnosticWithRange = (range: Range): IDiagnostic => {
       return {
-        code: "single_field_record",
         message: `Using a record is obsolete if you only plan to store a single field in it.`,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
+        data: {
+          uri,
+          code: "single_field_record",
+        },
       };
     };
 
@@ -1173,13 +1207,16 @@ type alias CheckboxParams a =
   });
 
   describe("unnecessary list concat", () => {
-    const diagnosticWithRange = (range: Range): Diagnostic => {
+    const diagnosticWithRange = (range: Range): IDiagnostic => {
       return {
-        code: "unnecessary_list_concat",
         message: `You should just merge the arguments of \`List.concat\` to a single list.`,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
+        data: {
+          uri,
+          code: "unnecessary_list_concat",
+        },
       };
     };
 
@@ -1239,13 +1276,16 @@ foo =
   });
 
   describe("unnecessary port module", () => {
-    const diagnosticWithRange = (range: Range): Diagnostic => {
+    const diagnosticWithRange = (range: Range): IDiagnostic => {
       return {
-        code: "unnecessary_port_module",
         message: `Module is definined as a \`port\` module, but does not define any ports.`,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
+        data: {
+          uri,
+          code: "unnecessary_port_module",
+        },
       };
     };
 
@@ -1288,13 +1328,16 @@ port foo : String -> Cmd msg
   });
 
   describe("fully applied operator as prefix", () => {
-    const diagnosticWithRange = (range: Range): Diagnostic => {
+    const diagnosticWithRange = (range: Range): IDiagnostic => {
       return {
-        code: "no_uncurried_prefix",
         message: `Don't use fully applied prefix notation for operators.`,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
+        data: {
+          uri,
+          code: "no_uncurried_prefix",
+        },
       };
     };
 
@@ -1328,14 +1371,17 @@ foo = (+) 1
     const diagnosticWithRangeAndName = (
       range: Range,
       name: string,
-    ): Diagnostic => {
+    ): IDiagnostic => {
       return {
-        code: "unused_type_alias",
         message: `Type alias \`${name}\` is not used.`,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
+        data: {
+          uri,
+          code: "unused_type_alias",
+        },
       };
     };
 
@@ -1440,14 +1486,17 @@ foo = 1
     const diagnosticWithRangeAndName = (
       range: Range,
       name: string,
-    ): Diagnostic => {
+    ): IDiagnostic => {
       return {
-        code: "unused_value_constructor",
         message: `Value constructor \`${name}\` is not used.`,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,
         tags: [DiagnosticTag.Unnecessary],
+        data: {
+          uri,
+          code: "unused_value_constructor",
+        },
       };
     };
 

@@ -2,7 +2,11 @@ import { container } from "tsyringe";
 import { CodeAction } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { IElmWorkspace } from "../src/elmWorkspace";
-import { CodeActionProvider, ICodeActionParams } from "../src/providers";
+import {
+  CodeActionProvider,
+  convertFromAnalyzerDiagnostic,
+  ICodeActionParams,
+} from "../src/providers";
 import { Utils } from "../src/util/utils";
 import { baseUri } from "./utils/mockElmWorkspace";
 import { getTargetPositionFromSource } from "./utils/sourceParser";
@@ -90,7 +94,8 @@ describe("test codeActionProvider", () => {
         context: {
           diagnostics: program
             .getDiagnostics(sourceFile)
-            .filter((diag) => Utils.rangeOverlaps(diag.range, range)),
+            .filter((diag) => Utils.rangeOverlaps(diag.range, range))
+            .map(convertFromAnalyzerDiagnostic),
         },
       }) ?? [];
 
