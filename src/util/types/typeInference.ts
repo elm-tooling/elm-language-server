@@ -46,8 +46,12 @@ import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
 import { TypeChecker } from "./typeChecker";
 import { performance } from "perf_hooks";
 import { ICancellationToken } from "../../cancellation";
-import { Diagnostics, error, errorWithEndNode } from "./diagnostics";
-import { Diagnostic } from "vscode-languageserver";
+import {
+  Diagnostic,
+  Diagnostics,
+  error,
+  errorWithEndNode,
+} from "./diagnostics";
 
 export let inferTime = 0;
 export function resetInferTime(): void {

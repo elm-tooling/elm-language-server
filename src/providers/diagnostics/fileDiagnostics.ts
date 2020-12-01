@@ -1,5 +1,5 @@
-import { Diagnostic } from "vscode-languageserver";
 import { Utils } from "../../util/utils";
+import { IDiagnostic } from "./diagnosticsProvider";
 
 export const enum DiagnosticKind {
   ElmMake,
@@ -8,16 +8,17 @@ export const enum DiagnosticKind {
   ElmLS,
 }
 
-export function diagnosticsEquals(a: Diagnostic, b: Diagnostic): boolean {
+export function diagnosticsEquals(a: IDiagnostic, b: IDiagnostic): boolean {
   if (a === b) {
     return true;
   }
 
   return (
-    a.code === b.code &&
     a.message === b.message &&
     a.severity === b.severity &&
     a.source === b.source &&
+    a.data.code === b.data.code &&
+    a.data.uri === b.data.uri &&
     Utils.rangeEquals(a.range, b.range) &&
     Utils.arrayEquals(
       a.relatedInformation ?? [],
@@ -35,14 +36,14 @@ export function diagnosticsEquals(a: Diagnostic, b: Diagnostic): boolean {
 }
 
 export class FileDiagnostics {
-  private diagnostics: Map<DiagnosticKind, Diagnostic[]> = new Map<
+  private diagnostics: Map<DiagnosticKind, IDiagnostic[]> = new Map<
     DiagnosticKind,
-    Diagnostic[]
+    IDiagnostic[]
   >();
 
   constructor(public uri: string) {}
 
-  public get(): Diagnostic[] {
+  public get(): IDiagnostic[] {
     return [
       ...this.getForKind(DiagnosticKind.ElmMake),
       ...this.getForKind(DiagnosticKind.ElmTest),
@@ -51,7 +52,7 @@ export class FileDiagnostics {
     ];
   }
 
-  public update(kind: DiagnosticKind, diagnostics: Diagnostic[]): boolean {
+  public update(kind: DiagnosticKind, diagnostics: IDiagnostic[]): boolean {
     const existing = this.getForKind(kind);
     if (Utils.arrayEquals(existing, diagnostics, diagnosticsEquals)) {
       return false;
@@ -61,7 +62,7 @@ export class FileDiagnostics {
     return true;
   }
 
-  public getForKind(kind: DiagnosticKind): Diagnostic[] {
+  public getForKind(kind: DiagnosticKind): IDiagnostic[] {
     return this.diagnostics.get(kind) ?? [];
   }
 }

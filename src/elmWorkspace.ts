@@ -4,7 +4,7 @@ import os from "os";
 import path from "path";
 import { container } from "tsyringe";
 import util from "util";
-import { Connection, Diagnostic } from "vscode-languageserver";
+import { Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { ICancellationToken } from "./cancellation";
@@ -15,6 +15,7 @@ import {
   PossibleImportsCache,
 } from "./util/possibleImportsCache";
 import { Settings } from "./util/settings";
+import { Diagnostic } from "./util/types/diagnostics";
 import { TypeCache } from "./util/types/typeCache";
 import {
   createTypeChecker,

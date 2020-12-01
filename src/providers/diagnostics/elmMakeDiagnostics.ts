@@ -8,7 +8,6 @@ import {
   CodeAction,
   CodeActionKind,
   CodeActionParams,
-  Diagnostic,
   Connection,
   TextEdit,
 } from "vscode-languageserver";
@@ -22,7 +21,7 @@ import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { Settings } from "../../util/settings";
 import { TreeUtils } from "../../util/treeUtils";
 import { Utils } from "../../util/utils";
-import { IElmIssue } from "./diagnosticsProvider";
+import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
 import { IElmWorkspace } from "../../elmWorkspace";
@@ -106,10 +105,10 @@ export class ElmMakeDiagnostics {
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
   private neededImports: Map<
     string,
-    { moduleName: string; valueName?: string; diagnostic: Diagnostic }[]
+    { moduleName: string; valueName?: string; diagnostic: IDiagnostic }[]
   > = new Map<
     string,
-    { moduleName: string; valueName?: string; diagnostic: Diagnostic }[]
+    { moduleName: string; valueName?: string; diagnostic: IDiagnostic }[]
   >();
   private settings: Settings;
   private connection: Connection;
@@ -122,7 +121,7 @@ export class ElmMakeDiagnostics {
 
   public createDiagnostics = async (
     filePath: URI,
-  ): Promise<Map<string, Diagnostic[]>> => {
+  ): Promise<Map<string, IDiagnostic[]>> => {
     const workspaceRootPath = this.elmWorkspaceMatcher
       .getProgramFor(filePath)
       .getRootPath();
@@ -200,15 +199,15 @@ export class ElmMakeDiagnostics {
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
     const { uri } = params.textDocument;
-    const elmMakeDiagnostics: Diagnostic[] = this.filterElmMakeDiagnostics(
-      params.context.diagnostics,
+    const elmMakeDiagnostics: IDiagnostic[] = this.filterElmMakeDiagnostics(
+      params.context.diagnostics as IDiagnostic[],
     );
 
     return this.convertDiagnosticsToCodeActions(elmMakeDiagnostics, uri);
   }
 
   private convertDiagnosticsToCodeActions(
-    diagnostics: Diagnostic[],
+    diagnostics: IDiagnostic[],
     uri: string,
   ): CodeAction[] {
     const result: CodeAction[] = [];
@@ -295,7 +294,7 @@ export class ElmMakeDiagnostics {
 
   private addCaseQuickfixes(
     sourceTree: ITreeContainer | undefined,
-    diagnostic: Diagnostic,
+    diagnostic: IDiagnostic,
     uri: string,
     elmWorkspace: IElmWorkspace,
   ): CodeAction[] {
@@ -393,7 +392,7 @@ export class ElmMakeDiagnostics {
   private createCaseQuickFix(
     uri: string,
     replaceWith: string,
-    diagnostic: Diagnostic,
+    diagnostic: IDiagnostic,
     title: string,
   ): CodeAction {
     const map: {
@@ -414,7 +413,7 @@ export class ElmMakeDiagnostics {
   private createQuickFix(
     uri: string,
     replaceWith: string,
-    diagnostic: Diagnostic,
+    diagnostic: IDiagnostic,
     title: string,
   ): CodeAction {
     const map: {
@@ -434,7 +433,7 @@ export class ElmMakeDiagnostics {
 
   private createImportQuickFix(
     uri: string,
-    diagnostic: Diagnostic,
+    diagnostic: IDiagnostic,
     moduleName: string,
     nameToImport?: string,
   ): CodeAction {
@@ -469,7 +468,7 @@ export class ElmMakeDiagnostics {
     };
   }
 
-  private filterElmMakeDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
+  private filterElmMakeDiagnostics(diagnostics: IDiagnostic[]): IDiagnostic[] {
     return diagnostics.filter((diagnostic) => diagnostic.source === ELM_MAKE);
   }
 

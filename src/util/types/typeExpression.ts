@@ -35,8 +35,7 @@ import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { Utils } from "../utils";
 import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
 import { IElmWorkspace } from "../../elmWorkspace";
-import { Diagnostic } from "vscode-languageserver";
-import { Diagnostics, error } from "./diagnostics";
+import { Diagnostic, Diagnostics, error } from "./diagnostics";
 
 export class TypeExpression {
   // All the type variables we've seen

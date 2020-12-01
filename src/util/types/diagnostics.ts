@@ -1,6 +1,16 @@
-import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
+/* eslint-disable @typescript-eslint/naming-convention */
+import { DiagnosticSeverity, Range } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
 import { PositionUtil } from "../../positionUtil";
+
+export interface Diagnostic {
+  code: string;
+  message: string;
+  source: string;
+  severity: DiagnosticSeverity;
+  range: Range;
+  uri: string;
+}
 
 function format(text: string, ...args: (string | number)[]): string {
   return text.replace(/{(\d+)}/g, (_match, index: string) => `${args[+index]}`);
@@ -23,7 +33,7 @@ export function errorWithEndNode(
     code: diagnostic.code,
     severity: diagnostic.severity,
     source: "elm",
-    data: { uri: node.tree.uri },
+    uri: node.tree.uri,
   };
 }
 

@@ -1,10 +1,11 @@
 import { debug } from "console";
-import { Diagnostic } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
+import { convertFromAnalyzerDiagnostic } from "../../src/providers";
 import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics";
 import { TreeUtils } from "../../src/util/treeUtils";
 import {
+  Diagnostic,
   Diagnostics,
   error,
   IDiagnosticMessage,
@@ -93,11 +94,13 @@ describe("test elm diagnostics", () => {
     }
 
     const expected = expectedDiagnostics.map((exp) =>
-      error(nodeAtPosition, exp.message, ...exp.args),
+      convertFromAnalyzerDiagnostic(
+        error(nodeAtPosition, exp.message, ...exp.args),
+      ),
     );
 
     const diagnosticsEqual = Utils.arrayEquals(
-      diagnostics,
+      diagnostics.map(convertFromAnalyzerDiagnostic),
       expected,
       diagnosticsEquals,
     );

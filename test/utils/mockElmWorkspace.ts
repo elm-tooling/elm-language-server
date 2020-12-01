@@ -16,8 +16,8 @@ import {
   IPossibleImportsCache,
   PossibleImportsCache,
 } from "../../src/util/possibleImportsCache";
-import { Diagnostic } from "vscode-languageserver";
 import { ICancellationToken } from "../../src/cancellation";
+import { Diagnostic } from "../../src/util/types/diagnostics";
 
 export const baseUri = Path.join(__dirname, "../sources/src/");
 

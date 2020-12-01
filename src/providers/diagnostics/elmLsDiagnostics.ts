@@ -5,7 +5,6 @@ import {
   CodeAction,
   CodeActionKind,
   CodeActionParams,
-  Diagnostic,
   DiagnosticSeverity,
   DiagnosticTag,
   Range,
@@ -19,6 +18,7 @@ import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Utils } from "../../util/utils";
+import { IDiagnostic } from "./diagnosticsProvider";
 
 export class ElmLsDiagnostics {
   ELMLS = "ElmLS";
@@ -331,7 +331,7 @@ export class ElmLsDiagnostics {
   public createDiagnostics = (
     treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
-  ): Diagnostic[] => {
+  ): IDiagnostic[] => {
     const tree = treeContainer.tree;
     const uri = treeContainer.uri;
     try {
@@ -360,15 +360,15 @@ export class ElmLsDiagnostics {
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
     const { uri } = params.textDocument;
-    const elmDiagnostics: Diagnostic[] = params.context.diagnostics.filter(
+    const elmDiagnostics: IDiagnostic[] = params.context.diagnostics.filter(
       (diagnostic) => diagnostic.source === this.ELMLS,
-    );
+    ) as IDiagnostic[];
 
     return this.convertDiagnosticsToCodeActions(elmDiagnostics, uri);
   }
 
   private convertDiagnosticsToCodeActions(
-    diagnostics: Diagnostic[],
+    diagnostics: IDiagnostic[],
     uri: string,
   ): CodeAction[] {
     const result: CodeAction[] = [];
@@ -381,7 +381,7 @@ export class ElmLsDiagnostics {
 
     if (treeContainer) {
       diagnostics.forEach((diagnostic) => {
-        if (diagnostic.code === "unused_imported_value") {
+        if (diagnostic.data.code === "unused_imported_value") {
           const node = TreeUtils.getNamedDescendantForPosition(
             treeContainer.tree.rootNode,
             diagnostic.range.start,
@@ -427,7 +427,7 @@ export class ElmLsDiagnostics {
           }
         }
 
-        if (diagnostic.code === "unused_alias") {
+        if (diagnostic.data.code === "unused_alias") {
           const node = TreeUtils.getNamedDescendantForPosition(
             treeContainer.tree.rootNode,
             diagnostic.range.end,
@@ -443,7 +443,7 @@ export class ElmLsDiagnostics {
           });
         }
 
-        if (diagnostic.code === "unused_pattern") {
+        if (diagnostic.data.code === "unused_pattern") {
           const node = TreeUtils.getNamedDescendantForPosition(
             treeContainer.tree.rootNode,
             diagnostic.range.start,
@@ -468,8 +468,8 @@ export class ElmLsDiagnostics {
     return result;
   }
 
-  private getUnusedImportDiagnostics(tree: Tree): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  private getUnusedImportDiagnostics(tree: Tree): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const moduleImports = this.moduleImportsQuery
       .matches(tree.rootNode)
@@ -495,12 +495,12 @@ export class ElmLsDiagnostics {
 
       if (references.length === 0 && moduleImport.parent) {
         diagnostics.push({
-          code: "unused_import",
           range: this.getNodeRange(moduleImport.parent),
           message: `Unused import \`${moduleImport.text}\``,
           severity: DiagnosticSeverity.Warning,
           source: this.ELMLS,
           tags: [DiagnosticTag.Unnecessary],
+          data: { uri: tree.uri, code: "unused_import" },
         });
       }
     });
@@ -508,8 +508,8 @@ export class ElmLsDiagnostics {
     return diagnostics;
   }
 
-  private getUnusedImportValueAndTypeDiagnostics(tree: Tree): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  private getUnusedImportValueAndTypeDiagnostics(tree: Tree): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const exposedValuesAndTypes = this.exposedValuesAndTypesQuery
       .matches(tree.rootNode)
@@ -541,7 +541,6 @@ export class ElmLsDiagnostics {
 
       if (references.length === 0) {
         diagnostics.push({
-          code: "unused_imported_value",
           range: this.getNodeRange(exposedValueOrType),
           message: `Unused imported ${
             exposedValueOrType.type === "exposed_type" ? "type" : "value"
@@ -549,6 +548,7 @@ export class ElmLsDiagnostics {
           severity: DiagnosticSeverity.Warning,
           source: this.ELMLS,
           tags: [DiagnosticTag.Unnecessary],
+          data: { uri: tree.uri, code: "unused_imported_value" },
         });
       }
     });
@@ -556,8 +556,8 @@ export class ElmLsDiagnostics {
     return diagnostics;
   }
 
-  private getUnusedImportAliasDiagnostics(tree: Tree): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  private getUnusedImportAliasDiagnostics(tree: Tree): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const moduleAliases = this.importModuleAliasesQuery
       .matches(tree.rootNode)
@@ -573,12 +573,12 @@ export class ElmLsDiagnostics {
 
       if (references.length === 0 && moduleAlias.parent) {
         diagnostics.push({
-          code: "unused_alias",
           range: this.getNodeRange(moduleAlias.parent),
           message: `Unused import alias \`${moduleAlias.text}\``,
           severity: DiagnosticSeverity.Warning,
           source: this.ELMLS,
           tags: [DiagnosticTag.Unnecessary],
+          data: { uri: tree.uri, code: "unused_alias" },
         });
       }
     });
@@ -586,8 +586,8 @@ export class ElmLsDiagnostics {
     return diagnostics;
   }
 
-  private getUnusedPatternVariableDiagnostics(tree: Tree): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  private getUnusedPatternVariableDiagnostics(tree: Tree): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const patternMatches = this.patternsQuery.matches(tree.rootNode);
 
@@ -654,23 +654,23 @@ export class ElmLsDiagnostics {
 
           if (!outsideRef) {
             diagnostics.push({
-              code: "unused_top_level",
               range: this.getNodeRange(pattern),
               message: `Unused top level definition \`${pattern.text}\``,
               severity: DiagnosticSeverity.Warning,
               source: this.ELMLS,
               tags: [DiagnosticTag.Unnecessary],
+              data: { uri: tree.uri, code: "unused_top_level" },
             });
           }
         } else if (references.length === 0) {
           {
             diagnostics.push({
-              code: "unused_pattern",
               range: this.getNodeRange(pattern),
               message: `Unused pattern variable \`${pattern.text}\``,
               severity: DiagnosticSeverity.Warning,
               source: this.ELMLS,
               tags: [DiagnosticTag.Unnecessary],
+              data: { uri: tree.uri, code: "unused_pattern" },
             });
           }
         }
@@ -681,8 +681,8 @@ export class ElmLsDiagnostics {
 
   private getCaseBranchMapNothingToNothingDiagnostics(
     tree: Tree,
-  ): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  ): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const caseBranches = this.caseBranchesQuery
       .matches(tree.rootNode)
@@ -690,19 +690,19 @@ export class ElmLsDiagnostics {
 
     caseBranches.forEach((caseBranch) => {
       diagnostics.push({
-        code: "map_nothing_to_nothing",
         range: this.getNodeRange(caseBranch),
         message: `\`Nothing\` mapped to \`Nothing\` in case expression. Use Maybe.map or Maybe.andThen instead.`,
         severity: DiagnosticSeverity.Warning,
         source: this.ELMLS,
+        data: { uri: tree.uri, code: "map_nothing_to_nothing" },
       });
     });
 
     return diagnostics;
   }
 
-  private getBooleanCaseExpressionDiagnostics(tree: Tree): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  private getBooleanCaseExpressionDiagnostics(tree: Tree): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     // For some reason, we can't match on case_expr, tree-sitter throws a memory access error
     const caseExpressions = this.booleanCaseExpressionsQuery
@@ -712,19 +712,19 @@ export class ElmLsDiagnostics {
 
     caseExpressions.forEach((caseExpr) => {
       diagnostics.push({
-        code: "boolean_case_expr",
         range: this.getNodeRange(caseExpr),
         message: `Use an if expression instead of a case expression.`,
         severity: DiagnosticSeverity.Warning,
         source: this.ELMLS,
+        data: { uri: tree.uri, code: "boolean_case_expr" },
       });
     });
 
     return diagnostics;
   }
 
-  private getDropConcatOfListsDiagnostics(tree: Tree): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  private getDropConcatOfListsDiagnostics(tree: Tree): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const listExpressions = this.concatOfListsQuery
       .matches(tree.rootNode)
@@ -733,7 +733,6 @@ export class ElmLsDiagnostics {
 
     listExpressions.forEach(([startList, endList]) => {
       diagnostics.push({
-        code: "drop_concat_of_lists",
         range: {
           start: this.getNodeRange(startList).start,
           end: this.getNodeRange(endList).end,
@@ -741,14 +740,15 @@ export class ElmLsDiagnostics {
         message: `If you concatenate two lists, then you can merge them into one list.`,
         severity: DiagnosticSeverity.Warning,
         source: this.ELMLS,
+        data: { uri: tree.uri, code: "drop_concat_of_lists" },
       });
     });
 
     return diagnostics;
   }
 
-  private getDropConsOfItemAndListDiagnostics(tree: Tree): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  private getDropConsOfItemAndListDiagnostics(tree: Tree): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const consExpressions = this.consOfItemAndListQuery
       .matches(tree.rootNode)
@@ -757,7 +757,6 @@ export class ElmLsDiagnostics {
 
     consExpressions.forEach(([itemExpr, listExpr]) => {
       diagnostics.push({
-        code: "drop_cons_of_item_and_list",
         range: {
           start: this.getNodeRange(itemExpr).start,
           end: this.getNodeRange(listExpr).end,
@@ -765,14 +764,15 @@ export class ElmLsDiagnostics {
         message: `If you cons an item to a literal list, then you can just put the item into the list.`,
         severity: DiagnosticSeverity.Warning,
         source: this.ELMLS,
+        data: { uri: tree.uri, code: "drop_cons_of_item_and_list" },
       });
     });
 
     return diagnostics;
   }
 
-  private getUseConsOverConcatDiagnostics(tree: Tree): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  private getUseConsOverConcatDiagnostics(tree: Tree): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const concatExpressions = this.useConsOverConcatQuery
       .matches(tree.rootNode)
@@ -781,7 +781,6 @@ export class ElmLsDiagnostics {
 
     concatExpressions.forEach(([firstPart, lastPart]) => {
       diagnostics.push({
-        code: "use_cons_over_concat",
         range: {
           start: this.getNodeRange(firstPart).start,
           end: this.getNodeRange(lastPart).end,
@@ -789,6 +788,7 @@ export class ElmLsDiagnostics {
         message: `If you concatenate two lists, but the first item is a single element list, then you should use the cons operator.`,
         severity: DiagnosticSeverity.Warning,
         source: this.ELMLS,
+        data: { uri: tree.uri, code: "use_cons_over_concat" },
       });
     });
 
@@ -799,8 +799,8 @@ export class ElmLsDiagnostics {
     tree: Tree,
     uri: string,
     elmWorkspace: IElmWorkspace,
-  ): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  ): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const recordTypes = this.singleFieldRecordTypesQuery
       .matches(tree.rootNode)
@@ -827,11 +827,11 @@ export class ElmLsDiagnostics {
 
       if (isSingleField) {
         diagnostics.push({
-          code: "single_field_record",
           range: this.getNodeRange(recordType),
           message: `Using a record is obsolete if you only plan to store a single field in it.`,
           severity: DiagnosticSeverity.Warning,
           source: this.ELMLS,
+          data: { uri: tree.uri, code: "single_field_record" },
         });
       }
     });
@@ -839,8 +839,8 @@ export class ElmLsDiagnostics {
     return diagnostics;
   }
 
-  private getUnnecessaryListConcatDiagnostics(tree: Tree): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  private getUnnecessaryListConcatDiagnostics(tree: Tree): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const listConcats = this.unnecessaryListConcatQuery
       .matches(tree.rootNode)
@@ -849,19 +849,19 @@ export class ElmLsDiagnostics {
 
     listConcats.forEach((listConcat) => {
       diagnostics.push({
-        code: "unnecessary_list_concat",
         range: this.getNodeRange(listConcat),
         message: `You should just merge the arguments of \`List.concat\` to a single list.`,
         severity: DiagnosticSeverity.Warning,
         source: this.ELMLS,
+        data: { uri: tree.uri, code: "unnecessary_list_concat" },
       });
     });
 
     return diagnostics;
   }
 
-  private getUnnecessaryPortModuleDiagnostics(tree: Tree): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  private getUnnecessaryPortModuleDiagnostics(tree: Tree): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const unusedPortMatches = this.unusedPortModuleQuery.matches(tree.rootNode);
 
@@ -870,19 +870,21 @@ export class ElmLsDiagnostics {
       !unusedPortMatches[1]
     ) {
       diagnostics.push({
-        code: "unnecessary_port_module",
         range: this.getNodeRange(unusedPortMatches[0].captures[0].node),
         message: `Module is definined as a \`port\` module, but does not define any ports.`,
         severity: DiagnosticSeverity.Warning,
         source: this.ELMLS,
+        data: { uri: tree.uri, code: "unnecessary_port_module" },
       });
     }
 
     return diagnostics;
   }
 
-  private getFullyAppliedOperatorAsPrefixDiagnostics(tree: Tree): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  private getFullyAppliedOperatorAsPrefixDiagnostics(
+    tree: Tree,
+  ): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const operatorFunctions = this.operatorFunctionsQuery
       .matches(tree.rootNode)
@@ -891,19 +893,19 @@ export class ElmLsDiagnostics {
 
     operatorFunctions.forEach((operatorFunction) => {
       diagnostics.push({
-        code: "no_uncurried_prefix",
         range: this.getNodeRange(operatorFunction),
         message: `Don't use fully applied prefix notation for operators.`,
         severity: DiagnosticSeverity.Warning,
         source: this.ELMLS,
+        data: { uri: tree.uri, code: "no_uncurried_prefix" },
       });
     });
 
     return diagnostics;
   }
 
-  private getUnusedTypeAliasDiagnostics(tree: Tree): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  private getUnusedTypeAliasDiagnostics(tree: Tree): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const typeAliases = this.typeAliasesQuery
       .matches(tree.rootNode)
@@ -932,12 +934,12 @@ export class ElmLsDiagnostics {
 
       if (references.length === 0 && typeAlias.parent) {
         diagnostics.push({
-          code: "unused_type_alias",
           range: this.getNodeRange(typeAlias.parent),
           message: `Type alias \`${typeAlias.text}\` is not used.`,
           severity: DiagnosticSeverity.Warning,
           source: this.ELMLS,
           tags: [DiagnosticTag.Unnecessary],
+          data: { uri: tree.uri, code: "unused_type_alias" },
         });
       }
     });
@@ -945,8 +947,8 @@ export class ElmLsDiagnostics {
     return diagnostics;
   }
 
-  private getUnusedValueConstructorDiagnostics(tree: Tree): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+  private getUnusedValueConstructorDiagnostics(tree: Tree): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
 
     const unionVariants = this.unionVariantsQuery
       .matches(tree.rootNode)
@@ -980,12 +982,12 @@ export class ElmLsDiagnostics {
 
       if (references.length === 0 && unionVariant.parent) {
         diagnostics.push({
-          code: "unused_value_constructor",
           range: this.getNodeRange(unionVariant.parent),
           message: `Value constructor \`${unionVariant.text}\` is not used.`,
           severity: DiagnosticSeverity.Warning,
           source: this.ELMLS,
           tags: [DiagnosticTag.Unnecessary],
+          data: { uri: tree.uri, code: "unused_value_constructor" },
         });
       }
     });

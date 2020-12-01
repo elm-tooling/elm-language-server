@@ -36,6 +36,13 @@ export interface IElmIssue {
   file: string;
 }
 
+export interface IDiagnostic extends Omit<Diagnostic, "code"> {
+  data: {
+    uri: string;
+    code: string;
+  };
+}
+
 class PendingDiagnostics extends Map<string, number> {
   public getOrderedFiles(): string[] {
     return Array.from(this.entries())
@@ -177,7 +184,7 @@ export class DiagnosticsProvider {
     return result;
   }
 
-  public getCurrentDiagnostics(uri: string): Diagnostic[] {
+  public getCurrentDiagnostics(uri: string): IDiagnostic[] {
     return this.currentDiagnostics.get(uri)?.get() ?? [];
   }
 
@@ -242,7 +249,7 @@ export class DiagnosticsProvider {
   private updateDiagnostics(
     uri: string,
     kind: DiagnosticKind,
-    diagnostics: Diagnostic[],
+    diagnostics: IDiagnostic[],
   ): void {
     let didUpdate = false;
 
@@ -377,7 +384,7 @@ export class DiagnosticsProvider {
   }
 
   private resetDiagnostics(
-    diagnosticList: Map<string, Diagnostic[]>,
+    diagnosticList: Map<string, IDiagnostic[]>,
     diagnosticKind: DiagnosticKind,
   ): void {
     this.currentDiagnostics.forEach((fileDiagnostics, diagnosticsUri) => {

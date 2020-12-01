@@ -9,7 +9,7 @@ import {
 } from "./expressionTree";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { container } from "tsyringe";
-import { Connection, Diagnostic } from "vscode-languageserver";
+import { Connection } from "vscode-languageserver";
 import {
   Type,
   TUnknown,
@@ -25,7 +25,7 @@ import { Sequence } from "../sequence";
 import { Utils } from "../utils";
 import { TypeExpression } from "./typeExpression";
 import { ICancellationToken } from "../../cancellation";
-import { Diagnostics, error } from "./diagnostics";
+import { Diagnostic, Diagnostics, error } from "./diagnostics";
 
 export let bindTime = 0;
 export function resetBindTime(): void {
@@ -40,13 +40,11 @@ export interface DefinitionResult {
 
 class DiagnosticsCollection extends Map<string, Diagnostic[]> {
   public add(diagnostic: Diagnostic): void {
-    const uri = (<any>diagnostic.data).uri;
-
-    let diagnostics = super.get(uri);
+    let diagnostics = super.get(diagnostic.uri);
 
     if (!diagnostics) {
       diagnostics = [];
-      super.set(uri, diagnostics);
+      super.set(diagnostic.uri, diagnostics);
     }
 
     diagnostics.push(diagnostic);
