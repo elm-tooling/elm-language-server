@@ -445,6 +445,14 @@ export class TypeExpression {
     } else {
       if (typeRef.firstNamedChild?.firstNamedChild?.text === "List") {
         declaredType = TList(TVar("a"));
+      } else if (typeRef.firstNamedChild?.lastNamedChild) {
+        this.diagnostics.push(
+          error(
+            typeRef.firstNamedChild.lastNamedChild,
+            Diagnostics.MissingValue,
+            typeRef.firstNamedChild.lastNamedChild.text,
+          ),
+        );
       }
     }
 

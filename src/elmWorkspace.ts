@@ -22,6 +22,7 @@ import {
   DefinitionResult,
   TypeChecker,
 } from "./util/types/typeChecker";
+import { Utils } from "./util/utils";
 
 const readFile = util.promisify(fs.readFile);
 const readdir = util.promisify(fs.readdir);
@@ -199,9 +200,8 @@ export class ElmWorkspace implements IElmWorkspace {
       return cached;
     }
 
-    const diagnostics = this.getTypeChecker().getDiagnostics(
-      sourceFile,
-      cancellationToken,
+    const diagnostics = Utils.deduplicateDiagnostics(
+      this.getTypeChecker().getDiagnostics(sourceFile, cancellationToken),
     );
 
     this.diagnosticsCache.set(sourceFile.uri, diagnostics);
@@ -218,9 +218,11 @@ export class ElmWorkspace implements IElmWorkspace {
       return Promise.resolve(cached);
     }
 
-    const diagnostics = await this.getTypeChecker().getDiagnosticsAsync(
-      sourceFile,
-      cancellationToken,
+    const diagnostics = Utils.deduplicateDiagnostics(
+      await this.getTypeChecker().getDiagnosticsAsync(
+        sourceFile,
+        cancellationToken,
+      ),
     );
 
     this.diagnosticsCache.set(sourceFile.uri, diagnostics);

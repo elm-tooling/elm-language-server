@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-use-before-define */
 import { Range } from "vscode-languageserver";
+import { Diagnostic } from "./types/diagnostics";
 
 export class Utils {
   public static notUndefined<T>(x: T | undefined): x is T {
@@ -50,4 +52,46 @@ export class Utils {
     }
     return true;
   }
+
+  public static deduplicate<T>(
+    array: readonly T[],
+    equalityComparer: (a: T, b: T) => boolean,
+  ): T[] {
+    if (array.length === 0) {
+      return [];
+    }
+
+    if (array.length === 1) {
+      return array.slice();
+    }
+
+    const result: T[] = [];
+    for (const item of array) {
+      if (!result.find((other) => equalityComparer(item, other))) {
+        result.push(item);
+      }
+    }
+    return result;
+  }
+
+  public static deduplicateDiagnostics(
+    diagnostics: Diagnostic[],
+  ): Diagnostic[] {
+    return this.deduplicate(diagnostics, diagnosticsEquals);
+  }
+}
+
+export function diagnosticsEquals(a: Diagnostic, b: Diagnostic): boolean {
+  if (a === b) {
+    return true;
+  }
+
+  return (
+    a.message === b.message &&
+    a.severity === b.severity &&
+    a.source === b.source &&
+    a.code === b.code &&
+    a.uri === b.uri &&
+    Utils.rangeEquals(a.range, b.range)
+  );
 }

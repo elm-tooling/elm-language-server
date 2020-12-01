@@ -1041,14 +1041,19 @@ export class InferenceScope {
     let type: Type | undefined;
     // Get the type annotation if there is one
     if (declaration.typeAnnotation) {
-      type = TypeExpression.typeAnnotationInference(
+      const result = TypeExpression.typeAnnotationInference(
         mapSyntaxNodeToExpression(
           declaration.typeAnnotation,
         ) as ETypeAnnotation,
         referenceUri,
         this.elmWorkspace,
         false,
-      )?.type;
+      );
+
+      if (result) {
+        type = result.type;
+        this.diagnostics.push(...result.diagnostics);
+      }
     }
 
     if (!type) {
@@ -1594,7 +1599,7 @@ export class InferenceScope {
     valueDeclaration: EValueDeclaration,
     functionDeclaration: EFunctionDeclarationLeft,
   ): ParameterBindingResult {
-    const typeRefType = valueDeclaration.typeAnnotation
+    const typeRefResult = valueDeclaration.typeAnnotation
       ? TypeExpression.typeAnnotationInference(
           mapSyntaxNodeToExpression(
             valueDeclaration.typeAnnotation,
@@ -1602,12 +1607,12 @@ export class InferenceScope {
           this.uri,
           this.elmWorkspace,
           true,
-        )?.type
+        )
       : undefined;
 
     const patterns = functionDeclaration.params;
 
-    if (!typeRefType) {
+    if (!typeRefResult) {
       const params = this.uniqueVars(patterns.length);
       patterns.forEach((pat, i) => this.bindPattern(pat, params[i], true));
       return {
@@ -1616,6 +1621,9 @@ export class InferenceScope {
         count: params.length,
       } as Unannotated;
     }
+
+    this.diagnostics.push(...typeRefResult.diagnostics);
+    const typeRefType = typeRefResult.type;
 
     const maxParams =
       typeRefType.nodeType === "Function" ? typeRefType.params.length : 0;
