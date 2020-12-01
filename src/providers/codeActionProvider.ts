@@ -90,13 +90,14 @@ export class CodeActionProvider {
     params: ICodeActionParams,
     title: string,
     edits: TextEdit[],
+    isPreferred = false,
   ): CodeAction {
     const changes = { [params.sourceFile.uri]: edits };
     return {
       title,
       kind: CodeActionKind.QuickFix,
       edit: { changes },
-      isPreferred: true,
+      isPreferred,
     };
   }
 
