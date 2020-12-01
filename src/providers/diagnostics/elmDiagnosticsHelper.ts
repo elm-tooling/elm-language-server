@@ -1,15 +1,15 @@
 import path from "path";
-import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
+import { DiagnosticSeverity, Range } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { Diagnostics } from "../../util/types/diagnostics";
-import { IElmIssue } from "./diagnosticsProvider";
+import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { NAMING_ERROR } from "./elmMakeDiagnostics";
 
 export class ElmDiagnosticsHelper {
   public static issuesToDiagnosticMap(
     issues: IElmIssue[],
     elmWorkspaceFolder: URI,
-  ): Map<string, Diagnostic[]> {
+  ): Map<string, IDiagnostic[]> {
     return issues.reduce((acc, issue) => {
       const uri = this.getUriFromIssue(issue, elmWorkspaceFolder);
       const diagnostic = this.elmMakeIssueToDiagnostic(issue);
@@ -17,7 +17,7 @@ export class ElmDiagnosticsHelper {
       arr.push(diagnostic);
       acc.set(uri, arr);
       return acc;
-    }, new Map<string, Diagnostic[]>());
+    }, new Map<string, IDiagnostic[]>());
   }
 
   private static severityStringToDiagnosticSeverity(
@@ -42,7 +42,7 @@ export class ElmDiagnosticsHelper {
     ).toString();
   }
 
-  private static elmMakeIssueToDiagnostic(issue: IElmIssue): Diagnostic {
+  private static elmMakeIssueToDiagnostic(issue: IElmIssue): IDiagnostic {
     const lineRange: Range = Range.create(
       issue.region.start.line - 1,
       issue.region.start.column - 1,
@@ -52,18 +52,18 @@ export class ElmDiagnosticsHelper {
 
     const messagePrefix = issue.overview ? `${issue.overview} - ` : "";
 
-    let code = undefined;
+    let code = "elm_make";
 
     if (issue.overview.startsWith(NAMING_ERROR)) {
       code = Diagnostics.MissingValue.code;
     }
 
-    return Diagnostic.create(
-      lineRange,
-      `${messagePrefix}${issue.details.replace(/\[\d+m/g, "")}`,
-      this.severityStringToDiagnosticSeverity(issue.type),
-      code,
-      "Elm",
-    );
+    return {
+      range: lineRange,
+      message: `${messagePrefix}${issue.details.replace(/\[\d+m/g, "")}`,
+      severity: this.severityStringToDiagnosticSeverity(issue.type),
+      source: "elm",
+      data: { uri: issue.file, code },
+    };
   }
 }

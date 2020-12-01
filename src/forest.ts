@@ -7,7 +7,7 @@ import { existsSync } from "fs";
 import { URI } from "vscode-uri";
 import { SyntaxNodeMap } from "./util/types/syntaxNodeMap";
 import { SymbolMap } from "./util/types/binder";
-import { Diagnostic } from "vscode-languageserver";
+import { Diagnostic } from "./util/types/diagnostics";
 
 export interface ITreeContainer {
   uri: string;

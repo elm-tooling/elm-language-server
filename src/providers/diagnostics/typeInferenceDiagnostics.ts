@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { CancellationToken, Diagnostic } from "vscode-languageserver";
+import { CancellationToken } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
 import { TreeUtils } from "../../util/treeUtils";
 import { mapSyntaxNodeToExpression } from "../../util/types/expressionTree";
@@ -7,7 +7,21 @@ import { TypeChecker } from "../../util/types/typeChecker";
 import { ITreeContainer } from "../../forest";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { ServerCancellationToken } from "../../cancellation";
-import { Diagnostics, error } from "../../util/types/diagnostics";
+import { Diagnostic, Diagnostics, error } from "../../util/types/diagnostics";
+import { IDiagnostic } from "./diagnosticsProvider";
+
+export function convertFromAnalyzerDiagnostic(diag: Diagnostic): IDiagnostic {
+  return {
+    message: diag.message,
+    source: diag.source,
+    severity: diag.severity,
+    range: diag.range,
+    data: {
+      uri: diag.uri,
+      code: diag.code,
+    },
+  };
+}
 
 export class TypeInferenceDiagnostics {
   TYPE_INFERENCE = "Type Inference";
@@ -16,12 +30,14 @@ export class TypeInferenceDiagnostics {
     treeContainer: ITreeContainer,
     program: IElmWorkspace,
     cancellationToken: CancellationToken,
-  ): Promise<Diagnostic[]> {
+  ): Promise<IDiagnostic[]> {
     const checker = program.getTypeChecker();
 
-    const diagnostics: Diagnostic[] = [];
+    const diagnostics: IDiagnostic[] = [];
 
-    diagnostics.push(...treeContainer.parseDiagnostics);
+    diagnostics.push(
+      ...treeContainer.parseDiagnostics.map(convertFromAnalyzerDiagnostic),
+    );
 
     const allTopLevelFunctions =
       TreeUtils.findAllTopLevelFunctionDeclarations(treeContainer.tree) ?? [];
@@ -33,7 +49,7 @@ export class TypeInferenceDiagnostics {
           new ServerCancellationToken(cancellationToken),
         )
         .then((diag) => {
-          diagnostics.push(...diag);
+          diagnostics.push(...diag.map(convertFromAnalyzerDiagnostic));
 
           // Get other custom diagnostics
           allTopLevelFunctions.forEach((declaration) => {
@@ -56,13 +72,13 @@ export class TypeInferenceDiagnostics {
     checker: TypeChecker,
     declaration: SyntaxNode,
     treeContainer: ITreeContainer,
-  ): Diagnostic[] {
+  ): IDiagnostic[] {
     const valueDeclaration = mapSyntaxNodeToExpression(declaration);
     if (valueDeclaration?.nodeType !== "ValueDeclaration") {
       return [];
     }
 
-    const diagnostics: Diagnostic[] = [];
+    const diagnostics: IDiagnostic[] = [];
 
     if (!valueDeclaration.typeAnnotation) {
       const typeString: string = checker.typeToString(
@@ -76,10 +92,12 @@ export class TypeInferenceDiagnostics {
         declaration.firstNamedChild?.firstNamedChild
       ) {
         diagnostics.push(
-          error(
-            declaration.firstNamedChild.firstNamedChild,
-            Diagnostics.MissingTypeAnnotation,
-            typeString,
+          convertFromAnalyzerDiagnostic(
+            error(
+              declaration.firstNamedChild.firstNamedChild,
+              Diagnostics.MissingTypeAnnotation,
+              typeString,
+            ),
           ),
         );
       }

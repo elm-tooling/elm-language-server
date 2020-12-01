@@ -9,6 +9,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
+import { convertFromAnalyzerDiagnostic } from "./diagnostics/typeInferenceDiagnostics";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher, IParams } from "../util/elmWorkspaceMatcher";
 import { MultiMap } from "../util/multiMap";
@@ -16,6 +17,7 @@ import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { Settings } from "../util/settings";
 import { flatMap, TreeUtils } from "../util/treeUtils";
 import { Diagnostics } from "../util/types/diagnostics";
+import { IDiagnostic } from "./diagnostics/diagnosticsProvider";
 import { ElmLsDiagnostics } from "./diagnostics/elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
 import { diagnosticsEquals } from "./diagnostics/fileDiagnostics";
@@ -134,45 +136,45 @@ export class CodeActionProvider {
     // handles the diagnostic error code and ask for the code actions for that error
     // and the fix all code action for that error if there are other diagnostics with
     // the same error code
-    params.context.diagnostics.forEach((diagnostic) => {
-      if (typeof diagnostic?.code === "string") {
-        const registrations = CodeActionProvider.errorCodeToRegistrationMap.getAll(
-          diagnostic.code,
-        );
+    (<IDiagnostic[]>params.context.diagnostics).forEach((diagnostic) => {
+      const registrations = CodeActionProvider.errorCodeToRegistrationMap.getAll(
+        diagnostic.data.code,
+      );
 
-        // Set the params range to the diagnostic range so we get the correct nodes
-        params.range = diagnostic.range;
+      // Set the params range to the diagnostic range so we get the correct nodes
+      params.range = diagnostic.range;
 
-        results.push(
-          ...flatMap(registrations, (reg) => {
-            const codeActions =
-              reg
-                .getCodeActions(params)
-                ?.map((codeAction) =>
-                  this.addDiagnosticToCodeAction(codeAction, diagnostic),
-                ) ?? [];
+      results.push(
+        ...flatMap(registrations, (reg) => {
+          const codeActions =
+            reg
+              .getCodeActions(params)
+              ?.map((codeAction) =>
+                this.addDiagnosticToCodeAction(codeAction, diagnostic),
+              ) ?? [];
 
-            if (
-              codeActions.length > 0 &&
-              params.program
-                .getDiagnostics(params.sourceFile)
-                .some(
-                  (diag) =>
-                    !diagnosticsEquals(diag, diagnostic) &&
-                    diag.code === diagnostic.code,
-                )
-            ) {
-              const fixAllCodeAction = reg.getFixAllCodeAction(params);
+          if (
+            codeActions.length > 0 &&
+            params.program
+              .getDiagnostics(params.sourceFile)
+              .some(
+                (diag) =>
+                  !diagnosticsEquals(
+                    convertFromAnalyzerDiagnostic(diag),
+                    diagnostic,
+                  ) && diag.code === diagnostic.data.code,
+              )
+          ) {
+            const fixAllCodeAction = reg.getFixAllCodeAction(params);
 
-              if (fixAllCodeAction) {
-                codeActions?.push(fixAllCodeAction);
-              }
+            if (fixAllCodeAction) {
+              codeActions?.push(fixAllCodeAction);
             }
+          }
 
-            return codeActions;
-          }),
-        );
-      }
+          return codeActions;
+        }),
+      );
     });
 
     return [
