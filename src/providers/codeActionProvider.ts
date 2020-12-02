@@ -4,7 +4,7 @@ import {
   CodeActionKind,
   CodeActionParams,
   Connection,
-  Diagnostic,
+  Diagnostic as LspDiagnostic,
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -14,11 +14,14 @@ import { MultiMap } from "../util/multiMap";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { Settings } from "../util/settings";
 import { flatMap, TreeUtils } from "../util/treeUtils";
-import { IDiagnostic } from "./diagnostics/diagnosticsProvider";
+import { Diagnostic } from "../util/types/diagnostics";
+import {
+  convertFromAnalyzerDiagnostic,
+  IDiagnostic,
+} from "./diagnostics/diagnosticsProvider";
 import { ElmLsDiagnostics } from "./diagnostics/elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
 import { diagnosticsEquals } from "./diagnostics/fileDiagnostics";
-import { convertFromAnalyzerDiagnostic } from "./diagnostics/typeInferenceDiagnostics";
 import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 
@@ -70,12 +73,20 @@ export class CodeActionProvider {
     });
   }
 
+  private static getDiagnostics(params: ICodeActionParams): Diagnostic[] {
+    return [
+      ...params.program.getSyntacticDiagnostics(params.sourceFile),
+      ...params.program.getSemanticDiagnostics(params.sourceFile),
+      ...params.program.getSuggestionDiagnostics(params.sourceFile),
+    ];
+  }
+
   private static forEachDiagnostic(
     params: ICodeActionParams,
     errorCodes: string[],
     callback: (diagnostic: Diagnostic) => void,
   ): void {
-    params.program.getDiagnostics(params.sourceFile).forEach((diagnostic) => {
+    CodeActionProvider.getDiagnostics(params).forEach((diagnostic) => {
       if (
         typeof diagnostic.code === "string" &&
         errorCodes.includes(diagnostic.code)
@@ -104,14 +115,14 @@ export class CodeActionProvider {
     params: ICodeActionParams,
     errorCodes: string[],
     fixId: string,
-    callback: (edits: TextEdit[], diagnostic: Diagnostic) => void,
+    callback: (edits: TextEdit[], diagnostic: LspDiagnostic) => void,
   ): CodeAction {
     const edits: TextEdit[] = [];
     const changes = {
       [params.sourceFile.uri]: edits,
     };
 
-    const diagnostics: Diagnostic[] = [];
+    const diagnostics: LspDiagnostic[] = [];
     CodeActionProvider.forEachDiagnostic(params, errorCodes, (diagnostic) => {
       diagnostics.push(diagnostic);
       callback(edits, diagnostic);
@@ -160,15 +171,13 @@ export class CodeActionProvider {
               // Check if there is already a "fix all" code action for this fix
               (codeAction) => /* fixId */ codeAction.data === reg.fixId,
             ) &&
-            params.program
-              .getDiagnostics(params.sourceFile)
-              .some(
-                (diag) =>
-                  !diagnosticsEquals(
-                    convertFromAnalyzerDiagnostic(diag),
-                    diagnostic,
-                  ) && diag.code === diagnostic.data.code,
-              )
+            CodeActionProvider.getDiagnostics(params).some(
+              (diag) =>
+                !diagnosticsEquals(
+                  convertFromAnalyzerDiagnostic(diag),
+                  diagnostic,
+                ) && diag.code === diagnostic.data.code,
+            )
           ) {
             const fixAllCodeAction = reg.getFixAllCodeAction(params);
 
@@ -387,7 +396,7 @@ export class CodeActionProvider {
 
   private addDiagnosticToCodeAction(
     codeAction: CodeAction,
-    diagnostic: Diagnostic,
+    diagnostic: LspDiagnostic,
   ): CodeAction {
     codeAction.diagnostics = [diagnostic];
     return codeAction;

@@ -25,7 +25,6 @@ import {
   ReferencesProvider,
   RenameProvider,
   SelectionRangeProvider,
-  TypeInferenceDiagnostics,
   WorkspaceSymbolProvider,
 } from "./providers";
 import { ElmLsDiagnostics } from "./providers/diagnostics/elmLsDiagnostics";
@@ -146,10 +145,6 @@ export class Server implements ILanguageServer {
 
     container.register(ElmMakeDiagnostics, {
       useValue: new ElmMakeDiagnostics(),
-    });
-
-    container.register(TypeInferenceDiagnostics, {
-      useValue: new TypeInferenceDiagnostics(),
     });
 
     container.register(ElmLsDiagnostics, {

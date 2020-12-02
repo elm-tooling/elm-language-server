@@ -2,11 +2,12 @@ import { container, injectable } from "tsyringe";
 import {
   CancellationToken,
   Connection,
-  Diagnostic,
+  Diagnostic as LspDiagnostic,
   FileChangeType,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
+import { ServerCancellationToken } from "../../cancellation";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { GetDiagnosticsRequest } from "../../protocol";
 import { Delayer } from "../../util/delayer";
@@ -14,12 +15,12 @@ import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { MultistepOperation } from "../../util/multistepOperation";
 import { IClientSettings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
+import { Diagnostic } from "../../util/types/diagnostics";
 import { ASTProvider } from "../astProvider";
 import { DiagnosticsRequest } from "./diagnosticsRequest";
 import { ElmLsDiagnostics } from "./elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics";
-import { TypeInferenceDiagnostics } from "./typeInferenceDiagnostics";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -36,10 +37,23 @@ export interface IElmIssue {
   file: string;
 }
 
-export interface IDiagnostic extends Omit<Diagnostic, "code"> {
+export interface IDiagnostic extends Omit<LspDiagnostic, "code"> {
   data: {
     uri: string;
     code: string;
+  };
+}
+
+export function convertFromAnalyzerDiagnostic(diag: Diagnostic): IDiagnostic {
+  return {
+    message: diag.message,
+    source: diag.source,
+    severity: diag.severity,
+    range: diag.range,
+    data: {
+      uri: diag.uri,
+      code: diag.code,
+    },
   };
 }
 
@@ -54,7 +68,6 @@ class PendingDiagnostics extends Map<string, number> {
 @injectable()
 export class DiagnosticsProvider {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
-  private typeInferenceDiagnostics: TypeInferenceDiagnostics;
   private elmLsDiagnostics: ElmLsDiagnostics;
   private currentDiagnostics: Map<string, FileDiagnostics>;
   private events: TextDocumentEvents;
@@ -74,7 +87,6 @@ export class DiagnosticsProvider {
     this.clientSettings = container.resolve("ClientSettings");
 
     this.elmMakeDiagnostics = container.resolve(ElmMakeDiagnostics);
-    this.typeInferenceDiagnostics = container.resolve(TypeInferenceDiagnostics);
     this.elmLsDiagnostics = container.resolve(ElmLsDiagnostics);
     this.documentEvents = container.resolve(TextDocumentEvents);
 
@@ -287,6 +299,9 @@ export class DiagnosticsProvider {
     cancellationToken: CancellationToken,
   ): Promise<void> {
     const followMs = Math.min(delay, 200);
+    const serverCancellationToken = new ServerCancellationToken(
+      cancellationToken,
+    );
 
     return new Promise((resolve) =>
       this.diagnosticsOperation.startNew(
@@ -308,45 +323,76 @@ export class DiagnosticsProvider {
             }
 
             const uri = files[index];
-            const workspace = this.elmWorkspaceMatcher.getProgramFor(
+            const program = this.elmWorkspaceMatcher.getProgramFor(
               URI.parse(uri),
             );
 
-            const treeContainer = workspace.getForest().getByUri(uri);
+            const sourceFile = program.getForest().getByUri(uri);
 
-            if (!treeContainer) {
+            if (!sourceFile) {
               goNext();
               return;
             }
 
-            next.promise(async () => {
-              const diagnostics = await this.typeInferenceDiagnostics.getDiagnosticsForFileAsync(
-                treeContainer,
-                workspace,
-                cancellationToken,
+            next.immediate(() => {
+              this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
+              this.updateDiagnostics(
+                uri,
+                DiagnosticKind.Syntactic,
+                program
+                  .getSyntacticDiagnostics(sourceFile)
+                  .map(convertFromAnalyzerDiagnostic),
               );
 
               if (this.changeSeq !== seq) {
                 return;
               }
 
-              this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
-              this.updateDiagnostics(
-                uri,
-                DiagnosticKind.TypeInference,
-                diagnostics,
-              );
+              next.promise(async () => {
+                const diagnostics = await program.getSemanticDiagnosticsAsync(
+                  sourceFile,
+                  serverCancellationToken,
+                );
 
-              next.immediate(() => {
+                if (this.changeSeq !== seq) {
+                  return;
+                }
+
                 this.updateDiagnostics(
                   uri,
-                  DiagnosticKind.ElmLS,
-                  this.elmLsDiagnostics.createDiagnostics(
-                    treeContainer,
-                    workspace,
-                  ),
+                  DiagnosticKind.Semantic,
+                  diagnostics.map(convertFromAnalyzerDiagnostic),
                 );
-                goNext();
+
+                next.immediate(() => {
+                  this.updateDiagnostics(
+                    uri,
+                    DiagnosticKind.Suggestion,
+                    program
+                      .getSuggestionDiagnostics(
+                        sourceFile,
+                        serverCancellationToken,
+                      )
+                      .map(convertFromAnalyzerDiagnostic),
+                  );
+
+                  if (this.changeSeq !== seq) {
+                    return;
+                  }
+
+                  next.immediate(() => {
+                    this.updateDiagnostics(
+                      uri,
+                      DiagnosticKind.ElmLS,
+                      this.elmLsDiagnostics.createDiagnostics(
+                        sourceFile,
+                        program,
+                      ),
+                    );
+
+                    goNext();
+                  });
+                });
               });
             });
           };
@@ -368,7 +414,8 @@ export class DiagnosticsProvider {
     this.resetDiagnostics(elmMakeDiagnostics, DiagnosticKind.ElmMake);
 
     elmMakeDiagnostics.forEach((diagnostics, diagnosticsUri) => {
-      this.updateDiagnostics(diagnosticsUri, DiagnosticKind.TypeInference, []);
+      this.updateDiagnostics(diagnosticsUri, DiagnosticKind.Syntactic, []);
+      this.updateDiagnostics(diagnosticsUri, DiagnosticKind.Semantic, []);
       this.updateDiagnostics(
         diagnosticsUri,
         DiagnosticKind.ElmMake,

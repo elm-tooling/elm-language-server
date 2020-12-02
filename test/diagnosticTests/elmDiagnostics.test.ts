@@ -79,7 +79,9 @@ describe("test elm diagnostics", () => {
 
     program.getForest().treeMap.forEach((treeContainer) => {
       if (!treeContainer.uri.includes("Basic")) {
-        diagnostics.push(...program.getDiagnostics(treeContainer));
+        diagnostics.push(...program.getSyntacticDiagnostics(treeContainer));
+        diagnostics.push(...program.getSemanticDiagnostics(treeContainer));
+        diagnostics.push(...program.getSuggestionDiagnostics(treeContainer));
       }
     });
 
@@ -107,7 +109,7 @@ describe("test elm diagnostics", () => {
 
     if (debug && !diagnosticsEqual) {
       console.log(
-        `Expecting ${JSON.stringify(expectedDiagnostics)}, got ${JSON.stringify(
+        `Expecting ${JSON.stringify(expected)}, got ${JSON.stringify(
           diagnostics,
         )}`,
       );
@@ -149,7 +151,8 @@ module Test exposing (..)
 import App
       --^
 
-func = ""
+func : Int
+func = 5
 `;
     await testTypeInference(basicsSources + source, [
       { message: Diagnostics.ImportMissing, args: ["App"] },

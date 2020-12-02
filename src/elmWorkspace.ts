@@ -22,7 +22,6 @@ import {
   DefinitionResult,
   TypeChecker,
 } from "./util/types/typeChecker";
-import { Utils } from "./util/utils";
 
 const readFile = util.promisify(fs.readFile);
 const readdir = util.promisify(fs.readdir);
@@ -86,14 +85,19 @@ export interface IElmWorkspace {
   markAsDirty(): void;
   getPossibleImportsCache(): IPossibleImportsCache;
   getOperatorsCache(): Map<string, DefinitionResult>;
-  getDiagnostics(
+  getSemanticDiagnostics(
     sourceFile: ITreeContainer,
     cancellationToken?: ICancellationToken,
   ): Diagnostic[];
-  getDiagnosticsAsync(
+  getSemanticDiagnosticsAsync(
     sourceFile: ITreeContainer,
     cancellationToken?: ICancellationToken,
   ): Promise<Diagnostic[]>;
+  getSyntacticDiagnostics(sourceFile: ITreeContainer): Diagnostic[];
+  getSuggestionDiagnostics(
+    sourceFile: ITreeContainer,
+    cancellationToken?: ICancellationToken,
+  ): Diagnostic[];
 }
 
 export interface IRootFolder {
@@ -190,7 +194,7 @@ export class ElmWorkspace implements IElmWorkspace {
     return this.operatorsCache;
   }
 
-  public getDiagnostics(
+  public getSemanticDiagnostics(
     sourceFile: ITreeContainer,
     cancellationToken?: ICancellationToken,
   ): Diagnostic[] {
@@ -209,7 +213,7 @@ export class ElmWorkspace implements IElmWorkspace {
     return diagnostics;
   }
 
-  public async getDiagnosticsAsync(
+  public async getSemanticDiagnosticsAsync(
     sourceFile: ITreeContainer,
     cancellationToken?: ICancellationToken,
   ): Promise<Diagnostic[]> {
@@ -226,6 +230,22 @@ export class ElmWorkspace implements IElmWorkspace {
 
     this.diagnosticsCache.set(sourceFile.uri, diagnostics);
     return diagnostics;
+  }
+
+  public getSyntacticDiagnostics(sourceFile: ITreeContainer): Diagnostic[] {
+    // Getting the type checker will bind the file if its not
+    this.getTypeChecker();
+    return sourceFile.parseDiagnostics;
+  }
+
+  public getSuggestionDiagnostics(
+    sourceFile: ITreeContainer,
+    cancellationToken?: ICancellationToken,
+  ): Diagnostic[] {
+    return this.getTypeChecker().getSuggestionDiagnostics(
+      sourceFile,
+      cancellationToken,
+    );
   }
 
   private async initWorkspace(
