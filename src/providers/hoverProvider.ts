@@ -24,7 +24,7 @@ export class HoverProvider {
     this.connection = container.resolve<Connection>("Connection");
     this.diagnostics = container.resolve(DiagnosticsProvider);
     this.connection.onHover((params) =>
-      this.diagnostics.interuptDiagnostics(() =>
+      this.diagnostics.interruptDiagnostics(() =>
         new ElmWorkspaceMatcher((params: TextDocumentPositionParams) =>
           URI.parse(params.textDocument.uri),
         ).handlerForWorkspace(this.handleHoverRequest)(params),

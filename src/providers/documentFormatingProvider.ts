@@ -1,6 +1,5 @@
 import { container, injectable } from "tsyringe";
 import {
-  CancellationToken,
   DocumentFormattingParams,
   Connection,
   TextEdit,
@@ -29,7 +28,7 @@ export class DocumentFormattingProvider {
     this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.diagnostics = container.resolve(DiagnosticsProvider);
     this.connection.onDocumentFormatting((params) =>
-      this.diagnostics.interuptDiagnostics(() =>
+      this.diagnostics.interruptDiagnostics(() =>
         new ElmWorkspaceMatcher((params: DocumentFormattingParams) =>
           URI.parse(params.textDocument.uri),
         ).handlerForWorkspace(this.handleFormattingRequest)(params),

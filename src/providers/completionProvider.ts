@@ -54,7 +54,7 @@ export class CompletionProvider {
     this.connection = container.resolve<Connection>("Connection");
     this.diagnostics = container.resolve(DiagnosticsProvider);
     this.connection.onCompletion((params) =>
-      this.diagnostics.interuptDiagnostics(() =>
+      this.diagnostics.interruptDiagnostics(() =>
         new ElmWorkspaceMatcher((params: CompletionParams) =>
           URI.parse(params.textDocument.uri),
         ).handlerForWorkspace(this.handleCompletionRequest)(params),

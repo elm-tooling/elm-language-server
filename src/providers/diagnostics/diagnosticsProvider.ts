@@ -183,7 +183,7 @@ export class DiagnosticsProvider {
     });
   }
 
-  public interuptDiagnostics<T>(f: () => T): T {
+  public interruptDiagnostics<T>(f: () => T): T {
     if (!this.pendingRequest) {
       return f();
     }
