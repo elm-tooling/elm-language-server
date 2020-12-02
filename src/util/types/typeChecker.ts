@@ -6,6 +6,10 @@ import {
   Expression,
   EValueDeclaration,
   mapSyntaxNodeToExpression,
+  ETypeAliasDeclaration,
+  ETypeDeclaration,
+  EUnionVariant,
+  EPortAnnotation,
 } from "./expressionTree";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { container } from "tsyringe";
@@ -81,6 +85,10 @@ export interface TypeChecker {
     token?: ICancellationToken,
     cancelCallback?: () => boolean,
   ) => Promise<Diagnostic[]>;
+  getSuggestionDiagnostics: (
+    treeContainer: ITreeContainer,
+    cancellationToken?: ICancellationToken,
+  ) => Diagnostic[];
   findImportModuleNameNode: (
     moduleNameOrAlias: string,
     treeContainer: ITreeContainer,
@@ -92,7 +100,10 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   const imports = new Map<string, Imports>();
 
   const diagnostics = new DiagnosticsCollection();
+  const suggestionDiagnostics = new DiagnosticsCollection();
   let cancellationToken: ICancellationToken | undefined;
+
+  const checkedNodes = new Set<number>();
 
   const start = performance.now();
   forest.treeMap.forEach((treeContainer) => {
@@ -109,6 +120,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     typeToString,
     getDiagnostics,
     getDiagnosticsAsync,
+    getSuggestionDiagnostics,
     findImportModuleNameNode,
   };
 
@@ -187,7 +199,6 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       ) {
         const inferenceResult = TypeExpression.typeAliasDeclarationInference(
           typeAliasDeclaration,
-          uri,
           workspace,
         );
 
@@ -204,11 +215,8 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
           : undefined;
 
       if (unionVariant && unionVariant.nodeType === "UnionVariant") {
-        return TypeExpression.unionVariantInference(
-          unionVariant,
-          uri,
-          workspace,
-        ).type;
+        return TypeExpression.unionVariantInference(unionVariant, workspace)
+          .type;
       }
 
       const typeDeclaration = mapSyntaxNodeToExpression(
@@ -218,7 +226,6 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       if (typeDeclaration && typeDeclaration.nodeType === "TypeDeclaration") {
         const inferenceResult = TypeExpression.typeDeclarationInference(
           typeDeclaration,
-          uri,
           workspace,
         );
 
@@ -288,6 +295,21 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
       checkOne();
     });
+  }
+
+  function getSuggestionDiagnostics(
+    treeContainer: ITreeContainer,
+    token?: ICancellationToken,
+  ): Diagnostic[] {
+    try {
+      cancellationToken = token;
+
+      checkNode(treeContainer.tree.rootNode);
+
+      return suggestionDiagnostics.get(treeContainer.uri);
+    } finally {
+      cancellationToken = undefined;
+    }
   }
 
   function getAllImports(treeContainer: ITreeContainer): Imports {
@@ -832,6 +854,10 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   }
 
   function checkNode(node: SyntaxNode): void {
+    if (checkedNodes.has(node.id)) {
+      return;
+    }
+
     cancellationToken?.throwIfCancellationRequested();
 
     switch (node.type) {
@@ -844,17 +870,57 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       case "import_clause":
         checkImportClause(node);
         break;
+      case "type_alias_declaration":
+        checkTypeAliasDeclaration(node);
+        break;
+      case "type_declaration":
+        checkTypeDeclaration(node);
+        break;
+      case "union_variant":
+        checkUnionVariant(node);
+        break;
+      case "port_annotation":
+        checkPortAnnotation(node);
+        break;
     }
+
+    checkedNodes.add(node.id);
   }
 
   function checkValueDeclaration(valueDeclaration: SyntaxNode): void {
-    InferenceScope.valueDeclarationInference(
-      mapSyntaxNodeToExpression(valueDeclaration) as EValueDeclaration,
+    const declaration = mapSyntaxNodeToExpression(
+      valueDeclaration,
+    ) as EValueDeclaration;
+
+    const result = InferenceScope.valueDeclarationInference(
+      declaration,
       valueDeclaration.tree.uri,
       workspace,
       new Set(),
       cancellationToken,
-    ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
+    );
+    result.diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
+
+    if (!declaration.typeAnnotation) {
+      const typeString: string = typeToString(
+        result.type,
+        forest.getByUri(declaration.tree.uri),
+      );
+
+      if (
+        typeString &&
+        typeString !== "unknown" &&
+        declaration.firstNamedChild?.firstNamedChild
+      ) {
+        suggestionDiagnostics.add(
+          error(
+            declaration.firstNamedChild.firstNamedChild,
+            Diagnostics.MissingTypeAnnotation,
+            typeString,
+          ),
+        );
+      }
+    }
   }
 
   function checkImportClause(importClause: SyntaxNode): void {
@@ -868,5 +934,36 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         );
       }
     }
+  }
+
+  function checkTypeAliasDeclaration(typeAliasDeclaration: SyntaxNode): void {
+    TypeExpression.typeAliasDeclarationInference(
+      mapSyntaxNodeToExpression(typeAliasDeclaration) as ETypeAliasDeclaration,
+      workspace,
+    ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
+  }
+
+  function checkTypeDeclaration(typeDeclaration: SyntaxNode): void {
+    TypeExpression.typeDeclarationInference(
+      mapSyntaxNodeToExpression(typeDeclaration) as ETypeDeclaration,
+      workspace,
+    ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
+
+    // Need to check union variants
+    typeDeclaration.children.forEach(checkNode);
+  }
+
+  function checkUnionVariant(unionVariant: SyntaxNode): void {
+    TypeExpression.unionVariantInference(
+      mapSyntaxNodeToExpression(unionVariant) as EUnionVariant,
+      workspace,
+    ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
+  }
+
+  function checkPortAnnotation(portAnnotation: SyntaxNode): void {
+    TypeExpression.portAnnotationInference(
+      mapSyntaxNodeToExpression(portAnnotation) as EPortAnnotation,
+      workspace,
+    ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
   }
 }

@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-use-before-define */
 import { Range } from "vscode-languageserver";
+import { Diagnostic } from "./types/diagnostics";
 
 export class Utils {
   public static notUndefined<T>(x: T | undefined): x is T {

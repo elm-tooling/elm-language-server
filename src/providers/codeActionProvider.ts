@@ -4,20 +4,21 @@ import {
   CodeActionKind,
   CodeActionParams,
   Connection,
-  Diagnostic,
+  Diagnostic as LspDiagnostic,
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { convertFromAnalyzerDiagnostic } from "./diagnostics/typeInferenceDiagnostics";
-import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher, IParams } from "../util/elmWorkspaceMatcher";
 import { MultiMap } from "../util/multiMap";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { Settings } from "../util/settings";
 import { flatMap, TreeUtils } from "../util/treeUtils";
-import { Diagnostics } from "../util/types/diagnostics";
-import { IDiagnostic } from "./diagnostics/diagnosticsProvider";
+import { Diagnostic } from "../util/types/diagnostics";
+import {
+  convertFromAnalyzerDiagnostic,
+  IDiagnostic,
+} from "./diagnostics/diagnosticsProvider";
 import { ElmLsDiagnostics } from "./diagnostics/elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
 import { diagnosticsEquals } from "./diagnostics/fileDiagnostics";
@@ -28,6 +29,7 @@ export type ICodeActionParams = CodeActionParams & IParams;
 
 export interface ICodeActionRegistration {
   errorCodes: string[];
+  fixId: string;
   getCodeActions(params: ICodeActionParams): CodeAction[] | undefined;
   getFixAllCodeAction(params: ICodeActionParams): CodeAction | undefined;
 }
@@ -71,12 +73,20 @@ export class CodeActionProvider {
     });
   }
 
+  private static getDiagnostics(params: ICodeActionParams): Diagnostic[] {
+    return [
+      ...params.program.getSyntacticDiagnostics(params.sourceFile),
+      ...params.program.getSemanticDiagnostics(params.sourceFile),
+      ...params.program.getSuggestionDiagnostics(params.sourceFile),
+    ];
+  }
+
   private static forEachDiagnostic(
     params: ICodeActionParams,
     errorCodes: string[],
     callback: (diagnostic: Diagnostic) => void,
   ): void {
-    params.program.getDiagnostics(params.sourceFile).forEach((diagnostic) => {
+    CodeActionProvider.getDiagnostics(params).forEach((diagnostic) => {
       if (
         typeof diagnostic.code === "string" &&
         errorCodes.includes(diagnostic.code)
@@ -90,14 +100,13 @@ export class CodeActionProvider {
     params: ICodeActionParams,
     title: string,
     edits: TextEdit[],
-    isPreferred = false,
   ): CodeAction {
     const changes = { [params.sourceFile.uri]: edits };
     return {
       title,
       kind: CodeActionKind.QuickFix,
       edit: { changes },
-      isPreferred,
+      isPreferred: true,
     };
   }
 
@@ -105,14 +114,15 @@ export class CodeActionProvider {
     title: string,
     params: ICodeActionParams,
     errorCodes: string[],
-    callback: (edits: TextEdit[], diagnostic: Diagnostic) => void,
+    fixId: string,
+    callback: (edits: TextEdit[], diagnostic: LspDiagnostic) => void,
   ): CodeAction {
     const edits: TextEdit[] = [];
     const changes = {
       [params.sourceFile.uri]: edits,
     };
 
-    const diagnostics: Diagnostic[] = [];
+    const diagnostics: LspDiagnostic[] = [];
     CodeActionProvider.forEachDiagnostic(params, errorCodes, (diagnostic) => {
       diagnostics.push(diagnostic);
       callback(edits, diagnostic);
@@ -120,9 +130,10 @@ export class CodeActionProvider {
 
     return {
       title,
-      kind: CodeActionKind.SourceFixAll,
+      kind: CodeActionKind.QuickFix,
       diagnostics,
       edit: { changes },
+      data: fixId,
     };
   }
 
@@ -156,15 +167,17 @@ export class CodeActionProvider {
 
           if (
             codeActions.length > 0 &&
-            params.program
-              .getDiagnostics(params.sourceFile)
-              .some(
-                (diag) =>
-                  !diagnosticsEquals(
-                    convertFromAnalyzerDiagnostic(diag),
-                    diagnostic,
-                  ) && diag.code === diagnostic.data.code,
-              )
+            !results.some(
+              // Check if there is already a "fix all" code action for this fix
+              (codeAction) => /* fixId */ codeAction.data === reg.fixId,
+            ) &&
+            CodeActionProvider.getDiagnostics(params).some(
+              (diag) =>
+                !diagnosticsEquals(
+                  convertFromAnalyzerDiagnostic(diag),
+                  diagnostic,
+                ) && diag.code === diagnostic.data.code,
+            )
           ) {
             const fixAllCodeAction = reg.getFixAllCodeAction(params);
 
@@ -180,11 +193,6 @@ export class CodeActionProvider {
 
     return [
       ...results,
-      ...this.convertDiagnosticsToCodeActions(
-        params.context.diagnostics,
-        params.program,
-        params.textDocument.uri,
-      ),
       ...this.getRefactorCodeActions(params),
       ...this.getTypeAnnotationCodeActions(params),
       ...make,
@@ -260,7 +268,6 @@ export class CodeActionProvider {
       codeActions.push(
         ...this.getFunctionCodeActions(params, tree, nodeAtPosition),
         ...this.getTypeAliasCodeActions(params, tree, nodeAtPosition),
-        ...this.getMakeDeclarationFromUsageCodeActions(params, nodeAtPosition),
       );
     }
 
@@ -387,132 +394,9 @@ export class CodeActionProvider {
     return codeActions;
   }
 
-  private getMakeDeclarationFromUsageCodeActions(
-    params: ICodeActionParams,
-    nodeAtPosition: SyntaxNode,
-  ): CodeAction[] {
-    const codeActions: CodeAction[] = [];
-
-    if (
-      nodeAtPosition.type === "lower_case_identifier" &&
-      nodeAtPosition.parent?.parent?.type === "value_expr" &&
-      nodeAtPosition.parent?.parent?.parent &&
-      nodeAtPosition.previousSibling?.type !== "dot"
-    ) {
-      const funcName = nodeAtPosition.text;
-
-      const tree = params.sourceFile.tree;
-      const checker = params.program.getTypeChecker();
-
-      if (
-        !TreeUtils.findAllTopLevelFunctionDeclarations(tree)?.some(
-          (a) =>
-            a.firstChild?.text == funcName ||
-            a.firstChild?.firstChild?.text == funcName,
-        )
-      ) {
-        const insertLineNumber = RefactorEditUtils.findLineNumberAfterCurrentFunction(
-          nodeAtPosition,
-        );
-
-        const typeString: string = checker.typeToString(
-          checker.findType(nodeAtPosition),
-          params.sourceFile,
-        );
-
-        const edit = RefactorEditUtils.createTopLevelFunction(
-          insertLineNumber ?? tree.rootNode.endPosition.row,
-          funcName,
-          typeString,
-          TreeUtils.findParentOfType("function_call_expr", nodeAtPosition),
-        );
-
-        if (edit) {
-          codeActions.push({
-            title: `Create local function`,
-            edit: {
-              changes: {
-                [params.textDocument.uri]: [edit],
-              },
-            },
-            kind: CodeActionKind.QuickFix,
-          });
-        }
-      }
-    }
-
-    return codeActions;
-  }
-
-  private convertDiagnosticsToCodeActions(
-    diagnostics: Diagnostic[],
-    elmWorkspace: IElmWorkspace,
-    uri: string,
-  ): CodeAction[] {
-    const result: CodeAction[] = [];
-
-    const forest = elmWorkspace.getForest();
-    const treeContainer = forest.getByUri(uri);
-    const checker = elmWorkspace.getTypeChecker();
-
-    if (treeContainer) {
-      diagnostics.forEach((diagnostic) => {
-        switch (diagnostic.code) {
-          case Diagnostics.MissingTypeAnnotation.code:
-            {
-              const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-                treeContainer.tree.rootNode,
-                diagnostic.range.start,
-              );
-
-              if (nodeAtPosition.parent) {
-                const typeString: string = checker.typeToString(
-                  checker.findType(nodeAtPosition.parent),
-                  treeContainer,
-                );
-
-                result.push(
-                  this.insertQuickFixAtStart(
-                    uri,
-                    `${nodeAtPosition.text} : ${typeString}\n`,
-                    diagnostic,
-                    "Add inferred annotation",
-                  ),
-                );
-              }
-            }
-            break;
-        }
-      });
-    }
-
-    return result;
-  }
-
-  private insertQuickFixAtStart(
-    uri: string,
-    replaceWith: string,
-    diagnostic: Diagnostic,
-    title: string,
-  ): CodeAction {
-    const map: {
-      [uri: string]: TextEdit[];
-    } = {};
-    if (!map[uri]) {
-      map[uri] = [];
-    }
-    map[uri].push(TextEdit.insert(diagnostic.range.start, replaceWith));
-    return {
-      diagnostics: [diagnostic],
-      edit: { changes: map },
-      kind: CodeActionKind.QuickFix,
-      title,
-    };
-  }
-
   private addDiagnosticToCodeAction(
     codeAction: CodeAction,
-    diagnostic: Diagnostic,
+    diagnostic: LspDiagnostic,
   ): CodeAction {
     codeAction.diagnostics = [diagnostic];
     return codeAction;

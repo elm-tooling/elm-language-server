@@ -951,15 +951,12 @@ export class InferenceScope {
         if (valueDeclaration?.nodeType !== "ValueDeclaration") {
           throw new Error("Could not find parent value declaration");
         }
-        return this.inferReferencedValueDeclaration(
-          valueDeclaration,
-          definition?.uri,
-        );
+        return this.inferReferencedValueDeclaration(valueDeclaration);
       }
       case "LowerPattern": {
         const parentPattern = getParentPatternDeclaration(definition.expr);
         if (parentPattern) {
-          this.inferReferencedValueDeclaration(parentPattern, definition.uri);
+          this.inferReferencedValueDeclaration(parentPattern);
 
           const binding = this.getBinding(definition.expr);
 
@@ -975,14 +972,12 @@ export class InferenceScope {
       case "UnionVariant": {
         return TypeExpression.unionVariantInference(
           definition.expr,
-          this.uri,
           this.elmWorkspace,
         ).type;
       }
       case "TypeAliasDeclaration": {
         const ty = TypeExpression.typeAliasDeclarationInference(
           definition.expr,
-          this.uri,
           this.elmWorkspace,
         ).type;
         if (ty.nodeType === "Record" && Object.keys(ty.fields).length > 0) {
@@ -999,7 +994,6 @@ export class InferenceScope {
         if (typeAlias && typeAlias.nodeType === "TypeAliasDeclaration") {
           const fields = (TypeExpression.typeAliasDeclarationInference(
             typeAlias,
-            this.uri,
             this.elmWorkspace,
           ).type as TRecord)?.fields;
 
@@ -1013,7 +1007,6 @@ export class InferenceScope {
       case "PortAnnotation": {
         return TypeExpression.portAnnotationInference(
           definition.expr,
-          this.uri,
           this.elmWorkspace,
         ).type;
       }
@@ -1024,7 +1017,6 @@ export class InferenceScope {
 
   private inferReferencedValueDeclaration(
     declaration: EValueDeclaration | undefined,
-    referenceUri: string,
   ): Type {
     if (!declaration) {
       return TUnknown;
@@ -1045,7 +1037,6 @@ export class InferenceScope {
         mapSyntaxNodeToExpression(
           declaration.typeAnnotation,
         ) as ETypeAnnotation,
-        referenceUri,
         this.elmWorkspace,
         false,
       )?.type;
@@ -1067,7 +1058,7 @@ export class InferenceScope {
       type = !parentScope
         ? InferenceScope.valueDeclarationInference(
             declaration,
-            referenceUri,
+            declaration.tree.uri,
             this.elmWorkspace,
             this.activeScopes,
             this.cancellationToken,
@@ -1291,10 +1282,7 @@ export class InferenceScope {
       return [TUnknown, { precedence: 0, associativity: "NON" }];
     }
 
-    const type = this.inferReferencedValueDeclaration(
-      opDeclaration,
-      definition.uri,
-    );
+    const type = this.inferReferencedValueDeclaration(opDeclaration);
 
     this.expressionTypes.set(e, type);
     return [
@@ -1340,10 +1328,7 @@ export class InferenceScope {
     const opDeclaration = mapSyntaxNodeToExpression(definition?.expr.parent);
 
     if (opDeclaration?.nodeType === "ValueDeclaration" && definition?.uri) {
-      return this.inferReferencedValueDeclaration(
-        opDeclaration,
-        definition.uri,
-      );
+      return this.inferReferencedValueDeclaration(opDeclaration);
     } else {
       return TUnknown;
     }
@@ -1594,20 +1579,19 @@ export class InferenceScope {
     valueDeclaration: EValueDeclaration,
     functionDeclaration: EFunctionDeclarationLeft,
   ): ParameterBindingResult {
-    const typeRefType = valueDeclaration.typeAnnotation
+    const typeRefResult = valueDeclaration.typeAnnotation
       ? TypeExpression.typeAnnotationInference(
           mapSyntaxNodeToExpression(
             valueDeclaration.typeAnnotation,
           ) as ETypeAnnotation,
-          this.uri,
           this.elmWorkspace,
           true,
-        )?.type
+        )
       : undefined;
 
     const patterns = functionDeclaration.params;
 
-    if (!typeRefType) {
+    if (!typeRefResult) {
       const params = this.uniqueVars(patterns.length);
       patterns.forEach((pat, i) => this.bindPattern(pat, params[i], true));
       return {
@@ -1616,6 +1600,9 @@ export class InferenceScope {
         count: params.length,
       } as Unannotated;
     }
+
+    this.diagnostics.push(...typeRefResult.diagnostics);
+    const typeRefType = typeRefResult.type;
 
     const maxParams =
       typeRefType.nodeType === "Function" ? typeRefType.params.length : 0;
@@ -1789,9 +1776,10 @@ export class InferenceScope {
     );
 
     if (variant?.expr.nodeType !== "UnionVariant") {
+      unionPattern.namedParams.forEach((p) => this.setBinding(p, TUnknown));
       this.diagnostics.push(
         error(
-          unionPattern,
+          unionPattern.constructor.lastNamedChild ?? unionPattern.constructor,
           Diagnostics.MissingValue,
           unionPattern.constructor.lastNamedChild?.text ?? "union variant",
         ),
@@ -1801,7 +1789,6 @@ export class InferenceScope {
 
     const variantType = TypeExpression.unionVariantInference(
       variant.expr,
-      variant.uri,
       this.elmWorkspace,
     ).type;
 

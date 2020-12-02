@@ -4,8 +4,10 @@ import { IDiagnostic } from "./diagnosticsProvider";
 export const enum DiagnosticKind {
   ElmMake,
   ElmTest,
-  TypeInference,
   ElmLS,
+  Syntactic,
+  Semantic,
+  Suggestion,
 }
 
 export function diagnosticsEquals(a: IDiagnostic, b: IDiagnostic): boolean {
@@ -47,8 +49,10 @@ export class FileDiagnostics {
     return [
       ...this.getForKind(DiagnosticKind.ElmMake),
       ...this.getForKind(DiagnosticKind.ElmTest),
-      ...this.getForKind(DiagnosticKind.TypeInference),
       ...this.getForKind(DiagnosticKind.ElmLS),
+      ...this.getForKind(DiagnosticKind.Syntactic),
+      ...this.getForKind(DiagnosticKind.Semantic),
+      ...this.getForKind(DiagnosticKind.Suggestion),
     ];
   }
 

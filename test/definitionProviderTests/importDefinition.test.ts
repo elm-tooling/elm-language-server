@@ -515,4 +515,24 @@ type Model = Model {}
 `;
     await testBase.testDefinition(source);
   });
+
+  it(`test type resolves when there is a conflicting import name in the other file`, async () => {
+    const source = `
+--@ main.elm
+import App exposing (Model)
+
+func : Model
+       --^App.elm
+func = ""
+
+--@ App.elm
+module App exposing (Model)
+
+import Module.Model as Model
+
+type Model = String
+--X
+`;
+    await testBase.testDefinition(source);
+  });
 });

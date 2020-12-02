@@ -90,7 +90,12 @@ export class MockElmWorkspace implements IElmWorkspace {
     return this.operatorsCache;
   }
 
-  public getDiagnostics(
+  public getSyntacticDiagnostics(sourceFile: ITreeContainer): Diagnostic[] {
+    this.getTypeChecker();
+    return sourceFile.parseDiagnostics;
+  }
+
+  public getSemanticDiagnostics(
     sourceFile: ITreeContainer,
     cancellationToken?: ICancellationToken,
   ): Diagnostic[] {
@@ -109,7 +114,7 @@ export class MockElmWorkspace implements IElmWorkspace {
     return diagnostics;
   }
 
-  public async getDiagnosticsAsync(
+  public async getSemanticDiagnosticsAsync(
     sourceFile: ITreeContainer,
     cancellationToken?: ICancellationToken,
   ): Promise<Diagnostic[]> {
@@ -126,6 +131,16 @@ export class MockElmWorkspace implements IElmWorkspace {
 
     this.diagnosticsCache.set(sourceFile.uri, diagnostics);
     return diagnostics;
+  }
+
+  public getSuggestionDiagnostics(
+    sourceFile: ITreeContainer,
+    cancellationToken?: ICancellationToken,
+  ): Diagnostic[] {
+    return this.getTypeChecker().getSuggestionDiagnostics(
+      sourceFile,
+      cancellationToken,
+    );
   }
 
   private parseAndAddToForest(fileName: string, source: string): void {

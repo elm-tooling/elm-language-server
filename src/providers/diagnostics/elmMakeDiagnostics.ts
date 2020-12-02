@@ -16,8 +16,6 @@ import { ITreeContainer } from "../../forest";
 import * as utils from "../../util/elmUtils";
 import { execCmd } from "../../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { ImportUtils } from "../../util/importUtils";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { Settings } from "../../util/settings";
 import { TreeUtils } from "../../util/treeUtils";
 import { Utils } from "../../util/utils";
@@ -103,13 +101,6 @@ function elmToolingEntrypointsDecoder(json: unknown): NonEmptyArray<string> {
 
 export class ElmMakeDiagnostics {
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
-  private neededImports: Map<
-    string,
-    { moduleName: string; valueName?: string; diagnostic: IDiagnostic }[]
-  > = new Map<
-    string,
-    { moduleName: string; valueName?: string; diagnostic: IDiagnostic }[]
-  >();
   private settings: Settings;
   private connection: Connection;
 
@@ -125,7 +116,7 @@ export class ElmMakeDiagnostics {
     const workspaceRootPath = this.elmWorkspaceMatcher
       .getProgramFor(filePath)
       .getRootPath();
-    const diagnostics = await this.checkForErrors(
+    return await this.checkForErrors(
       workspaceRootPath.fsPath,
       filePath.fsPath,
     ).then((issues) => {
@@ -133,68 +124,6 @@ export class ElmMakeDiagnostics {
         ? new Map([[filePath.toString(), []]])
         : ElmDiagnosticsHelper.issuesToDiagnosticMap(issues, workspaceRootPath);
     });
-
-    // Handle import all
-    const forest = this.elmWorkspaceMatcher.getProgramFor(filePath).getForest();
-
-    const exposedValues = ImportUtils.getPossibleImports(
-      forest,
-      filePath.fsPath,
-    );
-
-    // Get all possible imports from the diagnostics for import all
-    diagnostics.forEach((innerDiagnostics, uri) => {
-      const sourceTree = forest.getByUri(uri);
-      this.neededImports.set(uri, []);
-
-      innerDiagnostics.forEach((diagnostic) => {
-        if (diagnostic.message.startsWith(NAMING_ERROR)) {
-          const valueNode = sourceTree?.tree.rootNode.namedDescendantForPosition(
-            {
-              column: diagnostic.range.start.character,
-              row: diagnostic.range.start.line,
-            },
-            {
-              column: diagnostic.range.end.character,
-              row: diagnostic.range.end.line,
-            },
-          );
-
-          // Find imports
-          if (valueNode) {
-            exposedValues
-              .filter(
-                (exposed) =>
-                  exposed.value === valueNode.text ||
-                  ((valueNode.type === "upper_case_qid" ||
-                    valueNode.type === "value_qid") &&
-                    exposed.value ===
-                      valueNode.namedChildren[
-                        valueNode.namedChildren.length - 1
-                      ].text &&
-                    exposed.module === valueNode.namedChildren[0].text),
-              )
-              .forEach((exposed, i) => {
-                if (i === 0) {
-                  this.neededImports.get(uri)?.push({
-                    moduleName: exposed.module,
-                    valueName:
-                      valueNode.type !== "upper_case_qid" &&
-                      valueNode.type !== "value_qid"
-                        ? exposed.valueToImport
-                          ? exposed.valueToImport
-                          : exposed.value
-                        : undefined,
-                    diagnostic,
-                  });
-                }
-              });
-          }
-        }
-      });
-    });
-
-    return diagnostics;
   };
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
@@ -428,43 +357,6 @@ export class ElmMakeDiagnostics {
       edit: { changes: map },
       kind: CodeActionKind.QuickFix,
       title,
-    };
-  }
-
-  private createImportQuickFix(
-    uri: string,
-    diagnostic: IDiagnostic,
-    moduleName: string,
-    nameToImport?: string,
-  ): CodeAction {
-    const changes: {
-      [uri: string]: TextEdit[];
-    } = {};
-    if (!changes[uri]) {
-      changes[uri] = [];
-    }
-
-    const tree = this.elmWorkspaceMatcher
-      .getProgramFor(URI.parse(uri))
-      .getForest()
-      .getTree(uri);
-
-    if (tree) {
-      const edit = RefactorEditUtils.addImport(tree, moduleName, nameToImport);
-
-      if (edit) {
-        changes[uri].push(edit);
-      }
-    }
-
-    return {
-      diagnostics: [diagnostic],
-      edit: { changes },
-      kind: CodeActionKind.QuickFix,
-      title: nameToImport
-        ? `Import '${nameToImport}' from module "${moduleName}"`
-        : `Import module "${moduleName}"`,
-      isPreferred: true,
     };
   }
 

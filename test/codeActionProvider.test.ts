@@ -92,8 +92,11 @@ describe("test codeActionProvider", () => {
         range,
         textDocument: { uri: testUri },
         context: {
-          diagnostics: program
-            .getDiagnostics(sourceFile)
+          diagnostics: [
+            ...program.getSyntacticDiagnostics(sourceFile),
+            ...program.getSemanticDiagnostics(sourceFile),
+            ...program.getSuggestionDiagnostics(sourceFile),
+          ]
             .filter((diag) => Utils.rangeOverlaps(diag.range, range))
             .map(convertFromAnalyzerDiagnostic),
         },
