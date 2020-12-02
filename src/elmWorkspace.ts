@@ -200,8 +200,9 @@ export class ElmWorkspace implements IElmWorkspace {
       return cached;
     }
 
-    const diagnostics = Utils.deduplicateDiagnostics(
-      this.getTypeChecker().getDiagnostics(sourceFile, cancellationToken),
+    const diagnostics = this.getTypeChecker().getDiagnostics(
+      sourceFile,
+      cancellationToken,
     );
 
     this.diagnosticsCache.set(sourceFile.uri, diagnostics);
@@ -218,11 +219,9 @@ export class ElmWorkspace implements IElmWorkspace {
       return Promise.resolve(cached);
     }
 
-    const diagnostics = Utils.deduplicateDiagnostics(
-      await this.getTypeChecker().getDiagnosticsAsync(
-        sourceFile,
-        cancellationToken,
-      ),
+    const diagnostics = await this.getTypeChecker().getDiagnosticsAsync(
+      sourceFile,
+      cancellationToken,
     );
 
     this.diagnosticsCache.set(sourceFile.uri, diagnostics);

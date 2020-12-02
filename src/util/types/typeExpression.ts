@@ -60,7 +60,6 @@ export class TypeExpression {
 
   public static typeDeclarationInference(
     e: ETypeDeclaration,
-    uri: string,
     workspace: IElmWorkspace,
   ): InferenceResult {
     const setter = (): InferenceResult => {
@@ -79,7 +78,7 @@ export class TypeExpression {
       };
     };
 
-    if (!workspace.getForest().getByUri(uri)?.writeable) {
+    if (!workspace.getForest().getByUri(e.tree.uri)?.writeable) {
       return workspace
         .getTypeCache()
         .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter);
@@ -92,7 +91,6 @@ export class TypeExpression {
 
   public static typeAliasDeclarationInference(
     e: ETypeAliasDeclaration,
-    uri: string,
     workspace: IElmWorkspace,
     activeAliases = new Set<ETypeAliasDeclaration>(),
   ): InferenceResult {
@@ -113,7 +111,7 @@ export class TypeExpression {
       };
     };
 
-    if (!workspace.getForest().getByUri(uri)?.writeable) {
+    if (!workspace.getForest().getByUri(e.tree.uri)?.writeable) {
       return workspace
         .getTypeCache()
         .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter);
@@ -126,7 +124,6 @@ export class TypeExpression {
 
   public static typeAnnotationInference(
     e: ETypeAnnotation,
-    uri: string,
     workspace: IElmWorkspace,
     rigid = true,
   ): InferenceResult | undefined {
@@ -144,7 +141,7 @@ export class TypeExpression {
       return { ...inferenceResult, type };
     };
 
-    const result = !workspace.getForest().getByUri(uri)?.writeable
+    const result = !workspace.getForest().getByUri(e.tree.uri)?.writeable
       ? workspace.getTypeCache().getOrSet("PACKAGE_TYPE_ANNOTATION", e, setter)
       : workspace.getTypeCache().getOrSet("PROJECT_TYPE_ANNOTATION", e, setter);
 
@@ -157,7 +154,6 @@ export class TypeExpression {
 
   public static unionVariantInference(
     e: EUnionVariant,
-    uri: string,
     workspace: IElmWorkspace,
   ): InferenceResult {
     const inferenceResult = new TypeExpression(
@@ -175,7 +171,6 @@ export class TypeExpression {
 
   public static portAnnotationInference(
     e: EPortAnnotation,
-    uri: string,
     workspace: IElmWorkspace,
   ): InferenceResult {
     const inferenceResult = new TypeExpression(
@@ -357,7 +352,6 @@ export class TypeExpression {
     const type =
       TypeExpression.typeAnnotationInference(
         annotation as ETypeAnnotation,
-        definition.uri,
         this.workspace,
         true,
       )?.expressionTypes.get(definition.expr) ?? TUnknown;
@@ -427,14 +421,12 @@ export class TypeExpression {
         case "TypeDeclaration":
           declaredType = TypeExpression.typeDeclarationInference(
             definition.expr,
-            definition.uri,
             this.workspace,
           ).type;
           break;
         case "TypeAliasDeclaration":
           declaredType = TypeExpression.typeAliasDeclarationInference(
             definition.expr,
-            definition.uri,
             this.workspace,
             new Set(this.activeAliases.values()),
           ).type;
