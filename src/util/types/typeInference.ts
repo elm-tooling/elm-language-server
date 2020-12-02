@@ -1776,9 +1776,10 @@ export class InferenceScope {
     );
 
     if (variant?.expr.nodeType !== "UnionVariant") {
+      unionPattern.namedParams.forEach((p) => this.setBinding(p, TUnknown));
       this.diagnostics.push(
         error(
-          unionPattern,
+          unionPattern.constructor.lastNamedChild ?? unionPattern.constructor,
           Diagnostics.MissingValue,
           unionPattern.constructor.lastNamedChild?.text ?? "union variant",
         ),

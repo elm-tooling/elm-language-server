@@ -437,12 +437,12 @@ export class TypeExpression {
     } else {
       if (typeRef.firstNamedChild?.firstNamedChild?.text === "List") {
         declaredType = TList(TVar("a"));
-      } else if (typeRef.firstNamedChild?.lastNamedChild) {
+      } else if (typeRef.firstNamedChild) {
         this.diagnostics.push(
           error(
-            typeRef.firstNamedChild.lastNamedChild,
+            typeRef.firstNamedChild,
             Diagnostics.MissingValue,
-            typeRef.firstNamedChild.lastNamedChild.text,
+            typeRef.firstNamedChild.text,
           ),
         );
       }
