@@ -401,7 +401,11 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
                 }
               }
             } else {
-              const typeNode = rootSymbols?.get(value.text);
+              const typeNode = rootSymbols?.get(
+                value.text,
+                (symbol) =>
+                  symbol.type === "Type" || symbol.type === "TypeAlias",
+              );
 
               if (typeNode) {
                 exposed.set(value.text, {
