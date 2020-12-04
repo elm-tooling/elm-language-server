@@ -62,6 +62,10 @@ export class MockElmWorkspace implements IElmWorkspace {
     return baseUri;
   }
 
+  public getSourceFile(uri: string): ITreeContainer | undefined {
+    return this.getForest().getByUri(uri);
+  }
+
   getForest(): IForest {
     return this.forest;
   }

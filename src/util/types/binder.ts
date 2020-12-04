@@ -24,12 +24,14 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
   }
 
   const symbolLinks = new SyntaxNodeMap<SyntaxNode, SymbolMap>();
+  const nonShadowableNames = new Set<string>();
   let container: SymbolMap;
   let parent: SyntaxNode;
   const treeCursor = treeContainer.tree.walk();
 
   bind();
   treeContainer.symbolLinks = symbolLinks;
+  treeContainer.nonShadowableNames = nonShadowableNames;
 
   // Bind exposing must happen after symbolLinks is bound
   bindExposing();
@@ -112,10 +114,16 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
     );
 
     if (functionDeclarationLeft && functionDeclarationLeft.firstChild) {
-      container.set(functionDeclarationLeft.firstChild.text, {
+      const functionName = functionDeclarationLeft.firstChild.text;
+      container.set(functionName, {
         node: functionDeclarationLeft,
         type: "Function",
       });
+
+      // Add to nonShadowableNames if it is top level
+      if (node.parent?.type === "file") {
+        nonShadowableNames.add(functionDeclarationLeft.firstChild.text);
+      }
     } else {
       // If there is a pattern, bind it to the parent container
       const pattern = node.childForFieldName("pattern");
