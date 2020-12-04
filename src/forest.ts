@@ -26,6 +26,7 @@ export interface ITreeContainer {
   // Resolved during binding
   exposing?: IExposing;
   symbolLinks?: SyntaxNodeMap<SyntaxNode, SymbolMap>;
+  nonShadowableNames?: Set<string>; // Top level function names
 }
 
 export interface IForest {

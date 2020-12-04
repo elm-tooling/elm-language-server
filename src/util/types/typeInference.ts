@@ -548,18 +548,18 @@ export class InferenceScope {
   public static valueDeclarationInference(
     declaration: EValueDeclaration,
     uri: string,
-    elmWorkspace: IElmWorkspace,
+    program: IElmWorkspace,
     activeScopes: Set<EValueDeclaration>,
     cancellationToken?: ICancellationToken,
   ): InferenceResult {
-    // TODO: Need a good way to get all visible values
-    const shadowableNames = new Set<string>();
+    const nonShadowableNames =
+      program.getSourceFile(uri)?.nonShadowableNames ?? new Set<string>();
 
     const setter = (): InferenceResult =>
       new InferenceScope(
         uri,
-        elmWorkspace,
-        shadowableNames,
+        program,
+        nonShadowableNames,
         new Set(activeScopes.values()),
         /* recursionAllowed */ false,
         cancellationToken,
@@ -567,12 +567,12 @@ export class InferenceScope {
 
     const start = performance.now();
     try {
-      if (!elmWorkspace.getForest().getByUri(uri)?.writeable) {
-        return elmWorkspace
+      if (!program.getForest().getByUri(uri)?.writeable) {
+        return program
           .getTypeCache()
           .getOrSet("PACKAGE_VALUE_DECLARATION", declaration, setter);
       } else {
-        return elmWorkspace
+        return program
           .getTypeCache()
           .getOrSet("PROJECT_VALUE_DECLARATION", declaration, setter);
       }

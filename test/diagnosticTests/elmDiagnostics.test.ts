@@ -158,4 +158,23 @@ func = 5
       { message: Diagnostics.ImportMissing, args: ["App"] },
     ]);
   });
+
+  test("Shadowing a function with the same name", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Model =
+    { field : Int
+    }
+
+field : Model -> Int
+field { field } =
+        --^
+    4
+`;
+    await testTypeInference(basicsSources + source, [
+      { message: Diagnostics.Redefinition, args: ["field"] },
+    ]);
+  });
 });

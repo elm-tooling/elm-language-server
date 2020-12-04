@@ -78,6 +78,7 @@ export interface IElmWorkspace {
   hasDocument(uri: URI): boolean;
   hasPath(uri: URI): boolean;
   getPath(uri: URI): string | undefined;
+  getSourceFile(uri: string): ITreeContainer | undefined;
   getForest(synchronize?: boolean): IForest;
   getRootPath(): URI;
   getTypeCache(): TypeCache;
@@ -150,6 +151,10 @@ export class ElmWorkspace implements IElmWorkspace {
     return Array.from(this.elmFolders.keys()).find((elmFolder) =>
       uri.fsPath.startsWith(elmFolder),
     );
+  }
+
+  public getSourceFile(uri: string): ITreeContainer | undefined {
+    return this.getForest().getByUri(uri);
   }
 
   public getForest(synchronize = true): IForest {
