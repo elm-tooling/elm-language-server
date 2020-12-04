@@ -972,7 +972,9 @@ export class ElmLsDiagnostics {
             (#eq? @type.reference "${unionVariant.text}")
           )
           ((case_of_branch
-            (pattern) @variant.reference)
+            (pattern
+              (union_pattern
+                (upper_case_qid) @variant.reference)))
             (#eq? @variant.reference "${unionVariant.text}")
           )
           `,
