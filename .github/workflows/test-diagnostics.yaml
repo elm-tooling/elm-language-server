@@ -1,0 +1,17 @@
+name: Test Diagnostics
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 14
+      - run: npm install -g elm
+      - run: npm ci
+      - run: npm run compile
+      - run: node -r ts-node/register --expose-gc ./test/diagnostics.ts
