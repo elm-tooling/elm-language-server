@@ -6,12 +6,12 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { DiagnosticsProvider } from ".";
-import { IElmWorkspace } from "../elmWorkspace";
 import * as Diff from "../util/diff";
 import { execCmd } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Settings } from "../util/settings";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
+import { IDocumentFormattingParams } from "./paramsExtensions";
 
 type DocumentFormattingResult = Promise<TextEdit[] | undefined>;
 
@@ -27,11 +27,11 @@ export class DocumentFormattingProvider {
     this.connection = container.resolve<Connection>("Connection");
     this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.diagnostics = container.resolve(DiagnosticsProvider);
-    this.connection.onDocumentFormatting((params) =>
+    this.connection.onDocumentFormatting(
       this.diagnostics.interruptDiagnostics(() =>
         new ElmWorkspaceMatcher((params: DocumentFormattingParams) =>
           URI.parse(params.textDocument.uri),
-        ).handlerForWorkspace(this.handleFormattingRequest)(params),
+        ).handle(this.handleFormattingRequest),
       ),
     );
   }
@@ -62,8 +62,7 @@ export class DocumentFormattingProvider {
   };
 
   protected handleFormattingRequest = async (
-    params: DocumentFormattingParams,
-    elmWorkspace: IElmWorkspace,
+    params: IDocumentFormattingParams,
   ): DocumentFormattingResult => {
     this.connection.console.info(`Formatting was requested`);
     try {
@@ -75,7 +74,7 @@ export class DocumentFormattingProvider {
 
       const settings = await this.settings.getClientSettings();
       return await this.formatText(
-        elmWorkspace.getRootPath(),
+        params.program.getRootPath(),
         settings.elmFormatPath,
         text.getText(),
       );

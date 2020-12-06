@@ -1,4 +1,3 @@
-import { debug } from "console";
 import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
 import { convertFromAnalyzerDiagnostic } from "../../src/providers";

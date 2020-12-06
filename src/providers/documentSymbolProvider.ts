@@ -8,10 +8,10 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 import { ThrottledCancellationToken } from "../cancellation";
+import { IDocumentSymbolParams } from "./paramsExtensions";
 
 type DocumentSymbolResult =
   | SymbolInformation[]
@@ -27,20 +27,18 @@ export class DocumentSymbolProvider {
     this.connection.onDocumentSymbol(
       new ElmWorkspaceMatcher((param: DocumentSymbolParams) =>
         URI.parse(param.textDocument.uri),
-      ).handlerForWorkspace(this.handleDocumentSymbolRequest),
+      ).handle(this.handleDocumentSymbolRequest.bind(this)),
     );
   }
 
   private handleDocumentSymbolRequest = (
-    param: DocumentSymbolParams,
-    elmWorkspace: IElmWorkspace,
+    param: IDocumentSymbolParams,
     token?: CancellationToken,
   ): DocumentSymbolResult => {
     this.connection.console.info(`Document Symbols were requested`);
     const symbolInformationList: SymbolInformation[] = [];
 
-    const forest = elmWorkspace.getForest();
-    const tree: Tree | undefined = forest.getTree(param.textDocument.uri);
+    const tree: Tree | undefined = param.sourceFile.tree;
 
     const cancellationToken = token
       ? new ThrottledCancellationToken(token)

@@ -1,7 +1,7 @@
-import { Location, TextDocumentPositionParams } from "vscode-languageserver";
+import { Location } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../../src/elmWorkspace";
 import { DefinitionProvider, DefinitionResult } from "../../src/providers";
+import { ITextDocumentPositionParams } from "../../src/providers/paramsExtensions";
 import { TreeUtils } from "../../src/util/treeUtils";
 import { baseUri } from "../utils/mockElmWorkspace";
 import { getInvokeAndTargetPositionFromSource } from "../utils/sourceParser";
@@ -9,10 +9,9 @@ import { SourceTreeParser } from "../utils/sourceTreeParser";
 
 class MockDefinitionProvider extends DefinitionProvider {
   public handleDefinition(
-    params: TextDocumentPositionParams,
-    elmWorkspace: IElmWorkspace,
+    params: ITextDocumentPositionParams,
   ): DefinitionResult {
-    return this.handleDefinitionRequest(params, elmWorkspace);
+    return this.handleDefinitionRequest(params);
   }
 }
 
@@ -32,18 +31,22 @@ export class DefinitionProviderTestBase {
       baseUri + determinedTestType.invokeFile,
     ).toString();
 
+    const program = this.treeParser.getWorkspace(determinedTestType.sources);
+    const sourceFile = program.getForest().getByUri(invokeUri);
+
+    if (!sourceFile) throw new Error("Getting tree failed");
+
     switch (determinedTestType.kind) {
       case "unresolved":
         {
-          const definition = this.definitionProvider.handleDefinition(
-            {
-              textDocument: {
-                uri: invokeUri,
-              },
-              position: determinedTestType.invokePosition,
+          const definition = this.definitionProvider.handleDefinition({
+            textDocument: {
+              uri: invokeUri,
             },
-            this.treeParser.getWorkspace(determinedTestType.sources),
-          );
+            position: determinedTestType.invokePosition,
+            program,
+            sourceFile,
+          });
 
           expect(definition).toEqual(undefined);
         }
@@ -51,18 +54,14 @@ export class DefinitionProviderTestBase {
 
       case "resolvesToDifferentFile":
         {
-          const workspace = this.treeParser.getWorkspace(
-            determinedTestType.sources,
-          );
-          const definition = this.definitionProvider.handleDefinition(
-            {
-              textDocument: {
-                uri: invokeUri,
-              },
-              position: determinedTestType.invokePosition,
+          const definition = this.definitionProvider.handleDefinition({
+            textDocument: {
+              uri: invokeUri,
             },
-            workspace,
-          );
+            position: determinedTestType.invokePosition,
+            program,
+            sourceFile,
+          });
 
           expect(definition).toBeDefined();
           expect((definition as Location).uri).toContain(
@@ -74,7 +73,7 @@ export class DefinitionProviderTestBase {
               baseUri + determinedTestType.targetFile,
             ).toString();
 
-            const rootNode = workspace.getForest().treeMap.get(targetUri)!.tree
+            const rootNode = program.getForest().treeMap.get(targetUri)!.tree
               .rootNode;
             const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
               rootNode,
@@ -99,20 +98,17 @@ export class DefinitionProviderTestBase {
 
       case "resolves":
         {
-          const definition = this.definitionProvider.handleDefinition(
-            {
-              textDocument: {
-                uri: invokeUri,
-              },
-              position: determinedTestType.invokePosition,
+          const definition = this.definitionProvider.handleDefinition({
+            textDocument: {
+              uri: invokeUri,
             },
-            this.treeParser.getWorkspace(determinedTestType.sources),
-          );
+            position: determinedTestType.invokePosition,
+            program,
+            sourceFile,
+          });
 
-          const rootNode = this.treeParser
-            .getWorkspace(determinedTestType.sources)
-            .getForest()
-            .treeMap.get(invokeUri)!.tree.rootNode;
+          const rootNode = program.getForest().treeMap.get(invokeUri)!.tree
+            .rootNode;
           const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
             rootNode,
             determinedTestType.targetPosition,

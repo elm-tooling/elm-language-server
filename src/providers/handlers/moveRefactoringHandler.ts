@@ -1,7 +1,6 @@
 import { container } from "tsyringe";
 import { Connection, Position, Range, TextEdit } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../../elmWorkspace";
 import {
   GetMoveDestinationRequest,
   IMoveDestination,
@@ -23,28 +22,27 @@ export class MoveRefactoringHandler {
       GetMoveDestinationRequest,
       new ElmWorkspaceMatcher((param: IMoveParams) =>
         URI.parse(param.sourceUri),
-      ).handlerForWorkspace(this.handleGetMoveDestinationsRequest.bind(this)),
+      ).handle(this.handleGetMoveDestinationsRequest.bind(this)),
     );
 
     this.connection.onRequest(
       MoveRequest,
       new ElmWorkspaceMatcher((param: IMoveParams) =>
         URI.parse(param.sourceUri),
-      ).handlerForWorkspace(this.handleMoveRequest.bind(this)),
+      ).handle(this.handleMoveRequest.bind(this)),
     );
   }
 
   private handleGetMoveDestinationsRequest(
     params: IMoveParams,
-    elmWorkspace: IElmWorkspace,
   ): IMoveDestinationsResponse {
-    const forest = elmWorkspace.getForest();
+    const forest = params.program.getForest();
 
     const destinations: IMoveDestination[] = Array.from(forest.treeMap.values())
       .filter((tree) => tree.writeable && tree.uri !== params.sourceUri)
       .map((tree) => {
         let uri = URI.parse(tree.uri).fsPath;
-        const rootPath = elmWorkspace.getRootPath().fsPath;
+        const rootPath = params.program.getRootPath().fsPath;
 
         uri = uri.slice(rootPath.length + 1);
         const index = uri.lastIndexOf("\\");
@@ -61,15 +59,12 @@ export class MoveRefactoringHandler {
     };
   }
 
-  private async handleMoveRequest(
-    params: IMoveParams,
-    elmWorkspace: IElmWorkspace,
-  ): Promise<void> {
+  private async handleMoveRequest(params: IMoveParams): Promise<void> {
     if (!params.destination) {
       return;
     }
 
-    const forest = elmWorkspace.getForest();
+    const forest = params.program.getForest();
     const tree = forest.getTree(params.sourceUri);
     const destinationTree = forest.getTree(params.destination.uri);
 
@@ -159,7 +154,7 @@ export class MoveRefactoringHandler {
             nodeType: "Function",
             uri: params.sourceUri,
           },
-          elmWorkspace,
+          params.program,
         ).map((ref) => {
           return {
             ...ref,

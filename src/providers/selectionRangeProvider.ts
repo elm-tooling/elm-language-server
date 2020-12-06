@@ -8,10 +8,10 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
 import { PositionUtil } from "../positionUtil";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
+import { ISelectionRangeParams } from "./paramsExtensions";
 
 export class SelectionRangeProvider {
   private connection: Connection;
@@ -21,20 +21,18 @@ export class SelectionRangeProvider {
     this.connection.onSelectionRanges(
       new ElmWorkspaceMatcher((param: SelectionRangeParams) =>
         URI.parse(param.textDocument.uri),
-      ).handlerForWorkspace(this.handleSelectionRangeRequest),
+      ).handle(this.handleSelectionRangeRequest.bind(this)),
     );
   }
 
   private handleSelectionRangeRequest = (
-    params: SelectionRangeParams,
-    elmWorkspace: IElmWorkspace,
+    params: ISelectionRangeParams,
   ): SelectionRange[] | null => {
     this.connection.console.info(`Selection Ranges were requested`);
 
     const ret: SelectionRange[] = [];
 
-    const forest = elmWorkspace.getForest();
-    const tree: Tree | undefined = forest.getTree(params.textDocument.uri);
+    const tree: Tree | undefined = params.sourceFile.tree;
 
     if (tree) {
       params.positions.forEach((position: Position) => {

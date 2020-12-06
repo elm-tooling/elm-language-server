@@ -7,8 +7,8 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
+import { IFoldingRangeParams } from "./paramsExtensions";
 
 export class FoldingRangeProvider {
   private readonly REGION_CONSTRUCTS: Set<string> = new Set([
@@ -25,18 +25,16 @@ export class FoldingRangeProvider {
     this.connection.onFoldingRanges(
       new ElmWorkspaceMatcher((param: FoldingRangeParams) =>
         URI.parse(param.textDocument.uri),
-      ).handlerForWorkspace(this.handleFoldingRange),
+      ).handle(this.handleFoldingRange.bind(this)),
     );
   }
 
   protected handleFoldingRange = (
-    param: FoldingRangeParams,
-    elmWorkspace: IElmWorkspace,
+    param: IFoldingRangeParams,
   ): FoldingRange[] => {
     this.connection.console.info(`Folding ranges were requested`);
     const folds: FoldingRange[] = [];
-    const forest = elmWorkspace.getForest();
-    const tree: Tree | undefined = forest.getTree(param.textDocument.uri);
+    const tree: Tree | undefined = param.sourceFile.tree;
 
     const findLastIdenticalNamedSibling: (node: SyntaxNode) => SyntaxNode = (
       node: SyntaxNode,

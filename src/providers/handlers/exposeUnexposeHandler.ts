@@ -1,7 +1,6 @@
 import { container } from "tsyringe";
 import { Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../../elmWorkspace";
 import {
   ExposeRequest,
   IExposeUnexposeParams,
@@ -19,23 +18,21 @@ export class ExposeUnexposeHandler {
       ExposeRequest,
       new ElmWorkspaceMatcher((params: IExposeUnexposeParams) =>
         URI.parse(params.uri),
-      ).handlerForWorkspace(this.handleExposeRequest.bind(this)),
+      ).handle(this.handleExposeRequest.bind(this)),
     );
 
     this.connection.onRequest(
       UnexposeRequest,
       new ElmWorkspaceMatcher((params: IExposeUnexposeParams) =>
         URI.parse(params.uri),
-      ).handlerForWorkspace(this.handleUnexposeRequest.bind(this)),
+      ).handle(this.handleUnexposeRequest.bind(this)),
     );
   }
 
   private async handleExposeRequest(
     params: IExposeUnexposeParams,
-    elmWorkspace: IElmWorkspace,
   ): Promise<void> {
-    const forest = elmWorkspace.getForest();
-    const tree = forest.getTree(params.uri);
+    const tree = params.sourceFile.tree;
 
     if (tree) {
       const edits = RefactorEditUtils.exposeValueInModule(tree, params.name);
@@ -52,10 +49,8 @@ export class ExposeUnexposeHandler {
 
   private async handleUnexposeRequest(
     params: IExposeUnexposeParams,
-    elmWorkspace: IElmWorkspace,
   ): Promise<void> {
-    const forest = elmWorkspace.getForest();
-    const tree = forest.getTree(params.uri);
+    const tree = params.sourceFile.tree;
 
     if (tree) {
       const edits = RefactorEditUtils.unexposedValueInModule(tree, params.name);

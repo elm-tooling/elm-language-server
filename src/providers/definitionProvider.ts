@@ -8,10 +8,10 @@ import {
   TextDocumentPositionParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
+import { SyntaxNode } from "web-tree-sitter";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
+import { ITextDocumentPositionParams } from "./paramsExtensions";
 
 export type DefinitionResult =
   | Location
@@ -27,18 +27,16 @@ export class DefinitionProvider {
     this.connection.onDefinition(
       new ElmWorkspaceMatcher((param: TextDocumentPositionParams) =>
         URI.parse(param.textDocument.uri),
-      ).handlerForWorkspace(this.handleDefinitionRequest),
+      ).handle(this.handleDefinitionRequest.bind(this)),
     );
   }
 
   protected handleDefinitionRequest = (
-    param: TextDocumentPositionParams,
-    elmWorkspace: IElmWorkspace,
+    param: ITextDocumentPositionParams,
   ): DefinitionResult => {
     this.connection.console.info(`A definition was requested`);
-    const forest = elmWorkspace.getForest();
-    const checker = elmWorkspace.getTypeChecker();
-    const treeContainer = forest.getByUri(param.textDocument.uri);
+    const checker = param.program.getTypeChecker();
+    const treeContainer = param.sourceFile;
 
     if (treeContainer) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(

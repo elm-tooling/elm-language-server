@@ -10,13 +10,16 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree, Edit, Point, SyntaxNode } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Position, Range } from "vscode-languageserver-textdocument";
 import { FileEventsHandler } from "./handlers/fileEventsHandler";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 import { TreeUtils } from "../util/treeUtils";
 import { ITreeContainer } from "../forest";
+import {
+  IDidChangeTextDocumentParams,
+  IDidOpenTextDocumentParams,
+} from "./paramsExtensions";
 
 export class ASTProvider {
   private connection: Connection;
@@ -43,25 +46,24 @@ export class ASTProvider {
       "change",
       new ElmWorkspaceMatcher((params: DidChangeTextDocumentParams) =>
         URI.parse(params.textDocument.uri),
-      ).handlerForWorkspace(this.handleChangeTextDocument),
+      ).handle(this.handleChangeTextDocument.bind(this)),
     );
 
     this.documentEvents.on(
       "open",
       new ElmWorkspaceMatcher((params: DidOpenTextDocumentParams) =>
         URI.parse(params.textDocument.uri),
-      ).handlerForWorkspace(this.handleChangeTextDocument),
+      ).handle(this.handleChangeTextDocument.bind(this)),
     );
   }
 
   protected handleChangeTextDocument = (
-    params: DidChangeTextDocumentParams | DidOpenTextDocumentParams,
-    elmWorkspace: IElmWorkspace,
+    params: IDidChangeTextDocumentParams | IDidOpenTextDocumentParams,
   ): void => {
     this.connection.console.info(
       `Changed text document, going to parse it. ${params.textDocument.uri}`,
     );
-    const forest = elmWorkspace.getForest(false); // Don't synchronize the forest, we are only looking at the tree
+    const forest = params.program.getForest(false); // Don't synchronize the forest, we are only looking at the tree
     const document: VersionedTextDocumentIdentifier = params.textDocument;
 
     let tree: Tree | undefined = forest.getTree(document.uri);
@@ -104,9 +106,9 @@ export class ASTProvider {
           TreeUtils.getTypeAnnotation(startNode)
         ) {
           changedDeclaration = startNode;
-          elmWorkspace.getTypeCache().invalidateValueDeclaration(startNode);
+          params.program.getTypeCache().invalidateValueDeclaration(startNode);
         } else {
-          elmWorkspace.getTypeCache().invalidateProject();
+          params.program.getTypeCache().invalidateProject();
         }
       });
 
@@ -122,7 +124,7 @@ export class ASTProvider {
       );
 
       // The workspace now needs to be synchronized
-      elmWorkspace.markAsDirty();
+      params.program.markAsDirty();
 
       setImmediate(() => {
         if (tree) {
