@@ -87,7 +87,7 @@ describe("test elm diagnostics", () => {
     let nodeAtPosition: SyntaxNode;
 
     if ("position" in result) {
-      const rootNode = program.getForest().treeMap.get(testUri)!.tree.rootNode;
+      const rootNode = program.getSourceFile(testUri)!.tree.rootNode;
       nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
         rootNode,
         result.position,

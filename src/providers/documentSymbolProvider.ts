@@ -38,7 +38,7 @@ export class DocumentSymbolProvider {
     this.connection.console.info(`Document Symbols were requested`);
     const symbolInformationList: SymbolInformation[] = [];
 
-    const tree: Tree | undefined = param.sourceFile.tree;
+    const tree: Tree = param.sourceFile.tree;
 
     const cancellationToken = token
       ? new ThrottledCancellationToken(token)
@@ -59,9 +59,8 @@ export class DocumentSymbolProvider {
         traverse(childNode);
       }
     };
-    if (tree) {
-      traverse(tree.rootNode);
-    }
+
+    traverse(tree.rootNode);
 
     return symbolInformationList;
   };

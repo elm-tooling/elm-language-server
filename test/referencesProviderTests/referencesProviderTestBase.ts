@@ -62,8 +62,7 @@ export class ReferencesProviderTestBase {
     referenceTest.references.forEach(({ referencePosition, referenceFile }) => {
       const referenceUri = URI.file(baseUri + referenceFile).toString();
 
-      const rootNode = program.getForest().treeMap.get(referenceUri)!.tree
-        .rootNode;
+      const rootNode = program.getSourceFile(referenceUri).tree.rootNode;
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
         rootNode,
         referencePosition,

@@ -32,30 +32,28 @@ export class SelectionRangeProvider {
 
     const ret: SelectionRange[] = [];
 
-    const tree: Tree | undefined = params.sourceFile.tree;
+    const tree: Tree = params.sourceFile.tree;
 
-    if (tree) {
-      params.positions.forEach((position: Position) => {
-        const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-          tree.rootNode,
-          position,
-        );
+    params.positions.forEach((position: Position) => {
+      const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
+        tree.rootNode,
+        position,
+      );
 
-        const newRange = {
-          start: PositionUtil.FROM_TS_POSITION(
-            nodeAtPosition.startPosition,
-          ).toVSPosition(),
-          end: PositionUtil.FROM_TS_POSITION(
-            nodeAtPosition.endPosition,
-          ).toVSPosition(),
-        };
+      const newRange = {
+        start: PositionUtil.FROM_TS_POSITION(
+          nodeAtPosition.startPosition,
+        ).toVSPosition(),
+        end: PositionUtil.FROM_TS_POSITION(
+          nodeAtPosition.endPosition,
+        ).toVSPosition(),
+      };
 
-        ret.push({
-          range: newRange,
-          parent: this.getParentNode(nodeAtPosition, newRange),
-        });
+      ret.push({
+        range: newRange,
+        parent: this.getParentNode(nodeAtPosition, newRange),
       });
-    }
+    });
 
     return ret ? ret : null;
   };

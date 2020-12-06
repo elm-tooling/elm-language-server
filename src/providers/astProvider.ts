@@ -66,7 +66,7 @@ export class ASTProvider {
     const forest = params.program.getForest(false); // Don't synchronize the forest, we are only looking at the tree
     const document: VersionedTextDocumentIdentifier = params.textDocument;
 
-    let tree: Tree | undefined = forest.getTree(document.uri);
+    let tree: Tree = params.sourceFile.tree;
 
     if ("contentChanges" in params) {
       for (const change of params.contentChanges) {

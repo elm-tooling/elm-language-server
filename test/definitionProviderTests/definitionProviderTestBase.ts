@@ -73,8 +73,7 @@ export class DefinitionProviderTestBase {
               baseUri + determinedTestType.targetFile,
             ).toString();
 
-            const rootNode = program.getForest().treeMap.get(targetUri)!.tree
-              .rootNode;
+            const rootNode = program.getSourceFile(targetUri).tree.rootNode;
             const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
               rootNode,
               determinedTestType.targetPosition,
@@ -107,8 +106,7 @@ export class DefinitionProviderTestBase {
             sourceFile,
           });
 
-          const rootNode = program.getForest().treeMap.get(invokeUri)!.tree
-            .rootNode;
+          const rootNode = program.getSourceFile(invokeUri).tree.rootNode;
           const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
             rootNode,
             determinedTestType.targetPosition,
