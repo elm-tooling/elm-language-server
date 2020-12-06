@@ -2,11 +2,12 @@
 import { DiagnosticSeverity, Range } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
 import { PositionUtil } from "../../positionUtil";
+import { DiagnosticSource } from "../../providers/diagnostics/diagnosticSource";
 
 export interface Diagnostic {
   code: string;
   message: string;
-  source: string;
+  source: DiagnosticSource;
   severity: DiagnosticSeverity;
   range: Range;
   uri: string;
@@ -32,7 +33,7 @@ export function errorWithEndNode(
     message: format(diagnostic.message, ...args),
     code: diagnostic.code,
     severity: diagnostic.severity,
-    source: "elm",
+    source: "Elm",
     uri: node.tree.uri,
   };
 }
