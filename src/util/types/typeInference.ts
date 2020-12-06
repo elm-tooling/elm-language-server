@@ -553,7 +553,8 @@ export class InferenceScope {
     cancellationToken?: ICancellationToken,
   ): InferenceResult {
     const nonShadowableNames =
-      program.getSourceFile(uri)?.nonShadowableNames ?? new Set<string>();
+      new Set(program.getSourceFile(uri)?.nonShadowableNames) ??
+      new Set<string>();
 
     const setter = (): InferenceResult =>
       new InferenceScope(
