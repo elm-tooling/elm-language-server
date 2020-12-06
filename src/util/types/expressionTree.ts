@@ -395,7 +395,7 @@ export function mapSyntaxNodeToExpression(
         const functionDeclarationLeft = node as EFunctionDeclarationLeft;
         functionDeclarationLeft.nodeType = "FunctionDeclarationLeft";
         functionDeclarationLeft.params = node.namedChildren
-          .filter((n) => n.type.includes("pattern"))
+          .filter((n) => n.type.includes("pattern") || n.type === "unit_expr")
           ?.map(mapSyntaxNodeToExpression)
           .filter(
             Utils.notUndefined.bind(mapSyntaxNodeToExpression),

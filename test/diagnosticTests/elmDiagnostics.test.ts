@@ -189,4 +189,21 @@ field =
   `;
     await testTypeInference(basicsSources + source, []);
   });
+
+  test("unit expr as a function param", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+field : () -> Int
+field =
+    let
+        func () =
+            4
+
+    in
+    func
+  `;
+    await testTypeInference(basicsSources + source, []);
+  });
 });
