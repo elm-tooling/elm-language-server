@@ -132,7 +132,7 @@ const parsingFailures = [
 ];
 const compilerFailures = ["pablohirafuji/elm-qrcode", "rtfeldman/elm-css"];
 
-const unknownFailures = ["Chadtech/elm-css-grid"];
+const otherFailures = ["Chadtech/elm-vector"];
 
 let completed: string[] = [];
 
@@ -150,7 +150,7 @@ const filteredLibs = libsToParse
     (lib) =>
       !lib.startsWith("elm/") &&
       !lib.startsWith("elm-explorations/") &&
-      !unknownFailures.includes(lib) &&
+      !otherFailures.includes(lib) &&
       // !parsingFailures.includes(lib) &&
       // !compilerFailures.includes(lib) &&
       !completed.includes(path.join(__dirname, "../", `examples-full/${lib}`)),
