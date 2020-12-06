@@ -5,16 +5,10 @@ import { ElmWorkspace } from "../src/elmWorkspace";
 import * as path from "path";
 import { Settings } from "../src/util/settings";
 import Parser from "web-tree-sitter";
-import {
-  getCancellationFilePath,
-  FileBasedCancellationTokenSource,
-  getCancellationFolderPath,
-  ThrottledCancellationToken,
-} from "../src/cancellation";
-import { randomBytes } from "crypto";
-import { Diagnostic } from "vscode-languageserver";
 import { spawnSync } from "child_process";
 import { appendFileSync, readFileSync } from "fs";
+import { Diagnostic } from "../src/util/types/diagnostics";
+import { performance } from "perf_hooks";
 
 container.register("Connection", {
   useValue: {
@@ -25,8 +19,8 @@ container.register("Connection", {
       warn: (): void => {
         // console.log(a);
       },
-      error: (): void => {
-        // console.log(a);
+      error: (a: string): void => {
+        console.log(a);
       },
     },
     window: {
@@ -36,6 +30,7 @@ container.register("Connection", {
     },
   },
 });
+
 container.register("Settings", {
   useValue: new Settings({} as any, {}),
 });
@@ -50,61 +45,59 @@ async function initParser(): Promise<void> {
   container.resolve<Parser>("Parser").setLanguage(language);
 }
 
+const failed: string[] = [];
+const diagnosticTimes = new Map<string, number>();
+
 export async function runDiagnosticTests(uri: string): Promise<void> {
   const pathUri = URI.file(uri);
 
-  await initParser();
-
-  const elmWorkspace = new ElmWorkspace(pathUri);
-  await elmWorkspace.init(() => {
-    //
-  });
-
-  const cancellationToken = new FileBasedCancellationTokenSource(
-    getCancellationFilePath(
-      getCancellationFolderPath(randomBytes(21).toString("hex")),
-      "1",
-    ),
-  );
-
-  const token = new ThrottledCancellationToken(cancellationToken.token);
-
   try {
+    let elmWorkspace = new ElmWorkspace(pathUri);
+    await elmWorkspace.init(() => {
+      //
+    });
+
+    const start = performance.now();
     const diagnostics: Diagnostic[] = [];
-    elmWorkspace.getForest().treeMap.forEach((treeContainer) =>
-      diagnostics.push(
-        ...elmWorkspace
-          .getTypeChecker()
-          .getDiagnostics(treeContainer, token)
-          .filter((d) => {
-            const uri = (<any>d.data).uri as string;
-            return (
-              !uri.includes("test") &&
-              elmWorkspace.getForest().getByUri(uri)?.writeable
-            );
-          }),
-      ),
-    );
-    console.log("\n");
-    console.log(uri);
+    elmWorkspace
+      .getForest()
+      .treeMap.forEach((treeContainer) =>
+        diagnostics.push(
+          ...[
+            ...elmWorkspace.getSyntacticDiagnostics(treeContainer),
+            ...elmWorkspace.getSemanticDiagnostics(treeContainer),
+          ].filter(
+            (d) =>
+              !d.uri.includes("test") &&
+              elmWorkspace.getForest().getByUri(d.uri)?.writeable,
+          ),
+        ),
+      );
+    diagnosticTimes.set(path.basename(uri), performance.now() - start);
+
     console.log(`${diagnostics.length} diagnostics found.`);
 
     diagnostics.forEach((diagnostic) => {
-      console.log(
-        `${path.basename((<any>diagnostic.data).uri)}: ${diagnostic.message}`,
-      );
+      console.log(`${path.basename(diagnostic.uri)}: ${diagnostic.message}`);
     });
 
+    console.log();
+
     if (diagnostics.length === 0) {
-      appendFileSync(path.join(__dirname, "complete.txt"), `${uri}\n`);
+      // appendFileSync(path.join(__dirname, "complete.txt"), `${uri}\n`);
     } else {
-      process.exitCode = 1;
+      failed.push(path.basename(uri));
+      // process.exitCode = 1;
     }
+
+    elmWorkspace.getForest().treeMap.forEach((sourceFile) => {
+      sourceFile.tree.delete();
+    });
+    elmWorkspace = undefined!;
   } catch (e) {
-    console.log("\n");
-    console.log(uri);
     console.log(e);
-    process.exitCode = 1;
+    failed.push(uri);
+    // process.exitCode = 1;
   }
 }
 
@@ -116,7 +109,6 @@ function checkout(repo: string, url: string): void {
   spawnSync("git", ["fetch"]);
   spawnSync("git", ["reset", "--hard", "HEAD"]);
   spawnSync("elm", ["make"]);
-  spawnSync("elm-test");
   process.chdir(cur);
 }
 
@@ -130,11 +122,7 @@ const libsToParse = require("../script/search.json") as {
 }[];
 
 const parsingFailures = [
-  "showell/dict-dot-dot",
-  "folkertdev/elm-cff",
   "niho/json-schema-form",
-  "ianmackenzie/elm-iso-10303",
-  "ianmackenzie/elm-step-file",
   "brian-watkins/elm-spec",
   "ggb/elm-trend",
   "indicatrix/elm-chartjs-webcomponent", // comment between case branches
@@ -143,6 +131,8 @@ const parsingFailures = [
   "zwilias/json-decode-exploration", // Weird parsing error in mgold/elm-nonempty-list
 ];
 const compilerFailures = ["pablohirafuji/elm-qrcode", "rtfeldman/elm-css"];
+
+const unknownFailures = ["Chadtech/elm-css-grid"];
 
 let completed: string[] = [];
 
@@ -160,8 +150,9 @@ const filteredLibs = libsToParse
     (lib) =>
       !lib.startsWith("elm/") &&
       !lib.startsWith("elm-explorations/") &&
-      !parsingFailures.includes(lib) &&
-      !compilerFailures.includes(lib) &&
+      !unknownFailures.includes(lib) &&
+      // !parsingFailures.includes(lib) &&
+      // !compilerFailures.includes(lib) &&
       !completed.includes(path.join(__dirname, "../", `examples-full/${lib}`)),
   );
 
@@ -169,17 +160,40 @@ console.log("Getting applications");
 
 const applications = require("../script/applications.json") as string[];
 
-[...applications, ...filteredLibs]
-  // .slice(0, 50)
-  .forEach((lib) => {
+async function testAll(): Promise<void> {
+  await initParser();
+
+  for (const lib of [...applications, ...filteredLibs]) {
     console.log(lib);
     const dir = `examples-full/${lib}`;
 
     try {
       checkout(dir, lib);
 
-      void runDiagnosticTests(path.join(__dirname, "../", dir));
+      await runDiagnosticTests(path.join(__dirname, "../", dir));
     } catch (e) {
       console.log(e);
+    } finally {
+      if (global.gc) {
+        global.gc();
+      }
     }
-  });
+  }
+
+  console.log("FAILURES");
+  failed.forEach((fail) => console.log(fail));
+
+  console.log("TOP TEN TIMES");
+  Array.from(diagnosticTimes.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .forEach(([uri, time]) => {
+      console.log(`${uri}: ${time.toFixed(0)}ms`);
+    });
+}
+
+process.on("uncaughtException", function (err) {
+  console.log(`Caught exception: ${err}`);
+});
+
+void testAll();
