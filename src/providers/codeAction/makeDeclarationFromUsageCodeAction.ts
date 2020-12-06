@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
 import { CodeAction, Range } from "vscode-languageserver";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";

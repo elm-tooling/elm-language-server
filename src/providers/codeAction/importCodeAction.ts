@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
 import { CodeAction, TextEdit } from "vscode-languageserver";
 import { Range } from "vscode-languageserver-textdocument";
 import { SyntaxNode } from "web-tree-sitter";
