@@ -96,7 +96,7 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
     elmWorkspace = undefined!;
   } catch (e) {
     console.log(e);
-    failed.push(uri);
+    failed.push(path.basename(uri));
     // process.exitCode = 1;
   }
 }
@@ -130,9 +130,12 @@ const parsingFailures = [
   "terezka/charts", // Let expr on the same line
   "zwilias/json-decode-exploration", // Weird parsing error in mgold/elm-nonempty-list
 ];
-const compilerFailures = ["pablohirafuji/elm-qrcode", "rtfeldman/elm-css"];
+const compilerFailures = ["mdgriffith/elm-ui", "frandibar/elm-bootstrap"];
 
-const unknownFailures = ["Chadtech/elm-css-grid"];
+const otherFailures = [
+  "Chadtech/elm-vector", // Too big
+  "arowM/html-extra", // Advanced module resolution bug
+];
 
 let completed: string[] = [];
 
@@ -150,9 +153,9 @@ const filteredLibs = libsToParse
     (lib) =>
       !lib.startsWith("elm/") &&
       !lib.startsWith("elm-explorations/") &&
-      !unknownFailures.includes(lib) &&
+      !otherFailures.includes(lib) &&
       // !parsingFailures.includes(lib) &&
-      // !compilerFailures.includes(lib) &&
+      !compilerFailures.includes(lib) &&
       !completed.includes(path.join(__dirname, "../", `examples-full/${lib}`)),
   );
 

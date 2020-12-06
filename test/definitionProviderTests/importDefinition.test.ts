@@ -535,4 +535,25 @@ type Model = String
 `;
     await testBase.testDefinition(source);
   });
+
+  it(`test union constructor resolves when it is used in bin op expr`, async () => {
+    const source = `
+--@ main.elm
+import App exposing (..)
+
+type alias Expression =
+    App.Expression
+    
+func : Expression
+func = "" >> Expression
+               --^App.elm
+
+--@ App.elm
+module App exposing (..)
+
+type Expression = Expression
+                    --X
+`;
+    await testBase.testDefinition(source);
+  });
 });
