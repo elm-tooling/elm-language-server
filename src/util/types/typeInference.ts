@@ -345,12 +345,16 @@ function getParentPatternDeclaration(
 }
 
 export function getTypeclassName(type: TVar): string | undefined {
-  switch (type.name) {
-    case "number":
-    case "appendable":
-    case "comparable":
-    case "compappend":
-      return type.name;
+  if (type.name.length < 6) {
+    return;
+  } else if (type.name.startsWith("number")) {
+    return "number";
+  } else if (type.name.startsWith("appendable")) {
+    return "appendable";
+  } else if (type.name.startsWith("comparable")) {
+    return "comparable";
+  } else if (type.name.startsWith("compappend")) {
+    return "compappend";
   }
 }
 

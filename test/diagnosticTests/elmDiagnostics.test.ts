@@ -177,4 +177,16 @@ field { field } =
       { message: Diagnostics.Redefinition, args: ["field"] },
     ]);
   });
+
+  test("Type class used with a suffix", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+field : number1
+field =
+    4
+  `;
+    await testTypeInference(basicsSources + source, []);
+  });
 });
