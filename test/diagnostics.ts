@@ -6,7 +6,7 @@ import * as path from "path";
 import { Settings } from "../src/util/settings";
 import Parser from "web-tree-sitter";
 import { spawnSync } from "child_process";
-import { appendFileSync, readFileSync } from "fs";
+import { readFileSync } from "fs";
 import { Diagnostic } from "../src/util/types/diagnostics";
 import { performance } from "perf_hooks";
 
@@ -141,6 +141,29 @@ const compilerFailures = ["mdgriffith/elm-ui", "frandibar/elm-bootstrap"];
 const otherFailures = [
   "Chadtech/elm-vector", // Too big
   "arowM/html-extra", // Advanced module resolution bug
+  "MattCheely/tryframe-coordinator", // Still on version 0.18
+  "danmarcab/material-icons", // Still on version 0.18
+  "krisajenkins/elm-astar", // Still on version 0.18
+  "proda-ai/elm-svg-loader", // Still on version 0.18
+  "sh4r3m4n/elm-piano", // Still on version 0.18
+  "thaterikperson/elm-strftime", // Still on version 0.18
+  "tomjkidd/elm-multiway-tree-zipper", // Still on version 0.18
+];
+
+const removedFromGithubFailures = [
+  "HAN-ASD-DT/priority-queue",
+  "HAN-ASD-DT/rsa",
+  "abradley2/form-controls",
+  "abradley2/form-fields",
+  "altjsus/elm-airtable",
+  "jwheeler-cp/elm-form",
+  "m-mullins/elm-console",
+  "nathanjohnson320/elm-ui-components",
+  "nik-garmash/elm-test",
+  "not1602/elm-feather",
+  "ozyinc/elm-sortable-table-with-row-id",
+  "peterszerzo/elm-natural-ui",
+  "proda-ai/elm-logger",
 ];
 
 let completed: string[] = [];
@@ -162,6 +185,7 @@ const filteredLibs = libsToParse
       !otherFailures.includes(lib) &&
       // !parsingFailures.includes(lib) &&
       !compilerFailures.includes(lib) &&
+      !removedFromGithubFailures.includes(lib) &&
       !completed.includes(path.join(__dirname, "../", `examples-full/${lib}`)),
   );
 
