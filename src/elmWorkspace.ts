@@ -529,7 +529,7 @@ export class ElmWorkspace implements IElmWorkspace {
         encoding: "utf-8",
       });
 
-      const tree: Tree | undefined = this.parser.parse(fileContent);
+      const tree: Tree = this.parser.parse(fileContent);
       this.forest.setTree(
         URI.file(filePath.path).toString(),
         filePath.writeable,

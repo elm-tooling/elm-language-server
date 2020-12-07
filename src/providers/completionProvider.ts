@@ -27,6 +27,7 @@ import { DiagnosticsProvider } from ".";
 import { TypeChecker } from "../util/types/typeChecker";
 import escapeStringRegexp from "escape-string-regexp";
 import { TRecord } from "../util/types/typeInference";
+import { ICompletionParams } from "./paramsExtensions";
 
 export type CompletionResult =
   | CompletionItem[]
@@ -53,25 +54,24 @@ export class CompletionProvider {
   constructor() {
     this.connection = container.resolve<Connection>("Connection");
     this.diagnostics = container.resolve(DiagnosticsProvider);
-    this.connection.onCompletion((params) =>
+    this.connection.onCompletion(
       this.diagnostics.interruptDiagnostics(() =>
         new ElmWorkspaceMatcher((params: CompletionParams) =>
           URI.parse(params.textDocument.uri),
-        ).handlerForWorkspace(this.handleCompletionRequest)(params),
+        ).handle(this.handleCompletionRequest.bind(this)),
       ),
     );
   }
 
   protected handleCompletionRequest = (
-    params: CompletionParams,
-    elmWorkspace: IElmWorkspace,
+    params: ICompletionParams,
   ): CompletionResult => {
     this.connection.console.info(`A completion was requested`);
     const completions: CompletionItem[] = [];
 
-    const forest = elmWorkspace.getForest();
-    const checker = elmWorkspace.getTypeChecker();
-    const treeContainer = forest.getByUri(params.textDocument.uri);
+    const forest = params.program.getForest();
+    const checker = params.program.getTypeChecker();
+    const treeContainer = params.sourceFile;
 
     if (treeContainer) {
       const tree = treeContainer?.tree;
@@ -274,7 +274,7 @@ export class CompletionProvider {
           nodeAtPosition,
           treeContainer,
           replaceRange,
-          elmWorkspace,
+          params.program,
         );
       }
 
@@ -327,7 +327,7 @@ export class CompletionProvider {
         const moduleCompletions = this.getSubmodulesOrValues(
           targetNode,
           treeContainer,
-          elmWorkspace,
+          params.program,
           replaceRange,
           targetWord,
         );
@@ -340,7 +340,7 @@ export class CompletionProvider {
           targetNode,
           treeContainer,
           replaceRange,
-          elmWorkspace,
+          params.program,
         );
 
         if (recordCompletions.length > 0) {
@@ -375,7 +375,7 @@ export class CompletionProvider {
       completions.push(...this.getKeywordsInline());
 
       const possibleImportCompletions = this.getPossibleImports(
-        elmWorkspace,
+        params.program,
         replaceRange,
         tree,
         params.textDocument.uri,

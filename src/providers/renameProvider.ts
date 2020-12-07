@@ -16,6 +16,7 @@ import { SyntaxNode } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { RenameUtils } from "../util/renameUtils";
+import { IRenameParams, IPrepareRenameParams } from "./paramsExtensions";
 
 export class RenameProvider {
   private connection: Connection;
@@ -25,26 +26,25 @@ export class RenameProvider {
     this.connection.onPrepareRename(
       new ElmWorkspaceMatcher((params: PrepareRenameParams) =>
         URI.parse(params.textDocument.uri),
-      ).handlerForWorkspace(this.handlePrepareRenameRequest),
+      ).handle(this.handlePrepareRenameRequest.bind(this)),
     );
 
     this.connection.onRenameRequest(
       new ElmWorkspaceMatcher((params: RenameParams) =>
         URI.parse(params.textDocument.uri),
-      ).handlerForWorkspace(this.handleRenameRequest),
+      ).handle(this.handleRenameRequest.bind(this)),
     );
   }
 
   protected handleRenameRequest = (
-    params: RenameParams,
-    elmWorkspace: IElmWorkspace,
+    params: IRenameParams,
   ): WorkspaceEdit | null | undefined => {
     this.connection.console.info(`Renaming was requested`);
 
     let newName = params.newName;
 
     const affectedNodes = RenameUtils.getRenameAffectedNodes(
-      elmWorkspace,
+      params.program,
       params.textDocument.uri,
       params.position,
     );
@@ -54,7 +54,7 @@ export class RenameProvider {
     const renameChanges: RenameFile[] = [];
     const moduleDeclarationRenameChange = this.createModuleDeclarationRenameChange(
       affectedNodes,
-      elmWorkspace,
+      params.program,
       params,
       newName,
     );
@@ -74,13 +74,12 @@ export class RenameProvider {
   };
 
   protected handlePrepareRenameRequest = (
-    params: PrepareRenameParams,
-    elmWorkspace: IElmWorkspace,
+    params: IPrepareRenameParams,
   ): Range | null => {
     this.connection.console.info(`Prepare rename was requested`);
 
     const affectedNodes = RenameUtils.getRenameAffectedNodes(
-      elmWorkspace,
+      params.program,
       params.textDocument.uri,
       params.position,
     );

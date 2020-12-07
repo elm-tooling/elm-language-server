@@ -1,5 +1,6 @@
 import { CodeActionParams, RequestType } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import { IParams } from "./util/elmWorkspaceMatcher";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export const GetMoveDestinationRequest = new RequestType<
@@ -10,7 +11,7 @@ export const GetMoveDestinationRequest = new RequestType<
 
 export const MoveRequest = new RequestType<IMoveParams, void, void>("elm/move");
 
-export interface IMoveParams {
+export interface IMoveParams extends IParams {
   sourceUri: string;
   params: CodeActionParams;
   destination?: IMoveDestination;
@@ -30,7 +31,7 @@ export const ExposeRequest = new RequestType<IExposeUnexposeParams, void, void>(
   "elm/expose",
 );
 
-export interface IExposeUnexposeParams {
+export interface IExposeUnexposeParams extends IParams {
   uri: string;
   name: string;
 }

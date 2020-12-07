@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
 import { CodeAction, TextEdit } from "vscode-languageserver";
 import { Range } from "vscode-languageserver-textdocument";
 import { SyntaxNode } from "web-tree-sitter";
@@ -7,7 +6,8 @@ import { ImportUtils, IPossibleImport } from "../../util/importUtils";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../util/types/diagnostics";
-import { CodeActionProvider, ICodeActionParams } from "../codeActionProvider";
+import { CodeActionProvider } from "../codeActionProvider";
+import { ICodeActionParams } from "../paramsExtensions";
 
 const errorCodes = [Diagnostics.MissingValue.code];
 const fixId = "import";

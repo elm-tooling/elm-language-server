@@ -17,6 +17,7 @@ import { IClientSettings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
 import { Diagnostic } from "../../util/types/diagnostics";
 import { ASTProvider } from "../astProvider";
+import { DiagnosticSource } from "./diagnosticSource";
 import { DiagnosticsRequest } from "./diagnosticsRequest";
 import { ElmLsDiagnostics } from "./elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
@@ -38,6 +39,7 @@ export interface IElmIssue {
 }
 
 export interface IDiagnostic extends Omit<LspDiagnostic, "code"> {
+  source: DiagnosticSource;
   data: {
     uri: string;
     code: string;

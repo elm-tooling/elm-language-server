@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
 import { CodeAction, Range, TextEdit } from "vscode-languageserver";
 import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../util/types/diagnostics";
-import { CodeActionProvider, ICodeActionParams } from "../codeActionProvider";
+import { CodeActionProvider } from "../codeActionProvider";
+import { ICodeActionParams } from "../paramsExtensions";
 
 const errorCodes = [Diagnostics.MissingTypeAnnotation.code];
 const fixId = "add_type_annotation";

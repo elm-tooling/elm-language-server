@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
 import { ITreeContainer } from "../../forest";
 import { SyntaxNode } from "web-tree-sitter";
 import { MultiMap } from "../multiMap";

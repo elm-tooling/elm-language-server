@@ -5,8 +5,8 @@ import { IElmWorkspace } from "../src/elmWorkspace";
 import {
   CodeActionProvider,
   convertFromAnalyzerDiagnostic,
-  ICodeActionParams,
 } from "../src/providers";
+import { ICodeActionParams } from "../src/providers/paramsExtensions";
 import { Utils } from "../src/util/utils";
 import { baseUri } from "./utils/mockElmWorkspace";
 import { getTargetPositionFromSource } from "./utils/sourceParser";

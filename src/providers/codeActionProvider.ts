@@ -9,7 +9,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ElmWorkspaceMatcher, IParams } from "../util/elmWorkspaceMatcher";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { MultiMap } from "../util/multiMap";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { Settings } from "../util/settings";
@@ -24,8 +24,7 @@ import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
 import { diagnosticsEquals } from "./diagnostics/fileDiagnostics";
 import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
-
-export type ICodeActionParams = CodeActionParams & IParams;
+import { ICodeActionParams } from "./paramsExtensions";
 
 export interface ICodeActionRegistration {
   errorCodes: string[];
@@ -206,8 +205,7 @@ export class CodeActionProvider {
     // Top level annotation are handled by diagnostics
     const codeActions: CodeAction[] = [];
 
-    const forest = params.program.getForest();
-    const treeContainer = forest.getByUri(params.textDocument.uri);
+    const treeContainer = params.sourceFile;
     const tree = treeContainer?.tree;
     const checker = params.program.getTypeChecker();
 

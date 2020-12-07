@@ -148,7 +148,7 @@ export class MockElmWorkspace implements IElmWorkspace {
   }
 
   private parseAndAddToForest(fileName: string, source: string): void {
-    const tree: Tree | undefined = this.parser.parse(source);
+    const tree: Tree = this.parser.parse(source);
     this.forest.setTree(
       URI.file(baseUri + fileName).toString(),
       true,

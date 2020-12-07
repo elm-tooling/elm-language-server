@@ -1,18 +1,14 @@
-import { ReferenceParams } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../../src/elmWorkspace";
 import { ReferenceResult, ReferencesProvider } from "../../src/providers";
+import { IReferenceParams } from "../../src/providers/paramsExtensions";
 import { TreeUtils } from "../../src/util/treeUtils";
 import { baseUri } from "../utils/mockElmWorkspace";
 import { getReferencesTestFromSource } from "../utils/sourceParser";
 import { SourceTreeParser } from "../utils/sourceTreeParser";
 
 class MockReferencesProvider extends ReferencesProvider {
-  public handleReference(
-    params: ReferenceParams,
-    elmWorkspace: IElmWorkspace,
-  ): ReferenceResult {
-    return this.handleReferencesRequest(params, elmWorkspace);
+  public handleReference(params: IReferenceParams): ReferenceResult {
+    return this.handleReferencesRequest(params);
   }
 }
 
@@ -30,25 +26,30 @@ export class ReferencesProviderTestBase {
     const referenceTest = getReferencesTestFromSource(source);
 
     if (!referenceTest) {
-      fail();
+      throw new Error("Getting references from source failed");
     }
+
+    const testUri = URI.file(baseUri + referenceTest.invokeFile).toString();
+
+    const program = this.treeParser.getWorkspace(referenceTest.sources);
+    const sourceFile = program.getForest().getByUri(testUri);
+
+    if (!sourceFile) throw new Error("Getting tree failed");
 
     const invokeUri = URI.file(baseUri + referenceTest.invokeFile).toString();
 
-    const workspace = this.treeParser.getWorkspace(referenceTest.sources);
     const references =
-      this.referencesProvider.handleReference(
-        {
-          textDocument: {
-            uri: invokeUri,
-          },
-          position: referenceTest.invokePosition,
-          context: {
-            includeDeclaration: true,
-          },
+      this.referencesProvider.handleReference({
+        textDocument: {
+          uri: invokeUri,
         },
-        workspace,
-      ) ?? [];
+        position: referenceTest.invokePosition,
+        context: {
+          includeDeclaration: true,
+        },
+        program,
+        sourceFile,
+      }) ?? [];
 
     // Add invoke position to references
     referenceTest.references.push({
@@ -61,8 +62,7 @@ export class ReferencesProviderTestBase {
     referenceTest.references.forEach(({ referencePosition, referenceFile }) => {
       const referenceUri = URI.file(baseUri + referenceFile).toString();
 
-      const rootNode = workspace.getForest().treeMap.get(referenceUri)!.tree
-        .rootNode;
+      const rootNode = program.getSourceFile(referenceUri)!.tree.rootNode;
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
         rootNode,
         referencePosition,

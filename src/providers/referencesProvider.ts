@@ -7,10 +7,10 @@ import {
   ReferenceParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
 import { TreeUtils } from "../util/treeUtils";
+import { IReferenceParams } from "./paramsExtensions";
 
 export type ReferenceResult = Location[] | null | undefined;
 
@@ -21,20 +21,18 @@ export class ReferencesProvider {
     this.connection.onReferences(
       new ElmWorkspaceMatcher((param: ReferenceParams) =>
         URI.parse(param.textDocument.uri),
-      ).handlerForWorkspace(this.handleReferencesRequest),
+      ).handle(this.handleReferencesRequest.bind(this)),
     );
   }
 
   protected handleReferencesRequest = (
-    params: ReferenceParams,
-    elmWorkspace: IElmWorkspace,
+    params: IReferenceParams,
   ): ReferenceResult => {
     this.connection.console.info(`References were requested`);
 
-    const forest = elmWorkspace.getForest();
-    const checker = elmWorkspace.getTypeChecker();
+    const checker = params.program.getTypeChecker();
 
-    const treeContainer = forest.getByUri(params.textDocument.uri);
+    const treeContainer = params.sourceFile;
 
     if (treeContainer) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
@@ -47,7 +45,7 @@ export class ReferencesProvider {
         treeContainer,
       );
 
-      const references = References.find(definitionNode, elmWorkspace);
+      const references = References.find(definitionNode, params.program);
 
       if (references) {
         return references.map((a) =>

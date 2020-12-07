@@ -2,23 +2,19 @@ import { isDeepStrictEqual } from "util";
 import {
   CompletionContext,
   CompletionItem,
-  CompletionParams,
   Position,
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../src/elmWorkspace";
 import { CompletionProvider, CompletionResult } from "../src/providers";
+import { ICompletionParams } from "../src/providers/paramsExtensions";
 import { baseUri } from "./utils/mockElmWorkspace";
 import { getCaretPositionFromSource } from "./utils/sourceParser";
 import { SourceTreeParser } from "./utils/sourceTreeParser";
 
 class MockCompletionProvider extends CompletionProvider {
-  public handleCompletion(
-    params: CompletionParams,
-    elmWorkspace: IElmWorkspace,
-  ): CompletionResult {
-    return this.handleCompletionRequest(params, elmWorkspace);
+  public handleCompletion(params: ICompletionParams): CompletionResult {
+    return this.handleCompletionRequest(params);
   }
 }
 
@@ -52,19 +48,24 @@ describe("CompletionProvider", () => {
     );
 
     if (!position) {
-      fail();
+      throw new Error("Getting position failed");
     }
 
-    function testCompletionsWithContext(context: CompletionContext) {
+    const testUri = URI.file(baseUri + fileWithCaret).toString();
+    const program = treeParser.getWorkspace(newSources);
+    const sourceFile = program.getForest().getByUri(testUri);
+
+    function testCompletionsWithContext(context: CompletionContext): void {
+      if (!sourceFile) throw new Error("Getting tree failed");
+
       const completions =
-        completionProvider.handleCompletion(
-          {
-            textDocument: { uri: URI.file(baseUri + fileWithCaret).toString() },
-            position: position!,
-            context,
-          },
-          treeParser.getWorkspace(newSources),
-        ) ?? [];
+        completionProvider.handleCompletion({
+          textDocument: { uri: testUri },
+          position: position!,
+          context,
+          program,
+          sourceFile,
+        }) ?? [];
 
       const completionsList = Array.isArray(completions)
         ? completions

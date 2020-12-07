@@ -7,7 +7,7 @@ import {
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { container } from "tsyringe";
-import { CancellationToken, Connection } from "vscode-languageserver";
+import { Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { RenameUtils } from "../../util/renameUtils";
 import { RenameProvider } from "../renameProvider";

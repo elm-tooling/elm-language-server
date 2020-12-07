@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
 import { CodeAction, Range } from "vscode-languageserver";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../util/types/diagnostics";
-import { CodeActionProvider, ICodeActionParams } from "../codeActionProvider";
+import { CodeActionProvider } from "../codeActionProvider";
+import { ICodeActionParams } from "../paramsExtensions";
 
 const errorCodes = [Diagnostics.MissingValue.code];
 const fixId = "make_declaration_from_usage";

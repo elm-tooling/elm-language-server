@@ -10,11 +10,11 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
 import { Settings } from "../util/settings";
 import { TreeUtils } from "../util/treeUtils";
+import { ICodeLens, ICodeLensParams } from "./paramsExtensions";
 
 type CodeLensType = "exposed" | "referenceCounter";
 type CodeLensResult = CodeLens[] | null | undefined;
@@ -29,45 +29,40 @@ export class CodeLensProvider {
     this.connection.onCodeLens(
       new ElmWorkspaceMatcher((param: CodeLensParams) =>
         URI.parse(param.textDocument.uri),
-      ).handlerForWorkspace(this.handleCodeLensRequest),
+      ).handle(this.handleCodeLensRequest),
     );
     this.connection.onCodeLensResolve(
       new ElmWorkspaceMatcher((param: CodeLens) =>
         URI.parse(param.data.uri),
-      ).handlerForWorkspace(this.handleCodeLensResolveRequest),
+      ).handle(this.handleCodeLensResolveRequest),
     );
   }
 
   protected handleCodeLensRequest = (
-    param: CodeLensParams,
-    elmWorkspace: IElmWorkspace,
+    param: ICodeLensParams,
   ): CodeLensResult => {
     this.connection.console.info(
       `A code lens was requested for ${param.textDocument.uri}`,
     );
     const codeLens: CodeLens[] = [];
 
-    const forest = elmWorkspace.getForest();
-    const tree: Tree | undefined = forest.getTree(param.textDocument.uri);
+    const tree: Tree = param.sourceFile.tree;
 
-    if (tree) {
-      codeLens.push(
-        ...this.getExposingCodeLenses(tree, param.textDocument.uri),
-      );
+    codeLens.push(...this.getExposingCodeLenses(tree, param.textDocument.uri));
 
-      codeLens.push(
-        ...this.getReferencesCodeLenses(tree, param.textDocument.uri),
-      );
+    codeLens.push(
+      ...this.getReferencesCodeLenses(tree, param.textDocument.uri),
+    );
 
-      return codeLens;
-    }
+    return codeLens;
   };
 
-  protected handleCodeLensResolveRequest = (
-    param: CodeLens,
-    elmWorkspace: IElmWorkspace,
-  ): CodeLens => {
-    const codelens = param;
+  protected handleCodeLensResolveRequest = (param: ICodeLens): CodeLens => {
+    const codelens: CodeLens = {
+      range: param.range,
+      command: param.command,
+      data: param.data,
+    };
     const data: {
       codeLensType: CodeLensType;
       references: Location[];
@@ -78,9 +73,8 @@ export class CodeLensProvider {
     this.connection.console.info(
       `A code lens resolve was requested for ${data.uri}`,
     );
-    const forest = elmWorkspace.getForest();
-    const checker = elmWorkspace.getTypeChecker();
-    const treeContainer = forest.getByUri(data.uri);
+    const checker = param.program.getTypeChecker();
+    const treeContainer = param.sourceFile;
     if (treeContainer && data.codeLensType) {
       const tree = treeContainer.tree;
 
@@ -116,7 +110,7 @@ export class CodeLensProvider {
             treeContainer,
           );
 
-          const references = References.find(definitionNode, elmWorkspace);
+          const references = References.find(definitionNode, param.program);
 
           let refLocations: Location[] = [];
           if (references) {

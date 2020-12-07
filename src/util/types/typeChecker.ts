@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-use-before-define */
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
 import { flatMap, NodeType, TreeUtils } from "../treeUtils";
