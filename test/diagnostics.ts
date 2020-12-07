@@ -59,23 +59,26 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
     });
 
     const start = performance.now();
-    const diagnostics: Diagnostic[] = [];
-    elmWorkspace.getForest().treeMap.forEach((treeContainer) => {
-      if (!treeContainer.tree.rootNode.hasError()) {
-        diagnostics.push(
-          ...[
-            ...elmWorkspace.getSyntacticDiagnostics(treeContainer),
-            ...elmWorkspace.getSemanticDiagnostics(treeContainer),
-          ].filter(
-            (d) =>
-              !d.uri.includes("test") &&
-              elmWorkspace.getForest().getByUri(d.uri)?.writeable,
-          ),
-        );
-      } else {
-        parsingErrors.add(treeContainer.maintainerAndPackageName);
+    let diagnostics: Diagnostic[] = [];
+    for (const sourceFile of elmWorkspace.getForest().treeMap.values()) {
+      if (!sourceFile.writeable) {
+        continue;
       }
-    });
+
+      if (sourceFile.tree.rootNode.hasError()) {
+        parsingErrors.add(sourceFile.maintainerAndPackageName);
+        diagnostics = [];
+        break;
+      }
+
+      diagnostics.push(
+        ...[
+          ...elmWorkspace.getSyntacticDiagnostics(sourceFile),
+          ...elmWorkspace.getSemanticDiagnostics(sourceFile),
+        ].filter((d) => !d.uri.includes("test")),
+      );
+    }
+
     diagnosticTimes.set(path.basename(uri), performance.now() - start);
 
     console.log(`${diagnostics.length} diagnostics found.`);
