@@ -47,6 +47,7 @@ async function initParser(): Promise<void> {
 
 const failed: string[] = [];
 const diagnosticTimes = new Map<string, number>();
+const parsingErrors = new Set();
 
 export async function runDiagnosticTests(uri: string): Promise<void> {
   const pathUri = URI.file(uri);
@@ -58,21 +59,26 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
     });
 
     const start = performance.now();
-    const diagnostics: Diagnostic[] = [];
-    elmWorkspace
-      .getForest()
-      .treeMap.forEach((treeContainer) =>
-        diagnostics.push(
-          ...[
-            ...elmWorkspace.getSyntacticDiagnostics(treeContainer),
-            ...elmWorkspace.getSemanticDiagnostics(treeContainer),
-          ].filter(
-            (d) =>
-              !d.uri.includes("test") &&
-              elmWorkspace.getForest().getByUri(d.uri)?.writeable,
-          ),
-        ),
+    let diagnostics: Diagnostic[] = [];
+    for (const sourceFile of elmWorkspace.getForest().treeMap.values()) {
+      if (!sourceFile.writeable) {
+        continue;
+      }
+
+      if (sourceFile.tree.rootNode.hasError()) {
+        parsingErrors.add(sourceFile.maintainerAndPackageName);
+        diagnostics = [];
+        break;
+      }
+
+      diagnostics.push(
+        ...[
+          ...elmWorkspace.getSyntacticDiagnostics(sourceFile),
+          ...elmWorkspace.getSemanticDiagnostics(sourceFile),
+        ].filter((d) => !d.uri.includes("test")),
       );
+    }
+
     diagnosticTimes.set(path.basename(uri), performance.now() - start);
 
     console.log(`${diagnostics.length} diagnostics found.`);
@@ -193,6 +199,10 @@ async function testAll(): Promise<void> {
     .forEach(([uri, time]) => {
       console.log(`${uri}: ${time.toFixed(0)}ms`);
     });
+
+  console.log(
+    `Had to skip ${parsingErrors.size} libraries due to parsing errors`,
+  );
 }
 
 process.on("uncaughtException", function (err) {

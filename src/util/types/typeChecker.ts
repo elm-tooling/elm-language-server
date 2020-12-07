@@ -462,39 +462,24 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         TreeUtils.findParentOfType("type_ref", upperCaseQid) ||
         upperCaseQid.parent?.type === "exposed_type";
       const isConstructorUsage = upperCaseQid.parent?.type === "value_expr";
-      const isFunctionUsage =
-        (upperCaseQid.parent?.parent?.type === "function_call_expr" &&
-          upperCaseQid.parent.parent.childForFieldName("target")?.id ===
-            upperCaseQid.parent.id) ||
-        upperCaseQid.parent?.parent?.type === "bin_op_expr";
 
       const definitionNode = rootSymbols?.get(upperCaseQidText, (symbol) =>
         isTypeUsage
           ? symbol.type === "Type" || symbol.type === "TypeAlias"
           : isConstructorUsage
-          ? symbol.type === "UnionConstructor" || symbol.type === "TypeAlias"
+          ? symbol.type === "UnionConstructor" ||
+            (symbol.type === "TypeAlias" &&
+              symbol.node.childForFieldName("typeExpression")?.children[0]
+                ?.type === "record_type")
           : symbol.type === "UnionConstructor",
       );
 
       if (definitionNode) {
-        let type: Type = TUnknown;
-        if (isConstructorUsage && isFunctionUsage) {
-          type = findType(definitionNode.node);
-        }
-
-        // If it is a constructor function usage, the type of the definition must be a function or record
-        if (
-          !isConstructorUsage ||
-          !isFunctionUsage ||
-          type.nodeType === "Function" ||
-          type.nodeType === "Record"
-        ) {
-          return {
-            node: definitionNode.node,
-            nodeType: definitionNode.type,
-            uri,
-          };
-        }
+        return {
+          node: definitionNode.node,
+          nodeType: definitionNode.type,
+          uri,
+        };
       }
 
       let definitionFromOtherFile;

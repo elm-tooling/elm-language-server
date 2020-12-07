@@ -67,7 +67,7 @@ export class TypeExpression {
       const inferenceResult = new TypeExpression(
         e,
         workspace,
-        false,
+        /* rigidVars */ false,
       ).inferTypeDeclaration(e);
 
       TypeReplacement.freeze(inferenceResult.type);
@@ -99,7 +99,7 @@ export class TypeExpression {
       const inferenceResult = new TypeExpression(
         e,
         workspace,
-        false,
+        /* rigidVars */ false,
         activeAliases,
       ).inferTypeAliasDeclaration(e);
 
@@ -132,11 +132,13 @@ export class TypeExpression {
       const inferenceResult = new TypeExpression(
         e,
         workspace,
-        true,
+        /* rigidVars */ true,
       ).inferTypeExpression(e.typeExpression!);
 
       const type = TypeReplacement.replace(inferenceResult.type, new Map());
       TypeReplacement.freeze(inferenceResult.type);
+
+      workspace.getTypeCache().trackTypeAnnotation(e);
 
       return { ...inferenceResult, type };
     };
@@ -159,7 +161,7 @@ export class TypeExpression {
     const inferenceResult = new TypeExpression(
       e,
       workspace,
-      false,
+      /* rigidVars */ false,
     ).inferUnionConstructor(e);
     TypeReplacement.freeze(inferenceResult.type);
 
@@ -176,7 +178,7 @@ export class TypeExpression {
     const inferenceResult = new TypeExpression(
       e,
       workspace,
-      false,
+      /* rigidVars */ false,
     ).inferPortAnnotation(e);
     TypeReplacement.freeze(inferenceResult.type);
 
@@ -353,7 +355,7 @@ export class TypeExpression {
       TypeExpression.typeAnnotationInference(
         annotation as ETypeAnnotation,
         this.workspace,
-        true,
+        /* rigid */ true,
       )?.expressionTypes.get(definition.expr) ?? TUnknown;
 
     if (type.nodeType === "Var") {

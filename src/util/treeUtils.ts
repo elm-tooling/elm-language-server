@@ -966,6 +966,28 @@ export class TreeUtils {
     }
   }
 
+  public static getValueDeclaration(
+    typeAnnotation?: SyntaxNode,
+  ): SyntaxNode | undefined {
+    if (typeAnnotation?.type !== "type_annotation") {
+      return;
+    }
+
+    let candidate = typeAnnotation.nextNamedSibling;
+
+    // Skip comments
+    while (
+      candidate?.type === "line_comment" ||
+      candidate?.type === "comment_block"
+    ) {
+      candidate = candidate.nextNamedSibling;
+    }
+
+    if (candidate?.type === "value_declaration") {
+      return candidate;
+    }
+  }
+
   /**
    * This gets a list of all ancestors of a type
    * in order from the closest declaration up to the top level declaration

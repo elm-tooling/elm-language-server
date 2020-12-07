@@ -192,4 +192,19 @@ func =
 `;
     await testBase.testDefinition(source);
   });
+
+  it(`test union constructor resolves when used in a bin op expr`, async () => {
+    const source = `
+--@ main.elm
+
+type Page = 
+    Home
+   --X
+
+func var = 
+    var == Home
+          --^
+`;
+    await testBase.testDefinition(source);
+  });
 });

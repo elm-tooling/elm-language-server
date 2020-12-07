@@ -41,7 +41,7 @@ export class TypeReplacement {
 
       return new TypeReplacement(
         replacements,
-        false,
+        /* freshen */ false,
         keepRecordsMutable,
         varsToRemainRigid,
       ).replace(type);
@@ -51,11 +51,18 @@ export class TypeReplacement {
   }
 
   public static freshenVars(type: Type): Type {
-    return new TypeReplacement(new Map(), true, false).replace(type);
+    return new TypeReplacement(new Map(), /* freshen */ true, false).replace(
+      type,
+    );
   }
 
   public static flexify(type: Type): Type {
-    return new TypeReplacement(new Map(), false, false, []).replace(type);
+    return new TypeReplacement(
+      new Map(),
+      /* freshen */ false,
+      false,
+      [],
+    ).replace(type);
   }
 
   public static freeze(type: Type): void {
@@ -83,7 +90,59 @@ export class TypeReplacement {
     type.alias?.parameters.forEach(TypeReplacement.freeze.bind(this));
   }
 
+  private wouldChange(type: Type): boolean {
+    const changeAllVars = this.freshen || !!this.varsToRemainRigid;
+
+    const wouldChangeWorker = (type: Type): boolean => {
+      let result = false;
+      switch (type.nodeType) {
+        case "Var":
+          result = changeAllVars || this.replacements.has(type);
+          break;
+        case "Tuple":
+          result = type.types.some(wouldChangeWorker);
+          break;
+        case "Record":
+          result =
+            Object.values(type.fields).some(wouldChangeWorker) ||
+            (type.baseType ? wouldChangeWorker(type.baseType) : false);
+          break;
+        case "MutableRecord":
+          result =
+            !this.keepRecordsMutable ||
+            Object.values(type.fields).some(wouldChangeWorker) ||
+            (type.baseType ? wouldChangeWorker(type.baseType) : false);
+          break;
+        case "Union":
+          result = type.params.some(wouldChangeWorker);
+          break;
+        case "Function":
+          result =
+            wouldChangeWorker(type.return) ||
+            type.params.some(wouldChangeWorker);
+          break;
+        case "Unit":
+        case "Unknown":
+        case "InProgressBinding":
+          result = false;
+          break;
+      }
+
+      if (!result) {
+        result = !!type.alias?.parameters.some(wouldChangeWorker);
+      }
+
+      return result;
+    };
+
+    return wouldChangeWorker(type);
+  }
+
   private replace(type: Type): Type {
+    if (!this.wouldChange(type)) {
+      return type;
+    }
+
     switch (type.nodeType) {
       case "Var":
         return this.getReplacement(type) ?? type;

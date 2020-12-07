@@ -1,4 +1,6 @@
 import { SyntaxNode } from "web-tree-sitter";
+import { MultiMap } from "../multiMap";
+import { TreeUtils } from "../treeUtils";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { InferenceResult } from "./typeInference";
 
@@ -17,6 +19,7 @@ export class TypeCache {
   private projectTypeAnnotation: SyntaxNodeMap<SyntaxNode, InferenceResult>;
   private projectTypeAndTypeAlias: SyntaxNodeMap<SyntaxNode, InferenceResult>;
   private projectValueDeclaration: SyntaxNodeMap<SyntaxNode, InferenceResult>;
+  private declarationAnnotations: MultiMap<number, SyntaxNode>;
 
   constructor() {
     this.packageTypeAnnotation = new SyntaxNodeMap<
@@ -43,6 +46,7 @@ export class TypeCache {
       SyntaxNode,
       InferenceResult
     >();
+    this.declarationAnnotations = new MultiMap();
   }
 
   public getOrSet(
@@ -74,5 +78,29 @@ export class TypeCache {
 
   public invalidateValueDeclaration(node: SyntaxNode): void {
     this.projectValueDeclaration.delete(node);
+    this.declarationAnnotations
+      .getAll(node.id)
+      ?.forEach((annotation) => this.projectTypeAnnotation.delete(annotation));
+  }
+
+  /**
+   * Track a type annotation
+   *
+   * We associate type annotations with its top level declaration
+   * so we can clear its cache when we invalidate that declaration
+   */
+  public trackTypeAnnotation(annotation: SyntaxNode): void {
+    const declaration =
+      annotation.parent?.type === "file"
+        ? TreeUtils.getValueDeclaration(annotation)
+        : TreeUtils.findParentOfType(
+            "value_declaration",
+            annotation,
+            /* topLevel */ true,
+          );
+
+    if (declaration) {
+      this.declarationAnnotations.set(declaration.id, annotation);
+    }
   }
 }

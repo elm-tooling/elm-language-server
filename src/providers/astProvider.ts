@@ -107,10 +107,12 @@ export class ASTProvider {
         ) {
           changedDeclaration = startNode;
           params.program.getTypeCache().invalidateValueDeclaration(startNode);
-        } else {
-          params.program.getTypeCache().invalidateProject();
         }
       });
+
+    if (!changedDeclaration) {
+      params.program.getTypeCache().invalidateProject();
+    }
 
     tree = newTree;
 
