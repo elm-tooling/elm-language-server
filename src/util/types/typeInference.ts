@@ -397,21 +397,21 @@ function typeMismatchError(
     let s = "";
 
     if (diff.extra.size > 0) {
-      s += `\nExtra fields: ${checker.typeToString(
+      s += `\nExtra fields: \`${checker.typeToString(
         TRecord(Object.fromEntries(diff.extra.entries())),
-      )}`;
+      )}\``;
     }
     if (diff.missing.size > 0) {
-      s += `\nMissing fields: ${checker.typeToString(
+      s += `\nMissing fields: \`${checker.typeToString(
         TRecord(Object.fromEntries(diff.missing.entries())),
-      )}`;
+      )}\``;
     }
     if (diff.mismatched.size > 0) {
       s += `\nMismatched fields: `;
       diff.mismatched.forEach(([expected, found], field) => {
-        s += `\n Field ${field} expected ${checker.typeToString(
+        s += `\n Field \`${field}\` expected \`${checker.typeToString(
           expected,
-        )}, found ${checker.typeToString(found)}`;
+        )}\`, found \`${checker.typeToString(found)}\``;
       });
     }
 
@@ -2001,6 +2001,7 @@ export class InferenceScope {
           t2,
           errorExpr,
           patternBinding,
+          diff,
         ),
       );
 
