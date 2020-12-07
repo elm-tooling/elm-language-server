@@ -47,6 +47,7 @@ async function initParser(): Promise<void> {
 
 const failed: string[] = [];
 const diagnosticTimes = new Map<string, number>();
+const parsingErrors = new Set();
 
 export async function runDiagnosticTests(uri: string): Promise<void> {
   const pathUri = URI.file(uri);
@@ -59,9 +60,8 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
 
     const start = performance.now();
     const diagnostics: Diagnostic[] = [];
-    elmWorkspace
-      .getForest()
-      .treeMap.forEach((treeContainer) =>
+    elmWorkspace.getForest().treeMap.forEach((treeContainer) => {
+      if (!treeContainer.tree.rootNode.hasError()) {
         diagnostics.push(
           ...[
             ...elmWorkspace.getSyntacticDiagnostics(treeContainer),
@@ -71,8 +71,11 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
               !d.uri.includes("test") &&
               elmWorkspace.getForest().getByUri(d.uri)?.writeable,
           ),
-        ),
-      );
+        );
+      } else {
+        parsingErrors.add(treeContainer.maintainerAndPackageName);
+      }
+    });
     diagnosticTimes.set(path.basename(uri), performance.now() - start);
 
     console.log(`${diagnostics.length} diagnostics found.`);
@@ -193,6 +196,10 @@ async function testAll(): Promise<void> {
     .forEach(([uri, time]) => {
       console.log(`${uri}: ${time.toFixed(0)}ms`);
     });
+
+  console.log(
+    `Had to skip ${parsingErrors.size} libraries due to parsing errors`,
+  );
 }
 
 process.on("uncaughtException", function (err) {
