@@ -52,6 +52,7 @@ import {
   error,
   errorWithEndNode,
 } from "./diagnostics";
+import fromEntries from "fromentries";
 
 export let inferTime = 0;
 export function resetInferTime(): void {
@@ -398,12 +399,12 @@ function typeMismatchError(
 
     if (diff.extra.size > 0) {
       s += `\nExtra fields: \`${checker.typeToString(
-        TRecord(Object.fromEntries(diff.extra.entries())),
+        TRecord(fromEntries(diff.extra.entries())),
       )}\``;
     }
     if (diff.missing.size > 0) {
       s += `\nMissing fields: \`${checker.typeToString(
-        TRecord(Object.fromEntries(diff.missing.entries())),
+        TRecord(fromEntries(diff.missing.entries())),
       )}\``;
     }
     if (diff.mismatched.size > 0) {
@@ -1913,7 +1914,7 @@ export class InferenceScope {
       fields.some((field) => !Object.keys(ty.fields).includes(field.text))
     ) {
       if (ty.nodeType !== "Unknown") {
-        const actualTyParams = Object.fromEntries(
+        const actualTyParams = fromEntries(
           fields.map((field, i) => [field.text, vars[i]] as [string, Type]),
         );
         const actualTy = TRecord(actualTyParams);
