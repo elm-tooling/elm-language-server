@@ -72,6 +72,7 @@ export class CapabilityCalculator {
           },
         },
       },
+      linkedEditingRangeProvider: true,
     };
   }
 }
