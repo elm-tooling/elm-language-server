@@ -3,6 +3,7 @@ import { TextEdit } from "vscode-languageserver-textdocument";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../util/types/diagnostics";
+import { TFunction } from "../../util/types/typeInference";
 import { CodeActionProvider } from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
 
@@ -61,16 +62,15 @@ function getEdits(params: ICodeActionParams, range: Range): TextEdit[] {
       nodeAtPosition,
     );
 
-    const typeString: string = checker.typeToString(
-      checker.findType(nodeAtPosition),
-      params.sourceFile,
-    );
+    const type = checker.findType(nodeAtPosition);
+    const typeString: string = checker.typeToString(type, params.sourceFile);
 
     const edit = RefactorEditUtils.createTopLevelFunction(
       insertLineNumber ?? tree.rootNode.endPosition.row,
       funcName,
       typeString,
-      TreeUtils.findParentOfType("function_call_expr", nodeAtPosition),
+      type.nodeType === "Function" ? type.params.length : 0,
+      `Debug.todo "TODO"`,
     );
 
     if (edit) {

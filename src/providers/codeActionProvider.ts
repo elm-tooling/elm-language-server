@@ -3,12 +3,16 @@ import {
   CodeAction,
   CodeActionKind,
   CodeActionParams,
+  CodeActionResolveRequest,
   Connection,
   Diagnostic as LspDiagnostic,
+  Range,
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
+import { IElmWorkspace } from "../elmWorkspace";
+import { ITreeContainer } from "../forest";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { MultiMap } from "../util/multiMap";
 import { RefactorEditUtils } from "../util/refactorEditUtils";
@@ -17,6 +21,7 @@ import { flatMap, TreeUtils } from "../util/treeUtils";
 import { Diagnostic } from "../util/types/diagnostics";
 import {
   convertFromAnalyzerDiagnostic,
+  DiagnosticsProvider,
   IDiagnostic,
 } from "./diagnostics/diagnosticsProvider";
 import { ElmLsDiagnostics } from "./diagnostics/elmLsDiagnostics";
@@ -33,15 +38,37 @@ export interface ICodeActionRegistration {
   getFixAllCodeAction(params: ICodeActionParams): CodeAction | undefined;
 }
 
+export interface IRefactorCodeAction extends CodeAction {
+  data: {
+    uri: string;
+    refactorName: string;
+    actionName: string;
+    range: Range;
+  };
+}
+
+export interface IRefactorRegistration {
+  getAvailableActions(params: ICodeActionParams): IRefactorCodeAction[];
+  getEditsForAction(
+    params: ICodeActionParams,
+    actionName: string,
+  ): TextEdit[] | undefined;
+}
+
 export class CodeActionProvider {
   private connection: Connection;
   private settings: Settings;
   private elmMake: ElmMakeDiagnostics;
   private elmDiagnostics: ElmLsDiagnostics;
+  private diagnosticsProvider: DiagnosticsProvider;
 
   private static errorCodeToRegistrationMap = new MultiMap<
     string,
     ICodeActionRegistration
+  >();
+  private static refactorRegistrations = new Map<
+    string,
+    IRefactorRegistration
   >();
 
   constructor() {
@@ -49,12 +76,24 @@ export class CodeActionProvider {
     this.elmMake = container.resolve(ElmMakeDiagnostics);
     this.elmDiagnostics = container.resolve(ElmLsDiagnostics);
     this.connection = container.resolve<Connection>("Connection");
+    this.diagnosticsProvider = container.resolve(DiagnosticsProvider);
 
     this.onCodeAction = this.onCodeAction.bind(this);
     this.connection.onCodeAction(
-      new ElmWorkspaceMatcher((param: CodeActionParams) =>
-        URI.parse(param.textDocument.uri),
-      ).handle(this.onCodeAction.bind(this)),
+      this.diagnosticsProvider.interruptDiagnostics(() =>
+        new ElmWorkspaceMatcher((param: CodeActionParams) =>
+          URI.parse(param.textDocument.uri),
+        ).handle(this.onCodeAction.bind(this)),
+      ),
+    );
+
+    this.connection.onRequest(
+      CodeActionResolveRequest.method,
+      new ElmWorkspaceMatcher((codeAction: IRefactorCodeAction) =>
+        URI.parse(codeAction.data.uri),
+      ).handleResolve((codeAction, program, sourceFile) =>
+        this.onCodeActionResolve(codeAction, program, sourceFile),
+      ),
     );
 
     if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
@@ -70,6 +109,13 @@ export class CodeActionProvider {
     registration.errorCodes.forEach((code) => {
       CodeActionProvider.errorCodeToRegistrationMap.set(code, registration);
     });
+  }
+
+  public static registerRefactorAction(
+    name: string,
+    registration: IRefactorRegistration,
+  ): void {
+    this.refactorRegistrations.set(name, registration);
   }
 
   private static getDiagnostics(params: ICodeActionParams): Diagnostic[] {
@@ -190,6 +236,13 @@ export class CodeActionProvider {
       );
     });
 
+    results.push(
+      ...flatMap(
+        Array.from(CodeActionProvider.refactorRegistrations.values()),
+        (registration) => registration.getAvailableActions(params),
+      ),
+    );
+
     return [
       ...results,
       ...this.getRefactorCodeActions(params),
@@ -197,6 +250,33 @@ export class CodeActionProvider {
       ...make,
       ...elmDiagnostics,
     ];
+  }
+
+  private onCodeActionResolve(
+    codeAction: IRefactorCodeAction,
+    program: IElmWorkspace,
+    sourceFile: ITreeContainer,
+  ): IRefactorCodeAction {
+    const edits = CodeActionProvider.refactorRegistrations
+      .get(codeAction.data.refactorName)
+      ?.getEditsForAction(
+        {
+          textDocument: {
+            uri: codeAction.data.uri,
+          },
+          context: { diagnostics: [] },
+          range: codeAction.data.range,
+          program,
+          sourceFile,
+        },
+        codeAction.data.actionName,
+      );
+
+    if (edits) {
+      codeAction.edit = { changes: { [codeAction.data.uri]: edits } };
+    }
+
+    return codeAction;
   }
 
   private getTypeAnnotationCodeActions(
