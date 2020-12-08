@@ -70,7 +70,12 @@ CodeActionProvider.registerRefactorAction(refactorName, {
       hadParenthesis = true;
     }
 
-    if (node.type === "list_expr") {
+    // List, record, and tuple expr should all be treated like parenthesis groups
+    if (
+      node.type === "list_expr" ||
+      node.type === "record_expr" ||
+      node.type === "tuple_expr"
+    ) {
       hadParenthesis = true;
     }
 
