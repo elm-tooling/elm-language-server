@@ -34,25 +34,66 @@ export class RefactorEditUtils {
     insertLineNumber: number,
     valueName: string,
     typeString: string | undefined,
-    valueExpression: SyntaxNode | undefined,
-  ): TextEdit | undefined {
-    const arity = valueExpression ? valueExpression.namedChildCount - 1 : 0;
-    const hasArity0 = arity == 0;
-    const argList: string = this.argListFromArity(arity);
+    args: number | string[],
+    content: string,
+  ): TextEdit {
+    return this.createFunction(
+      insertLineNumber,
+      valueName,
+      typeString,
+      args,
+      content,
+    );
+  }
+
+  public static createFunction(
+    insertLineNumber: number,
+    valueName: string,
+    typeString: string | undefined,
+    args: number | string[],
+    content: string,
+    contentIndendation = 0,
+    targetIndendation = 0,
+  ): TextEdit {
+    const hasArity0 = args === 0 || (Array.isArray(args) && args.length === 0);
+    const argList: string =
+      typeof args === "number" ? this.argListFromArity(args) : args.join(" ");
+
+    const bodyTargetIndendation = targetIndendation + 4;
+    const spaces = getSpaces(targetIndendation);
+    const bodySpaces = getSpaces(bodyTargetIndendation);
+
+    const diffIndentation = bodyTargetIndendation - contentIndendation;
+
+    if (diffIndentation > 0) {
+      const diffSpaces = getSpaces(diffIndentation);
+      content = content.split("\n").join(`\n${diffSpaces}`);
+    } else if (diffIndentation < 0) {
+      content = content
+        .split("\n")
+        .map((line) => {
+          let i = 0;
+          while (i < Math.abs(diffIndentation) && line[i] === " ") {
+            i++;
+          }
+          return line.slice(i);
+        })
+        .join("\n");
+    }
 
     if (hasArity0) {
       return TextEdit.insert(
         Position.create(insertLineNumber, 0),
         `\n\n${
-          typeString ? valueName + " : " + typeString + "\n" : ""
-        }${valueName} =\n    Debug.todo "TODO"\n`,
+          typeString ? `${spaces}${valueName}` + " : " + typeString + "\n" : ""
+        }${spaces}${valueName} =\n${bodySpaces}${content}\n`,
       );
     } else {
       return TextEdit.insert(
         Position.create(insertLineNumber, 0),
         `\n\n${
-          typeString ? valueName + " : " + typeString + "\n" : ""
-        }${valueName} ${argList} =\n    Debug.todo "TODO"\n`,
+          typeString ? `${spaces}${valueName}` + " : " + typeString + "\n" : ""
+        }${spaces}${valueName} ${argList} =\n${bodySpaces}${content}\n`,
       );
     }
   }
@@ -326,4 +367,10 @@ export class RefactorEditUtils {
       );
     }
   }
+}
+
+export function getSpaces(n: number): string {
+  return Array(n + 1)
+    .map(() => "")
+    .join(" ");
 }

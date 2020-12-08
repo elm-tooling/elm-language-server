@@ -1,7 +1,18 @@
-import { CodeAction, Range, TextEdit } from "vscode-languageserver";
+import {
+  CodeAction,
+  CodeActionKind,
+  Range,
+  TextEdit,
+} from "vscode-languageserver";
+import { PositionUtil } from "../../positionUtil";
+import { getSpaces } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../util/types/diagnostics";
-import { CodeActionProvider } from "../codeActionProvider";
+import {
+  CodeActionProvider,
+  IRefactorCodeAction,
+  IRefactorEdit,
+} from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
 
 const errorCodes = [Diagnostics.MissingTypeAnnotation.code];
@@ -32,9 +43,51 @@ CodeActionProvider.registerCodeAction({
       errorCodes,
       fixId,
       (edits, diagnostic) => {
-        edits.push(...getEdits(params, diagnostic.range));
+        const newEdits = getEdits(params, diagnostic.range);
+        if (
+          newEdits.length > 0 &&
+          !edits.find((edit) => edit.newText === newEdits[0].newText)
+        ) {
+          edits.push(...newEdits);
+        }
       },
     );
+  },
+});
+
+// Handle adding annotation to let expr declaration
+const refactorName = "add_type_annotation";
+CodeActionProvider.registerRefactorAction(refactorName, {
+  getAvailableActions: (params: ICodeActionParams): IRefactorCodeAction[] => {
+    const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
+      params.sourceFile.tree.rootNode,
+      params.range.start,
+    );
+
+    if (
+      nodeAtPosition.parent?.type === "function_declaration_left" &&
+      TreeUtils.findParentOfType("let_in_expr", nodeAtPosition) &&
+      nodeAtPosition.parent.parent &&
+      !TreeUtils.getTypeAnnotation(nodeAtPosition.parent.parent)
+    ) {
+      return [
+        {
+          title: "Add inferred annotation",
+          kind: CodeActionKind.RefactorExtract,
+          data: {
+            actionName: "add_type_annotation",
+            refactorName,
+            uri: params.sourceFile.uri,
+            range: params.range,
+          },
+        },
+      ];
+    }
+
+    return [];
+  },
+  getEditsForAction: (params: ICodeActionParams): IRefactorEdit => {
+    return { edits: getEdits(params, params.range) };
   },
 });
 
@@ -52,8 +105,16 @@ function getEdits(params: ICodeActionParams, range: Range): TextEdit[] {
       params.sourceFile,
     );
 
+    const startPosition = PositionUtil.FROM_TS_POSITION(
+      nodeAtPosition.startPosition,
+    ).toVSPosition();
     return [
-      TextEdit.insert(range.start, `${nodeAtPosition.text} : ${typeString}\n`),
+      TextEdit.insert(
+        startPosition,
+        `${nodeAtPosition.text} : ${typeString}\n${getSpaces(
+          startPosition.character,
+        )}`,
+      ),
     ];
   } else {
     return [];

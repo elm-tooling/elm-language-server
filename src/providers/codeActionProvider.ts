@@ -3,20 +3,24 @@ import {
   CodeAction,
   CodeActionKind,
   CodeActionParams,
+  CodeActionResolveRequest,
   Connection,
   Diagnostic as LspDiagnostic,
+  Position,
+  Range,
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { IElmWorkspace } from "../elmWorkspace";
+import { ITreeContainer } from "../forest";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { MultiMap } from "../util/multiMap";
-import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { Settings } from "../util/settings";
-import { flatMap, TreeUtils } from "../util/treeUtils";
+import { flatMap } from "../util/treeUtils";
 import { Diagnostic } from "../util/types/diagnostics";
 import {
   convertFromAnalyzerDiagnostic,
+  DiagnosticsProvider,
   IDiagnostic,
 } from "./diagnostics/diagnosticsProvider";
 import { ElmLsDiagnostics } from "./diagnostics/elmLsDiagnostics";
@@ -33,15 +37,42 @@ export interface ICodeActionRegistration {
   getFixAllCodeAction(params: ICodeActionParams): CodeAction | undefined;
 }
 
+export interface IRefactorCodeAction extends CodeAction {
+  data: {
+    uri: string;
+    refactorName: string;
+    actionName: string;
+    range: Range;
+    renamePosition?: Position;
+  };
+}
+
+export interface IRefactorEdit {
+  edits?: TextEdit[];
+  renamePosition?: Position;
+}
+export interface IRefactorRegistration {
+  getAvailableActions(params: ICodeActionParams): IRefactorCodeAction[];
+  getEditsForAction(
+    params: ICodeActionParams,
+    actionName: string,
+  ): IRefactorEdit;
+}
+
 export class CodeActionProvider {
   private connection: Connection;
   private settings: Settings;
   private elmMake: ElmMakeDiagnostics;
   private elmDiagnostics: ElmLsDiagnostics;
+  private diagnosticsProvider: DiagnosticsProvider;
 
   private static errorCodeToRegistrationMap = new MultiMap<
     string,
     ICodeActionRegistration
+  >();
+  private static refactorRegistrations = new Map<
+    string,
+    IRefactorRegistration
   >();
 
   constructor() {
@@ -49,12 +80,24 @@ export class CodeActionProvider {
     this.elmMake = container.resolve(ElmMakeDiagnostics);
     this.elmDiagnostics = container.resolve(ElmLsDiagnostics);
     this.connection = container.resolve<Connection>("Connection");
+    this.diagnosticsProvider = container.resolve(DiagnosticsProvider);
 
     this.onCodeAction = this.onCodeAction.bind(this);
     this.connection.onCodeAction(
-      new ElmWorkspaceMatcher((param: CodeActionParams) =>
-        URI.parse(param.textDocument.uri),
-      ).handle(this.onCodeAction.bind(this)),
+      this.diagnosticsProvider.interruptDiagnostics(() =>
+        new ElmWorkspaceMatcher((param: CodeActionParams) =>
+          URI.parse(param.textDocument.uri),
+        ).handle(this.onCodeAction.bind(this)),
+      ),
+    );
+
+    this.connection.onRequest(
+      CodeActionResolveRequest.method,
+      new ElmWorkspaceMatcher((codeAction: IRefactorCodeAction) =>
+        URI.parse(codeAction.data.uri),
+      ).handleResolve((codeAction, program, sourceFile) =>
+        this.onCodeActionResolve(codeAction, program, sourceFile),
+      ),
     );
 
     if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
@@ -70,6 +113,13 @@ export class CodeActionProvider {
     registration.errorCodes.forEach((code) => {
       CodeActionProvider.errorCodeToRegistrationMap.set(code, registration);
     });
+  }
+
+  public static registerRefactorAction(
+    name: string,
+    registration: IRefactorRegistration,
+  ): void {
+    this.refactorRegistrations.set(name, registration);
   }
 
   private static getDiagnostics(params: ICodeActionParams): Diagnostic[] {
@@ -190,206 +240,45 @@ export class CodeActionProvider {
       );
     });
 
-    return [
-      ...results,
-      ...this.getRefactorCodeActions(params),
-      ...this.getTypeAnnotationCodeActions(params),
-      ...make,
-      ...elmDiagnostics,
-    ];
+    results.push(
+      ...flatMap(
+        Array.from(CodeActionProvider.refactorRegistrations.values()),
+        (registration) => registration.getAvailableActions(params),
+      ),
+    );
+
+    return [...results, ...make, ...elmDiagnostics];
   }
 
-  private getTypeAnnotationCodeActions(
-    params: ICodeActionParams,
-  ): CodeAction[] {
-    // Top level annotation are handled by diagnostics
-    const codeActions: CodeAction[] = [];
-
-    const treeContainer = params.sourceFile;
-    const tree = treeContainer?.tree;
-    const checker = params.program.getTypeChecker();
-
-    if (tree) {
-      const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        tree.rootNode,
-        params.range.start,
-      );
-
-      if (
-        nodeAtPosition.parent?.type === "function_declaration_left" &&
-        TreeUtils.findParentOfType("let_in_expr", nodeAtPosition) &&
-        nodeAtPosition.parent.parent &&
-        !TreeUtils.getTypeAnnotation(nodeAtPosition.parent.parent)
-      ) {
-        const typeString: string = checker.typeToString(
-          checker.findType(nodeAtPosition.parent),
-          treeContainer,
-        );
-
-        codeActions.push({
-          edit: {
-            changes: {
-              [params.textDocument.uri]: [
-                TextEdit.insert(
-                  {
-                    line: nodeAtPosition.startPosition.row,
-                    character: nodeAtPosition.startPosition.column,
-                  },
-                  `${nodeAtPosition.text} : ${typeString}\n${Array(
-                    nodeAtPosition.startPosition.column + 1,
-                  ).join(" ")}`,
-                ),
-              ],
-            },
+  private onCodeActionResolve(
+    codeAction: IRefactorCodeAction,
+    program: IElmWorkspace,
+    sourceFile: ITreeContainer,
+  ): IRefactorCodeAction {
+    const result = CodeActionProvider.refactorRegistrations
+      .get(codeAction.data.refactorName)
+      ?.getEditsForAction(
+        {
+          textDocument: {
+            uri: codeAction.data.uri,
           },
-          kind: CodeActionKind.QuickFix,
-          title: "Add inferred annotation",
-        });
-      }
-    }
-
-    return codeActions;
-  }
-
-  private getRefactorCodeActions(params: ICodeActionParams): CodeAction[] {
-    const codeActions: CodeAction[] = [];
-
-    const forest = params.program.getForest();
-    const tree = forest.getTree(params.textDocument.uri);
-
-    if (tree) {
-      const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        tree.rootNode,
-        params.range.start,
+          context: { diagnostics: [] },
+          range: codeAction.data.range,
+          program,
+          sourceFile,
+        },
+        codeAction.data.actionName,
       );
 
-      codeActions.push(
-        ...this.getFunctionCodeActions(params, tree, nodeAtPosition),
-        ...this.getTypeAliasCodeActions(params, tree, nodeAtPosition),
-      );
+    if (result?.edits) {
+      codeAction.edit = { changes: { [codeAction.data.uri]: result.edits } };
     }
 
-    return codeActions;
-  }
-
-  private getFunctionCodeActions(
-    params: CodeActionParams,
-    tree: Tree,
-    nodeAtPosition: SyntaxNode,
-  ): CodeAction[] {
-    const codeActions: CodeAction[] = [];
-
-    if (
-      (nodeAtPosition.parent?.type === "type_annotation" ||
-        nodeAtPosition.parent?.type === "function_declaration_left") &&
-      !TreeUtils.findParentOfType("let_in_expr", nodeAtPosition)
-    ) {
-      const functionName = nodeAtPosition.text;
-
-      if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
-        codeActions.push({
-          title: "Move Function",
-          command: {
-            title: "Refactor",
-            command: "elm.refactor",
-            arguments: [
-              "moveFunction",
-              { textDocument: params.textDocument, range: params.range },
-              functionName,
-            ],
-          },
-          kind: CodeActionKind.RefactorRewrite,
-        });
-      }
-
-      if (TreeUtils.isExposedFunction(tree, functionName)) {
-        const edit = RefactorEditUtils.unexposedValueInModule(
-          tree,
-          functionName,
-        );
-
-        if (edit) {
-          codeActions.push({
-            title: "Unexpose Function",
-            edit: {
-              changes: {
-                [params.textDocument.uri]: [edit],
-              },
-            },
-            kind: CodeActionKind.Refactor,
-          });
-        }
-      } else {
-        const edit = RefactorEditUtils.exposeValueInModule(tree, functionName);
-
-        if (edit) {
-          codeActions.push({
-            title: "Expose Function",
-            edit: {
-              changes: {
-                [params.textDocument.uri]: [edit],
-              },
-            },
-            kind: CodeActionKind.Refactor,
-          });
-        }
-      }
+    if (result?.renamePosition) {
+      codeAction.data.renamePosition = result.renamePosition;
     }
 
-    return codeActions;
-  }
-
-  private getTypeAliasCodeActions(
-    params: CodeActionParams,
-    tree: Tree,
-    nodeAtPosition: SyntaxNode,
-  ): CodeAction[] {
-    const codeActions: CodeAction[] = [];
-
-    if (
-      nodeAtPosition.type === "upper_case_identifier" &&
-      (nodeAtPosition.parent?.type === "type_alias_declaration" ||
-        nodeAtPosition.parent?.type === "type_declaration")
-    ) {
-      const typeName = nodeAtPosition.text;
-
-      const alias =
-        nodeAtPosition.parent?.type === "type_alias_declaration"
-          ? " Alias"
-          : "";
-
-      if (TreeUtils.isExposedTypeOrTypeAlias(tree, typeName)) {
-        const edit = RefactorEditUtils.unexposedValueInModule(tree, typeName);
-
-        if (edit) {
-          codeActions.push({
-            title: `Unexpose Type${alias}`,
-            edit: {
-              changes: {
-                [params.textDocument.uri]: [edit],
-              },
-            },
-            kind: CodeActionKind.Refactor,
-          });
-        }
-      } else {
-        const edit = RefactorEditUtils.exposeValueInModule(tree, typeName);
-
-        if (edit) {
-          codeActions.push({
-            title: `Expose Type${alias}`,
-            edit: {
-              changes: {
-                [params.textDocument.uri]: [edit],
-              },
-            },
-            kind: CodeActionKind.Refactor,
-          });
-        }
-      }
-    }
-
-    return codeActions;
+    return codeAction;
   }
 
   private addDiagnosticToCodeAction(

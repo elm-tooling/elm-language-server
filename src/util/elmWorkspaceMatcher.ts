@@ -42,6 +42,25 @@ export class ElmWorkspaceMatcher<ParamType> {
     };
   }
 
+  public handleResolve<ResultType>(
+    handler: (
+      param: ParamType,
+      program: IElmWorkspace,
+      sourceFile: ITreeContainer,
+      token?: CancellationToken,
+    ) => ResultType,
+  ): (param: ParamType, token?: CancellationToken) => ResultType {
+    return (param: ParamType, token?: CancellationToken): ResultType => {
+      const program = this.getProgramFor(param);
+      return handler(
+        param,
+        program,
+        this.getSourceFileFor(param, program),
+        token,
+      );
+    };
+  }
+
   /**
    * @deprecated Use handle() instead, which returns a params with the program and source file in it
    */
