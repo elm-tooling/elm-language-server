@@ -25,7 +25,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
     ) {
       if (TreeUtils.findParentOfType("let_in_expr", node)) {
         result.push({
-          title: "Extract function to enclosing let scope",
+          title: "Extract function to enclosing let",
           kind: CodeActionKind.RefactorExtract,
           data: {
             actionName: "extract_let",

@@ -39,7 +39,13 @@ CodeActionProvider.registerCodeAction({
       errorCodes,
       fixId,
       (edits, diagnostic) => {
-        edits.push(...getEdits(params, diagnostic.range));
+        const newEdits = getEdits(params, diagnostic.range);
+        if (
+          newEdits.length > 0 &&
+          !edits.find((edit) => edit.newText === newEdits[0].newText)
+        ) {
+          edits.push(...newEdits);
+        }
       },
     );
   },
