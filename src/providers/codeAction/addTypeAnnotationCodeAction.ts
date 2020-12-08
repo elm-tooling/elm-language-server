@@ -8,7 +8,11 @@ import { PositionUtil } from "../../positionUtil";
 import { getSpaces } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../util/types/diagnostics";
-import { CodeActionProvider, IRefactorCodeAction } from "../codeActionProvider";
+import {
+  CodeActionProvider,
+  IRefactorCodeAction,
+  IRefactorEdit,
+} from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
 
 const errorCodes = [Diagnostics.MissingTypeAnnotation.code];
@@ -82,8 +86,8 @@ CodeActionProvider.registerRefactorAction(refactorName, {
 
     return [];
   },
-  getEditsForAction: (params: ICodeActionParams): TextEdit[] => {
-    return getEdits(params, params.range);
+  getEditsForAction: (params: ICodeActionParams): IRefactorEdit => {
+    return { edits: getEdits(params, params.range) };
   },
 });
 

@@ -2,7 +2,11 @@ import { container } from "tsyringe";
 import { CodeActionKind, TextEdit } from "vscode-languageserver";
 import { Settings } from "../../util/settings";
 import { TreeUtils } from "../../util/treeUtils";
-import { CodeActionProvider, IRefactorCodeAction } from "../codeActionProvider";
+import {
+  CodeActionProvider,
+  IRefactorCodeAction,
+  IRefactorEdit,
+} from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
 
 const refactorName = "move_function";
@@ -52,7 +56,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
 
     return [];
   },
-  getEditsForAction: (): TextEdit[] => {
-    return [];
+  getEditsForAction: (): IRefactorEdit => {
+    return {};
   },
 });

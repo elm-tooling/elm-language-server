@@ -2,7 +2,11 @@ import { CodeActionKind } from "vscode-languageserver";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
-import { CodeActionProvider, IRefactorCodeAction } from "../codeActionProvider";
+import {
+  CodeActionProvider,
+  IRefactorCodeAction,
+  IRefactorEdit,
+} from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
 
 const refactorName = "expose_unexpose";
@@ -89,7 +93,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
   getEditsForAction: (
     params: ICodeActionParams,
     actionName: string,
-  ): TextEdit[] => {
+  ): IRefactorEdit => {
     const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
       params.sourceFile.tree.rootNode,
       params.range.start,
@@ -104,7 +108,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
           tree,
           nodeAtPosition.text,
         );
-        return edit ? [edit] : [];
+        return edit ? { edits: [edit] } : {};
       }
       case "expose_function":
       case "expose_type": {
@@ -112,10 +116,10 @@ CodeActionProvider.registerRefactorAction(refactorName, {
           tree,
           nodeAtPosition.text,
         );
-        return edit ? [edit] : [];
+        return edit ? { edits: [edit] } : {};
       }
     }
 
-    return [];
+    return {};
   },
 });

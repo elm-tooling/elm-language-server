@@ -3,7 +3,11 @@ import { SyntaxNode } from "web-tree-sitter";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { TFunction } from "../../util/types/typeInference";
-import { CodeActionProvider, IRefactorCodeAction } from "../codeActionProvider";
+import {
+  CodeActionProvider,
+  IRefactorCodeAction,
+  IRefactorEdit,
+} from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
 
 const refactorName = "extract_function";
@@ -53,7 +57,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
   getEditsForAction: (
     params: ICodeActionParams,
     actionName: string,
-  ): TextEdit[] | undefined => {
+  ): IRefactorEdit => {
     const edits: TextEdit[] = [];
     let node = TreeUtils.getNamedDescendantForRange(
       params.sourceFile,
@@ -63,6 +67,10 @@ CodeActionProvider.registerRefactorAction(refactorName, {
     let hadParenthesis = false;
     if (node.type === "parenthesized_expr") {
       node = node.childForFieldName("expression") ?? node;
+      hadParenthesis = true;
+    }
+
+    if (node.type === "list_expr") {
       hadParenthesis = true;
     }
 
@@ -188,12 +196,27 @@ CodeActionProvider.registerRefactorAction(refactorName, {
         ? `newFunction ${args.map((arg) => arg.text).join(" ")}`
         : `newFunction`;
 
-    if (hadParenthesis && args.length > 0) {
+    const needsParenthesis = hadParenthesis && args.length > 0;
+    if (needsParenthesis) {
       textToInsert = `(${textToInsert})`;
     }
 
     edits.push(TextEdit.replace(params.range, textToInsert));
 
-    return edits;
+    // Check if we are adding the function before the current range and adjust the rename position
+    const linesAdded =
+      edits[0].range.start.line < params.range.start.line
+        ? edits[0].newText.split("\n").length - 1
+        : 0;
+
+    return {
+      edits,
+      renamePosition: {
+        line: params.range.start.line + linesAdded,
+        character: needsParenthesis
+          ? params.range.start.character + 1
+          : params.range.start.character,
+      },
+    };
   },
 });

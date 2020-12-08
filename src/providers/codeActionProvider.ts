@@ -6,6 +6,7 @@ import {
   CodeActionResolveRequest,
   Connection,
   Diagnostic as LspDiagnostic,
+  Position,
   Range,
   TextEdit,
 } from "vscode-languageserver";
@@ -42,15 +43,20 @@ export interface IRefactorCodeAction extends CodeAction {
     refactorName: string;
     actionName: string;
     range: Range;
+    renamePosition?: Position;
   };
 }
 
+export interface IRefactorEdit {
+  edits?: TextEdit[];
+  renamePosition?: Position;
+}
 export interface IRefactorRegistration {
   getAvailableActions(params: ICodeActionParams): IRefactorCodeAction[];
   getEditsForAction(
     params: ICodeActionParams,
     actionName: string,
-  ): TextEdit[] | undefined;
+  ): IRefactorEdit;
 }
 
 export class CodeActionProvider {
@@ -249,7 +255,7 @@ export class CodeActionProvider {
     program: IElmWorkspace,
     sourceFile: ITreeContainer,
   ): IRefactorCodeAction {
-    const edits = CodeActionProvider.refactorRegistrations
+    const result = CodeActionProvider.refactorRegistrations
       .get(codeAction.data.refactorName)
       ?.getEditsForAction(
         {
@@ -264,8 +270,12 @@ export class CodeActionProvider {
         codeAction.data.actionName,
       );
 
-    if (edits) {
-      codeAction.edit = { changes: { [codeAction.data.uri]: edits } };
+    if (result?.edits) {
+      codeAction.edit = { changes: { [codeAction.data.uri]: result.edits } };
+    }
+
+    if (result?.renamePosition) {
+      codeAction.data.renamePosition = result.renamePosition;
     }
 
     return codeAction;
