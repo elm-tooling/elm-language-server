@@ -10,14 +10,12 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ITreeContainer } from "../forest";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { MultiMap } from "../util/multiMap";
-import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { Settings } from "../util/settings";
-import { flatMap, TreeUtils } from "../util/treeUtils";
+import { flatMap } from "../util/treeUtils";
 import { Diagnostic } from "../util/types/diagnostics";
 import {
   convertFromAnalyzerDiagnostic,
@@ -243,13 +241,7 @@ export class CodeActionProvider {
       ),
     );
 
-    return [
-      ...results,
-      ...this.getRefactorCodeActions(params),
-      ...this.getTypeAnnotationCodeActions(params),
-      ...make,
-      ...elmDiagnostics,
-    ];
+    return [...results, ...make, ...elmDiagnostics];
   }
 
   private onCodeActionResolve(
@@ -277,199 +269,6 @@ export class CodeActionProvider {
     }
 
     return codeAction;
-  }
-
-  private getTypeAnnotationCodeActions(
-    params: ICodeActionParams,
-  ): CodeAction[] {
-    // Top level annotation are handled by diagnostics
-    const codeActions: CodeAction[] = [];
-
-    const treeContainer = params.sourceFile;
-    const tree = treeContainer?.tree;
-    const checker = params.program.getTypeChecker();
-
-    if (tree) {
-      const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        tree.rootNode,
-        params.range.start,
-      );
-
-      if (
-        nodeAtPosition.parent?.type === "function_declaration_left" &&
-        TreeUtils.findParentOfType("let_in_expr", nodeAtPosition) &&
-        nodeAtPosition.parent.parent &&
-        !TreeUtils.getTypeAnnotation(nodeAtPosition.parent.parent)
-      ) {
-        const typeString: string = checker.typeToString(
-          checker.findType(nodeAtPosition.parent),
-          treeContainer,
-        );
-
-        codeActions.push({
-          edit: {
-            changes: {
-              [params.textDocument.uri]: [
-                TextEdit.insert(
-                  {
-                    line: nodeAtPosition.startPosition.row,
-                    character: nodeAtPosition.startPosition.column,
-                  },
-                  `${nodeAtPosition.text} : ${typeString}\n${Array(
-                    nodeAtPosition.startPosition.column + 1,
-                  ).join(" ")}`,
-                ),
-              ],
-            },
-          },
-          kind: CodeActionKind.QuickFix,
-          title: "Add inferred annotation",
-        });
-      }
-    }
-
-    return codeActions;
-  }
-
-  private getRefactorCodeActions(params: ICodeActionParams): CodeAction[] {
-    const codeActions: CodeAction[] = [];
-
-    const forest = params.program.getForest();
-    const tree = forest.getTree(params.textDocument.uri);
-
-    if (tree) {
-      const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        tree.rootNode,
-        params.range.start,
-      );
-
-      codeActions.push(
-        ...this.getFunctionCodeActions(params, tree, nodeAtPosition),
-        ...this.getTypeAliasCodeActions(params, tree, nodeAtPosition),
-      );
-    }
-
-    return codeActions;
-  }
-
-  private getFunctionCodeActions(
-    params: CodeActionParams,
-    tree: Tree,
-    nodeAtPosition: SyntaxNode,
-  ): CodeAction[] {
-    const codeActions: CodeAction[] = [];
-
-    if (
-      (nodeAtPosition.parent?.type === "type_annotation" ||
-        nodeAtPosition.parent?.type === "function_declaration_left") &&
-      !TreeUtils.findParentOfType("let_in_expr", nodeAtPosition)
-    ) {
-      const functionName = nodeAtPosition.text;
-
-      if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
-        codeActions.push({
-          title: "Move Function",
-          command: {
-            title: "Refactor",
-            command: "elm.refactor",
-            arguments: [
-              "moveFunction",
-              { textDocument: params.textDocument, range: params.range },
-              functionName,
-            ],
-          },
-          kind: CodeActionKind.RefactorRewrite,
-        });
-      }
-
-      if (TreeUtils.isExposedFunction(tree, functionName)) {
-        const edit = RefactorEditUtils.unexposedValueInModule(
-          tree,
-          functionName,
-        );
-
-        if (edit) {
-          codeActions.push({
-            title: "Unexpose Function",
-            edit: {
-              changes: {
-                [params.textDocument.uri]: [edit],
-              },
-            },
-            kind: CodeActionKind.Refactor,
-          });
-        }
-      } else {
-        const edit = RefactorEditUtils.exposeValueInModule(tree, functionName);
-
-        if (edit) {
-          codeActions.push({
-            title: "Expose Function",
-            edit: {
-              changes: {
-                [params.textDocument.uri]: [edit],
-              },
-            },
-            kind: CodeActionKind.Refactor,
-          });
-        }
-      }
-    }
-
-    return codeActions;
-  }
-
-  private getTypeAliasCodeActions(
-    params: CodeActionParams,
-    tree: Tree,
-    nodeAtPosition: SyntaxNode,
-  ): CodeAction[] {
-    const codeActions: CodeAction[] = [];
-
-    if (
-      nodeAtPosition.type === "upper_case_identifier" &&
-      (nodeAtPosition.parent?.type === "type_alias_declaration" ||
-        nodeAtPosition.parent?.type === "type_declaration")
-    ) {
-      const typeName = nodeAtPosition.text;
-
-      const alias =
-        nodeAtPosition.parent?.type === "type_alias_declaration"
-          ? " Alias"
-          : "";
-
-      if (TreeUtils.isExposedTypeOrTypeAlias(tree, typeName)) {
-        const edit = RefactorEditUtils.unexposedValueInModule(tree, typeName);
-
-        if (edit) {
-          codeActions.push({
-            title: `Unexpose Type${alias}`,
-            edit: {
-              changes: {
-                [params.textDocument.uri]: [edit],
-              },
-            },
-            kind: CodeActionKind.Refactor,
-          });
-        }
-      } else {
-        const edit = RefactorEditUtils.exposeValueInModule(tree, typeName);
-
-        if (edit) {
-          codeActions.push({
-            title: `Expose Type${alias}`,
-            edit: {
-              changes: {
-                [params.textDocument.uri]: [edit],
-              },
-            },
-            kind: CodeActionKind.Refactor,
-          });
-        }
-      }
-    }
-
-    return codeActions;
   }
 
   private addDiagnosticToCodeAction(

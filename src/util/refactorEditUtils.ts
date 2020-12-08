@@ -369,7 +369,7 @@ export class RefactorEditUtils {
   }
 }
 
-function getSpaces(n: number): string {
+export function getSpaces(n: number): string {
   return Array(n + 1)
     .map(() => "")
     .join(" ");
