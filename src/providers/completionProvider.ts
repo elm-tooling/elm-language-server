@@ -417,6 +417,7 @@ export class CompletionProvider {
       .filter(
         (t) =>
           t.moduleName &&
+          t.isExposed &&
           (!targetModule || t.moduleName?.startsWith(targetModule + ".")) &&
           t.moduleName !== currentModuleNameNode?.text &&
           t.moduleName !== targetModule,

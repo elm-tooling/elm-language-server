@@ -22,7 +22,8 @@ import { Diagnostic } from "../../src/util/types/diagnostics";
 export const baseUri = Path.join(__dirname, "../sources/src/");
 
 export class MockElmWorkspace implements IElmWorkspace {
-  private forest: IForest = new Forest(new Map());
+  private moduleToUriMap = new Map<string, string>();
+  private forest: IForest = new Forest(this.moduleToUriMap);
   private parser: Parser;
   private typeCache = new TypeCache();
   private possibleImportsCache = new PossibleImportsCache();
@@ -147,6 +148,10 @@ export class MockElmWorkspace implements IElmWorkspace {
     );
   }
 
+  public hasAccesibleModule(moduleName: string): boolean {
+    return this.getForest().getByModuleName(moduleName)?.isExposed ?? false;
+  }
+
   private parseAndAddToForest(fileName: string, source: string): void {
     const tree: Tree = this.parser.parse(source);
     this.forest.setTree(
@@ -178,9 +183,7 @@ export class MockElmWorkspace implements IElmWorkspace {
         const uri = URI.file(path.join(baseUri, modulePath)).toString();
         const found = this.forest.getByUri(uri);
 
-        if (!found) {
-          // TODO: Diagnostics for unresolved imports
-        } else {
+        if (found) {
           resolvedModules.set(moduleName, uri);
         }
       }

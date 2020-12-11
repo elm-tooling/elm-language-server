@@ -99,6 +99,7 @@ export interface IElmWorkspace {
     sourceFile: ITreeContainer,
     cancellationToken?: ICancellationToken,
   ): Diagnostic[];
+  hasAccesibleModule(moduleName: string): boolean;
 }
 
 export interface IRootFolder {
@@ -108,7 +109,8 @@ export interface IRootFolder {
 
 export class ElmWorkspace implements IElmWorkspace {
   private elmFolders = new Map<string, IRootFolder>();
-  private forest: IForest = new Forest(new Map());
+  private moduleToUriMap = new Map<string, string>();
+  private forest: IForest = new Forest(this.moduleToUriMap);
   private parser: Parser;
   private connection: Connection;
   private settings: Settings;
@@ -253,6 +255,10 @@ export class ElmWorkspace implements IElmWorkspace {
     );
   }
 
+  public hasAccesibleModule(moduleName: string): boolean {
+    return this.moduleToUriMap.has(moduleName);
+  }
+
   private async initWorkspace(
     progressCallback: (percent: number) => void,
   ): Promise<void> {
@@ -338,8 +344,6 @@ export class ElmWorkspace implements IElmWorkspace {
           "The path or paths you entered in the 'source-directories' field of your 'elm.json' does not contain any elm files.",
         );
       }
-
-      this.forest = new Forest(this.elmFolders);
 
       const promiseList: Promise<void>[] = [];
       const PARSE_STAGES = 3;
@@ -438,12 +442,22 @@ export class ElmWorkspace implements IElmWorkspace {
         await globby(`${globUri}/**/*.elm`, {
           suppressErrors: true,
         })
-      ).map((matchingPath) => ({
-        maintainerAndPackageName: element.maintainerAndPackageName,
-        path: matchingPath,
-        writeable: element.writeable,
-        isExposed: true,
-      }));
+      ).map((matchingPath) => {
+        const moduleName = path
+          .relative(element.uri, matchingPath)
+          .replace(".elm", "")
+          .split("/")
+          .join(".");
+
+        this.moduleToUriMap.set(moduleName, URI.file(matchingPath).toString());
+
+        return {
+          maintainerAndPackageName: element.maintainerAndPackageName,
+          path: matchingPath,
+          writeable: element.writeable,
+          isExposed: true,
+        };
+      });
     } else {
       const [elmFiles, elmJsonString] = await Promise.all([
         globby(`${globUri}/src/**/*.elm`, { suppressErrors: true }),
@@ -455,18 +469,26 @@ export class ElmWorkspace implements IElmWorkspace {
         JSON.parse(elmJsonString),
         element.uri,
       );
+
+      exposedModules.forEach(([module, uri]) => {
+        this.moduleToUriMap.set(module, uri.toString());
+      });
+
       return elmFiles.map((matchingPath) => ({
         maintainerAndPackageName: element.maintainerAndPackageName,
         path: matchingPath,
         writeable: element.writeable,
         isExposed: exposedModules.some(
-          (a) => a.fsPath === URI.file(matchingPath).fsPath,
+          ([, uri]) => uri.fsPath === URI.file(matchingPath).fsPath,
         ),
       }));
     }
   }
 
-  private modulesToFilenames(elmJson: unknown, pathToPackage: string): URI[] {
+  private modulesToFilenames(
+    elmJson: unknown,
+    pathToPackage: string,
+  ): [string, URI][] {
     if (!elmJson || !Object.hasOwnProperty.call(elmJson, "exposed-modules")) {
       return [];
     }
@@ -474,27 +496,32 @@ export class ElmWorkspace implements IElmWorkspace {
       "exposed-modules": Record<string, string | string[]>;
     })["exposed-modules"];
 
-    const result: URI[] = [];
+    const result: [string, URI][] = [];
 
     for (const key in x) {
       if (Object.hasOwnProperty.call(x, key)) {
         const element = x[key];
         if (typeof element === "string") {
-          result.push(
+          result.push([
+            element,
             URI.file(
               pathToPackage
                 .concat("/src/")
                 .concat(element.split(".").join("/").concat(".elm")),
             ),
-          );
+          ]);
         } else {
           result.push(
-            ...element.map((element) =>
-              URI.file(
-                pathToPackage
-                  .concat("/src/")
-                  .concat(element.split(".").join("/").concat(".elm")),
-              ),
+            ...element.map(
+              (element) =>
+                [
+                  element,
+                  URI.file(
+                    pathToPackage
+                      .concat("/src/")
+                      .concat(element.split(".").join("/").concat(".elm")),
+                  ),
+                ] as [string, URI],
             ),
           );
         }
