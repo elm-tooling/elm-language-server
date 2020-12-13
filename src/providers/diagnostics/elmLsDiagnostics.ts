@@ -5,6 +5,7 @@ import {
   CodeAction,
   CodeActionKind,
   CodeActionParams,
+  Connection,
   DiagnosticSeverity,
   DiagnosticTag,
   Range,
@@ -19,10 +20,39 @@ import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Utils } from "../../util/utils";
 import { IDiagnostic } from "./diagnosticsProvider";
+import * as path from "path";
 
+interface IElmAnalyseJson {
+  checks?: {
+    BooleanCase?: boolean;
+    DropConcatOfLists?: boolean;
+    DropConsOfItemAndList?: boolean;
+    ExposeAll?: boolean;
+    NoUncurriedPrefix?: boolean;
+    ImportAll?: boolean;
+    MapNothingToNothing?: boolean;
+    NoTopLevelSignature?: boolean;
+    SingleFieldRecord?: boolean;
+    UnnecessaryListConcat?: boolean;
+    UnnecessaryParens?: boolean;
+    UnnecessaryPortModule?: boolean;
+    UnusedImport?: boolean;
+    UnusedImportAlias?: boolean;
+    UnusedImportedVariable?: boolean;
+    UnusedPatternVariable?: boolean;
+    UnusedTopLevel?: boolean;
+    UnusedTypeAlias?: boolean;
+    UnusedValueConstructor?: boolean;
+    UnusedVariable?: boolean;
+    UseConsOverConcat?: boolean;
+  };
+  excludedPaths?: string[];
+}
 export class ElmLsDiagnostics {
   private language: Language;
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
+  private connection: Connection;
+  private elmAnalyseJson = new Map<string, IElmAnalyseJson>();
 
   private readonly exposedValuesAndTypesQuery: Query;
   private readonly moduleImportsQuery: Query;
@@ -46,6 +76,7 @@ export class ElmLsDiagnostics {
   constructor() {
     this.language = container.resolve<Parser>("Parser").getLanguage();
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
+    this.connection = container.resolve<Connection>("Connection");
 
     this.exposedValuesAndTypesQuery = this.language.query(
       `
@@ -330,31 +361,87 @@ export class ElmLsDiagnostics {
     treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
   ): IDiagnostic[] => {
+    const elmAnalyseJson = this.getElmAnalyseJson(
+      elmWorkspace.getRootPath().toString(),
+    );
     const tree = treeContainer.tree;
     const uri = treeContainer.uri;
     try {
       return [
-        ...this.getUnusedImportDiagnostics(tree),
-        ...this.getUnusedImportValueAndTypeDiagnostics(tree),
-        ...this.getUnusedImportAliasDiagnostics(tree),
-        ...this.getUnusedPatternVariableDiagnostics(tree),
-        ...this.getCaseBranchMapNothingToNothingDiagnostics(tree),
-        ...this.getBooleanCaseExpressionDiagnostics(tree),
-        ...this.getDropConcatOfListsDiagnostics(tree),
-        ...this.getDropConsOfItemAndListDiagnostics(tree),
-        ...this.getUseConsOverConcatDiagnostics(tree),
-        ...this.getSingleFieldRecordDiagnostics(tree, elmWorkspace),
-        ...this.getUnnecessaryListConcatDiagnostics(tree),
-        ...this.getUnnecessaryPortModuleDiagnostics(tree),
-        ...this.getFullyAppliedOperatorAsPrefixDiagnostics(tree),
-        ...this.getUnusedTypeAliasDiagnostics(tree),
-        ...this.getUnusedValueConstructorDiagnostics(tree),
+        ...(elmAnalyseJson.checks?.UnusedImport === false
+          ? []
+          : this.getUnusedImportDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.UnusedImportedVariable === false
+          ? []
+          : this.getUnusedImportValueAndTypeDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.UnusedImportAlias === false
+          ? []
+          : this.getUnusedImportAliasDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.UnusedPatternVariable === false
+          ? []
+          : this.getUnusedPatternVariableDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.MapNothingToNothing === false
+          ? []
+          : this.getCaseBranchMapNothingToNothingDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.BooleanCase === false
+          ? []
+          : this.getBooleanCaseExpressionDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.DropConcatOfLists === false
+          ? []
+          : this.getDropConcatOfListsDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.DropConsOfItemAndList === false
+          ? []
+          : this.getDropConsOfItemAndListDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.UseConsOverConcat === false
+          ? []
+          : this.getUseConsOverConcatDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.SingleFieldRecord === false
+          ? []
+          : this.getSingleFieldRecordDiagnostics(tree, elmWorkspace)),
+        ...(elmAnalyseJson.checks?.UnnecessaryListConcat === false
+          ? []
+          : this.getUnnecessaryListConcatDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.UnnecessaryPortModule === false
+          ? []
+          : this.getUnnecessaryPortModuleDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.NoUncurriedPrefix === false
+          ? []
+          : this.getFullyAppliedOperatorAsPrefixDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.UnusedTypeAlias === false
+          ? []
+          : this.getUnusedTypeAliasDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.UnusedValueConstructor === false
+          ? []
+          : this.getUnusedValueConstructorDiagnostics(tree)),
       ];
     } catch (e) {
-      console.log(e);
+      this.connection.console.error(e);
     }
     return [];
   };
+
+  private getElmAnalyseJson(workspacePath: string): IElmAnalyseJson {
+    const cached = this.elmAnalyseJson.get(workspacePath);
+
+    if (cached) {
+      return cached;
+    }
+
+    let elmAnalyseJson = {};
+    try {
+      elmAnalyseJson = require(path.join(
+        workspacePath,
+        "elm-analyse.json",
+      )) as IElmAnalyseJson;
+    } catch {
+      this.connection.console.info(
+        "No elm-analyse.json found, enabling all diagnostic checks.",
+      );
+    }
+
+    this.elmAnalyseJson.set(workspacePath, elmAnalyseJson);
+    return elmAnalyseJson;
+  }
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
     const { uri } = params.textDocument;
