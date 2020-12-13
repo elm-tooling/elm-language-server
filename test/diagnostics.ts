@@ -140,7 +140,6 @@ const compilerFailures = ["mdgriffith/elm-ui", "frandibar/elm-bootstrap"];
 
 const otherFailures = [
   "Chadtech/elm-vector", // Too big
-  "arowM/html-extra", // Advanced module resolution bug
   "MattCheely/tryframe-coordinator", // Still on version 0.18
   "danmarcab/material-icons", // Still on version 0.18
   "krisajenkins/elm-astar", // Still on version 0.18
