@@ -2,6 +2,7 @@ import execa, { ExecaReturnValue } from "execa";
 import * as path from "path";
 import { Connection, CompletionItemKind } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import { IElmPackageCache, IConstraint, IVersion } from "../elmWorkspace";
 import { IClientSettings } from "./settings";
 
 export const isWindows = process.platform === "win32";
@@ -109,54 +110,187 @@ export async function getElmVersion(
   return Promise.resolve(version);
 }
 
-export function findDepVersion(
-  allVersionFolders: { version: string; versionPath: string }[],
-  versionRange: string,
-): { version: string; versionPath: string } | undefined {
+type SolverResult =
+  | {
+      pending: ReadonlyMap<string, IConstraint>;
+      solutions: ReadonlyMap<string, IVersion>;
+    }
+  | undefined;
+
+export function solveDependencies(
+  packageCache: IElmPackageCache,
+  deps: ReadonlyMap<string, IConstraint>,
+): ReadonlyMap<string, IVersion> | undefined {
+  const result = solveDependenciesWorker(
+    packageCache,
+    deps,
+    new Map<string, IVersion>(),
+  );
+
+  if (result) {
+    return result.solutions;
+  }
+}
+
+function solveDependenciesWorker(
+  packageCache: IElmPackageCache,
+  deps: ReadonlyMap<string, IConstraint>,
+  solutions: ReadonlyMap<string, IVersion>,
+): SolverResult {
+  function pickDep(): [
+    { name: string; constraint: IConstraint } | undefined,
+    Map<string, IConstraint>,
+  ] {
+    const restDeps = new Map(deps);
+    const firstDep = Array.from(deps.keys()).sort()[0];
+
+    restDeps.delete(firstDep);
+
+    return [
+      firstDep
+        ? { name: firstDep, constraint: deps.get(firstDep)! }
+        : undefined,
+      restDeps,
+    ];
+  }
+
+  function combineDeps(
+    a: ReadonlyMap<string, IConstraint>,
+    b: ReadonlyMap<string, IConstraint>,
+  ): Map<string, IConstraint> | undefined {
+    const deps = new Map<string, IConstraint>();
+    for (const key of new Set([...a.keys(), ...b.keys()])) {
+      const v1 = a.get(key);
+      const v2 = b.get(key);
+
+      if (v1 && v2) {
+        const intersect = constraintIntersect(v1, v2);
+
+        if (!intersect) {
+          return;
+        }
+
+        deps.set(key, intersect);
+      } else if (v1) {
+        deps.set(key, v1);
+      } else if (v2) {
+        deps.set(key, v2);
+      } else {
+        throw new Error("impossible");
+      }
+    }
+
+    return deps;
+  }
+
+  const [dep, restDeps] = pickDep();
+
+  if (!dep) {
+    return { pending: deps, solutions };
+  }
+
+  // Find versions that satisfy the constraint
+  let candidates = packageCache
+    .get(dep.name)
+    .filter(({ version }) => versionSatifiesConstraint(version, dep.constraint))
+    .sort((a, b) =>
+      a.version < b.version ? -1 : a.version > b.version ? 1 : 0,
+    )
+    .reverse();
+
+  const solvedVersion = solutions.get(dep.name);
+
+  if (solvedVersion) {
+    candidates = candidates.filter(
+      (a) => a.version.string === solvedVersion.string,
+    );
+  }
+
+  for (const candidate of candidates) {
+    const tentativeDeps = combineDeps(restDeps, candidate.dependencies);
+
+    if (!tentativeDeps) {
+      continue;
+    }
+
+    const tentativeSolutions = new Map(solutions);
+    tentativeSolutions.set(dep.name, candidate.version);
+
+    const result = solveDependenciesWorker(
+      packageCache,
+      tentativeDeps,
+      tentativeSolutions,
+    );
+
+    if (result) {
+      return solveDependenciesWorker(
+        packageCache,
+        result.pending,
+        result.solutions,
+      );
+    }
+  }
+}
+
+export function parseVersion(version: string): IVersion {
+  const [major, minor, patch] = version.split(".");
+
+  return {
+    major: parseInt(major),
+    minor: parseInt(minor),
+    patch: parseInt(patch),
+    string: version,
+  };
+}
+
+export function parseContraint(contraint: string): IConstraint {
   const regex = /^(\d+\.\d+\.\d+) (<|<=) v (<|<=) (\d+\.\d+\.\d+)$/gm;
 
-  const m = regex.exec(versionRange);
+  const m = regex.exec(contraint);
   if (m) {
     const lowerRange = m[1];
     const lowerOperator = m[2];
     const upperOperator = m[3];
     const upperRange = m[4];
 
-    const filteredVersionList = allVersionFolders
-      .filter((a) => filterSemver(a.version, lowerRange, lowerOperator))
-      .filter((a) => filterSemver(upperRange, a.version, upperOperator));
-
-    const latestVersionInRange = filteredVersionList
-      .map((a) => a.version)
-      .sort(cmp)
-      .reverse()[0];
-    return allVersionFolders.find((a) => a.version === latestVersionInRange);
-  } else {
-    // Regex did not work, probably not a version range
-    return allVersionFolders.find(
-      (it: { version: string; versionPath: string }) =>
-        versionRange.includes(it.version),
-    );
+    return {
+      lower: parseVersion(lowerRange),
+      upper: parseVersion(upperRange),
+      lowerOperator: lowerOperator as "<" | "<=",
+      upperOperator: upperOperator as "<" | "<=",
+    };
   }
+
+  throw new Error("Could not parse version constraint");
+}
+
+export function versionSatifiesConstraint(
+  version: IVersion,
+  constraint: IConstraint,
+): boolean {
+  return (
+    filterSemver(constraint.lower, version, constraint.lowerOperator) &&
+    filterSemver(version, constraint.upper, constraint.upperOperator)
+  );
 }
 
 function filterSemver(
-  lower: string,
-  upper: string,
-  operator: string,
-): boolean | undefined {
-  const currentCompare = cmp(lower, upper);
+  lower: IVersion,
+  upper: IVersion,
+  operator: "<" | "<=",
+): boolean {
+  const currentCompare = versionCompare(lower, upper);
   switch (operator) {
     case "<=":
-      return currentCompare !== -1;
+      return currentCompare === -1 || currentCompare === 0;
     case "<":
-      return !(currentCompare === -1 || currentCompare === 0);
+      return currentCompare === -1;
   }
 }
 
-function cmp(a: string, b: string): number {
-  const pa = a.split(".");
-  const pb = b.split(".");
+function versionCompare(a: IVersion, b: IVersion): number {
+  const pa = a.string.split(".");
+  const pb = b.string.split(".");
   for (let i = 0; i < 3; i++) {
     const na = Number(pa[i]);
     const nb = Number(pb[i]);
@@ -166,12 +300,71 @@ function cmp(a: string, b: string): number {
     if (nb > na) {
       return -1;
     }
-    if (!isNaN(na) && isNaN(nb)) {
-      return 1;
-    }
-    if (isNaN(na) && !isNaN(nb)) {
-      return -1;
-    }
   }
   return 0;
+}
+
+export function constraintIntersect(
+  a: IConstraint,
+  b: IConstraint,
+): IConstraint | undefined {
+  function merge(op1: "<=" | "<", op2: "<=" | "<"): "<=" | "<" {
+    return op1 === "<" || op2 === "<" ? "<" : "<=";
+  }
+
+  let newLower;
+  let newLowerOp;
+  let newUpper;
+  let newUpperOp;
+
+  const lowerCompare = versionCompare(a.lower, b.lower);
+
+  switch (lowerCompare) {
+    case -1:
+      newLower = b.lower;
+      newLowerOp = b.lowerOperator;
+      break;
+    case 0:
+      newLower = a.lower;
+      newLowerOp = merge(a.lowerOperator, b.lowerOperator);
+      break;
+    case 1:
+      newLower = a.lower;
+      newLowerOp = a.lowerOperator;
+      break;
+  }
+
+  const upperCompare = versionCompare(a.upper, b.upper);
+
+  switch (upperCompare) {
+    case -1:
+      newUpper = a.upper;
+      newUpperOp = a.upperOperator;
+      break;
+    case 0:
+      newUpper = a.upper;
+      newUpperOp = merge(a.upperOperator, b.upperOperator);
+      break;
+    case 1:
+      newUpper = b.upper;
+      newUpperOp = b.upperOperator;
+      break;
+  }
+
+  if (
+    !newLower ||
+    !newUpper ||
+    !newLowerOp ||
+    !newUpperOp ||
+    versionCompare(newLower, newUpper) !== -1
+  ) {
+    return;
+  }
+
+  return {
+    lower: newLower,
+    upper: newUpper,
+    lowerOperator: newLowerOp,
+    upperOperator: newUpperOp,
+  };
 }

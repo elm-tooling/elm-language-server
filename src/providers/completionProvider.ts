@@ -318,7 +318,11 @@ export class CompletionProvider {
           }
         } else {
           if (contextNode.type === "import") {
-            return this.getImportableModules(tree, forest, replaceRange);
+            return this.getImportableModules(
+              params.program,
+              params.sourceFile,
+              replaceRange,
+            );
           }
         }
       }
@@ -407,30 +411,30 @@ export class CompletionProvider {
   }
 
   private getImportableModules(
-    tree: Tree,
-    forest: IForest,
+    program: IElmWorkspace,
+    sourceFile: ITreeContainer,
     range: Range,
     targetModule?: string,
   ): CompletionItem[] {
-    const currentModuleNameNode = TreeUtils.getModuleNameNode(tree);
-    return Array.from(forest.treeMap.values())
+    return Array.from(sourceFile.project.moduleToUriMap.entries())
       .filter(
-        (t) =>
-          t.moduleName &&
-          t.isExposed &&
-          (!targetModule || t.moduleName?.startsWith(targetModule + ".")) &&
-          t.moduleName !== currentModuleNameNode?.text &&
-          t.moduleName !== targetModule,
+        ([moduleName]) =>
+          (!targetModule || moduleName?.startsWith(targetModule + ".")) &&
+          moduleName !== sourceFile.moduleName &&
+          moduleName !== targetModule,
       )
-      .map((t) => {
-        const moduleNode = TreeUtils.findModuleDeclaration(t.tree);
+      .map(([moduleName, uri]) => {
+        const sourceFileToImport = program.getSourceFile(uri)!;
+        const moduleNode = TreeUtils.findModuleDeclaration(
+          sourceFileToImport.tree,
+        );
         const markdownDocumentation = HintHelper.createHint(moduleNode);
 
         return this.createModuleCompletion({
           label:
             (targetModule
-              ? t.moduleName?.slice(targetModule.length + 1) ?? t.moduleName
-              : t.moduleName) ?? "",
+              ? moduleName?.slice(targetModule.length + 1) ?? moduleName
+              : moduleName) ?? "",
           sortPrefix: "b",
           range,
           markdownDocumentation,
@@ -1199,20 +1203,20 @@ export class CompletionProvider {
 
   private getSubmodulesOrValues(
     node: SyntaxNode,
-    treeContainer: ITreeContainer,
-    elmWorkspace: IElmWorkspace,
+    sourceFile: ITreeContainer,
+    program: IElmWorkspace,
     range: Range,
     targetModule: string,
   ): CompletionItem[] {
     const result: CompletionItem[] = [];
 
-    const forest = elmWorkspace.getForest();
-    const checker = elmWorkspace.getTypeChecker();
-    const tree = treeContainer.tree;
+    const forest = program.getForest();
+    const checker = program.getTypeChecker();
+    const tree = sourceFile.tree;
 
     // Handle possible submodules
     result.push(
-      ...this.getImportableModules(tree, forest, range, targetModule),
+      ...this.getImportableModules(program, sourceFile, range, targetModule),
     );
 
     // If we are in an import completion, don't return any values
@@ -1223,19 +1227,19 @@ export class CompletionProvider {
     let alreadyImported = true;
 
     // Try to find the module definition that is already imported
-    const definitionNode = checker.findDefinition(node, treeContainer);
+    const definitionNode = checker.findDefinition(node, sourceFile);
 
     let moduleTree: ITreeContainer | undefined;
 
     if (definitionNode && definitionNode.nodeType === "Module") {
-      moduleTree = forest.getByUri(definitionNode.uri);
+      moduleTree = program.getSourceFile(definitionNode.uri);
     } else {
       // Try to find this module in the forest to import
       moduleTree = forest.getByModuleName(targetModule);
       alreadyImported = false;
     }
 
-    if (moduleTree && moduleTree.isExposed) {
+    if (moduleTree) {
       // Get exposed values
       const imports = ImportUtils.getPossibleImportsOfTree(moduleTree);
       imports.forEach((value) => {

@@ -4,6 +4,7 @@ import { IExposing, TreeUtils } from "./util/treeUtils";
 import { SyntaxNodeMap } from "./util/types/syntaxNodeMap";
 import { SymbolMap } from "./util/types/binder";
 import { Diagnostic } from "./util/types/diagnostics";
+import { ElmProject } from "./elmWorkspace";
 
 export interface ITreeContainer {
   uri: string;
@@ -11,7 +12,7 @@ export interface ITreeContainer {
   referenced: boolean;
   maintainerAndPackageName?: string;
   tree: Tree;
-  isExposed: boolean; // Is this file exposed by the elm.json
+  project: ElmProject; // The project this source file is associated with
 
   parseDiagnostics: Diagnostic[];
 
@@ -35,7 +36,7 @@ export interface IForest {
     writeable: boolean,
     referenced: boolean,
     tree: Tree,
-    isExposed: boolean,
+    project?: ElmProject,
     packageName?: string,
   ): ITreeContainer;
   removeTree(uri: string): void;
@@ -49,19 +50,14 @@ export class Forest implements IForest {
     ITreeContainer
   >();
 
-  private elmFolders: {
-    uri: string;
-    writeable: boolean;
-  }[] = [];
-
-  constructor(private moduleToUriMap: Map<string, string>) {}
+  constructor(private rootProject: ElmProject) {}
 
   public getTree(uri: string): Tree | undefined {
     return this.getByUri(uri)?.tree;
   }
 
   public getByModuleName(moduleName: string): ITreeContainer | undefined {
-    return this.getByUri(this.moduleToUriMap.get(moduleName) ?? "");
+    return this.getByUri(this.rootProject.moduleToUriMap.get(moduleName) ?? "");
   }
 
   public getByUri(uri: string): ITreeContainer | undefined {
@@ -73,7 +69,7 @@ export class Forest implements IForest {
     writeable: boolean,
     referenced: boolean,
     tree: Tree,
-    isExposed: boolean,
+    project: ElmProject = this.rootProject,
     maintainerAndPackageName?: string,
   ): ITreeContainer {
     tree.uri = uri;
@@ -84,7 +80,7 @@ export class Forest implements IForest {
       tree,
       uri,
       writeable,
-      isExposed,
+      project,
       parseDiagnostics: [],
     };
 
@@ -94,15 +90,6 @@ export class Forest implements IForest {
   }
 
   public removeTree(uri: string): void {
-    const existing = this.getByUri(uri);
-    if (
-      existing &&
-      existing.moduleName &&
-      this.moduleToUriMap.get(existing.moduleName) === uri
-    ) {
-      this.moduleToUriMap.delete(existing.moduleName);
-    }
-
     this.treeMap.delete(uri);
   }
 
@@ -120,8 +107,11 @@ export class Forest implements IForest {
         if (moduleName) {
           treeContainer.moduleName = moduleName;
 
-          if (treeContainer.writeable && !this.moduleToUriMap.has(moduleName)) {
-            this.moduleToUriMap.set(moduleName, treeContainer.uri);
+          if (
+            treeContainer.project === this.rootProject &&
+            !this.rootProject.moduleToUriMap.has(moduleName)
+          ) {
+            this.rootProject.moduleToUriMap.set(moduleName, treeContainer.uri);
           }
         }
       }
@@ -134,20 +124,19 @@ export class Forest implements IForest {
     });
   }
 
-  private resolveModules(treeContainer: ITreeContainer): Map<string, string> {
+  private resolveModules(sourceFile: ITreeContainer): Map<string, string> {
     const importClauses = [
       ...Imports.getVirtualImports(),
-      ...(TreeUtils.findAllImportClauseNodes(treeContainer.tree) ?? []),
+      ...(TreeUtils.findAllImportClauseNodes(sourceFile.tree) ?? []),
     ];
 
     const resolvedModules = new Map<string, string>();
 
-    // It should be faster to look directly at elmFolders instead of traversing the forest
     importClauses.forEach((importClause) => {
       const moduleName = importClause.childForFieldName("moduleName")?.text;
 
       if (moduleName) {
-        const found = this.moduleToUriMap.get(moduleName);
+        const found = sourceFile.project.moduleToUriMap.get(moduleName);
 
         if (found) {
           resolvedModules.set(moduleName, found);

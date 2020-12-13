@@ -118,13 +118,7 @@ export class ASTProvider {
     tree = newTree;
 
     if (tree) {
-      const treeContainer = forest.setTree(
-        document.uri,
-        true,
-        true,
-        tree,
-        true,
-      );
+      const treeContainer = forest.setTree(document.uri, true, true, tree);
 
       // The workspace now needs to be synchronized
       params.program.markAsDirty();
