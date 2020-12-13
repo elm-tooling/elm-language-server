@@ -10,12 +10,11 @@ import {
   IDiagnosticMessage,
 } from "../../src/util/types/diagnostics";
 import { Utils } from "../../src/util/utils";
-import { baseUri } from "../utils/mockElmWorkspace";
 import {
   getSourceFiles,
   getTargetPositionFromSource,
 } from "../utils/sourceParser";
-import { SourceTreeParser } from "../utils/sourceTreeParser";
+import { baseUri, SourceTreeParser } from "../utils/sourceTreeParser";
 
 const basicsSources = `
 --@ Basics.elm
@@ -69,7 +68,7 @@ describe("test elm diagnostics", () => {
 
     const testUri = URI.file(baseUri + "Test.elm").toString();
 
-    const program = treeParser.getWorkspace(result.sources);
+    const program = await treeParser.getProgram(result.sources);
     const treeContainer = program.getForest().getByUri(testUri);
 
     if (!treeContainer) throw new Error("Getting tree failed");

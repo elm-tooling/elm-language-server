@@ -148,7 +148,10 @@ export interface IElmPackageCache {
 export class ElmPackageCache implements IElmPackageCache {
   private cache = new Map<string, IPackage[]>();
 
-  constructor(private packagesRoot: string) {}
+  constructor(
+    private packagesRoot: string,
+    private loadElmJson: (elmJsonPath: string) => ElmJson,
+  ) {}
 
   public get(packageName: string): IPackage[] {
     const cached = this.cache.get(packageName);
@@ -168,7 +171,7 @@ export class ElmPackageCache implements IElmPackageCache {
 
     const allVersions: IPackage[] = [];
 
-    readDir.forEach((folderName) => {
+    for (const folderName of readDir) {
       const version = utils.parseVersion(folderName);
 
       if (
@@ -177,7 +180,7 @@ export class ElmPackageCache implements IElmPackageCache {
         Number.isInteger(version.patch)
       ) {
         const elmJsonPath = path.join(pathToPackage, folderName, "elm.json");
-        const elmJson = require(elmJsonPath) as ElmJson;
+        const elmJson = this.loadElmJson(elmJsonPath);
 
         allVersions.push({
           version,
@@ -189,12 +192,18 @@ export class ElmPackageCache implements IElmPackageCache {
           ),
         });
       }
-    });
+    }
 
     this.cache.set(packageName, allVersions);
 
     return allVersions;
   }
+}
+
+interface IProgramHost {
+  readFile(uri: string): Promise<string>;
+  readFileSync(uri: string): string;
+  readDirectory(uri: string): Promise<string[]>;
 }
 
 export class ElmWorkspace implements IElmWorkspace {
@@ -212,8 +221,9 @@ export class ElmWorkspace implements IElmWorkspace {
   private forest!: IForest;
   private elmPackageCache!: IElmPackageCache;
   private resolvedPackageCache = new Map<string, IElmPackage>();
+  private host: IProgramHost;
 
-  constructor(private rootPath: URI) {
+  constructor(private rootPath: URI, programHost?: IProgramHost) {
     this.settings = container.resolve("Settings");
     this.connection = container.resolve("Connection");
     this.parser = container.resolve("Parser");
@@ -225,6 +235,7 @@ export class ElmWorkspace implements IElmWorkspace {
     this.possibleImportsCache = new PossibleImportsCache();
     this.operatorsCache = new Map<string, DefinitionResult>();
     this.diagnosticsCache = new Map<string, Diagnostic[]>();
+    this.host = programHost ?? this.createProgramHost();
   }
 
   public async init(
@@ -379,7 +390,10 @@ export class ElmWorkspace implements IElmWorkspace {
         elmVersion,
       )}/`;
 
-      this.elmPackageCache = new ElmPackageCache(this.packagesRoot);
+      this.elmPackageCache = new ElmPackageCache(
+        this.packagesRoot,
+        this.loadElmJson.bind(this),
+      );
       this.rootProject = await this.loadRootProject(pathToElmJson);
       this.forest = new Forest(this.rootProject);
 
@@ -420,8 +434,7 @@ export class ElmWorkspace implements IElmWorkspace {
   }
 
   private async loadRootProject(elmJsonPath: string): Promise<ElmProject> {
-    // Find elm files and feed them to tree sitter
-    const elmJson = require(elmJsonPath) as ElmJson;
+    const elmJson = this.loadElmJson(elmJsonPath);
 
     if (elmJson.type === "application") {
       const allDependencies = new Map(
@@ -515,7 +528,7 @@ export class ElmWorkspace implements IElmWorkspace {
     const pathToPackageWithVersion = `${this.packagesRoot}${maintainer}/${name}/${version.string}`;
 
     const elmJsonPath = path.join(pathToPackageWithVersion, "elm.json");
-    const elmJson = require(elmJsonPath) as ElmJson;
+    const elmJson = this.loadElmJson(elmJsonPath);
 
     if (elmJson.type === "package") {
       const resolvedPackage = {
@@ -608,16 +621,9 @@ export class ElmWorkspace implements IElmWorkspace {
     const maintainerAndPackageName =
       project.type === "package" ? project.maintainerAndPackageName : undefined;
 
-    // Cleanup the path on windows, as globby does not like backslashes
-    const globUri = sourceDir.replace(/\\/g, "/");
+    this.connection.console.info(`Glob ${sourceDir}/**/*.elm`);
 
-    this.connection.console.info(`Glob ${globUri}/**/*.elm`);
-
-    (
-      await globby(`${globUri}/**/*.elm`, {
-        suppressErrors: true,
-      })
-    ).forEach((matchingPath) => {
+    (await this.host.readDirectory(sourceDir)).forEach((matchingPath) => {
       const moduleName = path
         .relative(sourceDir, matchingPath)
         .replace(".elm", "")
@@ -668,9 +674,9 @@ export class ElmWorkspace implements IElmWorkspace {
   ): Promise<void> {
     try {
       this.connection.console.info(`Adding ${filePath.path.toString()}`);
-      const fileContent: string = await readFile(filePath.path.toString(), {
-        encoding: "utf-8",
-      });
+      const fileContent: string = await this.host.readFile(
+        filePath.path.toString(),
+      );
 
       const tree: Tree = this.parser.parse(fileContent);
       this.forest.setTree(
@@ -705,5 +711,27 @@ export class ElmWorkspace implements IElmWorkspace {
     if (project === this.rootProject) {
       loadForDependencies(project.testDependencies);
     }
+  }
+
+  private loadElmJson(elmJsonPath: string): ElmJson {
+    return JSON.parse(this.host.readFileSync(elmJsonPath)) as ElmJson;
+  }
+
+  private createProgramHost(): IProgramHost {
+    return {
+      readFile: (uri): Promise<string> =>
+        readFile(uri, {
+          encoding: "utf-8",
+        }),
+      readFileSync: (uri): string =>
+        fs.readFileSync(uri, {
+          encoding: "utf-8",
+        }),
+      readDirectory: (uri: string): Promise<string[]> =>
+        // Cleanup the path on windows, as globby does not like backslashes
+        globby(`${uri.replace(/\\/g, "/")}/**/*.elm`, {
+          suppressErrors: true,
+        }),
+    };
   }
 }
