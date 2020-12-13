@@ -1,3 +1,4 @@
+import path from "path";
 import { Location } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { DefinitionProvider, DefinitionResult } from "../../src/providers";
@@ -26,9 +27,9 @@ export class DefinitionProviderTestBase {
     await this.treeParser.init();
 
     const determinedTestType = getInvokeAndTargetPositionFromSource(source);
-    const invokeUri = URI.file(
-      baseUri + determinedTestType.invokeFile,
-    ).toString();
+    const invokeUri = URI.parse(
+      path.join(baseUri.fsPath, determinedTestType.invokeFile),
+    );
 
     const program = await this.treeParser.getProgram(
       determinedTestType.sources,
@@ -42,7 +43,7 @@ export class DefinitionProviderTestBase {
         {
           const definition = this.definitionProvider.handleDefinition({
             textDocument: {
-              uri: invokeUri,
+              uri: invokeUri.toString(),
             },
             position: determinedTestType.invokePosition,
             program,
@@ -57,7 +58,7 @@ export class DefinitionProviderTestBase {
         {
           const definition = this.definitionProvider.handleDefinition({
             textDocument: {
-              uri: invokeUri,
+              uri: invokeUri.toString(),
             },
             position: determinedTestType.invokePosition,
             program,
@@ -70,9 +71,9 @@ export class DefinitionProviderTestBase {
           );
 
           if (determinedTestType.targetPosition) {
-            const targetUri = URI.file(
-              baseUri + determinedTestType.targetFile,
-            ).toString();
+            const targetUri = URI.parse(
+              path.join(baseUri.fsPath, determinedTestType.targetFile),
+            );
 
             const rootNode = program.getSourceFile(targetUri)!.tree.rootNode;
             const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
@@ -100,7 +101,7 @@ export class DefinitionProviderTestBase {
         {
           const definition = this.definitionProvider.handleDefinition({
             textDocument: {
-              uri: invokeUri,
+              uri: invokeUri.toString(),
             },
             position: determinedTestType.invokePosition,
             program,

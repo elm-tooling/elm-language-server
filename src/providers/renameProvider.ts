@@ -45,7 +45,7 @@ export class RenameProvider {
 
     const affectedNodes = RenameUtils.getRenameAffectedNodes(
       params.program,
-      params.textDocument.uri,
+      URI.parse(params.textDocument.uri),
       params.position,
     );
 
@@ -80,7 +80,7 @@ export class RenameProvider {
 
     const affectedNodes = RenameUtils.getRenameAffectedNodes(
       params.program,
-      params.textDocument.uri,
+      URI.parse(params.textDocument.uri),
       params.position,
     );
 
@@ -112,18 +112,18 @@ export class RenameProvider {
     affectedNodes:
       | {
           originalNode: SyntaxNode;
-          references: { node: SyntaxNode; uri: string }[];
+          references: { node: SyntaxNode; uri: URI }[];
         }
       | undefined,
     newName: string,
   ): [{ [uri: string]: TextEdit[] }, TextDocumentEdit[]] {
     const edits: { [uri: string]: TextEdit[] } = {};
     affectedNodes?.references.forEach((a) => {
-      if (!edits[a.uri]) {
-        edits[a.uri] = [];
+      if (!edits[a.uri.toString()]) {
+        edits[a.uri.toString()] = [];
       }
 
-      edits[a.uri].push(
+      edits[a.uri.toString()].push(
         TextEdit.replace(
           Range.create(
             Position.create(
@@ -159,7 +159,7 @@ export class RenameProvider {
           originalNode: SyntaxNode;
           references: {
             node: SyntaxNode;
-            uri: string;
+            uri: URI;
           }[];
         }
       | undefined,
@@ -191,7 +191,7 @@ export class RenameProvider {
     affectedNodes:
       | {
           originalNode: SyntaxNode;
-          references: { node: SyntaxNode; uri: string }[];
+          references: { node: SyntaxNode; uri: URI }[];
         }
       | undefined,
   ): string {

@@ -39,9 +39,11 @@ export class MoveRefactoringHandler {
     const forest = params.program.getForest();
 
     const destinations: IMoveDestination[] = Array.from(forest.treeMap.values())
-      .filter((tree) => tree.writeable && tree.uri !== params.sourceUri)
+      .filter(
+        (tree) => tree.writeable && tree.uri.toString() !== params.sourceUri,
+      )
       .map((tree) => {
-        let uri = URI.parse(tree.uri).fsPath;
+        let uri = tree.uri.fsPath;
         const rootPath = params.program.getRootPath().fsPath;
 
         uri = uri.slice(rootPath.length + 1);
@@ -50,7 +52,7 @@ export class MoveRefactoringHandler {
         return {
           name: uri.slice(index + 1),
           path: uri.slice(0, index),
-          uri: tree.uri,
+          uri: tree.uri.toString(),
         };
       });
 
@@ -65,8 +67,8 @@ export class MoveRefactoringHandler {
     }
 
     const forest = params.program.getForest();
-    const tree = forest.getTree(params.sourceUri);
-    const destinationTree = forest.getTree(params.destination.uri);
+    const tree = forest.getTree(URI.parse(params.sourceUri));
+    const destinationTree = forest.getTree(URI.parse(params.destination.uri));
 
     if (tree && destinationTree) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
@@ -152,7 +154,7 @@ export class MoveRefactoringHandler {
           {
             node: declarationNode,
             nodeType: "Function",
-            uri: params.sourceUri,
+            uri: URI.parse(params.sourceUri),
           },
           params.program,
         ).map((ref) => {
@@ -164,7 +166,7 @@ export class MoveRefactoringHandler {
 
         const sourceHasReference = !!references.find(
           (ref) =>
-            ref.uri === params.sourceUri &&
+            ref.uri.toString() === params.sourceUri &&
             ref.node.parent?.text !== typeNode?.text &&
             ref.node.parent?.parent?.text !== declarationNode?.text &&
             ref.node.type !== "exposed_value",
@@ -183,8 +185,8 @@ export class MoveRefactoringHandler {
 
         // Remove old imports to the old source file from all reference uris
         referenceUris.forEach((refUri) => {
-          if (!changes[refUri]) {
-            changes[refUri] = [];
+          if (!changes[refUri.toString()]) {
+            changes[refUri.toString()] = [];
           }
 
           const refTree = forest.getTree(refUri);
@@ -197,7 +199,7 @@ export class MoveRefactoringHandler {
             );
 
             if (removeImportEdit) {
-              changes[refUri].push(removeImportEdit);
+              changes[refUri.toString()].push(removeImportEdit);
             }
           }
         });
@@ -205,7 +207,9 @@ export class MoveRefactoringHandler {
         // Expose function in destination file if there are external references
         if (
           references.filter(
-            (ref) => ref.uri !== params.destination?.uri && !ref.fullyQualified,
+            (ref) =>
+              ref.uri.toString() !== params.destination?.uri &&
+              !ref.fullyQualified,
           ).length > 0
         ) {
           const exposeEdit = RefactorEditUtils.exposeValueInModule(
@@ -221,32 +225,32 @@ export class MoveRefactoringHandler {
         // Change the module name of every reference that is fully qualified
         references.forEach((ref) => {
           if (ref.fullyQualified) {
-            if (ref.uri !== params.destination?.uri) {
+            if (ref.uri.toString() !== params.destination?.uri) {
               const edit = RefactorEditUtils.changeQualifiedReferenceModule(
                 ref.node,
                 destinationModuleName,
               );
 
               if (edit) {
-                changes[ref.uri].push(edit);
+                changes[ref.uri.toString()].push(edit);
               }
             } else {
               // Remove the qualified references altogether on the destination file
               const edit = RefactorEditUtils.removeQualifiedReference(ref.node);
 
               if (edit) {
-                changes[ref.uri].push(edit);
+                changes[ref.uri.toString()].push(edit);
               }
             }
           }
         });
 
         // We don't want the destination file in the remaining edits
-        referenceUris.delete(params.destination.uri);
+        referenceUris.delete(URI.parse(params.destination.uri));
 
         // Add the new imports for each file with a reference
         referenceUris.forEach((refUri) => {
-          if (refUri === params.sourceUri && !sourceHasReference) {
+          if (refUri.toString() === params.sourceUri && !sourceHasReference) {
             return;
           }
 
@@ -264,7 +268,7 @@ export class MoveRefactoringHandler {
             );
 
             if (importEdit) {
-              changes[refUri].push(importEdit);
+              changes[refUri.toString()].push(importEdit);
             }
           }
         });

@@ -29,6 +29,8 @@ import { Utils } from "../utils";
 import { TypeExpression } from "./typeExpression";
 import { ICancellationToken } from "../../cancellation";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
+import { URI } from "vscode-uri";
+import { UriString } from "../../uri";
 
 export let bindTime = 0;
 export function resetBindTime(): void {
@@ -37,11 +39,11 @@ export function resetBindTime(): void {
 
 export interface DefinitionResult {
   node: SyntaxNode;
-  uri: string;
+  uri: URI;
   nodeType: NodeType;
 }
 
-class DiagnosticsCollection extends Map<string, Diagnostic[]> {
+class DiagnosticsCollection extends Map<URI, Diagnostic[]> {
   public add(diagnostic: Diagnostic): void {
     let diagnostics = super.get(diagnostic.uri);
 
@@ -53,7 +55,7 @@ class DiagnosticsCollection extends Map<string, Diagnostic[]> {
     diagnostics.push(diagnostic);
   }
 
-  public get(uri: string): Diagnostic[] {
+  public get(uri: URI): Diagnostic[] {
     return super.get(uri) ?? [];
   }
 }
@@ -96,7 +98,7 @@ export interface TypeChecker {
 
 export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   const forest = workspace.getForest();
-  const imports = new Map<string, Imports>();
+  const imports = new Map<UriString, Imports>();
 
   const diagnostics = new DiagnosticsCollection();
   const suggestionDiagnostics = new DiagnosticsCollection();
@@ -131,7 +133,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         TreeUtils.findParentOfType("value_declaration", node, true),
       );
 
-      const uri = node.tree.uri;
+      const uri = URI.parse(node.tree.uri);
 
       const findTypeOrParentType = (
         expr: SyntaxNode | undefined,
@@ -312,14 +314,14 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   }
 
   function getAllImports(treeContainer: ITreeContainer): Imports {
-    const cached = imports.get(treeContainer.uri);
+    const cached = imports.get(treeContainer.uri.toString());
 
     if (cached) {
       return cached;
     }
 
     const allImports = Imports.getImports(treeContainer, forest);
-    imports.set(treeContainer.uri, allImports);
+    imports.set(treeContainer.uri.toString(), allImports);
     return allImports;
   }
 
@@ -879,7 +881,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
     const result = InferenceScope.valueDeclarationInference(
       declaration,
-      valueDeclaration.tree.uri,
+      URI.parse(valueDeclaration.tree.uri),
       workspace,
       new Set(),
       cancellationToken,
@@ -889,7 +891,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     if (!declaration.typeAnnotation) {
       const typeString: string = typeToString(
         result.type,
-        forest.getByUri(declaration.tree.uri),
+        forest.getByUri(URI.parse(declaration.tree.uri)),
       );
 
       if (

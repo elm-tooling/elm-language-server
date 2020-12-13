@@ -50,7 +50,7 @@ const diagnosticTimes = new Map<string, number>();
 const parsingErrors = new Set();
 
 export async function runDiagnosticTests(uri: string): Promise<void> {
-  const pathUri = URI.file(uri);
+  const pathUri = URI.parse(uri);
 
   try {
     let elmWorkspace = new ElmWorkspace(pathUri);

@@ -78,7 +78,7 @@ export class ASTProvider {
     }
 
     const newText =
-      this.documentEvents.get(params.textDocument.uri)?.getText() ??
+      this.documentEvents.get(URI.parse(params.textDocument.uri))?.getText() ??
       readFileSync(URI.parse(document.uri).fsPath, "utf8");
 
     const newTree = this.parser.parse(newText, tree);
@@ -118,7 +118,12 @@ export class ASTProvider {
     tree = newTree;
 
     if (tree) {
-      const treeContainer = forest.setTree(document.uri, true, true, tree);
+      const treeContainer = forest.setTree(
+        URI.parse(document.uri),
+        true,
+        true,
+        tree,
+      );
 
       // The workspace now needs to be synchronized
       params.program.markAsDirty();

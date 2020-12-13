@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { DiagnosticSeverity, Range } from "vscode-languageserver";
+import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
 import { PositionUtil } from "../../positionUtil";
 import { DiagnosticSource } from "../../providers/diagnostics/diagnosticSource";
@@ -10,7 +11,7 @@ export interface Diagnostic {
   source: DiagnosticSource;
   severity: DiagnosticSeverity;
   range: Range;
-  uri: string;
+  uri: URI;
 }
 
 function format(text: string, ...args: (string | number)[]): string {
@@ -34,7 +35,7 @@ export function errorWithEndNode(
     code: diagnostic.code,
     severity: diagnostic.severity,
     source: "Elm",
-    uri: node.tree.uri,
+    uri: URI.file(node.tree.uri),
   };
 }
 

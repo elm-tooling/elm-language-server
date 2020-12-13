@@ -82,7 +82,7 @@ export class HoverProvider {
 
   private createMarkdownHoverFromDefinition(
     definitionNode:
-      | { node: SyntaxNode; uri: string; nodeType: NodeType }
+      | { node: SyntaxNode; uri: URI; nodeType: NodeType }
       | undefined,
   ): Hover | undefined {
     if (definitionNode) {

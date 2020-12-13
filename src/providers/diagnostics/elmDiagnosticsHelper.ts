@@ -1,6 +1,7 @@
 import path from "path";
 import { DiagnosticSeverity, Range } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import { UriString } from "../../uri";
 import { Diagnostics } from "../../util/types/diagnostics";
 import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { NAMING_ERROR } from "./elmMakeDiagnostics";
@@ -9,15 +10,15 @@ export class ElmDiagnosticsHelper {
   public static issuesToDiagnosticMap(
     issues: IElmIssue[],
     elmWorkspaceFolder: URI,
-  ): Map<string, IDiagnostic[]> {
+  ): Map<UriString, IDiagnostic[]> {
     return issues.reduce((acc, issue) => {
       const uri = this.getUriFromIssue(issue, elmWorkspaceFolder);
       const diagnostic = this.elmMakeIssueToDiagnostic(issue);
-      const arr = acc.get(uri) ?? [];
+      const arr = acc.get(uri.toString()) ?? [];
       arr.push(diagnostic);
-      acc.set(uri, arr);
+      acc.set(uri.toString(), arr);
       return acc;
-    }, new Map<string, IDiagnostic[]>());
+    }, new Map<UriString, IDiagnostic[]>());
   }
 
   private static severityStringToDiagnosticSeverity(
@@ -36,10 +37,8 @@ export class ElmDiagnosticsHelper {
   private static getUriFromIssue(
     issue: IElmIssue,
     elmWorkspaceFolder: URI,
-  ): string {
-    return URI.file(
-      path.join(elmWorkspaceFolder.fsPath, issue.file),
-    ).toString();
+  ): URI {
+    return URI.file(path.join(elmWorkspaceFolder.fsPath, issue.file));
   }
 
   private static elmMakeIssueToDiagnostic(issue: IElmIssue): IDiagnostic {
@@ -63,7 +62,7 @@ export class ElmDiagnosticsHelper {
       message: `${messagePrefix}${issue.details.replace(/\[\d+m/g, "")}`,
       severity: this.severityStringToDiagnosticSeverity(issue.type),
       source: "Elm",
-      data: { uri: issue.file, code },
+      data: { uri: URI.file(issue.file), code },
     };
   }
 }

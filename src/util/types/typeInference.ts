@@ -53,6 +53,7 @@ import {
   errorWithEndNode,
 } from "./diagnostics";
 import fromEntries from "fromentries";
+import { URI } from "vscode-uri";
 
 export let inferTime = 0;
 export function resetInferTime(): void {
@@ -522,7 +523,7 @@ export class InferenceScope {
   private typeChecker: TypeChecker;
 
   constructor(
-    private uri: string,
+    private uri: URI,
     private elmWorkspace: IElmWorkspace,
     private nonShadowableNames: Set<string>,
     private activeScopes: Set<EValueDeclaration>,
@@ -552,7 +553,7 @@ export class InferenceScope {
 
   public static valueDeclarationInference(
     declaration: EValueDeclaration,
-    uri: string,
+    uri: URI,
     program: IElmWorkspace,
     activeScopes: Set<EValueDeclaration>,
     cancellationToken?: ICancellationToken,
@@ -1064,7 +1065,7 @@ export class InferenceScope {
       type = !parentScope
         ? InferenceScope.valueDeclarationInference(
             declaration,
-            declaration.tree.uri,
+            URI.parse(declaration.tree.uri),
             this.elmWorkspace,
             this.activeScopes,
             this.cancellationToken,

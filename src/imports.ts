@@ -4,6 +4,7 @@ import { IExposed, IExposing, NodeType, TreeUtils } from "./util/treeUtils";
 import { container } from "tsyringe";
 import { MultiMap } from "./util/multiMap";
 import { performance } from "perf_hooks";
+import { URI } from "vscode-uri";
 
 export let importsTime = 0;
 export function resetImportsTime(): void {
@@ -13,7 +14,7 @@ export function resetImportsTime(): void {
 export interface IImport {
   alias: string;
   node: SyntaxNode;
-  fromUri: string;
+  fromUri: URI;
   fromModuleName: string;
   maintainerAndPackageName?: string;
   type: NodeType;
@@ -170,7 +171,7 @@ export class Imports extends MultiMap<string, IImport> {
     moduleName: string,
     importNode: SyntaxNode,
     exposed: IExposing,
-    uri: string,
+    uri: URI,
     maintainerAndPackageName?: string,
   ): IImport[] {
     const result: IImport[] = [];
@@ -274,7 +275,7 @@ export class Imports extends MultiMap<string, IImport> {
   private static getAllExposedCompletions(
     exposed: IExposing,
     moduleName: string,
-    uri: string,
+    uri: URI,
     maintainerAndPackageName?: string,
   ): IImport[] {
     const result: IImport[] = [];

@@ -95,7 +95,7 @@ export class ElmWorkspaceMatcher<ParamType> {
     param: ParamType,
     program: IElmWorkspace,
   ): ITreeContainer {
-    const uri = this.getUriFor(param).toString();
+    const uri = this.getUriFor(param);
 
     return program.getForest().getByUri(uri)!;
   }

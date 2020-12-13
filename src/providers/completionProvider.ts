@@ -382,7 +382,7 @@ export class CompletionProvider {
         params.program,
         replaceRange,
         tree,
-        params.textDocument.uri,
+        URI.parse(params.textDocument.uri),
         nodeAtPosition.text,
       );
 
@@ -1068,7 +1068,7 @@ export class CompletionProvider {
 
   private getPossibleImportsFiltered(
     workspace: IElmWorkspace,
-    uri: string,
+    uri: URI,
     filterText: string,
   ): IPossibleImport[] {
     const forest = workspace.getForest();
@@ -1148,7 +1148,7 @@ export class CompletionProvider {
     workspace: IElmWorkspace,
     range: Range,
     tree: Tree,
-    uri: string,
+    uri: URI,
     filterText: string,
   ): { list: CompletionItem[]; isIncomplete: boolean } {
     const result: CompletionItem[] = [];

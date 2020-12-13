@@ -60,11 +60,11 @@ export class DefinitionProvider {
 
   private createLocationFromDefinition(
     definitionNode: SyntaxNode | undefined,
-    uri: string,
+    uri: URI,
   ): Location | undefined {
     if (definitionNode) {
       return Location.create(
-        uri,
+        uri.toString(),
         Range.create(
           Position.create(
             definitionNode.startPosition.row,

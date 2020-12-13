@@ -2,15 +2,16 @@ import {
   CancellationToken,
   CancellationTokenSource,
 } from "vscode-languageserver";
+import { URI } from "vscode-uri";
 
 export class DiagnosticsRequest {
   public static execute(
     requestor: (
-      files: string[],
+      files: URI[],
       delay: number,
       cancellationToken: CancellationToken,
     ) => Promise<void>,
-    files: string[],
+    files: URI[],
     onDone: () => void,
   ): DiagnosticsRequest {
     return new DiagnosticsRequest(requestor, files, onDone);
@@ -21,11 +22,11 @@ export class DiagnosticsRequest {
 
   private constructor(
     requestor: (
-      files: string[],
+      files: URI[],
       delay: number,
       cancellationToken: CancellationToken,
     ) => Promise<void>,
-    public readonly files: string[],
+    public readonly files: URI[],
     onDone: () => void,
   ) {
     if (!files.length) {

@@ -4,6 +4,7 @@ import { TreeUtils } from "../treeUtils";
 import { Utils } from "../utils";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { performance } from "perf_hooks";
+import { URI } from "vscode-uri";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export let definitionTime = 0;
@@ -788,12 +789,14 @@ export function mapTypeAnnotation(typeAnnotation: ETypeAnnotation): void {
 export function findDefinition(
   e: SyntaxNode | undefined | null,
   elmWorkspace: IElmWorkspace,
-): { expr: Expression; uri: string } | undefined {
+): { expr: Expression; uri: URI } | undefined {
   if (!e) {
     return;
   }
 
-  const treeContainer = elmWorkspace.getForest().getByUri(e.tree.uri);
+  const treeContainer = elmWorkspace
+    .getForest()
+    .getByUri(URI.parse(e.tree.uri));
 
   if (!treeContainer) {
     return;

@@ -50,7 +50,7 @@ export class ReferencesProvider {
       if (references) {
         return references.map((a) =>
           Location.create(
-            a.uri,
+            a.uri.toString(),
             Range.create(
               Position.create(
                 a.node.startPosition.row,

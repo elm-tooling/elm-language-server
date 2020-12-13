@@ -63,7 +63,7 @@ export class FileEventsHandler {
       return;
     }
 
-    const tree = elmWorkspace.getForest().getByUri(oldFile.toString())?.tree;
+    const tree = elmWorkspace.getForest().getByUri(oldFile)?.tree;
 
     const moduleName = this.getModuleNameFromFile(newFile, elmWorkspace);
     const moduleNameNode = tree ? TreeUtils.getModuleNameNode(tree) : undefined;
@@ -75,7 +75,7 @@ export class FileEventsHandler {
 
       const affectedNodes = RenameUtils.getRenameAffectedNodes(
         elmWorkspace,
-        newFile.toString(),
+        newFile,
         moduleNodePosition,
       );
 
@@ -102,7 +102,7 @@ export class FileEventsHandler {
       return;
     }
 
-    const relativePath = URI.file(relative(sourceDir, file.fsPath)).path.slice(
+    const relativePath = URI.parse(relative(sourceDir, file.fsPath)).path.slice(
       1,
     );
 

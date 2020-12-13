@@ -4,7 +4,7 @@ import { ElmWorkspace, IElmWorkspace } from "../../src/elmWorkspace";
 import { container } from "tsyringe";
 import { URI } from "vscode-uri";
 
-export const baseUri = path.join(__dirname, "../sources/src/");
+export const baseUri = URI.parse(path.join(__dirname, "../sources/src/"));
 
 export class SourceTreeParser {
   private parser?: Parser;
@@ -26,8 +26,8 @@ export class SourceTreeParser {
   public async getProgram(sources: {
     [K: string]: string;
   }): Promise<IElmWorkspace> {
-    const readFile = (uri: string): string => {
-      if (uri.endsWith("elm.json")) {
+    const readFile = (uri: URI): string => {
+      if (uri.fsPath.endsWith("elm.json")) {
         return `
         {
           "type": "application",
@@ -47,17 +47,18 @@ export class SourceTreeParser {
         `;
       }
 
-      return sources[path.relative(baseUri, uri)];
+      return sources[path.relative(baseUri.fsPath, uri.fsPath)];
     };
 
-    const program = new ElmWorkspace(URI.file(baseUri), {
-      readFile: (uri: string): Promise<string> =>
-        Promise.resolve(readFile(uri)),
+    const program = new ElmWorkspace(URI.parse(baseUri.fsPath), {
+      readFile: (uri: URI): Promise<string> => Promise.resolve(readFile(uri)),
       readFileSync: readFile,
-      readDirectory: (uri: string): Promise<string[]> => {
+      readDirectory: (uri: URI): Promise<URI[]> => {
         return Promise.resolve(
-          path.parse(uri).dir === path.parse(baseUri).dir
-            ? Object.keys(sources).map((sourceUri) => path.join(uri, sourceUri))
+          path.parse(uri.fsPath).dir === path.parse(baseUri.fsPath).dir
+            ? Object.keys(sources).map((sourceUri) =>
+                URI.parse(path.join(uri.fsPath, sourceUri)),
+              )
             : [],
         );
       },

@@ -16,7 +16,7 @@ describe("ElmLsDiagnostics", () => {
   const treeParser = new SourceTreeParser();
 
   const debug = process.argv.find((arg) => arg === "--debug");
-  const uri = URI.file(baseUri + "Main.elm").toString();
+  const uri = URI.parse(baseUri.fsPath + "Main.elm");
 
   async function testDiagnostics(
     source: string,

@@ -10,6 +10,7 @@ import { URI } from "vscode-uri";
 import { ServerCancellationToken } from "../../cancellation";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { GetDiagnosticsRequest } from "../../protocol";
+import { UriString } from "../../uri";
 import { Delayer } from "../../util/delayer";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { MultistepOperation } from "../../util/multistepOperation";
@@ -41,7 +42,7 @@ export interface IElmIssue {
 export interface IDiagnostic extends Omit<LspDiagnostic, "code"> {
   source: DiagnosticSource;
   data: {
-    uri: string;
+    uri: URI;
     code: string;
   };
 }
@@ -59,8 +60,8 @@ export function convertFromAnalyzerDiagnostic(diag: Diagnostic): IDiagnostic {
   };
 }
 
-class PendingDiagnostics extends Map<string, number> {
-  public getOrderedFiles(): string[] {
+class PendingDiagnostics extends Map<URI, number> {
+  public getOrderedFiles(): URI[] {
     return Array.from(this.entries())
       .sort((a, b) => a[1] - b[1])
       .map((a) => a[0]);
@@ -71,7 +72,7 @@ class PendingDiagnostics extends Map<string, number> {
 export class DiagnosticsProvider {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
   private elmLsDiagnostics: ElmLsDiagnostics;
-  private currentDiagnostics: Map<string, FileDiagnostics>;
+  private currentDiagnostics: Map<UriString, FileDiagnostics>;
   private events: TextDocumentEvents;
   private connection: Connection;
   private clientSettings: IClientSettings;
@@ -101,25 +102,25 @@ export class DiagnosticsProvider {
 
     const astProvider = container.resolve(ASTProvider);
 
-    this.currentDiagnostics = new Map<string, FileDiagnostics>();
+    this.currentDiagnostics = new Map<UriString, FileDiagnostics>();
     this.pendingDiagnostics = new PendingDiagnostics();
     this.diagnosticsDelayer = new Delayer(300);
 
     this.events.on(
       "open",
       (d: { document: TextDocument }) =>
-        void this.getElmMakeDiagnostics(d.document.uri),
+        void this.getElmMakeDiagnostics(URI.parse(d.document.uri)),
     );
     this.events.on(
       "save",
       (d: { document: TextDocument }) =>
-        void this.getElmMakeDiagnostics(d.document.uri),
+        void this.getElmMakeDiagnostics(URI.parse(d.document.uri)),
     );
 
     this.connection.onDidChangeWatchedFiles((event) => {
       const newDeleteEvents = event.changes
         .filter((a) => a.type === FileChangeType.Deleted)
-        .map((a) => a.uri);
+        .map((a) => URI.parse(a.uri));
       newDeleteEvents.forEach((uri) => {
         this.deleteDiagnostics(uri);
       });
@@ -133,7 +134,11 @@ export class DiagnosticsProvider {
       this.connection.onRequest(
         GetDiagnosticsRequest,
         (params, cancellationToken) =>
-          this.getDiagnostics(params.files, params.delay, cancellationToken),
+          this.getDiagnostics(
+            params.files.map((a) => URI.parse(a)),
+            params.delay,
+            cancellationToken,
+          ),
       );
     }
 
@@ -142,7 +147,7 @@ export class DiagnosticsProvider {
 
       if (this.clientSettings.disableElmLSDiagnostics) {
         this.currentDiagnostics.forEach((_, uri) =>
-          this.updateDiagnostics(uri, DiagnosticKind.ElmLS, []),
+          this.updateDiagnostics(URI.parse(uri), DiagnosticKind.ElmLS, []),
         );
       } else {
         this.workspaces.forEach((workspace) => {
@@ -198,11 +203,11 @@ export class DiagnosticsProvider {
     return result;
   }
 
-  public getCurrentDiagnostics(uri: string): IDiagnostic[] {
-    return this.currentDiagnostics.get(uri)?.get() ?? [];
+  public getCurrentDiagnostics(uri: URI): IDiagnostic[] {
+    return this.currentDiagnostics.get(uri.toString())?.get() ?? [];
   }
 
-  private requestDiagnostics(uri: string): void {
+  private requestDiagnostics(uri: URI): void {
     this.pendingDiagnostics.set(uri, Date.now());
     this.triggerDiagnostics();
   }
@@ -261,42 +266,42 @@ export class DiagnosticsProvider {
   }
 
   private updateDiagnostics(
-    uri: string,
+    uri: URI,
     kind: DiagnosticKind,
     diagnostics: IDiagnostic[],
   ): void {
     let didUpdate = false;
 
-    let fileDiagnostics = this.currentDiagnostics.get(uri);
+    let fileDiagnostics = this.currentDiagnostics.get(uri.toString());
 
     if (fileDiagnostics) {
       didUpdate = fileDiagnostics.update(kind, diagnostics);
     } else if (diagnostics.length > 0) {
       fileDiagnostics = new FileDiagnostics(uri);
       fileDiagnostics.update(kind, diagnostics);
-      this.currentDiagnostics.set(uri, fileDiagnostics);
+      this.currentDiagnostics.set(uri.toString(), fileDiagnostics);
       didUpdate = true;
     }
 
     if (didUpdate) {
-      const fileDiagnostics = this.currentDiagnostics.get(uri);
+      const fileDiagnostics = this.currentDiagnostics.get(uri.toString());
       this.connection.sendDiagnostics({
-        uri,
+        uri: uri.toString(),
         diagnostics: fileDiagnostics ? fileDiagnostics.get() : [],
       });
     }
   }
 
-  private deleteDiagnostics(uri: string): void {
-    this.currentDiagnostics.delete(uri);
+  private deleteDiagnostics(uri: URI): void {
+    this.currentDiagnostics.delete(uri.toString());
     this.connection.sendDiagnostics({
-      uri,
+      uri: uri.toString(),
       diagnostics: [],
     });
   }
 
   private getDiagnostics(
-    files: string[],
+    files: URI[],
     delay: number,
     cancellationToken: CancellationToken,
   ): Promise<void> {
@@ -325,9 +330,7 @@ export class DiagnosticsProvider {
             }
 
             const uri = files[index];
-            const program = this.elmWorkspaceMatcher.getProgramFor(
-              URI.parse(uri),
-            );
+            const program = this.elmWorkspaceMatcher.getProgramFor(uri);
 
             const sourceFile = program.getForest().getByUri(uri);
 
@@ -408,14 +411,15 @@ export class DiagnosticsProvider {
     );
   }
 
-  private async getElmMakeDiagnostics(uri: string): Promise<void> {
+  private async getElmMakeDiagnostics(uri: URI): Promise<void> {
     const elmMakeDiagnostics = await this.elmMakeDiagnostics.createDiagnostics(
-      URI.parse(uri),
+      uri,
     );
 
     this.resetDiagnostics(elmMakeDiagnostics, DiagnosticKind.ElmMake);
 
-    elmMakeDiagnostics.forEach((diagnostics, diagnosticsUri) => {
+    elmMakeDiagnostics.forEach((diagnostics, uri) => {
+      const diagnosticsUri = URI.parse(uri);
       this.updateDiagnostics(diagnosticsUri, DiagnosticKind.Syntactic, []);
       this.updateDiagnostics(diagnosticsUri, DiagnosticKind.Semantic, []);
       this.updateDiagnostics(
@@ -427,21 +431,21 @@ export class DiagnosticsProvider {
 
     this.currentDiagnostics.forEach((_, uri) => {
       if (!elmMakeDiagnostics.has(uri)) {
-        this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
+        this.updateDiagnostics(URI.parse(uri), DiagnosticKind.ElmMake, []);
       }
     });
   }
 
   private resetDiagnostics(
-    diagnosticList: Map<string, IDiagnostic[]>,
+    diagnosticList: Map<UriString, IDiagnostic[]>,
     diagnosticKind: DiagnosticKind,
   ): void {
     this.currentDiagnostics.forEach((fileDiagnostics, diagnosticsUri) => {
       if (
-        !diagnosticList.has(diagnosticsUri) &&
+        !diagnosticList.has(diagnosticsUri.toString()) &&
         fileDiagnostics.getForKind(diagnosticKind).length > 0
       ) {
-        diagnosticList.set(diagnosticsUri, []);
+        diagnosticList.set(diagnosticsUri.toString(), []);
       }
     });
   }

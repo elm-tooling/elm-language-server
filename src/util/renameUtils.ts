@@ -3,18 +3,19 @@ import { Position, ResponseError } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
 import { References } from "./references";
 import { TreeUtils } from "./treeUtils";
+import { URI } from "vscode-uri";
 
 export class RenameUtils {
   static getRenameAffectedNodes(
     elmWorkspace: IElmWorkspace,
-    uri: string,
+    uri: URI,
     position: Position,
   ):
     | {
         originalNode: SyntaxNode;
         references: {
           node: SyntaxNode;
-          uri: string;
+          uri: URI;
         }[];
       }
     | undefined {

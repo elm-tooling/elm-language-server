@@ -34,12 +34,13 @@ export class WorkspaceSymbolProvider {
         ): void => {
           if (node.text.includes(param.query)) {
             const symbolInformation = SymbolInformationTranslator.translateNodeToSymbolInformation(
-              tree.uri,
+              tree.uri.toString(),
               node,
             );
             if (symbolInformation) {
-              const current = symbolInformationMap.get(tree.uri) || [];
-              symbolInformationMap.set(tree.uri, [
+              const current =
+                symbolInformationMap.get(tree.uri.toString()) || [];
+              symbolInformationMap.set(tree.uri.toString(), [
                 ...current,
                 symbolInformation,
               ]);
@@ -52,7 +53,7 @@ export class WorkspaceSymbolProvider {
         };
 
         // skip URIs already traversed in a previous Elm workspace
-        if (tree && !symbolInformationMap.get(tree.uri)) {
+        if (tree && !symbolInformationMap.get(tree.uri.toString())) {
           traverse(tree.tree.rootNode);
         }
       });

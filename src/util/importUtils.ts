@@ -2,6 +2,7 @@ import { IForest, ITreeContainer } from "../forest";
 import RANKING_LIST from "../providers/ranking";
 import { TreeUtils, NodeType } from "./treeUtils";
 import { SyntaxNode } from "web-tree-sitter";
+import { URI } from "vscode-uri";
 
 export interface IPossibleImport {
   module: string;
@@ -15,7 +16,7 @@ export interface IPossibleImport {
 export class ImportUtils {
   public static getPossibleImports(
     forest: IForest,
-    uri: string,
+    uri: URI,
   ): IPossibleImport[] {
     const currentModule = forest.getByUri(uri)?.moduleName;
 

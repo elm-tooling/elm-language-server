@@ -5,13 +5,14 @@ import { IReferenceNode } from "./referenceNode";
 import { TreeUtils } from "./treeUtils";
 import { Utils } from "./utils";
 import { IImport, Imports } from "../imports";
+import { URI } from "vscode-uri";
 
 export class References {
   public static find(
     definitionNode: IReferenceNode | undefined,
     elmWorkspace: IElmWorkspace,
-  ): { node: SyntaxNode; uri: string }[] {
-    const references: { node: SyntaxNode; uri: string }[] = [];
+  ): { node: SyntaxNode; uri: URI }[] {
+    const references: { node: SyntaxNode; uri: URI }[] = [];
 
     const forest = elmWorkspace.getForest();
     const checker = elmWorkspace.getTypeChecker();
@@ -22,7 +23,9 @@ export class References {
       if (refSourceTree) {
         const imports: { [uri: string]: Imports } = {};
         forest.treeMap.forEach((treeContainer) => {
-          imports[treeContainer.uri] = checker.getAllImports(treeContainer);
+          imports[treeContainer.uri.toString()] = checker.getAllImports(
+            treeContainer,
+          );
         });
 
         const moduleNameNode = TreeUtils.getModuleNameNode(refSourceTree.tree);
@@ -98,11 +101,13 @@ export class References {
                     const moduleName = moduleNameNode.text;
 
                     for (const uri in imports) {
-                      if (uri === definitionNode.uri) {
+                      if (uri === definitionNode.uri.toString()) {
                         continue;
                       }
 
-                      const otherTreeContainer = forest.getByUri(uri);
+                      const otherTreeContainer = forest.getByUri(
+                        URI.parse(uri),
+                      );
 
                       if (!otherTreeContainer) {
                         continue;
@@ -146,7 +151,7 @@ export class References {
                             if (exposedNode) {
                               references.push({
                                 node: exposedNode,
-                                uri,
+                                uri: URI.parse(uri),
                               });
                             }
                           }
@@ -159,7 +164,7 @@ export class References {
                           if (functions) {
                             references.push(
                               ...functions.map((node) => {
-                                return { node, uri };
+                                return { node, uri: URI.parse(uri) };
                               }),
                             );
                           }
@@ -225,11 +230,13 @@ export class References {
                   if (isExposed && moduleNameNode) {
                     const moduleName = moduleNameNode.text;
                     for (const uri in imports) {
-                      if (uri === definitionNode.uri) {
+                      if (uri === definitionNode.uri.toString()) {
                         continue;
                       }
 
-                      const otherTreeContainer = forest.getByUri(uri);
+                      const otherTreeContainer = forest.getByUri(
+                        definitionNode.uri,
+                      );
 
                       if (!otherTreeContainer) {
                         continue;
@@ -272,7 +279,7 @@ export class References {
                             if (exposedNode) {
                               references.push({
                                 node: exposedNode,
-                                uri,
+                                uri: URI.parse(uri),
                               });
                             }
                           }
@@ -284,7 +291,7 @@ export class References {
                           if (typeOrTypeAliasCalls) {
                             references.push(
                               ...typeOrTypeAliasCalls.map((node) => {
-                                return { node, uri };
+                                return { node, uri: URI.parse(uri) };
                               }),
                             );
                           }
@@ -308,7 +315,7 @@ export class References {
               }
 
               for (const uri in imports) {
-                if (uri === definitionNode.uri) {
+                if (uri === definitionNode.uri.toString()) {
                   continue;
                 }
 
@@ -316,7 +323,7 @@ export class References {
                 const found = element.get(moduleNameNode.text);
 
                 if (found) {
-                  const treeToCheck = forest.getByUri(uri);
+                  const treeToCheck = forest.getByUri(definitionNode.uri);
 
                   if (treeToCheck && treeToCheck.writeable) {
                     const importNameNode = checker.findImportModuleNameNode(
@@ -324,7 +331,10 @@ export class References {
                       treeToCheck,
                     );
                     if (importNameNode) {
-                      references.push({ node: importNameNode, uri });
+                      references.push({
+                        node: importNameNode,
+                        uri: URI.parse(uri),
+                      });
                     }
                     break;
                   }
@@ -452,7 +462,7 @@ export class References {
               }
 
               for (const uri in imports) {
-                if (uri === definitionNode.uri) {
+                if (uri === definitionNode.uri.toString()) {
                   continue;
                 }
 
@@ -466,7 +476,7 @@ export class References {
                   found.type === "UnionConstructor";
 
                 if (needsToBeChecked) {
-                  const treeToCheck = forest.getByUri(uri);
+                  const treeToCheck = forest.getByUri(URI.parse(uri));
                   if (treeToCheck && treeToCheck.writeable) {
                     const unionConstructorCallsFromOtherFiles = TreeUtils.findUnionConstructorCalls(
                       treeToCheck.tree,
@@ -475,7 +485,7 @@ export class References {
                     if (unionConstructorCallsFromOtherFiles) {
                       references.push(
                         ...unionConstructorCallsFromOtherFiles.map((node) => {
-                          return { node, uri };
+                          return { node, uri: URI.parse(uri) };
                         }),
                       );
                     }
@@ -505,16 +515,16 @@ export class References {
                 );
 
                 for (const uri in imports) {
-                  if (uri === definitionNode.uri) {
+                  if (uri === definitionNode.uri.toString()) {
                     continue;
                   }
 
                   const needsToBeChecked = forest
-                    .getByUri(uri)
+                    .getByUri(URI.parse(uri))
                     ?.resolvedModules?.get(moduleNameNode?.text ?? "");
 
                   if (needsToBeChecked) {
-                    const treeToCheck = forest.getByUri(uri);
+                    const treeToCheck = forest.getByUri(URI.parse(uri));
 
                     if (treeToCheck && treeToCheck.writeable) {
                       references.push(
@@ -549,7 +559,7 @@ export class References {
     if (functionNameNode) {
       const infixRef = elmWorkspace
         .getForest()
-        .getByUri(node.tree.uri)
+        .getByUri(URI.parse(node.tree.uri))
         ?.symbolLinks?.get(node.tree.rootNode)
         ?.get(
           functionNameNode.text,
@@ -657,11 +667,11 @@ export class References {
 
   private static getFieldReferences(
     fieldName: string,
-    definition: { node: SyntaxNode; uri: string },
+    definition: { node: SyntaxNode; uri: URI },
     treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
-  ): { node: SyntaxNode; uri: string }[] {
-    const references: { node: SyntaxNode; uri: string }[] = [];
+  ): { node: SyntaxNode; uri: URI }[] {
+    const references: { node: SyntaxNode; uri: URI }[] = [];
 
     const fieldUsages = References.findFieldUsages(
       treeContainer.tree,

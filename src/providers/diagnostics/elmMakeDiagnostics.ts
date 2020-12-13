@@ -23,6 +23,7 @@ import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
 import { IElmWorkspace } from "../../elmWorkspace";
+import { UriString } from "../../uri";
 
 const ELM_MAKE = "Elm";
 export const NAMING_ERROR = "NAMING ERROR";
@@ -112,7 +113,7 @@ export class ElmMakeDiagnostics {
 
   public createDiagnostics = async (
     filePath: URI,
-  ): Promise<Map<string, IDiagnostic[]>> => {
+  ): Promise<Map<UriString, IDiagnostic[]>> => {
     const workspaceRootPath = this.elmWorkspaceMatcher
       .getProgramFor(filePath)
       .getRootPath();
@@ -132,16 +133,19 @@ export class ElmMakeDiagnostics {
       params.context.diagnostics as IDiagnostic[],
     );
 
-    return this.convertDiagnosticsToCodeActions(elmMakeDiagnostics, uri);
+    return this.convertDiagnosticsToCodeActions(
+      elmMakeDiagnostics,
+      URI.file(uri),
+    );
   }
 
   private convertDiagnosticsToCodeActions(
     diagnostics: IDiagnostic[],
-    uri: string,
+    uri: URI,
   ): CodeAction[] {
     const result: CodeAction[] = [];
 
-    const elmWorkspace = this.elmWorkspaceMatcher.getProgramFor(URI.parse(uri));
+    const elmWorkspace = this.elmWorkspaceMatcher.getProgramFor(uri);
     const forest = elmWorkspace.getForest();
 
     const sourceTree = forest.getByUri(uri);
@@ -224,7 +228,7 @@ export class ElmMakeDiagnostics {
   private addCaseQuickfixes(
     sourceTree: ITreeContainer | undefined,
     diagnostic: IDiagnostic,
-    uri: string,
+    uri: URI,
     elmWorkspace: IElmWorkspace,
   ): CodeAction[] {
     const result = [];
@@ -319,7 +323,7 @@ export class ElmMakeDiagnostics {
   }
 
   private createCaseQuickFix(
-    uri: string,
+    uri: URI,
     replaceWith: string,
     diagnostic: IDiagnostic,
     title: string,
@@ -327,10 +331,12 @@ export class ElmMakeDiagnostics {
     const map: {
       [uri: string]: TextEdit[];
     } = {};
-    if (!map[uri]) {
-      map[uri] = [];
+    if (!map[uri.toString()]) {
+      map[uri.toString()] = [];
     }
-    map[uri].push(TextEdit.insert(diagnostic.range.end, replaceWith));
+    map[uri.toString()].push(
+      TextEdit.insert(diagnostic.range.end, replaceWith),
+    );
     return {
       diagnostics: [diagnostic],
       edit: { changes: map },
@@ -340,7 +346,7 @@ export class ElmMakeDiagnostics {
   }
 
   private createQuickFix(
-    uri: string,
+    uri: URI,
     replaceWith: string,
     diagnostic: IDiagnostic,
     title: string,
@@ -348,10 +354,10 @@ export class ElmMakeDiagnostics {
     const map: {
       [uri: string]: TextEdit[];
     } = {};
-    if (!map[uri]) {
-      map[uri] = [];
+    if (!map[uri.toString()]) {
+      map[uri.toString()] = [];
     }
-    map[uri].push(TextEdit.replace(diagnostic.range, replaceWith));
+    map[uri.toString()].push(TextEdit.replace(diagnostic.range, replaceWith));
     return {
       diagnostics: [diagnostic],
       edit: { changes: map },

@@ -28,19 +28,17 @@ export class ReferencesProviderTestBase {
       throw new Error("Getting references from source failed");
     }
 
-    const testUri = URI.file(baseUri + referenceTest.invokeFile).toString();
+    const testUri = URI.parse(baseUri.fsPath + referenceTest.invokeFile);
 
     const program = await this.treeParser.getProgram(referenceTest.sources);
     const sourceFile = program.getForest().getByUri(testUri);
 
     if (!sourceFile) throw new Error("Getting tree failed");
 
-    const invokeUri = URI.file(baseUri + referenceTest.invokeFile).toString();
-
     const references =
       this.referencesProvider.handleReference({
         textDocument: {
-          uri: invokeUri,
+          uri: testUri.toString(),
         },
         position: referenceTest.invokePosition,
         context: {
@@ -59,7 +57,7 @@ export class ReferencesProviderTestBase {
     expect(references.length).toEqual(referenceTest.references.length);
 
     referenceTest.references.forEach(({ referencePosition, referenceFile }) => {
-      const referenceUri = URI.file(baseUri + referenceFile).toString();
+      const referenceUri = URI.parse(baseUri.fsPath + referenceFile);
 
       const rootNode = program.getSourceFile(referenceUri)!.tree.rootNode;
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
@@ -69,7 +67,7 @@ export class ReferencesProviderTestBase {
 
       const foundReference = references.find(
         (ref) =>
-          ref.uri === referenceUri &&
+          ref.uri === referenceUri.toString() &&
           ref.range.start.line === referencePosition.line &&
           ref.range.start.character === nodeAtPosition.startPosition.column,
       );

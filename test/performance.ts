@@ -61,7 +61,7 @@ async function initParser(): Promise<void> {
 }
 
 export async function runPerformanceTests(uri: string): Promise<void> {
-  const pathUri = URI.file(uri);
+  const pathUri = URI.parse(uri);
   console.log(`Running with uri: ${pathUri.fsPath}`);
 
   await initParser();

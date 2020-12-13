@@ -66,12 +66,12 @@ describe("test elm diagnostics", () => {
       throw new Error("Getting sources failed");
     }
 
-    const testUri = URI.file(baseUri + "Test.elm").toString();
+    const testUri = URI.parse(baseUri.fsPath + "Test.elm");
 
     const program = await treeParser.getProgram(result.sources);
-    const treeContainer = program.getForest().getByUri(testUri);
+    const sourceFile = program.getForest().getByUri(testUri);
 
-    if (!treeContainer) throw new Error("Getting tree failed");
+    if (!sourceFile) throw new Error("Getting tree failed");
 
     const diagnostics: Diagnostic[] = [];
 

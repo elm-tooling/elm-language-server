@@ -166,7 +166,7 @@ export class Server implements ILanguageServer {
   }
 
   private getElmJsonFolder(uri: string): URI {
-    return URI.file(path.dirname(uri));
+    return URI.parse(path.dirname(uri));
   }
 
   private findTopLevelFolders(listOfElmJsonFolders: URI[]): Map<string, URI> {
@@ -192,7 +192,7 @@ export class Server implements ILanguageServer {
     if (params.rootUri) {
       return URI.parse(params.rootUri);
     } else if (params.rootPath) {
-      return URI.file(params.rootPath);
+      return URI.parse(params.rootPath);
     } else {
       return null;
     }

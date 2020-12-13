@@ -39,7 +39,7 @@ export interface ICodeActionRegistration {
 
 export interface IRefactorCodeAction extends CodeAction {
   data: {
-    uri: string;
+    uri: URI;
     refactorName: string;
     actionName: string;
     range: Range;
@@ -93,8 +93,8 @@ export class CodeActionProvider {
 
     this.connection.onRequest(
       CodeActionResolveRequest.method,
-      new ElmWorkspaceMatcher((codeAction: IRefactorCodeAction) =>
-        URI.parse(codeAction.data.uri),
+      new ElmWorkspaceMatcher(
+        (codeAction: IRefactorCodeAction) => codeAction.data.uri,
       ).handleResolve((codeAction, program, sourceFile) =>
         this.onCodeActionResolve(codeAction, program, sourceFile),
       ),
@@ -150,7 +150,7 @@ export class CodeActionProvider {
     title: string,
     edits: TextEdit[],
   ): CodeAction {
-    const changes = { [params.sourceFile.uri]: edits };
+    const changes = { [params.sourceFile.uri.toString()]: edits };
     return {
       title,
       kind: CodeActionKind.QuickFix,
@@ -168,7 +168,7 @@ export class CodeActionProvider {
   ): CodeAction {
     const edits: TextEdit[] = [];
     const changes = {
-      [params.sourceFile.uri]: edits,
+      [params.sourceFile.uri.toString()]: edits,
     };
 
     const diagnostics: LspDiagnostic[] = [];
@@ -260,7 +260,7 @@ export class CodeActionProvider {
       ?.getEditsForAction(
         {
           textDocument: {
-            uri: codeAction.data.uri,
+            uri: codeAction.data.uri.toString(),
           },
           context: { diagnostics: [] },
           range: codeAction.data.range,
@@ -271,7 +271,9 @@ export class CodeActionProvider {
       );
 
     if (result?.edits) {
-      codeAction.edit = { changes: { [codeAction.data.uri]: result.edits } };
+      codeAction.edit = {
+        changes: { [codeAction.data.uri.toString()]: result.edits },
+      };
     }
 
     if (result?.renamePosition) {

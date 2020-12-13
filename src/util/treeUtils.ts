@@ -9,6 +9,7 @@ import {
   mapSyntaxNodeToExpression,
 } from "./types/expressionTree";
 import { Range } from "vscode-languageserver-textdocument";
+import { URI } from "vscode-uri";
 
 export type NodeType =
   | "Function"
@@ -552,7 +553,7 @@ export class TreeUtils {
     node: SyntaxNode | undefined,
     treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
-  ): { node: SyntaxNode; uri: string } | undefined {
+  ): { node: SyntaxNode; uri: URI } | undefined {
     const fieldName = node?.parent?.firstNamedChild?.text;
 
     let recordType = TreeUtils.getTypeAliasOfRecord(
@@ -572,7 +573,7 @@ export class TreeUtils {
 
     const recordTypeTree = elmWorkspace
       .getForest()
-      .getByUri(recordType?.uri ?? "");
+      .getByUri(recordType?.uri ?? URI.parse(""));
 
     if (recordType && recordTypeTree) {
       const fieldTypes = TreeUtils.descendantsOfType(
@@ -616,7 +617,7 @@ export class TreeUtils {
     type: SyntaxNode | undefined,
     treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
-  ): { node: SyntaxNode; uri: string } | undefined {
+  ): { node: SyntaxNode; uri: URI } | undefined {
     if (type) {
       const definitionNode = elmWorkspace
         .getTypeChecker()
@@ -669,7 +670,7 @@ export class TreeUtils {
     node: SyntaxNode | undefined,
     treeContainer: ITreeContainer,
     elmWorkspace: IElmWorkspace,
-  ): { node: SyntaxNode; uri: string } | undefined {
+  ): { node: SyntaxNode; uri: URI } | undefined {
     if (node?.parent?.parent) {
       let type: SyntaxNode | undefined | null =
         TreeUtils.findFirstNamedChildOfType(
@@ -1059,7 +1060,7 @@ export class TreeUtils {
   public static findFieldReference(
     type: Type,
     fieldName: string,
-  ): { node: SyntaxNode; uri: string; nodeType: NodeType } | undefined {
+  ): { node: SyntaxNode; uri: URI; nodeType: NodeType } | undefined {
     if (type.nodeType === "Record") {
       const fieldRefs = type.fieldReferences.get(fieldName);
 
@@ -1070,7 +1071,7 @@ export class TreeUtils {
           return {
             node: fieldRefs[0],
             nodeType: "FieldType",
-            uri: refUri,
+            uri: URI.parse(refUri),
           };
         }
       }

@@ -1,3 +1,4 @@
+import { URI } from "vscode-uri";
 import { Utils } from "../../util/utils";
 import { IDiagnostic } from "./diagnosticsProvider";
 
@@ -43,7 +44,7 @@ export class FileDiagnostics {
     IDiagnostic[]
   >();
 
-  constructor(public uri: string) {}
+  constructor(public uri: URI) {}
 
   public get(): IDiagnostic[] {
     return [

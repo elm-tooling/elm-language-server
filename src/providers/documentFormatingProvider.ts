@@ -66,7 +66,7 @@ export class DocumentFormattingProvider {
   ): DocumentFormattingResult => {
     this.connection.console.info(`Formatting was requested`);
     try {
-      const text = this.events.get(params.textDocument.uri);
+      const text = this.events.get(URI.parse(params.textDocument.uri));
       if (!text) {
         this.connection.console.error("Can't find file for formatting.");
         return;

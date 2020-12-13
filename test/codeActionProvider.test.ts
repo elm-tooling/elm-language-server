@@ -72,7 +72,7 @@ describe("test codeActionProvider", () => {
       throw new Error("Getting sources failed");
     }
 
-    const testUri = URI.file(baseUri + "Test.elm").toString();
+    const testUri = URI.parse(baseUri.fsPath + "Test.elm");
 
     const program = await treeParser.getProgram(result.sources);
     const sourceFile = program.getForest().getByUri(testUri);
@@ -89,7 +89,7 @@ describe("test codeActionProvider", () => {
         program,
         sourceFile,
         range,
-        textDocument: { uri: testUri },
+        textDocument: { uri: testUri.toString() },
         context: {
           diagnostics: [
             ...program.getSyntacticDiagnostics(sourceFile),

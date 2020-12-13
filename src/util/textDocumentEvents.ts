@@ -8,6 +8,7 @@ import {
   TextDocumentsConfiguration,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { URI } from "vscode-uri";
 import { IDocumentEvents } from "./documentEvents";
 
 // This is loosely based on https://github.com/Microsoft/vscode-languageserver-node/blob/73180893ca/server/src/main.ts#L124
@@ -80,11 +81,11 @@ export class TextDocumentEvents extends EventEmitter {
    * @param uri The text document's URI to retrieve.
    * @return the text document or `undefined`.
    */
-  public get(uri: string): TextDocument | undefined {
-    return this._documents[uri];
+  public get(uri: URI): TextDocument | undefined {
+    return this._documents[uri.toString()];
   }
 
-  public getManagedUris(): string[] {
-    return Object.keys(this._documents);
+  public getManagedUris(): URI[] {
+    return Object.keys(this._documents).map((a) => URI.parse(a));
   }
 }

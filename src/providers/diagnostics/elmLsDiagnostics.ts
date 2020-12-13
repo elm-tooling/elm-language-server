@@ -343,7 +343,7 @@ export class ElmLsDiagnostics {
         ...this.getDropConcatOfListsDiagnostics(tree),
         ...this.getDropConsOfItemAndListDiagnostics(tree),
         ...this.getUseConsOverConcatDiagnostics(tree),
-        ...this.getSingleFieldRecordDiagnostics(tree, uri, elmWorkspace),
+        ...this.getSingleFieldRecordDiagnostics(tree, elmWorkspace),
         ...this.getUnnecessaryListConcatDiagnostics(tree),
         ...this.getUnnecessaryPortModuleDiagnostics(tree),
         ...this.getFullyAppliedOperatorAsPrefixDiagnostics(tree),
@@ -375,7 +375,7 @@ export class ElmLsDiagnostics {
 
     const forest = elmWorkspace.getForest();
 
-    const treeContainer = forest.getByUri(uri);
+    const treeContainer = forest.getByUri(URI.parse(uri));
 
     if (treeContainer) {
       diagnostics.forEach((diagnostic) => {
@@ -498,7 +498,7 @@ export class ElmLsDiagnostics {
           severity: DiagnosticSeverity.Warning,
           source: "ElmLS",
           tags: [DiagnosticTag.Unnecessary],
-          data: { uri: tree.uri, code: "unused_import" },
+          data: { uri: URI.parse(tree.uri), code: "unused_import" },
         });
       }
     });
@@ -546,7 +546,7 @@ export class ElmLsDiagnostics {
           severity: DiagnosticSeverity.Warning,
           source: "ElmLS",
           tags: [DiagnosticTag.Unnecessary],
-          data: { uri: tree.uri, code: "unused_imported_value" },
+          data: { uri: URI.parse(tree.uri), code: "unused_imported_value" },
         });
       }
     });
@@ -576,7 +576,7 @@ export class ElmLsDiagnostics {
           severity: DiagnosticSeverity.Warning,
           source: "ElmLS",
           tags: [DiagnosticTag.Unnecessary],
-          data: { uri: tree.uri, code: "unused_alias" },
+          data: { uri: URI.parse(tree.uri), code: "unused_alias" },
         });
       }
     });
@@ -657,7 +657,7 @@ export class ElmLsDiagnostics {
               severity: DiagnosticSeverity.Warning,
               source: "ElmLS",
               tags: [DiagnosticTag.Unnecessary],
-              data: { uri: tree.uri, code: "unused_top_level" },
+              data: { uri: URI.parse(tree.uri), code: "unused_top_level" },
             });
           }
         } else if (references.length === 0) {
@@ -668,7 +668,7 @@ export class ElmLsDiagnostics {
               severity: DiagnosticSeverity.Warning,
               source: "ElmLS",
               tags: [DiagnosticTag.Unnecessary],
-              data: { uri: tree.uri, code: "unused_pattern" },
+              data: { uri: URI.parse(tree.uri), code: "unused_pattern" },
             });
           }
         }
@@ -692,7 +692,7 @@ export class ElmLsDiagnostics {
         message: `\`Nothing\` mapped to \`Nothing\` in case expression. Use Maybe.map or Maybe.andThen instead.`,
         severity: DiagnosticSeverity.Warning,
         source: "ElmLS",
-        data: { uri: tree.uri, code: "map_nothing_to_nothing" },
+        data: { uri: URI.parse(tree.uri), code: "map_nothing_to_nothing" },
       });
     });
 
@@ -714,7 +714,7 @@ export class ElmLsDiagnostics {
         message: `Use an if expression instead of a case expression.`,
         severity: DiagnosticSeverity.Warning,
         source: "ElmLS",
-        data: { uri: tree.uri, code: "boolean_case_expr" },
+        data: { uri: URI.parse(tree.uri), code: "boolean_case_expr" },
       });
     });
 
@@ -738,7 +738,7 @@ export class ElmLsDiagnostics {
         message: `If you concatenate two lists, then you can merge them into one list.`,
         severity: DiagnosticSeverity.Warning,
         source: "ElmLS",
-        data: { uri: tree.uri, code: "drop_concat_of_lists" },
+        data: { uri: URI.parse(tree.uri), code: "drop_concat_of_lists" },
       });
     });
 
@@ -762,7 +762,7 @@ export class ElmLsDiagnostics {
         message: `If you cons an item to a literal list, then you can just put the item into the list.`,
         severity: DiagnosticSeverity.Warning,
         source: "ElmLS",
-        data: { uri: tree.uri, code: "drop_cons_of_item_and_list" },
+        data: { uri: URI.parse(tree.uri), code: "drop_cons_of_item_and_list" },
       });
     });
 
@@ -786,7 +786,7 @@ export class ElmLsDiagnostics {
         message: `If you concatenate two lists, but the first item is a single element list, then you should use the cons operator.`,
         severity: DiagnosticSeverity.Warning,
         source: "ElmLS",
-        data: { uri: tree.uri, code: "use_cons_over_concat" },
+        data: { uri: URI.parse(tree.uri), code: "use_cons_over_concat" },
       });
     });
 
@@ -795,7 +795,6 @@ export class ElmLsDiagnostics {
 
   getSingleFieldRecordDiagnostics(
     tree: Tree,
-    uri: string,
     elmWorkspace: IElmWorkspace,
   ): IDiagnostic[] {
     const diagnostics: IDiagnostic[] = [];
@@ -829,7 +828,7 @@ export class ElmLsDiagnostics {
           message: `Using a record is obsolete if you only plan to store a single field in it.`,
           severity: DiagnosticSeverity.Warning,
           source: "ElmLS",
-          data: { uri: tree.uri, code: "single_field_record" },
+          data: { uri: URI.parse(tree.uri), code: "single_field_record" },
         });
       }
     });
@@ -851,7 +850,7 @@ export class ElmLsDiagnostics {
         message: `You should just merge the arguments of \`List.concat\` to a single list.`,
         severity: DiagnosticSeverity.Warning,
         source: "ElmLS",
-        data: { uri: tree.uri, code: "unnecessary_list_concat" },
+        data: { uri: URI.parse(tree.uri), code: "unnecessary_list_concat" },
       });
     });
 
@@ -872,7 +871,7 @@ export class ElmLsDiagnostics {
         message: `Module is definined as a \`port\` module, but does not define any ports.`,
         severity: DiagnosticSeverity.Warning,
         source: "ElmLS",
-        data: { uri: tree.uri, code: "unnecessary_port_module" },
+        data: { uri: URI.parse(tree.uri), code: "unnecessary_port_module" },
       });
     }
 
@@ -895,7 +894,7 @@ export class ElmLsDiagnostics {
         message: `Don't use fully applied prefix notation for operators.`,
         severity: DiagnosticSeverity.Warning,
         source: "ElmLS",
-        data: { uri: tree.uri, code: "no_uncurried_prefix" },
+        data: { uri: URI.parse(tree.uri), code: "no_uncurried_prefix" },
       });
     });
 
@@ -937,7 +936,7 @@ export class ElmLsDiagnostics {
           severity: DiagnosticSeverity.Warning,
           source: "ElmLS",
           tags: [DiagnosticTag.Unnecessary],
-          data: { uri: tree.uri, code: "unused_type_alias" },
+          data: { uri: URI.parse(tree.uri), code: "unused_type_alias" },
         });
       }
     });
@@ -987,7 +986,7 @@ export class ElmLsDiagnostics {
           severity: DiagnosticSeverity.Warning,
           source: "ElmLS",
           tags: [DiagnosticTag.Unnecessary],
-          data: { uri: tree.uri, code: "unused_value_constructor" },
+          data: { uri: URI.parse(tree.uri), code: "unused_value_constructor" },
         });
       }
     });

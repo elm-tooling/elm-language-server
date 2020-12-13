@@ -1,3 +1,4 @@
+import path from "path";
 import { isDeepStrictEqual } from "util";
 import {
   CompletionContext,
@@ -50,7 +51,8 @@ describe("CompletionProvider", () => {
       throw new Error("Getting position failed");
     }
 
-    const testUri = URI.file(baseUri + fileWithCaret).toString();
+    const testUri = URI.parse(path.join(baseUri.fsPath, fileWithCaret));
+
     const program = await treeParser.getProgram(newSources);
     const sourceFile = program.getSourceFile(testUri);
 
@@ -59,7 +61,7 @@ describe("CompletionProvider", () => {
 
       const completions =
         completionProvider.handleCompletion({
-          textDocument: { uri: testUri },
+          textDocument: { uri: testUri.toString() },
           position: position!,
           context,
           program,

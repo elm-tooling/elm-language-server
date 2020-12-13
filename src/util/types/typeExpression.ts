@@ -36,6 +36,7 @@ import { Utils } from "../utils";
 import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
+import { URI } from "vscode-uri";
 
 export class TypeExpression {
   // All the type variables we've seen
@@ -78,7 +79,7 @@ export class TypeExpression {
       };
     };
 
-    if (!workspace.getForest().getByUri(e.tree.uri)?.writeable) {
+    if (!workspace.getForest().getByUri(URI.parse(e.tree.uri))?.writeable) {
       return workspace
         .getTypeCache()
         .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter);
@@ -111,7 +112,7 @@ export class TypeExpression {
       };
     };
 
-    if (!workspace.getForest().getByUri(e.tree.uri)?.writeable) {
+    if (!workspace.getForest().getByUri(URI.parse(e.tree.uri))?.writeable) {
       return workspace
         .getTypeCache()
         .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter);
@@ -143,7 +144,8 @@ export class TypeExpression {
       return { ...inferenceResult, type };
     };
 
-    const result = !workspace.getForest().getByUri(e.tree.uri)?.writeable
+    const result = !workspace.getForest().getByUri(URI.parse(e.tree.uri))
+      ?.writeable
       ? workspace.getTypeCache().getOrSet("PACKAGE_TYPE_ANNOTATION", e, setter)
       : workspace.getTypeCache().getOrSet("PROJECT_TYPE_ANNOTATION", e, setter);
 
@@ -489,7 +491,7 @@ export class TypeExpression {
     );
 
     return TUnion(
-      this.workspace.getForest().getByUri(typeDeclaration.tree.uri)
+      this.workspace.getForest().getByUri(URI.parse(typeDeclaration.tree.uri))
         ?.moduleName ?? "",
       typeDeclaration.name,
       params,

@@ -41,7 +41,7 @@ describe("test type inference", () => {
       throw new Error("Getting source and target position failed");
     }
 
-    const testUri = URI.file(baseUri + "Test.elm").toString();
+    const testUri = URI.pares(baseUri.fsPath + "Test.elm");
 
     const program = await treeParser.getProgram(result.sources);
     const sourceFile = program.getSourceFile(testUri);

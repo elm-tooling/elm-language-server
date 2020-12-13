@@ -9,6 +9,7 @@ import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { ICancellationToken } from "./cancellation";
 import { Forest, IForest, ITreeContainer } from "./forest";
+import { UriString } from "./uri";
 import * as utils from "./util/elmUtils";
 import {
   IPossibleImportsCache,
@@ -76,7 +77,7 @@ export interface IElmWorkspace {
   hasDocument(uri: URI): boolean;
   hasPath(uri: URI): boolean;
   getPath(uri: URI): string | undefined;
-  getSourceFile(uri: string): ITreeContainer | undefined;
+  getSourceFile(uri: URI): ITreeContainer | undefined;
   getForest(synchronize?: boolean): IForest;
   getRootPath(): URI;
   getTypeCache(): TypeCache;
@@ -104,12 +105,12 @@ export type ElmProject = IElmApplication | IElmPackage;
 
 interface IElmProject {
   type: string;
-  uri: string;
+  uri: URI;
   dependencies: Map<string, IElmPackage>;
   testDependencies: Map<string, IElmPackage>;
   sourceDirectories: string[];
   testDirectories: string[];
-  moduleToUriMap: Map<string, string>;
+  moduleToUriMap: Map<string, URI>;
 }
 
 interface IElmApplication extends IElmProject {
@@ -201,9 +202,9 @@ export class ElmPackageCache implements IElmPackageCache {
 }
 
 interface IProgramHost {
-  readFile(uri: string): Promise<string>;
-  readFileSync(uri: string): string;
-  readDirectory(uri: string): Promise<string[]>;
+  readFile(uri: URI): Promise<string>;
+  readFileSync(uri: URI): string;
+  readDirectory(uri: URI): Promise<URI[]>;
 }
 
 export class ElmWorkspace implements IElmWorkspace {
@@ -215,7 +216,7 @@ export class ElmWorkspace implements IElmWorkspace {
   private dirty = true;
   private possibleImportsCache: IPossibleImportsCache;
   private operatorsCache: Map<string, DefinitionResult>;
-  private diagnosticsCache: Map<string, Diagnostic[]>;
+  private diagnosticsCache: Map<URI, Diagnostic[]>;
   private rootProject!: ElmProject;
   private packagesRoot!: string;
   private forest!: IForest;
@@ -234,7 +235,7 @@ export class ElmWorkspace implements IElmWorkspace {
     this.typeCache = new TypeCache();
     this.possibleImportsCache = new PossibleImportsCache();
     this.operatorsCache = new Map<string, DefinitionResult>();
-    this.diagnosticsCache = new Map<string, Diagnostic[]>();
+    this.diagnosticsCache = new Map<URI, Diagnostic[]>();
     this.host = programHost ?? this.createProgramHost();
   }
 
@@ -245,7 +246,7 @@ export class ElmWorkspace implements IElmWorkspace {
   }
 
   public hasDocument(uri: URI): boolean {
-    return !!this.forest.getTree(uri.toString());
+    return !!this.forest.getTree(uri);
   }
 
   public hasPath(uri: URI): boolean {
@@ -259,7 +260,7 @@ export class ElmWorkspace implements IElmWorkspace {
     ].find((elmFolder) => uri.fsPath.startsWith(elmFolder));
   }
 
-  public getSourceFile(uri: string): ITreeContainer | undefined {
+  public getSourceFile(uri: URI): ITreeContainer | undefined {
     return this.getForest().getByUri(uri);
   }
 
@@ -450,7 +451,7 @@ export class ElmWorkspace implements IElmWorkspace {
 
       return {
         type: "application",
-        uri: this.rootPath.toString(),
+        uri: this.rootPath,
         sourceDirectories: elmJson["source-directories"].map((folder) =>
           path.resolve(this.rootPath.fsPath, folder),
         ),
@@ -463,7 +464,7 @@ export class ElmWorkspace implements IElmWorkspace {
           elmJson["test-dependencies"].direct,
           allDependencies,
         ),
-        moduleToUriMap: new Map<string, string>(),
+        moduleToUriMap: new Map<string, URI>(),
       } as IElmApplication;
     } else {
       const deps = new Map(
@@ -483,7 +484,7 @@ export class ElmWorkspace implements IElmWorkspace {
 
       return {
         type: "package",
-        uri: this.rootPath.toString(),
+        uri: this.rootPath,
         sourceDirectories: [path.join(this.rootPath.fsPath, "src")],
         testDirectories: [path.join(this.rootPath.fsPath, "tests")],
         dependencies: await this.loadDependencyMap(
@@ -497,7 +498,7 @@ export class ElmWorkspace implements IElmWorkspace {
         exposedModules: new Set(
           this.flatternExposedModules(elmJson["exposed-modules"]),
         ),
-        moduleToUriMap: new Map<string, string>(),
+        moduleToUriMap: new Map<string, URI>(),
       } as IElmPackage;
     }
   }
@@ -533,7 +534,7 @@ export class ElmWorkspace implements IElmWorkspace {
     if (elmJson.type === "package") {
       const resolvedPackage = {
         type: "package",
-        uri: URI.file(pathToPackageWithVersion).toString(),
+        uri: URI.parse(pathToPackageWithVersion),
         sourceDirectories: [path.join(pathToPackageWithVersion, "src")],
         testDirectories: [path.join(pathToPackageWithVersion, "tests")],
         dependencies: await this.loadDependencyMap(
@@ -544,7 +545,7 @@ export class ElmWorkspace implements IElmWorkspace {
         exposedModules: new Set(
           this.flatternExposedModules(elmJson["exposed-modules"]),
         ),
-        moduleToUriMap: new Map<string, string>(),
+        moduleToUriMap: new Map<string, URI>(),
       } as IElmPackage;
 
       this.resolvedPackageCache.set(cacheKey, resolvedPackage);
@@ -570,12 +571,14 @@ export class ElmWorkspace implements IElmWorkspace {
   /**
    * Get all unique source directories from project dependency tree
    */
-  private getSourceDirectories(project: ElmProject): Map<string, ElmProject> {
+  private getSourceDirectories(
+    project: ElmProject,
+  ): Map<UriString, ElmProject> {
     const sourceDirs = new Map(
       [
         ...project.sourceDirectories,
         ...(project === this.rootProject ? project.testDirectories : []),
-      ].map((sourceDir) => [sourceDir, project]),
+      ].map((sourceDir) => [URI.parse(sourceDir).toString(), project]),
     );
 
     project.dependencies.forEach((dep) =>
@@ -602,7 +605,7 @@ export class ElmWorkspace implements IElmWorkspace {
 
     this.getSourceDirectories(project).forEach((project, sourceDir) => {
       elmFilePathPromises.push(
-        this.findElmFilesInProjectWorker(sourceDir, project),
+        this.findElmFilesInProjectWorker(URI.parse(sourceDir), project),
       );
     });
 
@@ -613,7 +616,7 @@ export class ElmWorkspace implements IElmWorkspace {
   }
 
   private async findElmFilesInProjectWorker(
-    sourceDir: string,
+    sourceDir: URI,
     project: ElmProject,
   ): Promise<IElmFile[]> {
     const elmFiles: IElmFile[] = [];
@@ -625,16 +628,16 @@ export class ElmWorkspace implements IElmWorkspace {
 
     (await this.host.readDirectory(sourceDir)).forEach((matchingPath) => {
       const moduleName = path
-        .relative(sourceDir, matchingPath)
+        .relative(sourceDir.fsPath, matchingPath.fsPath)
         .replace(".elm", "")
-        .split("/")
+        .split("\\")
         .join(".");
 
-      project.moduleToUriMap.set(moduleName, URI.file(matchingPath).toString());
+      project.moduleToUriMap.set(moduleName, matchingPath);
 
       elmFiles.push({
         maintainerAndPackageName,
-        path: matchingPath,
+        path: matchingPath.fsPath,
         project,
       });
     });
@@ -675,12 +678,12 @@ export class ElmWorkspace implements IElmWorkspace {
     try {
       this.connection.console.info(`Adding ${filePath.path.toString()}`);
       const fileContent: string = await this.host.readFile(
-        filePath.path.toString(),
+        URI.parse(filePath.path),
       );
 
       const tree: Tree = this.parser.parse(fileContent);
       this.forest.setTree(
-        URI.file(filePath.path).toString(),
+        URI.parse(filePath.path),
         filePath.project === this.rootProject,
         true,
         tree,
@@ -714,24 +717,26 @@ export class ElmWorkspace implements IElmWorkspace {
   }
 
   private loadElmJson(elmJsonPath: string): ElmJson {
-    return JSON.parse(this.host.readFileSync(elmJsonPath)) as ElmJson;
+    return JSON.parse(
+      this.host.readFileSync(URI.parse(elmJsonPath)),
+    ) as ElmJson;
   }
 
   private createProgramHost(): IProgramHost {
     return {
       readFile: (uri): Promise<string> =>
-        readFile(uri, {
+        readFile(uri.fsPath, {
           encoding: "utf-8",
         }),
       readFileSync: (uri): string =>
-        fs.readFileSync(uri, {
+        fs.readFileSync(uri.fsPath, {
           encoding: "utf-8",
         }),
-      readDirectory: (uri: string): Promise<string[]> =>
+      readDirectory: (uri: URI): Promise<URI[]> =>
         // Cleanup the path on windows, as globby does not like backslashes
-        globby(`${uri.replace(/\\/g, "/")}/**/*.elm`, {
+        globby(`${uri.fsPath.replace(/\\/g, "/")}/**/*.elm`, {
           suppressErrors: true,
-        }),
+        }).then((a) => a.map((a) => URI.parse(a))),
     };
   }
 }
