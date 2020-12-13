@@ -44,7 +44,7 @@
     "jest-mock-extended": "^1.0.10",
     "prettier": "^2.2.1",
     "tree-sitter-cli": "^0.17.3",
-    "tree-sitter-elm": "^4.4.0",
+    "tree-sitter-elm": "^4.4.1",
     "ts-jest": "^26.4.4",
     "ts-node": "^9.1.1",
     "typescript": "4.1.3"
