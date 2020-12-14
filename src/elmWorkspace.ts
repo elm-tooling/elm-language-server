@@ -1,7 +1,6 @@
 import fs, { readdirSync } from "fs";
 import globby from "globby";
 import os from "os";
-import path from "path";
 import { container } from "tsyringe";
 import util from "util";
 import { Connection } from "vscode-languageserver";
@@ -10,6 +9,8 @@ import Parser, { Tree } from "web-tree-sitter";
 import { ICancellationToken } from "./cancellation";
 import { Forest, IForest, ITreeContainer } from "./forest";
 import * as utils from "./util/elmUtils";
+import * as path from "./util/path";
+import { normalizeUri } from "./util/path";
 import {
   IPossibleImportsCache,
   PossibleImportsCache,
@@ -575,7 +576,7 @@ export class ElmWorkspace implements IElmWorkspace {
       [
         ...project.sourceDirectories,
         ...(project === this.rootProject ? project.testDirectories : []),
-      ].map((sourceDir) => [sourceDir, project]),
+      ].map((sourceDir) => [normalizeUri(sourceDir), project]),
     );
 
     project.dependencies.forEach((dep) =>
@@ -624,6 +625,8 @@ export class ElmWorkspace implements IElmWorkspace {
     this.connection.console.info(`Glob ${sourceDir}/**/*.elm`);
 
     (await this.host.readDirectory(sourceDir)).forEach((matchingPath) => {
+      matchingPath = normalizeUri(matchingPath);
+
       const moduleName = path
         .relative(sourceDir, matchingPath)
         .replace(".elm", "")

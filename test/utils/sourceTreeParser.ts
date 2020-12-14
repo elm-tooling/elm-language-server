@@ -1,8 +1,9 @@
-import * as path from "path";
+import { parse } from "path";
+import { container } from "tsyringe";
+import { URI, uriToFsPath } from "vscode-uri";
 import Parser from "web-tree-sitter";
 import { ElmWorkspace, IElmWorkspace } from "../../src/elmWorkspace";
-import { container } from "tsyringe";
-import { URI } from "vscode-uri";
+import * as path from "../../src/util/path";
 
 export const baseUri = path.join(__dirname, "../sources/src/");
 
@@ -55,8 +56,11 @@ export class SourceTreeParser {
         Promise.resolve(readFile(uri)),
       readFileSync: readFile,
       readDirectory: (uri: string): Promise<string[]> => {
+        console.log(uri);
+        console.log(path.normalizeUri(baseUri.substr(0, baseUri.length - 1)));
         return Promise.resolve(
-          path.parse(uri).dir === path.parse(baseUri).dir
+          path.normalizeUri(uri) ===
+            path.normalizeUri(baseUri.substr(0, baseUri.length - 1)) // Remove trailing / from baseUri
             ? Object.keys(sources).map((sourceUri) => path.join(uri, sourceUri))
             : [],
         );
