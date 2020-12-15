@@ -2,12 +2,21 @@ import { SyntaxNode } from "web-tree-sitter";
 import { TreeUtils } from "./treeUtils";
 
 export class HintHelper {
-  public static createHint(node: SyntaxNode | undefined): string | undefined {
+  public static createHint(
+    node: SyntaxNode | undefined,
+    typeString?: string,
+  ): string | undefined {
     if (node) {
       if (node.type === "module_declaration") {
         return this.createHintFromModule(node);
-      } else if (node.parent && node.parent.type === "let_in_expr") {
-        return this.createHintFromDefinitionInLet(node);
+      } else if (
+        node.parent?.type === "let_in_expr" ||
+        (node.type === "lower_pattern" &&
+          !!TreeUtils.findParentOfType("let_in_expr", node))
+      ) {
+        return this.createHintFromDefinitionInLet(node, typeString);
+      } else if (node.type === "field_type") {
+        return this.createHintFromFieldType(node);
       } else {
         return this.createHintFromDefinition(node);
       }
@@ -16,11 +25,17 @@ export class HintHelper {
 
   public static createHintFromFunctionParameter(
     node: SyntaxNode | undefined,
+    typeString?: string,
   ): string {
     const annotation = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(node);
     if (annotation) {
       return this.formatHint(annotation.text, "Local parameter");
     }
+
+    if (node && typeString && typeString !== "unknown") {
+      return this.formatHint(`${node.text} : ${typeString}`, "Local parameter");
+    }
+
     return "Local parameter";
   }
 
@@ -39,17 +54,44 @@ export class HintHelper {
 
   public static createHintFromDefinitionInLet(
     declaration: SyntaxNode | undefined,
+    typeString?: string,
   ): string | undefined {
     if (declaration) {
       const comment = "Defined in local let scope";
-      let annotation = "";
+      let annotation;
       if (declaration.previousNamedSibling) {
         if (declaration.previousNamedSibling.type === "type_annotation") {
           annotation = declaration.previousNamedSibling.text;
         }
       }
-      return this.formatHint(annotation, comment);
+
+      if (!annotation && typeString) {
+        const functionName =
+          TreeUtils.getFunctionNameNodeFromDefinition(declaration)?.text ??
+          declaration.text;
+        annotation = `${functionName} : ${typeString}`;
+      }
+
+      return this.formatHint(annotation ?? "", comment);
     }
+  }
+
+  public static createHintFromFieldType(node: SyntaxNode): string {
+    const typeAlias = TreeUtils.findParentOfType(
+      "type_alias_declaration",
+      node,
+    );
+
+    return this.formatHint(
+      node.text,
+      `Field${
+        typeAlias
+          ? ` on the type alias \`${
+              typeAlias?.childForFieldName("name")?.text ?? ""
+            }\``
+          : ""
+      }`,
+    );
   }
 
   public static createHintFromDefinitionInCaseBranch(): string | undefined {
