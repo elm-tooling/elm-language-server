@@ -8,9 +8,8 @@ import {
 import { URI } from "vscode-uri";
 import { CompletionProvider, CompletionResult } from "../src/providers";
 import { ICompletionParams } from "../src/providers/paramsExtensions";
-import { baseUri } from "./utils/mockElmWorkspace";
 import { getCaretPositionFromSource } from "./utils/sourceParser";
-import { SourceTreeParser } from "./utils/sourceTreeParser";
+import { baseUri, SourceTreeParser } from "./utils/sourceTreeParser";
 
 class MockCompletionProvider extends CompletionProvider {
   public handleCompletion(params: ICompletionParams): CompletionResult {
@@ -52,11 +51,11 @@ describe("CompletionProvider", () => {
     }
 
     const testUri = URI.file(baseUri + fileWithCaret).toString();
-    const program = treeParser.getWorkspace(newSources);
-    const sourceFile = program.getForest().getByUri(testUri);
+    const program = await treeParser.getProgram(newSources);
+    const sourceFile = program.getSourceFile(testUri);
 
     function testCompletionsWithContext(context: CompletionContext): void {
-      if (!sourceFile) throw new Error("Getting tree failed");
+      if (!sourceFile) throw new Error("Getting source file failed");
 
       const completions =
         completionProvider.handleCompletion({

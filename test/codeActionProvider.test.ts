@@ -8,9 +8,8 @@ import {
 } from "../src/providers";
 import { ICodeActionParams } from "../src/providers/paramsExtensions";
 import { Utils } from "../src/util/utils";
-import { baseUri } from "./utils/mockElmWorkspace";
 import { getTargetPositionFromSource } from "./utils/sourceParser";
-import { SourceTreeParser } from "./utils/sourceTreeParser";
+import { baseUri, SourceTreeParser } from "./utils/sourceTreeParser";
 
 function codeActionEquals(a: CodeAction, b: CodeAction): boolean {
   return a.title === b.title;
@@ -75,7 +74,7 @@ describe("test codeActionProvider", () => {
 
     const testUri = URI.file(baseUri + "Test.elm").toString();
 
-    const program = treeParser.getWorkspace(result.sources);
+    const program = await treeParser.getProgram(result.sources);
     const sourceFile = program.getForest().getByUri(testUri);
 
     if (!sourceFile) throw new Error("Getting tree failed");

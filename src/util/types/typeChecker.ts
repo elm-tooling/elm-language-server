@@ -913,7 +913,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
     if (moduleNameNode) {
       const moduleName = moduleNameNode.text;
-      if (!workspace.getForest().getByModuleName(moduleName)) {
+      if (!workspace.hasAccessibleModule(moduleName)) {
         diagnostics.add(
           error(moduleNameNode, Diagnostics.ImportMissing, moduleName),
         );

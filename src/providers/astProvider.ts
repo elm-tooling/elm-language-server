@@ -66,7 +66,8 @@ export class ASTProvider {
     const forest = params.program.getForest(false); // Don't synchronize the forest, we are only looking at the tree
     const document: VersionedTextDocumentIdentifier = params.textDocument;
 
-    let tree: Tree = params.sourceFile.tree;
+    // Source file could be undefined here
+    let tree: Tree = params.sourceFile?.tree;
 
     if ("contentChanges" in params) {
       for (const change of params.contentChanges) {
@@ -117,13 +118,7 @@ export class ASTProvider {
     tree = newTree;
 
     if (tree) {
-      const treeContainer = forest.setTree(
-        document.uri,
-        true,
-        true,
-        tree,
-        true,
-      );
+      const treeContainer = forest.setTree(document.uri, true, true, tree);
 
       // The workspace now needs to be synchronized
       params.program.markAsDirty();

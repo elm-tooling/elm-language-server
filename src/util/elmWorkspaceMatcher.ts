@@ -97,12 +97,6 @@ export class ElmWorkspaceMatcher<ParamType> {
   ): ITreeContainer {
     const uri = this.getUriFor(param).toString();
 
-    const sourceFile = program.getForest().getByUri(uri);
-
-    if (!sourceFile) {
-      throw new NoWorkspaceContainsError(this.getUriFor(param));
-    }
-
-    return sourceFile;
+    return program.getForest().getByUri(uri)!;
   }
 }

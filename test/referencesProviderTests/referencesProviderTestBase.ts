@@ -2,9 +2,8 @@ import { URI } from "vscode-uri";
 import { ReferenceResult, ReferencesProvider } from "../../src/providers";
 import { IReferenceParams } from "../../src/providers/paramsExtensions";
 import { TreeUtils } from "../../src/util/treeUtils";
-import { baseUri } from "../utils/mockElmWorkspace";
 import { getReferencesTestFromSource } from "../utils/sourceParser";
-import { SourceTreeParser } from "../utils/sourceTreeParser";
+import { baseUri, SourceTreeParser } from "../utils/sourceTreeParser";
 
 class MockReferencesProvider extends ReferencesProvider {
   public handleReference(params: IReferenceParams): ReferenceResult {
@@ -31,7 +30,7 @@ export class ReferencesProviderTestBase {
 
     const testUri = URI.file(baseUri + referenceTest.invokeFile).toString();
 
-    const program = this.treeParser.getWorkspace(referenceTest.sources);
+    const program = await this.treeParser.getProgram(referenceTest.sources);
     const sourceFile = program.getForest().getByUri(testUri);
 
     if (!sourceFile) throw new Error("Getting tree failed");

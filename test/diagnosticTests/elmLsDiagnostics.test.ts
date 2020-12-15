@@ -8,9 +8,8 @@ import { IDiagnostic } from "../../src/providers/diagnostics/diagnosticsProvider
 import { ElmLsDiagnostics } from "../../src/providers/diagnostics/elmLsDiagnostics";
 import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics";
 import { Utils } from "../../src/util/utils";
-import { baseUri } from "../utils/mockElmWorkspace";
 import { getSourceFiles } from "../utils/sourceParser";
-import { SourceTreeParser } from "../utils/sourceTreeParser";
+import { baseUri, SourceTreeParser } from "../utils/sourceTreeParser";
 
 describe("ElmLsDiagnostics", () => {
   let elmDiagnostics: ElmLsDiagnostics;
@@ -27,16 +26,16 @@ describe("ElmLsDiagnostics", () => {
     await treeParser.init();
     elmDiagnostics = new ElmLsDiagnostics();
 
-    const workspace = treeParser.getWorkspace(getSourceFiles(source));
+    const program = await treeParser.getProgram(getSourceFiles(source));
 
-    const treeContainer = workspace.getForest().getByUri(uri);
+    const sourceFile = program.getSourceFile(uri);
 
-    if (!treeContainer) {
+    if (!sourceFile) {
       fail();
     }
 
     const diagnostics = elmDiagnostics
-      .createDiagnostics(treeContainer, workspace)
+      .createDiagnostics(sourceFile, program)
       .filter((diagnostic) => diagnostic.data.code === code);
 
     const diagnosticsEqual = Utils.arrayEquals(

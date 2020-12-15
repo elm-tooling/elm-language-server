@@ -3,9 +3,8 @@ import { URI } from "vscode-uri";
 import { DefinitionProvider, DefinitionResult } from "../../src/providers";
 import { ITextDocumentPositionParams } from "../../src/providers/paramsExtensions";
 import { TreeUtils } from "../../src/util/treeUtils";
-import { baseUri } from "../utils/mockElmWorkspace";
 import { getInvokeAndTargetPositionFromSource } from "../utils/sourceParser";
-import { SourceTreeParser } from "../utils/sourceTreeParser";
+import { baseUri, SourceTreeParser } from "../utils/sourceTreeParser";
 
 class MockDefinitionProvider extends DefinitionProvider {
   public handleDefinition(
@@ -31,7 +30,9 @@ export class DefinitionProviderTestBase {
       baseUri + determinedTestType.invokeFile,
     ).toString();
 
-    const program = this.treeParser.getWorkspace(determinedTestType.sources);
+    const program = await this.treeParser.getProgram(
+      determinedTestType.sources,
+    );
     const sourceFile = program.getForest().getByUri(invokeUri);
 
     if (!sourceFile) throw new Error("Getting tree failed");
