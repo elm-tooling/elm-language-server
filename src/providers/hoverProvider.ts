@@ -46,24 +46,28 @@ export class HoverProvider {
         params.position,
       );
 
-      let definitionNode = checker.findDefinition(
+      const definitionNode = checker.findDefinition(
         nodeAtPosition,
         treeContainer,
       );
 
       if (definitionNode) {
         if (
-          definitionNode.nodeType === "Function" &&
+          definitionNode.node.type === "function_declaration_left" &&
           definitionNode.node.parent
         ) {
-          definitionNode = {
-            node: definitionNode.node.parent,
-            uri: definitionNode.uri,
-            nodeType: definitionNode.nodeType,
-          };
+          definitionNode.node = definitionNode.node.parent;
         }
 
-        return this.createMarkdownHoverFromDefinition(definitionNode);
+        const typeString = checker.typeToString(
+          checker.findType(definitionNode.node),
+          treeContainer,
+        );
+
+        return this.createMarkdownHoverFromDefinition(
+          definitionNode,
+          typeString,
+        );
       } else {
         const specialMatch = getEmptyTypes().find(
           (a) => a.name === nodeAtPosition.text,
@@ -84,14 +88,18 @@ export class HoverProvider {
     definitionNode:
       | { node: SyntaxNode; uri: string; nodeType: NodeType }
       | undefined,
+    typeString: string,
   ): Hover | undefined {
     if (definitionNode) {
       const value =
         definitionNode.nodeType === "FunctionParameter" ||
         definitionNode.nodeType === "AnonymousFunctionParameter" ||
         definitionNode.nodeType === "CasePattern"
-          ? HintHelper.createHintFromFunctionParameter(definitionNode.node)
-          : HintHelper.createHint(definitionNode.node);
+          ? HintHelper.createHintFromFunctionParameter(
+              definitionNode.node,
+              typeString,
+            )
+          : HintHelper.createHint(definitionNode.node, typeString);
 
       if (value) {
         return {
