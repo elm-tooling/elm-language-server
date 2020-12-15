@@ -297,6 +297,7 @@ export class TypeReplacement {
           return undefined;
         } else {
           const newVar = TVar(key.name);
+          newVar.alias = key.alias;
           this.cachedReplacements.set(key, newVar);
           return newVar;
         }

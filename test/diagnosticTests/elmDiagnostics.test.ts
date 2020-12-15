@@ -204,4 +204,19 @@ field =
   `;
     await testTypeInference(basicsSources + source, []);
   });
+
+  test("type var as a type alias", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Comparable comparable =
+    comparable
+
+field : Comparable a
+field =
+    1
+  `;
+    await testTypeInference(basicsSources + source, []);
+  });
 });
