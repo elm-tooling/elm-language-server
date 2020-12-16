@@ -23,7 +23,7 @@ import {
   DefinitionResult,
   TypeChecker,
 } from "./util/types/typeChecker";
-import chokidar, { FSWatcher } from "chokidar";
+import chokidar from "chokidar";
 
 const readFile = util.promisify(fs.readFile);
 
@@ -202,10 +202,11 @@ export class ElmPackageCache implements IElmPackageCache {
   }
 }
 
-interface IProgramHost {
+export interface IProgramHost {
   readFile(uri: string): Promise<string>;
   readFileSync(uri: string): string;
   readDirectory(uri: string): Promise<string[]>;
+  watchFile(uri: string, callback: () => void): void;
 }
 
 export class ElmWorkspace implements IElmWorkspace {
@@ -224,7 +225,7 @@ export class ElmWorkspace implements IElmWorkspace {
   private elmPackageCache!: IElmPackageCache;
   private resolvedPackageCache = new Map<string, IElmPackage>();
   private host: IProgramHost;
-  private elmJsonWatcher: FSWatcher | undefined;
+  private filesWatching = new Set<string>();
 
   constructor(private rootPath: URI, programHost?: IProgramHost) {
     this.settings = container.resolve("Settings");
@@ -387,20 +388,24 @@ export class ElmWorkspace implements IElmWorkspace {
     const pathToElmJson = path.join(this.rootPath.fsPath, "elm.json");
     this.connection.console.info(`Reading elm.json from ${pathToElmJson}`);
 
-    await this.elmJsonWatcher?.close();
-    this.elmJsonWatcher = chokidar.watch(pathToElmJson).on("change", () => {
-      void this.connection.window.createWorkDoneProgress().then((progress) => {
-        progress.begin("Restarting Elm Language Server", 0);
+    if (!this.filesWatching.has(pathToElmJson)) {
+      this.host.watchFile(pathToElmJson, () => {
+        void this.connection.window
+          .createWorkDoneProgress()
+          .then((progress) => {
+            progress.begin("Restarting Elm Language Server", 0);
 
-        this.initWorkspace((percent: number) => {
-          progress.report(percent, `${percent.toFixed(0)}%`);
-        })
-          .then(() => progress.done())
-          .catch(() => {
-            //
+            this.initWorkspace((percent: number) => {
+              progress.report(percent, `${percent.toFixed(0)}%`);
+            })
+              .then(() => progress.done())
+              .catch(() => {
+                //
+              });
           });
       });
-    });
+      this.filesWatching.add(pathToElmJson);
+    }
 
     try {
       const elmHome = this.findElmHome();
@@ -752,6 +757,9 @@ export class ElmWorkspace implements IElmWorkspace {
         globby(`${uri.replace(/\\/g, "/")}/**/*.elm`, {
           suppressErrors: true,
         }),
+      watchFile: (uri: string, callback: () => void): void => {
+        chokidar.watch(uri).on("change", callback);
+      },
     };
   }
 }

@@ -1,14 +1,16 @@
 import "reflect-metadata";
 import { container } from "tsyringe";
 import { URI } from "vscode-uri";
-import { ElmWorkspace } from "../src/elmWorkspace";
+import { ElmWorkspace, IProgramHost } from "../src/elmWorkspace";
 import * as path from "path";
 import { Settings } from "../src/util/settings";
 import Parser from "web-tree-sitter";
 import { spawnSync } from "child_process";
-import { readFileSync } from "fs";
+import { readFile, readFileSync } from "fs";
 import { Diagnostic } from "../src/util/types/diagnostics";
 import { performance } from "perf_hooks";
+import globby from "globby";
+import { promisify } from "util";
 
 container.register("Connection", {
   useValue: {
@@ -45,6 +47,27 @@ async function initParser(): Promise<void> {
   container.resolve<Parser>("Parser").setLanguage(language);
 }
 
+export function createProgramHost(): IProgramHost {
+  return {
+    readFile: (uri): Promise<string> =>
+      promisify(readFile)(uri, {
+        encoding: "utf-8",
+      }),
+    readFileSync: (uri): string =>
+      readFileSync(uri, {
+        encoding: "utf-8",
+      }),
+    readDirectory: (uri: string): Promise<string[]> =>
+      // Cleanup the path on windows, as globby does not like backslashes
+      globby(`${uri.replace(/\\/g, "/")}/**/*.elm`, {
+        suppressErrors: true,
+      }),
+    watchFile: (): void => {
+      return;
+    },
+  };
+}
+
 const failed: string[] = [];
 const diagnosticTimes = new Map<string, number>();
 const parsingErrors = new Set();
@@ -53,7 +76,7 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
   const pathUri = URI.file(uri);
 
   try {
-    let elmWorkspace = new ElmWorkspace(pathUri);
+    let elmWorkspace = new ElmWorkspace(pathUri, createProgramHost());
     await elmWorkspace.init(() => {
       //
     });
