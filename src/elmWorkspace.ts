@@ -23,6 +23,7 @@ import {
   DefinitionResult,
   TypeChecker,
 } from "./util/types/typeChecker";
+import chokidar, { FSWatcher } from "chokidar";
 
 const readFile = util.promisify(fs.readFile);
 
@@ -223,6 +224,7 @@ export class ElmWorkspace implements IElmWorkspace {
   private elmPackageCache!: IElmPackageCache;
   private resolvedPackageCache = new Map<string, IElmPackage>();
   private host: IProgramHost;
+  private elmJsonWatcher: FSWatcher | undefined;
 
   constructor(private rootPath: URI, programHost?: IProgramHost) {
     this.settings = container.resolve("Settings");
@@ -384,6 +386,21 @@ export class ElmWorkspace implements IElmWorkspace {
 
     const pathToElmJson = path.join(this.rootPath.fsPath, "elm.json");
     this.connection.console.info(`Reading elm.json from ${pathToElmJson}`);
+
+    await this.elmJsonWatcher?.close();
+    this.elmJsonWatcher = chokidar.watch(pathToElmJson).on("change", () => {
+      void this.connection.window.createWorkDoneProgress().then((progress) => {
+        progress.begin("Restarting Elm Language Server", 0);
+
+        this.initWorkspace((percent: number) => {
+          progress.report(percent, `${percent.toFixed(0)}%`);
+        })
+          .then(() => progress.done())
+          .catch(() => {
+            //
+          });
+      });
+    });
 
     try {
       const elmHome = this.findElmHome();
