@@ -112,11 +112,36 @@ function checkout(repo: string, url: string): void {
   spawnSync("git", ["clone", `https://github.com/${url}`, repo]);
 
   const cur = process.cwd();
+  const cwd = path.join(cur, repo);
   process.chdir(repo);
   spawnSync("git", ["fetch"]);
   spawnSync("git", ["reset", "--hard", "HEAD"]);
-  spawnSync("elm", ["make"]);
+
+  const version = readElmJson();
+
+  if (version === "0.19.1") {
+    console.log("Make elm 0.19.1");
+    spawnSync("elm0191", ["make"], { cwd });
+  } else if (version === "0.19.0") {
+    console.log("Make elm 0.19.0");
+    spawnSync("elm0190", ["make"], { cwd });
+  } else {
+    console.log("Make elm 0.19.1 - Fallback");
+    spawnSync("elm0191", ["make"], { cwd });
+  }
+
   process.chdir(cur);
+}
+
+function readElmJson(): string {
+  let version = "";
+  const data = readFileSync("elm.json", "utf8");
+  const match = /"elm-version": "(\d+.\d+.\d+)",/g.exec(data);
+  if (match) {
+    version = match[1];
+  }
+
+  return version;
 }
 
 console.log("Getting libs");
