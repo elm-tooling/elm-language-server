@@ -5,6 +5,7 @@ import { IReferenceNode } from "./referenceNode";
 import { TreeUtils } from "./treeUtils";
 import { Utils } from "./utils";
 import { IImport, Imports } from "../imports";
+import { container } from "tsyringe";
 
 export class References {
   public static find(
@@ -312,22 +313,50 @@ export class References {
                   continue;
                 }
 
-                const element = imports[uri];
-                const found = element.get(moduleNameNode.text);
+                const sourceFileToCheck = forest.getByUri(uri);
 
-                if (found) {
-                  const treeToCheck = forest.getByUri(uri);
+                if (!sourceFileToCheck || !sourceFileToCheck.writeable) {
+                  continue;
+                }
 
-                  if (treeToCheck && treeToCheck.writeable) {
-                    const importNameNode = checker.findImportModuleNameNode(
-                      found.alias,
-                      treeToCheck,
-                    );
-                    if (importNameNode) {
-                      references.push({ node: importNameNode, uri });
-                    }
-                    break;
+                const moduleNameToLookFor =
+                  TreeUtils.findImportAliasOfModule(
+                    moduleNameNode.text,
+                    sourceFileToCheck.tree,
+                  ) ?? moduleNameNode.text;
+
+                // Check if it is imported
+                const imported = sourceFileToCheck.symbolLinks
+                  ?.get(sourceFileToCheck.tree.rootNode)
+                  ?.get(
+                    moduleNameToLookFor,
+                    (symbol) => symbol.type === "Import",
+                  );
+
+                if (imported) {
+                  const importNameNode = checker.findImportModuleNameNode(
+                    moduleNameToLookFor,
+                    sourceFileToCheck,
+                  );
+
+                  if (importNameNode) {
+                    references.push({ node: importNameNode, uri });
                   }
+                }
+
+                // If it is not imported as an alias, find all references in file
+                if (imported && moduleNameToLookFor === moduleNameNode.text) {
+                  sourceFileToCheck.tree.rootNode
+                    .descendantsOfType("value_expr")
+                    .forEach((valueNode) => {
+                      if (
+                        RegExp(`${moduleNameToLookFor}.[a-z].*`).exec(
+                          valueNode.text,
+                        )
+                      ) {
+                        references.push({ node: valueNode, uri });
+                      }
+                    });
                 }
               }
             }

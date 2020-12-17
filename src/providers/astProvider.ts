@@ -12,7 +12,6 @@ import { URI } from "vscode-uri";
 import Parser, { Tree, Edit, Point, SyntaxNode } from "web-tree-sitter";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Position, Range } from "vscode-languageserver-textdocument";
-import { FileEventsHandler } from "./handlers/fileEventsHandler";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 import { TreeUtils } from "../util/treeUtils";
 import { ITreeContainer } from "../forest";
@@ -35,12 +34,12 @@ export class ASTProvider {
     declaration?: SyntaxNode;
   }> = this.treeChangeEvent.event;
 
+  private pendingRenames = new Map<string, string>();
+
   constructor() {
     this.parser = container.resolve("Parser");
     this.connection = container.resolve("Connection");
     this.documentEvents = container.resolve(TextDocumentEvents);
-
-    new FileEventsHandler();
 
     this.documentEvents.on(
       "change",
@@ -55,6 +54,10 @@ export class ASTProvider {
         URI.parse(params.textDocument.uri),
       ).handle(this.handleChangeTextDocument.bind(this)),
     );
+  }
+
+  public addPendingRename(oldUri: string, newUri: string): void {
+    this.pendingRenames.set(oldUri, newUri);
   }
 
   protected handleChangeTextDocument = (
@@ -77,8 +80,16 @@ export class ASTProvider {
       }
     }
 
+    const pendingRenameUri = this.pendingRenames.get(document.uri);
+    this.pendingRenames.delete(document.uri);
+
+    // Remove the old tree
+    if (pendingRenameUri) {
+      forest.removeTree(document.uri);
+    }
+
     const newText =
-      this.documentEvents.get(params.textDocument.uri)?.getText() ??
+      this.documentEvents.get(document.uri)?.getText() ??
       readFileSync(URI.parse(document.uri).fsPath, "utf8");
 
     const newTree = this.parser.parse(newText, tree);
@@ -118,7 +129,12 @@ export class ASTProvider {
     tree = newTree;
 
     if (tree) {
-      const treeContainer = forest.setTree(document.uri, true, true, tree);
+      const treeContainer = forest.setTree(
+        pendingRenameUri ?? document.uri,
+        true,
+        true,
+        tree,
+      );
 
       // The workspace now needs to be synchronized
       params.program.markAsDirty();

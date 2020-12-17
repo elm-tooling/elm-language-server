@@ -1,112 +1,199 @@
-import { relative } from "path";
-import { IElmWorkspace } from "../../elmWorkspace";
+import { container } from "tsyringe";
 import {
-  OnDidCreateFilesRequest,
-  OnDidRenameFilesRequest,
-} from "../../protocol";
+  Connection,
+  CreateFilesParams,
+  DeleteFilesParams,
+  FileCreate,
+  FileDelete,
+  FileRename,
+  RenameFilesParams,
+  WorkspaceEdit,
+} from "vscode-languageserver";
+import { TextEdit } from "vscode-languageserver-textdocument";
+import { URI } from "vscode-uri";
+import { IElmWorkspace } from "../../elmWorkspace";
+import { PositionUtil } from "../../positionUtil";
+import { getModuleName } from "../../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
-import { container } from "tsyringe";
-import { Connection } from "vscode-languageserver";
-import { URI } from "vscode-uri";
 import { RenameUtils } from "../../util/renameUtils";
-import { RenameProvider } from "../renameProvider";
 import { TreeUtils } from "../../util/treeUtils";
-import { PositionUtil } from "../../positionUtil";
+import { ASTProvider } from "../astProvider";
+import {
+  ICreateFileParams,
+  IDeleteFileParams,
+  IRenameFileParams,
+} from "../paramsExtensions";
+import { RenameProvider } from "../renameProvider";
 
 export class FileEventsHandler {
   private connection: Connection;
+  private astProvider: ASTProvider;
 
   constructor() {
     this.connection = container.resolve<Connection>("Connection");
+    this.astProvider = container.resolve(ASTProvider);
 
-    this.connection.onRequest(OnDidCreateFilesRequest, async (params) => {
-      for (const file of params.files) {
-        await new ElmWorkspaceMatcher((file: URI) => file).handlerForWorkspace(
-          this.onDidCreateFile.bind(this),
-        )(URI.revive(file));
+    this.connection.workspace.onWillCreateFiles((params: CreateFilesParams) => {
+      const edit: WorkspaceEdit = { changes: {} };
+      for (const { uri } of params.files) {
+        const changes = new ElmWorkspaceMatcher(({ uri }: FileCreate) =>
+          URI.parse(uri),
+        ).handle(this.onWillCreateFile.bind(this))({
+          uri,
+        });
+
+        if (changes && edit.changes) {
+          edit.changes[uri] = changes;
+        }
       }
+      return edit;
     });
 
-    this.connection.onRequest(OnDidRenameFilesRequest, async (params) => {
+    this.connection.workspace.onWillRenameFiles((params: RenameFilesParams) => {
+      const edit: WorkspaceEdit = { changes: {} };
       for (const { oldUri, newUri } of params.files) {
-        await new ElmWorkspaceMatcher((file: URI) => file).handlerForWorkspace(
-          this.onDidRenameFile.bind(this, URI.revive(oldUri)),
-        )(URI.revive(newUri));
+        const workspaceEdit = new ElmWorkspaceMatcher(
+          ({ oldUri }: FileRename) => URI.parse(oldUri),
+        ).handle(this.onWillRenameFile.bind(this))({
+          oldUri,
+          newUri,
+        });
+
+        if (workspaceEdit) {
+          this.mergeWorkspaceEdit(edit, workspaceEdit);
+        }
       }
+      return edit;
+    });
+
+    this.connection.workspace.onWillDeleteFiles((params: DeleteFilesParams) => {
+      for (const { uri } of params.files) {
+        new ElmWorkspaceMatcher(({ uri }: FileDelete) => URI.parse(uri)).handle(
+          this.onWillDeleteFile.bind(this),
+        )({
+          uri,
+        });
+      }
+
+      return null;
     });
   }
 
-  async onDidCreateFile(file: URI, elmWorkspace: IElmWorkspace): Promise<void> {
-    if (!file.toString().endsWith(".elm")) {
-      return;
-    }
-
-    const moduleName = this.getModuleNameFromFile(file, elmWorkspace);
+  private onWillCreateFile({
+    uri,
+    program,
+  }: ICreateFileParams): TextEdit[] | undefined {
+    const moduleName = this.getModuleNameFromFile(uri, program);
 
     if (moduleName) {
       const addModuleDefinitionEdit = RefactorEditUtils.addModuleDeclaration(
         moduleName,
       );
-      await this.connection.workspace.applyEdit({
-        changes: { [file.toString()]: [addModuleDefinitionEdit] },
-      });
+      return [addModuleDefinitionEdit];
     }
   }
 
-  async onDidRenameFile(
-    oldFile: URI,
-    newFile: URI,
-    elmWorkspace: IElmWorkspace,
-  ): Promise<void> {
-    if (!newFile.toString().endsWith(".elm")) {
-      return;
+  private onWillRenameFile({
+    oldUri,
+    newUri,
+    program,
+    sourceFile,
+  }: IRenameFileParams): WorkspaceEdit | undefined {
+    // Handle folder rename
+    if (!sourceFile) {
+      return Array.from(program.getForest().treeMap.values())
+        .filter(({ uri }) => uri.startsWith(`${oldUri}/`))
+        .map((sourceFile) =>
+          this.onWillRenameFile({
+            oldUri: sourceFile.uri,
+            newUri: sourceFile.uri.replace(oldUri, newUri),
+            program,
+            sourceFile,
+          }),
+        )
+        .reduce<WorkspaceEdit>(
+          (prev, cur) => (cur ? this.mergeWorkspaceEdit(prev, cur) : prev),
+          {},
+        );
     }
 
-    const tree = elmWorkspace.getForest().getByUri(oldFile.toString())?.tree;
+    const newModuleName = this.getModuleNameFromFile(newUri, program);
+    const moduleNameNode = TreeUtils.getModuleNameNode(sourceFile.tree);
 
-    const moduleName = this.getModuleNameFromFile(newFile, elmWorkspace);
-    const moduleNameNode = tree ? TreeUtils.getModuleNameNode(tree) : undefined;
-
-    if (moduleName && moduleNameNode && tree) {
+    if (newModuleName && moduleNameNode) {
       const moduleNodePosition = PositionUtil.FROM_TS_POSITION(
         moduleNameNode.endPosition,
       ).toVSPosition();
 
       const affectedNodes = RenameUtils.getRenameAffectedNodes(
-        elmWorkspace,
-        newFile.toString(),
+        program,
+        oldUri,
         moduleNodePosition,
       );
 
-      const [edits, textDocumentEdits] = RenameProvider.getRenameEdits(
+      const [edits] = RenameProvider.getRenameEdits(
         affectedNodes,
-        moduleName,
+        newModuleName,
       );
 
-      await this.connection.workspace.applyEdit({
+      if (sourceFile.moduleName) {
+        sourceFile.project.moduleToUriMap.delete(sourceFile.moduleName);
+        sourceFile.project.moduleToUriMap.set(newModuleName, newUri);
+      }
+
+      this.astProvider.addPendingRename(oldUri, newUri);
+
+      return {
         changes: edits,
-        documentChanges: textDocumentEdits,
-      });
+      };
     }
   }
 
-  getModuleNameFromFile(
-    file: URI,
+  private onWillDeleteFile({ uri, program }: IDeleteFileParams): void {
+    program.getForest().removeTree(uri);
+  }
+
+  private getModuleNameFromFile(
+    file: string,
     elmWorkspace: IElmWorkspace,
   ): string | undefined {
-    const sourceDir = elmWorkspace.getPath(file);
+    const sourceDir = elmWorkspace.getSourceDirectoryOfFile(file);
 
     // The file is not in a source dir (shouldn't happen)
     if (!sourceDir) {
       return;
     }
 
-    const relativePath = URI.file(relative(sourceDir, file.fsPath)).path.slice(
-      1,
-    );
+    return getModuleName(file, URI.file(sourceDir).toString());
+  }
 
-    // Remove extension and convert to module name
-    return relativePath.split(".").slice(0, -1).join(".").split("/").join(".");
+  private mergeWorkspaceEdit(
+    a: WorkspaceEdit,
+    b: WorkspaceEdit,
+  ): WorkspaceEdit {
+    // Merge changes
+    if (b.changes) {
+      Object.entries(b.changes).forEach(([uri, edits]) => {
+        if (!a.changes) {
+          a.changes = {};
+        }
+
+        if (a.changes[uri]) {
+          a.changes[uri].push(...edits);
+        } else {
+          a.changes[uri] = edits;
+        }
+      });
+    }
+
+    if (b.documentChanges) {
+      if (!a.documentChanges) {
+        a.documentChanges = [];
+      }
+      a.documentChanges.push(...b.documentChanges);
+    }
+
+    return a;
   }
 }

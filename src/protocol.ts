@@ -42,26 +42,6 @@ export const UnexposeRequest = new RequestType<
   void
 >("elm/unexpose");
 
-export interface IOnDidCreateFilesParams {
-  readonly files: ReadonlyArray<URI>;
-}
-
-export interface IOnDidRenameFilesParams {
-  readonly files: ReadonlyArray<{ oldUri: URI; newUri: URI }>;
-}
-
-export const OnDidCreateFilesRequest = new RequestType<
-  IOnDidCreateFilesParams,
-  void,
-  void
->("elm/ondidCreateFiles");
-
-export const OnDidRenameFilesRequest = new RequestType<
-  IOnDidRenameFilesParams,
-  void,
-  void
->("elm/ondidRenameFiles");
-
 export interface IGetDiagnosticsParams {
   files: string[];
   delay: number;

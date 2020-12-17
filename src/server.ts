@@ -28,6 +28,7 @@ import {
   WorkspaceSymbolProvider,
 } from "./providers";
 import { ElmLsDiagnostics } from "./providers/diagnostics/elmLsDiagnostics";
+import { FileEventsHandler } from "./providers/handlers/fileEventsHandler";
 import { Settings } from "./util/settings";
 
 export interface ILanguageServer {
@@ -163,6 +164,7 @@ export class Server implements ILanguageServer {
     new CodeLensProvider();
     new SelectionRangeProvider();
     new RenameProvider();
+    new FileEventsHandler();
   }
 
   private getElmJsonFolder(uri: string): URI {

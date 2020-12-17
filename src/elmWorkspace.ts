@@ -78,8 +78,8 @@ interface IElmPackageJson {
 export interface IElmWorkspace {
   init(progressCallback: (percent: number) => void): void;
   hasDocument(uri: URI): boolean;
-  hasPath(uri: URI): boolean;
-  getPath(uri: URI): string | undefined;
+  isInSourceDirectory(uri: string): boolean;
+  getSourceDirectoryOfFile(uri: string): string | undefined;
   getSourceFile(uri: string): ITreeContainer | undefined;
   getForest(synchronize?: boolean): IForest;
   getRootPath(): URI;
@@ -175,15 +175,16 @@ export class ElmWorkspace implements IElmWorkspace {
     return !!this.forest.getTree(uri.toString());
   }
 
-  public hasPath(uri: URI): boolean {
-    return !!this.getPath(uri);
+  public isInSourceDirectory(uri: string): boolean {
+    return !!this.getSourceDirectoryOfFile(uri);
   }
 
-  public getPath(uri: URI): string | undefined {
+  public getSourceDirectoryOfFile(uri: string): string | undefined {
+    uri = normalizeUri(uri);
     return [
       ...this.rootProject.sourceDirectories,
       ...this.rootProject.testDirectories,
-    ].find((elmFolder) => uri.fsPath.startsWith(elmFolder));
+    ].find((elmFolder) => uri.includes(elmFolder));
   }
 
   public getSourceFile(uri: string): ITreeContainer | undefined {
@@ -588,11 +589,7 @@ export class ElmWorkspace implements IElmWorkspace {
     (await this.host.readDirectory(sourceDir)).forEach((matchingPath) => {
       matchingPath = normalizeUri(matchingPath);
 
-      const moduleName = path
-        .relative(sourceDir, matchingPath)
-        .replace(".elm", "")
-        .split("/")
-        .join(".");
+      const moduleName = utils.getModuleName(matchingPath, sourceDir);
 
       project.moduleToUriMap.set(moduleName, URI.file(matchingPath).toString());
 

@@ -118,19 +118,21 @@ export class RenameProvider {
     newName: string,
   ): [{ [uri: string]: TextEdit[] }, TextDocumentEdit[]] {
     const edits: { [uri: string]: TextEdit[] } = {};
+    const originalName = affectedNodes?.originalNode.text ?? "";
     affectedNodes?.references.forEach((a) => {
       if (!edits[a.uri]) {
         edits[a.uri] = [];
       }
 
+      const startColumn =
+        a.node.startPosition.column + a.node.text.indexOf(originalName);
+      const endColumn = startColumn + originalName.length;
+
       edits[a.uri].push(
         TextEdit.replace(
           Range.create(
-            Position.create(
-              a.node.startPosition.row,
-              a.node.startPosition.column,
-            ),
-            Position.create(a.node.endPosition.row, a.node.endPosition.column),
+            Position.create(a.node.startPosition.row, startColumn),
+            Position.create(a.node.endPosition.row, endColumn),
           ),
           newName,
         ),
@@ -173,7 +175,7 @@ export class RenameProvider {
       const newUri = this.generateUriFromModuleName(
         newName,
         elmWorkspace,
-        URI.parse(params.textDocument.uri),
+        params.textDocument.uri,
       );
 
       if (newUri) {
@@ -210,9 +212,9 @@ export class RenameProvider {
   private generateUriFromModuleName(
     moduleName: string,
     elmWorkspace: IElmWorkspace,
-    file: URI,
+    file: string,
   ): URI | undefined {
-    const sourceDir = elmWorkspace.getPath(file);
+    const sourceDir = elmWorkspace.getSourceDirectoryOfFile(file);
 
     // The file is not in a source dir (shouldn't happen)
     if (!sourceDir) {

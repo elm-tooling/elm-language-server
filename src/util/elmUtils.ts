@@ -1,5 +1,5 @@
 import execa, { ExecaReturnValue } from "execa";
-import * as path from "path";
+import * as path from "./path";
 import { Connection, CompletionItemKind } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { IElmPackageCache } from "../elmPackageCache";
@@ -380,4 +380,12 @@ export function constraintIntersect(
     lowerOperator: newLowerOp,
     upperOperator: newUpperOp,
   };
+}
+
+export function getModuleName(file: string, sourceDir: string): string {
+  return path
+    .relative(sourceDir, file)
+    .replace(".elm", "")
+    .split("/")
+    .join(".");
 }

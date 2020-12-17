@@ -6,7 +6,7 @@ import { TreeUtils } from "./treeUtils";
 
 export class RenameUtils {
   static getRenameAffectedNodes(
-    elmWorkspace: IElmWorkspace,
+    program: IElmWorkspace,
     uri: string,
     position: Position,
   ):
@@ -18,27 +18,23 @@ export class RenameUtils {
         }[];
       }
     | undefined {
-    const forest = elmWorkspace.getForest();
-    const checker = elmWorkspace.getTypeChecker();
-    const treeContainer = forest.getByUri(uri);
+    const checker = program.getTypeChecker();
+    const sourceFile = program.getSourceFile(uri);
 
-    if (treeContainer) {
+    if (sourceFile) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        treeContainer.tree.rootNode,
+        sourceFile.tree.rootNode,
         position,
       );
 
-      const definitionNode = checker.findDefinition(
-        nodeAtPosition,
-        treeContainer,
-      );
+      const definitionNode = checker.findDefinition(nodeAtPosition, sourceFile);
 
       if (definitionNode) {
-        const refTree = forest.getByUri(definitionNode.uri);
+        const refTree = program.getSourceFile(definitionNode.uri);
         if (refTree && refTree.writeable) {
           return {
             originalNode: nodeAtPosition,
-            references: References.find(definitionNode, elmWorkspace),
+            references: References.find(definitionNode, program),
           };
         }
         if (refTree && !refTree.writeable) {
