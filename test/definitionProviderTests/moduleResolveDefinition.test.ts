@@ -133,7 +133,7 @@ import Module
 import Module.Model
       
 func = Module.Model.func
-      --^Module.elm
+      --^Module/Model.elm
 `;
     await testBase.testDefinition(source2);
   });

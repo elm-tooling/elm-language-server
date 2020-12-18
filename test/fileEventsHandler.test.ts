@@ -1,5 +1,5 @@
 import { mockDeep } from "jest-mock-extended";
-import path from "path";
+import * as path from "../src/util/path";
 import { container } from "tsyringe";
 import {
   CancellationTokenSource,
@@ -7,6 +7,8 @@ import {
   CreateFilesParams,
   DeleteFilesParams,
   HandlerResult,
+  Position,
+  Range,
   RenameFilesParams,
   RequestHandler,
   WorkspaceEdit,
@@ -18,7 +20,7 @@ import { FileEventsHandler } from "../src/providers/handlers/fileEventsHandler";
 import { getSourceFiles } from "./utils/sourceParser";
 import { baseUri, SourceTreeParser } from "./utils/sourceTreeParser";
 
-describe("test fileEventsHandler", () => {
+describe("fileEventsHandler", () => {
   const treeParser = new SourceTreeParser();
 
   let createFilesHandler: RequestHandler<
@@ -47,12 +49,11 @@ describe("test fileEventsHandler", () => {
     }),
   });
 
-  new FileEventsHandler();
-
   const token = new CancellationTokenSource().token;
 
   async function createProgram(source: string): Promise<IElmWorkspace> {
     await treeParser.init();
+    new FileEventsHandler();
 
     const program = await treeParser.getProgram(getSourceFiles(source));
     const workspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
@@ -184,19 +185,8 @@ func = ""
 
     expect(edit.changes[oldPath][0]).toEqual<TextEdit>({
       newText: "Moved.Module",
-      range: {
-        start: {
-          line: 0,
-          character: 7,
-        },
-        end: {
-          line: 0,
-          character: 11,
-        },
-      },
+      range: Range.create(Position.create(0, 7), Position.create(0, 11)),
     });
-
-    expect(program.getSourceFile(newPath)).not.toBeUndefined();
   });
 
   it("handles folder rename event", async () => {
@@ -259,11 +249,7 @@ func = ""
         },
       },
     });
-
     expect(edit.changes[testCPath]).toBeUndefined();
-
-    expect(program.getSourceFile(uri("Moved/TestA.elm"))).not.toBeUndefined();
-    expect(program.getSourceFile(uri("Moved/TestB.elm"))).not.toBeUndefined();
   });
 
   it("handles file delete event", async () => {

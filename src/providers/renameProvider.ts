@@ -16,6 +16,7 @@ import { SyntaxNode } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { RenameUtils } from "../util/renameUtils";
+import { TreeUtils } from "../util/treeUtils";
 import { IRenameParams, IPrepareRenameParams } from "./paramsExtensions";
 
 export class RenameProvider {
@@ -85,24 +86,37 @@ export class RenameProvider {
     );
 
     if (affectedNodes?.references.length) {
-      //Select the whole module uppercase id `Component.Test` instead of just `Test`
+      let node = affectedNodes.originalNode;
+
+      // For a qualified value Component.Test.func, if renamed the module name, select the whole thing
       if (
-        affectedNodes.originalNode.parent?.parent?.type === "module_declaration"
+        node.type === "upper_case_identifier" &&
+        node.parent?.type === "value_qid"
       ) {
-        const node = affectedNodes.originalNode.parent;
-        if (node) {
-          return Range.create(
-            Position.create(node.startPosition.row, node.startPosition.column),
-            Position.create(node.endPosition.row, node.endPosition.column),
-          );
-        }
-      } else {
-        const node = affectedNodes.originalNode;
+        const moduleNameNodes =
+          TreeUtils.findAllNamedChildrenOfType(
+            "upper_case_identifier",
+            node.parent,
+          ) ?? [];
+
+        const first = moduleNameNodes[0];
+        const last = moduleNameNodes[moduleNameNodes.length - 1];
+
         return Range.create(
-          Position.create(node.startPosition.row, node.startPosition.column),
-          Position.create(node.endPosition.row, node.endPosition.column),
+          Position.create(first.startPosition.row, first.startPosition.column),
+          Position.create(last.endPosition.row, last.endPosition.column),
         );
       }
+
+      // Select the whole module uppercase id `Component.Test` instead of just `Test`
+      if (node.parent?.parent?.type === "module_declaration") {
+        node = node.parent;
+      }
+
+      return Range.create(
+        Position.create(node.startPosition.row, node.startPosition.column),
+        Position.create(node.endPosition.row, node.endPosition.column),
+      );
     }
 
     return null;
@@ -118,7 +132,23 @@ export class RenameProvider {
     newName: string,
   ): [{ [uri: string]: TextEdit[] }, TextDocumentEdit[]] {
     const edits: { [uri: string]: TextEdit[] } = {};
-    const originalName = affectedNodes?.originalNode.text ?? "";
+    let originalName = affectedNodes?.originalNode.text ?? "";
+
+    // Adjust the case of Module.App.func
+    if (
+      affectedNodes?.originalNode.type === "upper_case_identifier" &&
+      (affectedNodes.originalNode.parent?.type === "value_qid" ||
+        affectedNodes.originalNode.parent?.type === "upper_case_qid")
+    ) {
+      const moduleNameNodes =
+        TreeUtils.findAllNamedChildrenOfType(
+          "upper_case_identifier",
+          affectedNodes.originalNode.parent,
+        ) ?? [];
+
+      originalName = moduleNameNodes.map((node) => node.text).join(".");
+    }
+
     affectedNodes?.references.forEach((a) => {
       if (!edits[a.uri]) {
         edits[a.uri] = [];

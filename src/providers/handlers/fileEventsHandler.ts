@@ -158,7 +158,9 @@ export class FileEventsHandler {
     file: string,
     elmWorkspace: IElmWorkspace,
   ): string | undefined {
-    const sourceDir = elmWorkspace.getSourceDirectoryOfFile(file);
+    const sourceDir = elmWorkspace.getSourceDirectoryOfFile(
+      URI.parse(file).fsPath,
+    );
 
     // The file is not in a source dir (shouldn't happen)
     if (!sourceDir) {

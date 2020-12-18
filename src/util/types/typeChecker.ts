@@ -29,6 +29,7 @@ import { Utils } from "../utils";
 import { TypeExpression } from "./typeExpression";
 import { ICancellationToken } from "../../cancellation";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
+import { node } from "execa";
 
 export let bindTime = 0;
 export function resetBindTime(): void {
@@ -596,22 +597,30 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
           uri: treeContainer.uri,
         };
       } else {
-        // Get the full module name and handle an import alias if there is one
         const nodeParentText = nodeParent.text;
-        const endPos = nodeParentText.lastIndexOf(nodeText) + nodeText.length;
-        const moduleNameOrAlias = nodeParentText.substring(0, endPos);
-        const moduleName =
-          findImportModuleNameNode(moduleNameOrAlias, treeContainer)?.text ??
-          moduleNameOrAlias;
 
-        const moduleDefinitionFromOtherFile = findImportOfType(
-          treeContainer,
-          moduleName,
-          "Module",
-        );
+        // Get the full module name and handle an import alias if there is one
+        if (nodeAtPosition.type === "upper_case_identifier") {
+          const moduleNameOrAlias =
+            TreeUtils.findAllNamedChildrenOfType(
+              "upper_case_identifier",
+              nodeParent,
+            )
+              ?.map((node) => node.text)
+              .join(".") ?? "";
+          const moduleName =
+            findImportModuleNameNode(moduleNameOrAlias, treeContainer)?.text ??
+            moduleNameOrAlias;
 
-        if (moduleDefinitionFromOtherFile) {
-          return moduleDefinitionFromOtherFile;
+          const moduleDefinitionFromOtherFile = findImportOfType(
+            treeContainer,
+            moduleName,
+            "Module",
+          );
+
+          if (moduleDefinitionFromOtherFile) {
+            return moduleDefinitionFromOtherFile;
+          }
         }
 
         const portDefinitionFromOtherFile = findImportOfType(
