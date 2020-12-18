@@ -1,4 +1,4 @@
-import fs, { readdirSync } from "fs";
+import fs from "fs";
 import globby from "globby";
 import os from "os";
 import { container } from "tsyringe";
@@ -7,8 +7,10 @@ import { Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { ICancellationToken } from "./cancellation";
+import { ElmPackageCache, IElmPackageCache } from "./elmPackageCache";
 import { Forest, IForest, ITreeContainer } from "./forest";
 import * as utils from "./util/elmUtils";
+import { IVersion } from "./util/elmUtils";
 import * as path from "./util/path";
 import { normalizeUri } from "./util/path";
 import {
@@ -33,7 +35,7 @@ interface IElmFile {
   project: ElmProject;
 }
 
-type ElmJson = IElmApplicationJson | IElmPackageJson;
+export type ElmJson = IElmApplicationJson | IElmPackageJson;
 
 interface IElmApplicationJson {
   type: "application";
@@ -124,87 +126,8 @@ interface IElmPackage extends IElmProject {
   exposedModules: Set<string>;
 }
 
-export interface IVersion {
-  major: number;
-  minor: number;
-  patch: number;
-  string: string;
-}
-
-export interface IConstraint {
-  upper: IVersion;
-  lower: IVersion;
-  upperOperator: "<" | "<=";
-  lowerOperator: "<" | "<=";
-}
-
-export interface IPackage {
-  dependencies: Map<string, IConstraint>;
-  version: IVersion;
-}
-
-export interface IElmPackageCache {
-  get(packageName: string): IPackage[];
-}
-
-export class ElmPackageCache implements IElmPackageCache {
-  private cache = new Map<string, IPackage[]>();
-
-  constructor(
-    private packagesRoot: string,
-    private loadElmJson: (elmJsonPath: string) => ElmJson,
-  ) {}
-
-  public get(packageName: string): IPackage[] {
-    const cached = this.cache.get(packageName);
-
-    if (cached) {
-      return cached;
-    }
-
-    const maintainer = packageName.substring(0, packageName.indexOf("/"));
-    const name = packageName.substring(
-      packageName.indexOf("/") + 1,
-      packageName.length,
-    );
-
-    const pathToPackage = `${this.packagesRoot}${maintainer}/${name}/`;
-    const readDir = readdirSync(pathToPackage, "utf8");
-
-    const allVersions: IPackage[] = [];
-
-    for (const folderName of readDir) {
-      const version = utils.parseVersion(folderName);
-
-      if (
-        Number.isInteger(version.major) &&
-        Number.isInteger(version.minor) &&
-        Number.isInteger(version.patch)
-      ) {
-        const elmJsonPath = path.join(pathToPackage, folderName, "elm.json");
-        const elmJson = this.loadElmJson(elmJsonPath);
-
-        allVersions.push({
-          version,
-          dependencies: new Map(
-            Object.entries(elmJson.dependencies).map(([name, constraint]) => [
-              name,
-              utils.parseContraint(constraint),
-            ]),
-          ),
-        });
-      }
-    }
-
-    this.cache.set(packageName, allVersions);
-
-    return allVersions;
-  }
-}
-
 export interface IProgramHost {
   readFile(uri: string): Promise<string>;
-  readFileSync(uri: string): string;
   readDirectory(uri: string): Promise<string[]>;
   watchFile(uri: string, callback: () => void): void;
 }
@@ -413,6 +336,19 @@ export class ElmWorkspace implements IElmWorkspace {
         elmVersion,
       )}/`;
 
+      try {
+        // Run `elm make` to download dependencies
+        await utils.execCmd(
+          clientSettings.elmPath,
+          "elm",
+          { cmdArguments: ["make"] },
+          this.rootPath.fsPath,
+          this.connection,
+        );
+      } catch {
+        // Compile failed
+      }
+
       this.elmPackageCache = new ElmPackageCache(
         this.packagesRoot,
         this.loadElmJson.bind(this),
@@ -457,7 +393,7 @@ export class ElmWorkspace implements IElmWorkspace {
   }
 
   private async loadRootProject(elmJsonPath: string): Promise<ElmProject> {
-    const elmJson = this.loadElmJson(elmJsonPath);
+    const elmJson = await this.loadElmJson(elmJsonPath);
 
     if (elmJson.type === "application") {
       const allDependencies = new Map(
@@ -492,15 +428,18 @@ export class ElmWorkspace implements IElmWorkspace {
       const deps = new Map(
         Object.entries(
           Object.assign(elmJson.dependencies, elmJson["test-dependencies"]),
-        ).map(([dep, version]) => [dep, utils.parseContraint(version)]),
+        ).map(([dep, version]) => [dep, utils.parseConstraint(version)]),
       );
 
-      const solvedVersions = utils.solveDependencies(
+      const solvedVersions = await utils.solveDependencies(
         this.elmPackageCache,
         deps,
       );
 
       if (!solvedVersions) {
+        this.connection.window.showErrorMessage(
+          "There is a problem with elm.json. Could not solve dependencies with the given constraints. Try running `elm make` to install missing dependencies.",
+        );
         throw new Error("Unsolvable package constraints");
       }
 
@@ -551,7 +490,7 @@ export class ElmWorkspace implements IElmWorkspace {
     const pathToPackageWithVersion = `${this.packagesRoot}${maintainer}/${name}/${version.string}`;
 
     const elmJsonPath = path.join(pathToPackageWithVersion, "elm.json");
-    const elmJson = this.loadElmJson(elmJsonPath);
+    const elmJson = await this.loadElmJson(elmJsonPath);
 
     if (elmJson.type === "package") {
       const resolvedPackage = {
@@ -583,7 +522,7 @@ export class ElmWorkspace implements IElmWorkspace {
     },
     packageVersions: ReadonlyMap<string, IVersion>,
   ): Promise<Map<string, IElmPackage>> {
-    const dependencyMap = new Map();
+    const dependencyMap = new Map<string, IElmPackage>();
     for (const dep in deps) {
       dependencyMap.set(dep, await this.loadPackage(dep, packageVersions));
     }
@@ -738,18 +677,14 @@ export class ElmWorkspace implements IElmWorkspace {
     }
   }
 
-  private loadElmJson(elmJsonPath: string): ElmJson {
-    return JSON.parse(this.host.readFileSync(elmJsonPath)) as ElmJson;
+  private async loadElmJson(elmJsonPath: string): Promise<ElmJson> {
+    return JSON.parse(await this.host.readFile(elmJsonPath)) as ElmJson;
   }
 
   private createProgramHost(): IProgramHost {
     return {
       readFile: (uri): Promise<string> =>
         readFile(uri, {
-          encoding: "utf-8",
-        }),
-      readFileSync: (uri): string =>
-        fs.readFileSync(uri, {
           encoding: "utf-8",
         }),
       readDirectory: (uri: string): Promise<string[]> =>

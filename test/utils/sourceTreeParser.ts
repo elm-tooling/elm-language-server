@@ -53,7 +53,6 @@ export class SourceTreeParser {
     const program = new ElmWorkspace(URI.file(baseUri), {
       readFile: (uri: string): Promise<string> =>
         Promise.resolve(readFile(uri)),
-      readFileSync: readFile,
       readDirectory: (uri: string): Promise<string[]> => {
         return Promise.resolve(
           path.normalizeUri(uri) ===

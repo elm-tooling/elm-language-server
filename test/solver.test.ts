@@ -1,10 +1,10 @@
+import { IElmPackageCache, IPackage } from "../src/elmPackageCache";
 import {
   IConstraint,
-  IElmPackageCache,
-  IPackage,
   IVersion,
-} from "../src/elmWorkspace";
-import { parseContraint, solveDependencies } from "../src/util/elmUtils";
+  parseConstraint,
+  solveDependencies,
+} from "../src/util/elmUtils";
 
 describe("module resolution solver", () => {
   function v(
@@ -23,9 +23,9 @@ describe("module resolution solver", () => {
     };
   }
 
-  const c = parseContraint;
+  const c = parseConstraint;
 
-  const packageCache: IElmPackageCache = {
+  const packageCache = {
     get: (packageName: string): IPackage[] => {
       switch (packageName) {
         case "B":
@@ -72,14 +72,27 @@ describe("module resolution solver", () => {
     },
   };
 
-  function test(
+  async function test(
     deps: [string, IConstraint][],
     expected: [string, IVersion][] | undefined,
     cache = packageCache,
   ) {
-    expect(solveDependencies(cache, new Map(deps))).toEqual(
-      expected ? new Map(expected) : undefined,
-    );
+    expect(
+      await solveDependencies(
+        {
+          getVersions: (pacakgeName) =>
+            Promise.resolve(cache.get(pacakgeName).map((p) => p.version)),
+          getDependencies: (packageName, version) =>
+            Promise.resolve(
+              cache
+                .get(packageName)
+                .find((p) => p.version.string === version.string)
+                ?.dependencies ?? new Map(),
+            ),
+        },
+        new Map(deps),
+      ),
+    ).toEqual(expected ? new Map(expected) : undefined);
   }
 
   it("handles empty input", () => {

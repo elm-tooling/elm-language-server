@@ -1,11 +1,10 @@
-import { assert } from "console";
-import { IConstraint, IVersion } from "../src/elmWorkspace";
 import {
   constraintIntersect,
-  parseContraint,
+  IConstraint,
+  IVersion,
+  parseConstraint,
   versionSatifiesConstraint,
 } from "../src/util/elmUtils";
-import { Utils } from "../src/util/utils";
 
 describe("constraint test", () => {
   function v(
@@ -24,7 +23,7 @@ describe("constraint test", () => {
     };
   }
 
-  const c = parseContraint;
+  const c = parseConstraint;
 
   it("can determine whether a version satifies a half-open constraint", () => {
     const c: IConstraint = {
