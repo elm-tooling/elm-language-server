@@ -2,7 +2,7 @@ import execa, { ExecaReturnValue } from "execa";
 import * as path from "path";
 import { Connection, CompletionItemKind } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmPackageCache, IConstraint, IVersion } from "../elmWorkspace";
+import { IElmPackageCache } from "../elmPackageCache";
 import { IClientSettings } from "./settings";
 
 export const isWindows = process.platform === "win32";
@@ -117,11 +117,11 @@ type SolverResult =
     }
   | undefined;
 
-export function solveDependencies(
+export async function solveDependencies(
   packageCache: IElmPackageCache,
   deps: ReadonlyMap<string, IConstraint>,
-): ReadonlyMap<string, IVersion> | undefined {
-  const result = solveDependenciesWorker(
+): Promise<ReadonlyMap<string, IVersion> | undefined> {
+  const result = await solveDependenciesWorker(
     packageCache,
     deps,
     new Map<string, IVersion>(),
@@ -132,11 +132,11 @@ export function solveDependencies(
   }
 }
 
-function solveDependenciesWorker(
+async function solveDependenciesWorker(
   packageCache: IElmPackageCache,
   deps: ReadonlyMap<string, IConstraint>,
   solutions: ReadonlyMap<string, IVersion>,
-): SolverResult {
+): Promise<SolverResult> {
   function pickDep(): [
     { name: string; constraint: IConstraint } | undefined,
     Map<string, IConstraint>,
@@ -190,33 +190,32 @@ function solveDependenciesWorker(
   }
 
   // Find versions that satisfy the constraint
-  let candidates = packageCache
-    .get(dep.name)
-    .filter(({ version }) => versionSatifiesConstraint(version, dep.constraint))
-    .sort((a, b) =>
-      a.version < b.version ? -1 : a.version > b.version ? 1 : 0,
-    )
+  let candidates = (await packageCache.getVersions(dep.name))
+    .filter((version) => versionSatifiesConstraint(version, dep.constraint))
+    .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
     .reverse();
 
   const solvedVersion = solutions.get(dep.name);
 
   if (solvedVersion) {
-    candidates = candidates.filter(
-      (a) => a.version.string === solvedVersion.string,
-    );
+    candidates = candidates.filter((a) => a.string === solvedVersion.string);
   }
 
   for (const candidate of candidates) {
-    const tentativeDeps = combineDeps(restDeps, candidate.dependencies);
+    const candidateDeps = await packageCache.getDependencies(
+      dep.name,
+      candidate,
+    );
+    const tentativeDeps = combineDeps(restDeps, candidateDeps);
 
     if (!tentativeDeps) {
       continue;
     }
 
     const tentativeSolutions = new Map(solutions);
-    tentativeSolutions.set(dep.name, candidate.version);
+    tentativeSolutions.set(dep.name, candidate);
 
-    const result = solveDependenciesWorker(
+    const result = await solveDependenciesWorker(
       packageCache,
       tentativeDeps,
       tentativeSolutions,
@@ -232,6 +231,20 @@ function solveDependenciesWorker(
   }
 }
 
+export interface IVersion {
+  major: number;
+  minor: number;
+  patch: number;
+  string: string;
+}
+
+export interface IConstraint {
+  upper: IVersion;
+  lower: IVersion;
+  upperOperator: "<" | "<=";
+  lowerOperator: "<" | "<=";
+}
+
 export function parseVersion(version: string): IVersion {
   const [major, minor, patch] = version.split(".");
 
@@ -243,7 +256,7 @@ export function parseVersion(version: string): IVersion {
   };
 }
 
-export function parseContraint(contraint: string): IConstraint {
+export function parseConstraint(contraint: string): IConstraint {
   const regex = /^(\d+\.\d+\.\d+) (<|<=) v (<|<=) (\d+\.\d+\.\d+)$/gm;
 
   const m = regex.exec(contraint);

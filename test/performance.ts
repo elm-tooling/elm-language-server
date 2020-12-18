@@ -25,7 +25,7 @@ import {
   ThrottledCancellationToken,
 } from "../src/cancellation";
 import { randomBytes } from "crypto";
-import { createProgramHost } from "./diagnostics";
+import { createProgramHost } from "./utils/sourceTreeParser";
 
 container.register("Connection", {
   useValue: {

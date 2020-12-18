@@ -1,7 +1,14 @@
+import { readFile } from "fs";
+import globby from "globby";
 import { container } from "tsyringe";
+import { promisify } from "util";
 import { URI } from "vscode-uri";
 import Parser from "web-tree-sitter";
-import { ElmWorkspace, IElmWorkspace } from "../../src/elmWorkspace";
+import {
+  ElmWorkspace,
+  IElmWorkspace,
+  IProgramHost,
+} from "../../src/elmWorkspace";
 import * as path from "../../src/util/path";
 
 export const baseUri = path.join(__dirname, "../sources/src/");
@@ -53,7 +60,6 @@ export class SourceTreeParser {
     const program = new ElmWorkspace(URI.file(baseUri), {
       readFile: (uri: string): Promise<string> =>
         Promise.resolve(readFile(uri)),
-      readFileSync: readFile,
       readDirectory: (uri: string): Promise<string[]> => {
         return Promise.resolve(
           path.normalizeUri(uri) ===
@@ -73,4 +79,21 @@ export class SourceTreeParser {
 
     return program;
   }
+}
+
+export function createProgramHost(): IProgramHost {
+  return {
+    readFile: (uri): Promise<string> =>
+      promisify(readFile)(uri, {
+        encoding: "utf-8",
+      }),
+    readDirectory: (uri: string): Promise<string[]> =>
+      // Cleanup the path on windows, as globby does not like backslashes
+      globby(`${uri.replace(/\\/g, "/")}/**/*.elm`, {
+        suppressErrors: true,
+      }),
+    watchFile: (): void => {
+      return;
+    },
+  };
 }
