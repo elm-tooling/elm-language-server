@@ -27,7 +27,7 @@ export class CapabilityCalculator {
       },
       definitionProvider: true,
       documentFormattingProvider: true,
-      documentSymbolProvider: true,
+      documentSymbolProvider: { label: "Elm" },
       executeCommandProvider: {
         commands: [ElmMakeDiagnostics.CODE_ACTION_ELM_MAKE],
       },
