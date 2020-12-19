@@ -1,6 +1,6 @@
 import path from "path";
 import { DiagnosticSeverity, Range } from "vscode-languageserver";
-import { URI } from "vscode-uri";
+import { URI, Utils } from "vscode-uri";
 import { Diagnostics } from "../../util/types/diagnostics";
 import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { NAMING_ERROR } from "./elmMakeDiagnostics";
@@ -37,9 +37,7 @@ export class ElmDiagnosticsHelper {
     issue: IElmIssue,
     elmWorkspaceFolder: URI,
   ): string {
-    return URI.file(
-      path.join(elmWorkspaceFolder.fsPath, issue.file),
-    ).toString();
+    return Utils.joinPath(elmWorkspaceFolder, issue.file).toString();
   }
 
   private static elmMakeIssueToDiagnostic(issue: IElmIssue): IDiagnostic {
