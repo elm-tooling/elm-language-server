@@ -113,6 +113,7 @@ func = Module.Model.func
     const source2 = `
 --@ Module/Model.elm
 module Module.Model exposing (..)
+--X
 
 type alias Model = {
   var: String
@@ -120,7 +121,6 @@ type alias Model = {
 
 --@ Module.elm
 module Module exposing (..)
---X
 
 type alias Model = {
   var: String
