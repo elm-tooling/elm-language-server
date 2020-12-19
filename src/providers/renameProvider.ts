@@ -134,7 +134,7 @@ export class RenameProvider {
     const edits: { [uri: string]: TextEdit[] } = {};
     let originalName = affectedNodes?.originalNode.text ?? "";
 
-    // Adjust the case of Module.App.func
+    // Helps us to rename fully qualified functions without changing the last part
     if (
       affectedNodes?.originalNode.type === "upper_case_identifier" &&
       (affectedNodes.originalNode.parent?.type === "value_qid" ||
