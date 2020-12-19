@@ -29,7 +29,6 @@ import { Utils } from "../utils";
 import { TypeExpression } from "./typeExpression";
 import { ICancellationToken } from "../../cancellation";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
-import { node } from "execa";
 
 export let bindTime = 0;
 export function resetBindTime(): void {
