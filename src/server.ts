@@ -7,7 +7,7 @@ import {
   InitializeResult,
   WorkDoneProgressReporter,
 } from "vscode-languageserver";
-import { URI } from "vscode-uri";
+import { URI, Utils } from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { ElmWorkspace, IElmWorkspace } from "./elmWorkspace";
 import {
@@ -166,7 +166,7 @@ export class Server implements ILanguageServer {
   }
 
   private getElmJsonFolder(uri: string): URI {
-    return URI.file(path.dirname(uri));
+    return Utils.dirname(URI.file(uri));
   }
 
   private findTopLevelFolders(listOfElmJsonFolders: URI[]): Map<string, URI> {
