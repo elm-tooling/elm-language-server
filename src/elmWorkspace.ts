@@ -184,7 +184,7 @@ export class ElmWorkspace implements IElmWorkspace {
     return [
       ...this.rootProject.sourceDirectories,
       ...this.rootProject.testDirectories,
-    ].find((elmFolder) => uri.includes(elmFolder));
+    ].find((elmFolder) => uri.startsWith(elmFolder));
   }
 
   public getSourceFile(uri: string): ITreeContainer | undefined {
