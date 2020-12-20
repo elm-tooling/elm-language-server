@@ -155,11 +155,11 @@ export class FileEventsHandler {
   }
 
   private getModuleNameFromFile(
-    file: string,
+    uri: string,
     elmWorkspace: IElmWorkspace,
   ): string | undefined {
     const sourceDir = elmWorkspace.getSourceDirectoryOfFile(
-      URI.parse(file).fsPath,
+      URI.parse(uri).fsPath,
     );
 
     // The file is not in a source dir (shouldn't happen)
@@ -167,7 +167,7 @@ export class FileEventsHandler {
       return;
     }
 
-    return getModuleName(file, URI.file(sourceDir).toString());
+    return getModuleName(uri, URI.file(sourceDir).toString());
   }
 
   private mergeWorkspaceEdit(

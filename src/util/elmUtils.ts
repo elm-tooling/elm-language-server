@@ -382,10 +382,6 @@ export function constraintIntersect(
   };
 }
 
-export function getModuleName(file: string, sourceDir: string): string {
-  return path
-    .relative(sourceDir, file)
-    .replace(".elm", "")
-    .split("/")
-    .join(".");
+export function getModuleName(uri: string, sourceDir: string): string {
+  return path.relative(sourceDir, uri).replace(".elm", "").split("/").join(".");
 }
