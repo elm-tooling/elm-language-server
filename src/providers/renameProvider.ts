@@ -16,6 +16,7 @@ import { SyntaxNode } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { RenameUtils } from "../util/renameUtils";
+import { TreeUtils } from "../util/treeUtils";
 import { IRenameParams, IPrepareRenameParams } from "./paramsExtensions";
 
 export class RenameProvider {
@@ -85,24 +86,37 @@ export class RenameProvider {
     );
 
     if (affectedNodes?.references.length) {
-      //Select the whole module uppercase id `Component.Test` instead of just `Test`
+      let node = affectedNodes.originalNode;
+
+      // For a qualified value Component.Test.func, if renamed the module name, select the whole thing
       if (
-        affectedNodes.originalNode.parent?.parent?.type === "module_declaration"
+        node.type === "upper_case_identifier" &&
+        node.parent?.type === "value_qid"
       ) {
-        const node = affectedNodes.originalNode.parent;
-        if (node) {
-          return Range.create(
-            Position.create(node.startPosition.row, node.startPosition.column),
-            Position.create(node.endPosition.row, node.endPosition.column),
-          );
-        }
-      } else {
-        const node = affectedNodes.originalNode;
+        const moduleNameNodes =
+          TreeUtils.findAllNamedChildrenOfType(
+            "upper_case_identifier",
+            node.parent,
+          ) ?? [];
+
+        const first = moduleNameNodes[0];
+        const last = moduleNameNodes[moduleNameNodes.length - 1];
+
         return Range.create(
-          Position.create(node.startPosition.row, node.startPosition.column),
-          Position.create(node.endPosition.row, node.endPosition.column),
+          Position.create(first.startPosition.row, first.startPosition.column),
+          Position.create(last.endPosition.row, last.endPosition.column),
         );
       }
+
+      // Select the whole module uppercase id `Component.Test` instead of just `Test`
+      if (node.parent?.parent?.type === "module_declaration") {
+        node = node.parent;
+      }
+
+      return Range.create(
+        Position.create(node.startPosition.row, node.startPosition.column),
+        Position.create(node.endPosition.row, node.endPosition.column),
+      );
     }
 
     return null;
@@ -118,19 +132,37 @@ export class RenameProvider {
     newName: string,
   ): [{ [uri: string]: TextEdit[] }, TextDocumentEdit[]] {
     const edits: { [uri: string]: TextEdit[] } = {};
+    let originalName = affectedNodes?.originalNode.text ?? "";
+
+    // Helps us to rename fully qualified functions without changing the last part
+    if (
+      affectedNodes?.originalNode.type === "upper_case_identifier" &&
+      (affectedNodes.originalNode.parent?.type === "value_qid" ||
+        affectedNodes.originalNode.parent?.type === "upper_case_qid")
+    ) {
+      const moduleNameNodes =
+        TreeUtils.findAllNamedChildrenOfType(
+          "upper_case_identifier",
+          affectedNodes.originalNode.parent,
+        ) ?? [];
+
+      originalName = moduleNameNodes.map((node) => node.text).join(".");
+    }
+
     affectedNodes?.references.forEach((a) => {
       if (!edits[a.uri]) {
         edits[a.uri] = [];
       }
 
+      const startColumn =
+        a.node.startPosition.column + a.node.text.indexOf(originalName);
+      const endColumn = startColumn + originalName.length;
+
       edits[a.uri].push(
         TextEdit.replace(
           Range.create(
-            Position.create(
-              a.node.startPosition.row,
-              a.node.startPosition.column,
-            ),
-            Position.create(a.node.endPosition.row, a.node.endPosition.column),
+            Position.create(a.node.startPosition.row, startColumn),
+            Position.create(a.node.endPosition.row, endColumn),
           ),
           newName,
         ),
@@ -173,7 +205,7 @@ export class RenameProvider {
       const newUri = this.generateUriFromModuleName(
         newName,
         elmWorkspace,
-        URI.parse(params.textDocument.uri),
+        params.textDocument.uri,
       );
 
       if (newUri) {
@@ -210,9 +242,9 @@ export class RenameProvider {
   private generateUriFromModuleName(
     moduleName: string,
     elmWorkspace: IElmWorkspace,
-    file: URI,
+    file: string,
   ): URI | undefined {
-    const sourceDir = elmWorkspace.getPath(file);
+    const sourceDir = elmWorkspace.getSourceDirectoryOfFile(file);
 
     // The file is not in a source dir (shouldn't happen)
     if (!sourceDir) {

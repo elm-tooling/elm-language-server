@@ -50,4 +50,27 @@ export class Utils {
     }
     return true;
   }
+
+  public static getIndicesFromRange(
+    range: Range,
+    text: string,
+  ): [number, number] {
+    let startIndex = range.start.character;
+    let endIndex = range.end.character;
+
+    const regex = new RegExp(/\r\n|\r|\n/);
+    const eolResult = regex.exec(text);
+
+    const lines = text.split(regex);
+    const eol = eolResult && eolResult.length > 0 ? eolResult[0] : "";
+
+    for (let i = 0; i < range.end.line; i++) {
+      if (i < range.start.line) {
+        startIndex += lines[i].length + eol.length;
+      }
+      endIndex += lines[i].length + eol.length;
+    }
+
+    return [startIndex, endIndex];
+  }
 }

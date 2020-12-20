@@ -7,6 +7,9 @@ import {
   DidOpenTextDocumentParams,
   DocumentFormattingParams,
   DocumentSymbolParams,
+  FileCreate,
+  FileDelete,
+  FileRename,
   FoldingRangeParams,
   PrepareRenameParams,
   ReferenceParams,
@@ -31,3 +34,6 @@ export type IDocumentFormattingParams = DocumentFormattingParams & IParams;
 export type IDidChangeTextDocumentParams = DidChangeTextDocumentParams &
   IParams;
 export type IDidOpenTextDocumentParams = DidOpenTextDocumentParams & IParams;
+export type ICreateFileParams = FileCreate & IParams;
+export type IRenameFileParams = FileRename & IParams;
+export type IDeleteFileParams = FileDelete & IParams;

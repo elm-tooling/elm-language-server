@@ -40,6 +40,38 @@ export class CapabilityCalculator {
       selectionRangeProvider: true,
       textDocumentSync: TextDocumentSyncKind.Incremental,
       workspaceSymbolProvider: true,
+      workspace: {
+        fileOperations: {
+          willCreate: {
+            filters: [
+              {
+                scheme: "file",
+                pattern: { glob: "**/*.elm", matches: "file" },
+              },
+            ],
+          },
+          willRename: {
+            filters: [
+              {
+                scheme: "file",
+                pattern: { glob: "**/*.elm", matches: "file" },
+              },
+              {
+                scheme: "file",
+                pattern: { glob: "**/", matches: "folder" },
+              },
+            ],
+          },
+          willDelete: {
+            filters: [
+              {
+                scheme: "file",
+                pattern: { glob: "**/*.elm", matches: "file" },
+              },
+            ],
+          },
+        },
+      },
     };
   }
 }

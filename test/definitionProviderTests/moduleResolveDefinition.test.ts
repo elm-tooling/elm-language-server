@@ -113,6 +113,7 @@ func = Module.Model.func
     const source2 = `
 --@ Module/Model.elm
 module Module.Model exposing (..)
+--X
 
 type alias Model = {
   var: String
@@ -120,7 +121,6 @@ type alias Model = {
 
 --@ Module.elm
 module Module exposing (..)
---X
 
 type alias Model = {
   var: String
@@ -133,7 +133,7 @@ import Module
 import Module.Model
       
 func = Module.Model.func
-      --^Module.elm
+      --^Module/Model.elm
 `;
     await testBase.testDefinition(source2);
   });
