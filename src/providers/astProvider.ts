@@ -19,6 +19,7 @@ import {
   IDidChangeTextDocumentParams,
   IDidOpenTextDocumentParams,
 } from "./paramsExtensions";
+import { Utils } from "../util/utils";
 
 export class ASTProvider {
   private connection: Connection;
@@ -154,7 +155,10 @@ export class ASTProvider {
     change: { text: string; range: Range },
     text: string,
   ): Edit {
-    const [startIndex, endIndex] = this.getIndexesFromRange(change.range, text);
+    const [startIndex, endIndex] = Utils.getIndicesFromRange(
+      change.range,
+      text,
+    );
 
     return {
       startIndex,
@@ -175,26 +179,6 @@ export class ASTProvider {
       line: lines.length - 1,
       character: lines[lines.length - 1].length,
     };
-  }
-
-  private getIndexesFromRange(range: Range, text: string): [number, number] {
-    let startIndex = range.start.character;
-    let endIndex = range.end.character;
-
-    const regex = new RegExp(/\r\n|\r|\n/);
-    const eolResult = regex.exec(text);
-
-    const lines = text.split(regex);
-    const eol = eolResult && eolResult.length > 0 ? eolResult[0] : "";
-
-    for (let i = 0; i < range.end.line; i++) {
-      if (i < range.start.line) {
-        startIndex += lines[i].length + eol.length;
-      }
-      endIndex += lines[i].length + eol.length;
-    }
-
-    return [startIndex, endIndex];
   }
 
   private addPositions(pos1: Position, pos2: Position): Position {
