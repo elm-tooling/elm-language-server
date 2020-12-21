@@ -1,6 +1,5 @@
 import {
   CodeActionParams,
-  CodeLens,
   CodeLensParams,
   CompletionParams,
   DidChangeTextDocumentParams,
@@ -29,7 +28,6 @@ export type IPrepareRenameParams = PrepareRenameParams & IParams;
 export type IRenameParams = RenameParams & IParams;
 export type ISelectionRangeParams = SelectionRangeParams & IParams;
 export type ICodeLensParams = CodeLensParams & IParams;
-export type ICodeLens = CodeLens & IParams;
 export type IDocumentFormattingParams = DocumentFormattingParams & IParams;
 export type IDidChangeTextDocumentParams = DidChangeTextDocumentParams &
   IParams;

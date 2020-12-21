@@ -10,14 +10,33 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
+import { IElmWorkspace } from "../elmWorkspace";
+import { ITreeContainer } from "../forest";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../util/references";
 import { Settings } from "../util/settings";
 import { TreeUtils } from "../util/treeUtils";
-import { ICodeLens, ICodeLensParams } from "./paramsExtensions";
+import { ICodeLensParams } from "./paramsExtensions";
 
-type CodeLensType = "exposed" | "referenceCounter";
 type CodeLensResult = CodeLens[] | null | undefined;
+
+type ICodeLens = IReferenceCodeLens | IExposedCodeLens;
+
+interface IReferenceCodeLens extends CodeLens {
+  data: {
+    codeLensType: "referenceCounter";
+    uri: string;
+  };
+}
+
+interface IExposedCodeLens extends CodeLens {
+  data: {
+    codeLensType: "exposed";
+    uri: string;
+    nameNode: string;
+    isFunction: boolean;
+  };
+}
 
 export class CodeLensProvider {
   private readonly connection: Connection;
@@ -31,10 +50,10 @@ export class CodeLensProvider {
         URI.parse(param.textDocument.uri),
       ).handle(this.handleCodeLensRequest),
     );
-    this.connection.onCodeLensResolve(
-      new ElmWorkspaceMatcher((param: CodeLens) =>
+    this.connection.onCodeLensResolve((params) =>
+      new ElmWorkspaceMatcher((param: ICodeLens) =>
         URI.parse(param.data.uri),
-      ).handle(this.handleCodeLensResolveRequest),
+      ).handleResolve(this.handleCodeLensResolveRequest)(params as ICodeLens),
     );
   }
 
@@ -44,7 +63,7 @@ export class CodeLensProvider {
     this.connection.console.info(
       `A code lens was requested for ${param.textDocument.uri}`,
     );
-    const codeLens: CodeLens[] = [];
+    const codeLens: ICodeLens[] = [];
 
     const tree: Tree = param.sourceFile.tree;
 
@@ -57,25 +76,18 @@ export class CodeLensProvider {
     return codeLens;
   };
 
-  protected handleCodeLensResolveRequest = (param: ICodeLens): CodeLens => {
-    const codelens: CodeLens = {
-      range: param.range,
-      command: param.command,
-      data: param.data,
-    };
-    const data: {
-      codeLensType: CodeLensType;
-      references: Location[];
-      uri: string;
-      nameNode: string;
-      isFunction: boolean;
-    } = codelens.data;
+  protected handleCodeLensResolveRequest = (
+    codelens: ICodeLens,
+    program: IElmWorkspace,
+    sourceFile: ITreeContainer,
+  ): ICodeLens => {
+    const data = codelens.data;
     this.connection.console.info(
       `A code lens resolve was requested for ${data.uri}`,
     );
-    const checker = param.program.getTypeChecker();
-    const treeContainer = param.sourceFile;
-    if (treeContainer && data.codeLensType) {
+    const checker = program.getTypeChecker();
+    const treeContainer = sourceFile;
+    if (treeContainer) {
       const tree = treeContainer.tree;
 
       switch (data.codeLensType) {
@@ -103,14 +115,14 @@ export class CodeLensProvider {
         case "referenceCounter": {
           const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
             tree.rootNode,
-            param.range.start,
+            codelens.range.start,
           );
           const definitionNode = checker.findDefinition(
             nodeAtPosition,
             treeContainer,
           );
 
-          const references = References.find(definitionNode, param.program);
+          const references = References.find(definitionNode, program);
 
           let refLocations: Location[] = [];
           if (references) {
@@ -137,7 +149,7 @@ export class CodeLensProvider {
               : `${references.length} references`,
             "editor.action.showReferences",
             {
-              range: param.range,
+              range: codelens.range,
               references: refLocations,
               uri: data.uri,
             },
@@ -159,22 +171,27 @@ export class CodeLensProvider {
     nameNode: SyntaxNode,
     uri: string,
     isFunction: boolean,
-  ): CodeLens {
-    return CodeLens.create(
-      Range.create(
+  ): ICodeLens {
+    return {
+      range: Range.create(
         Position.create(node.startPosition.row, node.startPosition.column),
         Position.create(node.endPosition.row, node.endPosition.column),
       ),
-      { codeLensType: "exposed", nameNode: nameNode.text, isFunction, uri },
-    );
+      data: {
+        codeLensType: "exposed",
+        nameNode: nameNode.text,
+        isFunction,
+        uri,
+      },
+    };
   }
 
   private createReferenceCodeLens(
     placementNode: SyntaxNode,
     uri: string,
-  ): CodeLens {
-    return CodeLens.create(
-      Range.create(
+  ): ICodeLens {
+    return {
+      range: Range.create(
         Position.create(
           placementNode.startPosition.row,
           placementNode.startPosition.column,
@@ -184,15 +201,15 @@ export class CodeLensProvider {
           placementNode.endPosition.column,
         ),
       ),
-      {
+      data: {
         codeLensType: "referenceCounter",
         uri,
       },
-    );
+    };
   }
 
-  private getExposingCodeLenses(tree: Tree, uri: string): CodeLens[] {
-    const codeLens: CodeLens[] = [];
+  private getExposingCodeLenses(tree: Tree, uri: string): ICodeLens[] {
+    const codeLens: ICodeLens[] = [];
     tree.rootNode.children.forEach((node) => {
       if (node.type === "value_declaration") {
         const functionName = TreeUtils.getFunctionNameNodeFromDefinition(node);
@@ -235,8 +252,8 @@ export class CodeLensProvider {
     return codeLens;
   }
 
-  private getReferencesCodeLenses(tree: Tree, uri: string): CodeLens[] {
-    const codeLens: CodeLens[] = [];
+  private getReferencesCodeLenses(tree: Tree, uri: string): ICodeLens[] {
+    const codeLens: ICodeLens[] = [];
     tree.rootNode.children.forEach((node) => {
       if (
         node.type === "type_declaration" ||
