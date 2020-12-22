@@ -1,5 +1,34 @@
 # Change Log
 
+## 2.0.0
+
+### Features
+
+- Enabled type checking diagnostics that update on document change. These include parsing errors, type mismatch errors, value not found errors, etc
+- Support file events APIs (Previously VSCode only)
+
+  - On file create, the module name will be inserted
+  - On file rename, the module name and all references will be updated
+
+- A new "extract function" code action. Select a complete expression and it can be extracted to a function in the top level or the enclosing let expression (if there is one)
+- Show type information on hovers
+- Support linked editing ranges. When editing a function name, the type annotation name will auto rename, or vice versa
+- Watch elm.json for changes. The server will restart when a change is detected
+- Run elm make on server init
+
+### Bug Fixes
+
+- Greatly improve performance of diagnostics and type inference
+- Fix some type inference cases
+- Fix module resolution to be more like how the compiler resolves modules
+- Fix some incorrect unused value diagnostics
+
+### Other Changes
+
+- Update package rankings
+- Read elm-analyse.json for ElmLs diagnostics
+- Removed elm-analyse entirely
+
 ## 1.13.2
 
 - Fix bug on file open
