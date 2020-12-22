@@ -362,10 +362,19 @@ export class ElmLsDiagnostics {
     elmWorkspace: IElmWorkspace,
   ): IDiagnostic[] => {
     const elmAnalyseJson = this.getElmAnalyseJson(
-      elmWorkspace.getRootPath().toString(),
+      elmWorkspace.getRootPath().fsPath,
     );
     const tree = treeContainer.tree;
     const uri = treeContainer.uri;
+
+    if (
+      elmAnalyseJson.excludedPaths?.some((path) =>
+        uri.startsWith(URI.file(path).toString()),
+      )
+    ) {
+      return [];
+    }
+
     try {
       return [
         ...(elmAnalyseJson.checks?.UnusedImport === false
