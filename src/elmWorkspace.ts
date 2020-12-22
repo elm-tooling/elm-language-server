@@ -398,14 +398,12 @@ export class ElmWorkspace implements IElmWorkspace {
 
     if (elmJson.type === "application") {
       const allDependencies = new Map(
-        Object.entries(
-          Object.assign(
-            elmJson.dependencies.direct,
-            elmJson.dependencies.indirect,
-            elmJson["test-dependencies"].direct,
-            elmJson["test-dependencies"].indirect,
-          ),
-        ).map(([dep, version]) => [dep, utils.parseVersion(version)]),
+        Object.entries({
+          ...elmJson.dependencies.direct,
+          ...elmJson.dependencies.indirect,
+          ...elmJson["test-dependencies"].direct,
+          ...elmJson["test-dependencies"].indirect,
+        }).map(([dep, version]) => [dep, utils.parseVersion(version)]),
       );
 
       return {
