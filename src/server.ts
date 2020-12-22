@@ -22,6 +22,7 @@ import {
   ElmMakeDiagnostics,
   FoldingRangeProvider,
   HoverProvider,
+  LinkedEditiRangesProvider,
   ReferencesProvider,
   RenameProvider,
   SelectionRangeProvider,
@@ -165,6 +166,7 @@ export class Server implements ILanguageServer {
     new SelectionRangeProvider();
     new RenameProvider();
     new FileEventsHandler();
+    new LinkedEditiRangesProvider();
   }
 
   private getElmJsonFolder(uri: string): URI {

@@ -10,6 +10,7 @@ import {
   FileDelete,
   FileRename,
   FoldingRangeParams,
+  LinkedEditingRangeParams,
   PrepareRenameParams,
   ReferenceParams,
   RenameParams,
@@ -35,3 +36,4 @@ export type IDidOpenTextDocumentParams = DidOpenTextDocumentParams & IParams;
 export type ICreateFileParams = FileCreate & IParams;
 export type IRenameFileParams = FileRename & IParams;
 export type IDeleteFileParams = FileDelete & IParams;
+export type ILinkedEditingRangeParams = LinkedEditingRangeParams & IParams;

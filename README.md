@@ -117,6 +117,7 @@ Supports Elm 0.19 and up
 | documentSymbols  | Identifies all symbols in a document.                                                                                                                |
 | folding          | Let's you fold the code on certain Elm constructs                                                                                                    |
 | hover            | Shows type annotations and documentation for a type alias, module, custom type or function                                                           |
+| linkedEditing    | Enables auto renaming a function name when the type annotation name is edited, or vice versa                                                         |
 | references       | Lists all references to a type alias, module, custom type or function                                                                                |
 | rename           | Enables you to rename a type alias, module, custom type or function                                                                                  |
 | workspaceSymbols | Identifies all symbols in the current workspace                                                                                                      |
@@ -136,19 +137,21 @@ Settings may need a restart to be applied.
 
 ## Editor Support
 
-| Editor                                                                                  |    Diagnostics     |     Formatting     |    Code Lenses     |    Completions     |    Definitions     |  Document Symbols  |      Folding       |       Hover        |     References     |       Rename       | Workspace Symbols  |
-| --------------------------------------------------------------------------------------- | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: |
-| [VSCode](https://github.com/elm-tooling/elm-language-server#vscode)                     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| [VIM CoC](https://github.com/elm-tooling/elm-language-server#cocnvim)                   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| [VIM LanguageClient](https://github.com/elm-tooling/elm-language-server#languageClient) | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: |  :grey_question:   |  :grey_question:   |  :grey_question:   |  :grey_question:   |  :grey_question:   |  :grey_question:   |  :grey_question:   |
-| [VIM ALE](https://github.com/elm-tooling/elm-language-server#ale)                       | :heavy_check_mark: |        :x:         |        :x:         |  :grey_question:   | :heavy_check_mark: |        :x:         |        :x:         | :heavy_check_mark: | :heavy_check_mark: |        :x:         | :heavy_check_mark: |
-| [Kakoune](https://github.com/elm-tooling/elm-language-server#kak-lsp)                   | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   |
-| [Emacs](https://github.com/elm-tooling/elm-language-server#emacs)                       | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| [Sublime](https://github.com/elm-tooling/elm-language-server#sublime)                   | :heavy_check_mark: | :heavy_check_mark: |        :x:         | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| Editor                                                                                  |    Diagnostics     |     Formatting     |    Code Lenses     |    Completions     |    Definitions     |  Document Symbols  |      Folding       |       Hover        |   Linked Editing   |     References     |       Rename       | Workspace Symbols  |
+| --------------------------------------------------------------------------------------- | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: | :----------------: |
+| [VSCode](https://github.com/elm-tooling/elm-language-server#vscode)                     | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| [VIM CoC](https://github.com/elm-tooling/elm-language-server#cocnvim)                   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |        :x:         | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| [VIM LanguageClient](https://github.com/elm-tooling/elm-language-server#languageClient) | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: |  :grey_question:   |  :grey_question:   |  :grey_question:   |  :grey_question:   |        :x:         |  :grey_question:   |  :grey_question:   |  :grey_question:   |
+| [VIM ALE](https://github.com/elm-tooling/elm-language-server#ale)                       | :heavy_check_mark: |        :x:         |        :x:         |  :grey_question:   | :heavy_check_mark: |        :x:         |        :x:         | :heavy_check_mark: |        :x:         | :heavy_check_mark: |        :x:         | :heavy_check_mark: |
+| [Kakoune](https://github.com/elm-tooling/elm-language-server#kak-lsp)                   | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: |        :x:         | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   |
+| [Emacs](https://github.com/elm-tooling/elm-language-server#emacs)                       | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |  :grey_question:   | :heavy_check_mark: |        :x:         | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| [Sublime](https://github.com/elm-tooling/elm-language-server#sublime)                   | :heavy_check_mark: | :heavy_check_mark: |        :x:         | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |        :x:         | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 
 ### VSCode
 
 Just install the [`elm-tooling/elm-language-client-vscode`](https://github.com/elm-tooling/elm-language-client-vscode) plugin from the [VSCode MarketPlace](https://marketplace.visualstudio.com/items?itemName=Elmtooling.elm-ls-vscode)
+
+To enable linked editing in VSCode, use the setting `"editor.linkedEditing": true`.
 
 ### Vim
 
