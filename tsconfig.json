@@ -14,7 +14,6 @@
     "lib": ["es2019"],
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "composite": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "typeRoots": [ "./src/typings", "./node_modules/@types"],
