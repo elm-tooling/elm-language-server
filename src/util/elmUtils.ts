@@ -1,4 +1,4 @@
-import execa, { ExecaReturnValue } from "execa";
+import execa, { ExecaSyncReturnValue } from "execa";
 import * as path from "./path";
 import { Connection, CompletionItemKind } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -7,7 +7,7 @@ import { IClientSettings } from "./settings";
 
 export const isWindows = process.platform === "win32";
 
-/** Options for execCmd */
+/** Options for execCmdSync */
 export interface IExecCmdOptions {
   /** Any arguments */
   cmdArguments?: string[];
@@ -19,21 +19,21 @@ export interface IExecCmdOptions {
 }
 
 /** Executes a command. Shows an error message if the command isn't found */
-export async function execCmd(
+export function execCmdSync(
   cmdFromUser: string,
   cmdStatic: string,
   options: IExecCmdOptions = {},
   cwd: string,
   connection: Connection,
   input?: string,
-): Promise<ExecaReturnValue<string>> {
+): ExecaSyncReturnValue<string> {
   const cmd = cmdFromUser === "" ? cmdStatic : cmdFromUser;
   const preferLocal = cmdFromUser === "";
 
   const cmdArguments = options ? options.cmdArguments : [];
 
   try {
-    return await execa(cmd, cmdArguments, {
+    return execa.sync(cmd, cmdArguments, {
       cwd,
       input,
       preferLocal,
@@ -46,9 +46,11 @@ export async function execCmd(
           ? options.notFoundText
           : `Cannot find executable with name '${cmd}'`,
       );
-      return Promise.reject("Executable not found");
+      connection.console.warn("Executable not found");
+      throw "Executable not found";
     } else {
-      return Promise.reject(error);
+      connection.console.warn(JSON.stringify(error));
+      throw error;
     }
   }
 }
@@ -84,18 +86,18 @@ export function getEmptyTypes(): {
   ];
 }
 
-export async function getElmVersion(
+export function getElmVersion(
   settings: IClientSettings,
   elmWorkspaceFolder: URI,
   connection: Connection,
-): Promise<string> {
+): string {
   const options = {
     cmdArguments: ["--version"],
     notFoundText:
       "Elm binary not found, did you install and setup the path to your binary?",
   };
 
-  const result = await execCmd(
+  const result = execCmdSync(
     settings.elmPath,
     "elm",
     options,
@@ -107,7 +109,7 @@ export async function getElmVersion(
 
   connection.console.info(`Elm version ${version} detected.`);
 
-  return Promise.resolve(version);
+  return version;
 }
 
 type SolverResult =
