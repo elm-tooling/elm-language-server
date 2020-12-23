@@ -14,7 +14,6 @@ import {
 import { URI } from "vscode-uri";
 import { ITreeContainer } from "../../forest";
 import * as utils from "../../util/elmUtils";
-import { execCmd } from "../../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
 import { TreeUtils } from "../../util/treeUtils";
@@ -407,125 +406,123 @@ export class ElmMakeDiagnostics {
       `Find entrypoints: ${message}. See https://github.com/elm-tooling/elm-language-server#configuration for more information.`,
     );
 
-    return new Promise(async (resolve) => {
-      const argsMake = [
-        "make",
-        ...relativePathsToFiles,
-        "--report",
-        "json",
-        "--output",
-        "/dev/null",
-      ];
+    const argsMake = [
+      "make",
+      ...relativePathsToFiles,
+      "--report",
+      "json",
+      "--output",
+      "/dev/null",
+    ];
 
-      const argsTest = [
-        "make",
-        ...relativePathsToFiles,
-        "--report",
-        "json",
-        "--output",
-        "/dev/null",
-      ];
+    const argsTest = [
+      "make",
+      ...relativePathsToFiles,
+      "--report",
+      "json",
+      "--output",
+      "/dev/null",
+    ];
 
-      const makeCommand: string = settings.elmPath;
-      const testCommand: string = settings.elmTestPath;
-      const isTestFile = utils.isTestFile(filePath, workspaceRootPath);
-      const args = isTestFile ? argsTest : argsMake;
-      const testOrMakeCommand = isTestFile ? testCommand : makeCommand;
-      const testOrMakeCommandWithOmittedSettings = isTestFile
-        ? "elm-test"
-        : "elm";
-      const options = {
-        cmdArguments: args,
-        notFoundText: isTestFile
-          ? "'elm-test' is not available. Install Elm via 'npm install -g elm-test'."
-          : "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.",
-      };
+    const makeCommand: string = settings.elmPath;
+    const testCommand: string = settings.elmTestPath;
+    const isTestFile = utils.isTestFile(filePath, workspaceRootPath);
+    const args = isTestFile ? argsTest : argsMake;
+    const testOrMakeCommand = isTestFile ? testCommand : makeCommand;
+    const testOrMakeCommandWithOmittedSettings = isTestFile
+      ? "elm-test"
+      : "elm";
+    const options = {
+      cmdArguments: args,
+      notFoundText: isTestFile
+        ? "'elm-test' is not available. Install Elm via 'npm install -g elm-test'."
+        : "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.",
+    };
 
-      try {
-        // Do nothing on success, but return that there were no errors
-        await execCmd(
-          testOrMakeCommand,
-          testOrMakeCommandWithOmittedSettings,
-          options,
-          workspaceRootPath,
-          this.connection,
-        );
-        resolve([]);
-      } catch (error) {
-        if (typeof error === "string") {
-          resolve([]);
-        } else {
-          const execaError = error as execa.ExecaReturnValue<string>;
-          const lines: IElmIssue[] = [];
-          execaError.stderr.split("\n").forEach((line: string) => {
-            let errorObject: any;
-            try {
-              errorObject = JSON.parse(line);
-            } catch (error) {
-              this.connection.console.warn(
-                "Received an invalid json, skipping error.",
+    try {
+      // Do nothing on success, but return that there were no errors
+      utils.execCmdSync(
+        testOrMakeCommand,
+        testOrMakeCommandWithOmittedSettings,
+        options,
+        workspaceRootPath,
+        this.connection,
+      );
+      return [];
+    } catch (error) {
+      if (typeof error === "string") {
+        return [];
+      } else {
+        const execaError = error as execa.ExecaReturnValue<string>;
+        const lines: IElmIssue[] = [];
+        execaError.stderr.split("\n").forEach((line: string) => {
+          let errorObject: any;
+          try {
+            errorObject = JSON.parse(line);
+          } catch (error) {
+            this.connection.console.warn(
+              "Received an invalid json, skipping error.",
+            );
+          }
+
+          if (errorObject && errorObject.type === "compile-errors") {
+            errorObject.errors.forEach((error: IError) => {
+              const problems: IElmIssue[] = error.problems.map(
+                (problem: IProblem) => ({
+                  details: problem.message
+                    .map((message: string | IStyledString) =>
+                      typeof message === "string"
+                        ? message
+                        : `#${message.string}#`,
+                    )
+                    .join(""),
+                  file: error.path
+                    ? path.isAbsolute(error.path)
+                      ? path.relative(workspaceRootPath, error.path)
+                      : error.path
+                    : relativePathsToFiles[0],
+                  overview: problem.title,
+                  region: problem.region,
+                  subregion: "",
+                  tag: "error",
+                  type: "error",
+                }),
               );
-            }
 
-            if (errorObject && errorObject.type === "compile-errors") {
-              errorObject.errors.forEach((error: IError) => {
-                const problems: IElmIssue[] = error.problems.map(
-                  (problem: IProblem) => ({
-                    details: problem.message
-                      .map((message: string | IStyledString) =>
-                        typeof message === "string"
-                          ? message
-                          : `#${message.string}#`,
-                      )
-                      .join(""),
-                    file: error.path
-                      ? path.isAbsolute(error.path)
-                        ? path.relative(workspaceRootPath, error.path)
-                        : error.path
-                      : relativePathsToFiles[0],
-                    overview: problem.title,
-                    region: problem.region,
-                    subregion: "",
-                    tag: "error",
-                    type: "error",
-                  }),
-                );
-
-                lines.push(...problems);
-              });
-            } else if (errorObject && errorObject.type === "error") {
-              const problem: IElmIssue = {
-                details: errorObject.message
-                  .map((message: string | IStyledString) =>
-                    typeof message === "string" ? message : message.string,
-                  )
-                  .join(""),
-                // elm-test might supply absolute paths to files
-                file: errorObject.path
-                  ? path.relative(workspaceRootPath, errorObject.path)
-                  : relativePathsToFiles[0],
-                overview: errorObject.title,
-                region: {
-                  end: {
-                    column: 1,
-                    line: 1,
-                  },
-                  start: {
-                    column: 1,
-                    line: 1,
-                  },
+              lines.push(...problems);
+            });
+          } else if (errorObject && errorObject.type === "error") {
+            const problem: IElmIssue = {
+              details: errorObject.message
+                .map((message: string | IStyledString) =>
+                  typeof message === "string" ? message : message.string,
+                )
+                .join(""),
+              // elm-test might supply absolute paths to files
+              file: errorObject.path
+                ? path.relative(workspaceRootPath, errorObject.path)
+                : relativePathsToFiles[0],
+              overview: errorObject.title,
+              region: {
+                end: {
+                  column: 1,
+                  line: 1,
                 },
-                subregion: "",
-                tag: "error",
-                type: "error",
-              };
+                start: {
+                  column: 1,
+                  line: 1,
+                },
+              },
+              subregion: "",
+              tag: "error",
+              type: "error",
+            };
 
-              lines.push(problem);
-            }
-          });
-          resolve(lines);
-        }
+            lines.push(problem);
+          }
+        });
+        return lines;
       }
-    });
+    }
   }
 }

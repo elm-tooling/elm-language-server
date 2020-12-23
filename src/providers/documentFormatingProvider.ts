@@ -7,7 +7,7 @@ import {
 import { URI } from "vscode-uri";
 import { DiagnosticsProvider } from ".";
 import * as Diff from "../util/diff";
-import { execCmd } from "../util/elmUtils";
+import { execCmdSync } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Settings } from "../util/settings";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
@@ -36,7 +36,7 @@ export class DocumentFormattingProvider {
     );
   }
 
-  public formatText = async (
+  private formatText = (
     elmWorkspaceRootPath: URI,
     elmFormatPath: string,
     text: string,
@@ -46,19 +46,15 @@ export class DocumentFormattingProvider {
       notFoundText: "Install elm-format via 'npm install -g elm-format",
     };
 
-    try {
-      const format = await execCmd(
-        elmFormatPath,
-        "elm-format",
-        options,
-        elmWorkspaceRootPath.fsPath,
-        this.connection,
-        text,
-      );
-      return Diff.getTextRangeChanges(text, format.stdout);
-    } catch (error) {
-      this.connection.console.warn(JSON.stringify(error));
-    }
+    const format = execCmdSync(
+      elmFormatPath,
+      "elm-format",
+      options,
+      elmWorkspaceRootPath.fsPath,
+      this.connection,
+      text,
+    );
+    return Diff.getTextRangeChanges(text, format.stdout);
   };
 
   protected handleFormattingRequest = async (
@@ -73,7 +69,7 @@ export class DocumentFormattingProvider {
       }
 
       const settings = await this.settings.getClientSettings();
-      return await this.formatText(
+      return this.formatText(
         params.program.getRootPath(),
         settings.elmFormatPath,
         text.getText(),

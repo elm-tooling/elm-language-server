@@ -298,7 +298,7 @@ export class ElmWorkspace implements IElmWorkspace {
     let progress = 0;
     let elmVersion;
     try {
-      elmVersion = await utils.getElmVersion(
+      elmVersion = utils.getElmVersion(
         clientSettings,
         this.rootPath,
         this.connection,
@@ -337,17 +337,17 @@ export class ElmWorkspace implements IElmWorkspace {
         elmVersion,
       )}/`;
 
+      // Run `elm make` to download dependencies
       try {
-        // Run `elm make` to download dependencies
-        await utils.execCmd(
+        utils.execCmdSync(
           clientSettings.elmPath,
           "elm",
           { cmdArguments: ["make"] },
           this.rootPath.fsPath,
           this.connection,
         );
-      } catch {
-        // Compile failed
+      } catch (error) {
+        // On application projects, this will give a NO INPUT error message, but will still download the dependencies
       }
 
       this.elmPackageCache = new ElmPackageCache(
