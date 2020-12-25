@@ -1,7 +1,7 @@
 {
   "name": "@elm-tooling/elm-language-server",
   "description": "Implementation of an elm language server in node.",
-  "version": "2.0.0-RC2",
+  "version": "2.0.0-RC3",
   "author": "Kolja Lampe",
   "license": "MIT",
   "main": "./out/module.js",
@@ -33,9 +33,9 @@
   },
   "devDependencies": {
     "@types/jest": "^26.0.19",
-    "@types/node": "14.14.14",
-    "@typescript-eslint/eslint-plugin": "^4.10.0",
-    "@typescript-eslint/parser": "^4.10.0",
+    "@types/node": "14.14.16",
+    "@typescript-eslint/eslint-plugin": "^4.11.0",
+    "@typescript-eslint/parser": "^4.11.0",
     "copyfiles": "^2.4.1",
     "doctoc": "^2.0.0",
     "eslint": "^7.16.0",
