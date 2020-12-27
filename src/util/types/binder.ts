@@ -1,4 +1,4 @@
-import { ITreeContainer } from "../../forest";
+import { ISourceFile } from "../../forest";
 import { SyntaxNode } from "web-tree-sitter";
 import { MultiMap } from "../multiMap";
 import { IExposed, IExposing, NodeType, TreeUtils } from "../treeUtils";
@@ -17,8 +17,8 @@ export interface ISymbol {
   type: NodeType;
 }
 
-export function bindTreeContainer(treeContainer: ITreeContainer): void {
-  if (treeContainer.symbolLinks) {
+export function bindTreeContainer(sourceFile: ISourceFile): void {
+  if (sourceFile.symbolLinks) {
     return;
   }
 
@@ -26,11 +26,11 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
   const nonShadowableNames = new Set<string>();
   let container: SymbolMap;
   let parent: SyntaxNode;
-  const treeCursor = treeContainer.tree.walk();
+  const treeCursor = sourceFile.tree.walk();
 
   bind();
-  treeContainer.symbolLinks = symbolLinks;
-  treeContainer.nonShadowableNames = nonShadowableNames;
+  sourceFile.symbolLinks = symbolLinks;
+  sourceFile.nonShadowableNames = nonShadowableNames;
 
   // Bind exposing must happen after symbolLinks is bound
   bindExposing();
@@ -84,7 +84,7 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
         bindImportClause(node);
         break;
       case "ERROR":
-        treeContainer.parseDiagnostics.push(error(node, Diagnostics.Parsing));
+        sourceFile.parseDiagnostics.push(error(node, Diagnostics.Parsing));
         break;
       default:
         forEachChild(bind);
@@ -246,7 +246,7 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
   }
 
   function bindExposing(): void {
-    const tree = treeContainer.tree;
+    const tree = sourceFile.tree;
     const exposed: IExposing = new Map<string, IExposed>();
     const moduleDeclaration = TreeUtils.findModuleDeclaration(tree);
     if (moduleDeclaration) {
@@ -335,10 +335,7 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
           );
 
           for (const value of exposedOperators) {
-            const functionNode = TreeUtils.findOperator(
-              treeContainer,
-              value.text,
-            );
+            const functionNode = TreeUtils.findOperator(sourceFile, value.text);
 
             if (functionNode) {
               exposed.set(value.text, {
@@ -427,6 +424,6 @@ export function bindTreeContainer(treeContainer: ITreeContainer): void {
       }
     }
 
-    treeContainer.exposing = exposed;
+    sourceFile.exposing = exposed;
   }
 }

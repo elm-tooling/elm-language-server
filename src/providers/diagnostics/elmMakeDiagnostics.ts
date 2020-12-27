@@ -10,7 +10,7 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { ITreeContainer } from "../../forest";
+import { ISourceFile } from "../../forest";
 import * as utils from "../../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
@@ -19,8 +19,8 @@ import { NonEmptyArray, Utils } from "../../util/utils";
 import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
-import { IElmWorkspace } from "../../elmWorkspace";
 import { ElmToolingJsonManager } from "../../elmToolingJsonManager";
+import { IProgram } from "../../program";
 
 const ELM_MAKE = "Elm";
 export const NAMING_ERROR = "NAMING ERROR";
@@ -77,7 +77,7 @@ export class ElmMakeDiagnostics {
   }
 
   public createDiagnostics = async (
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
   ): Promise<Map<string, IDiagnostic[]>> => {
     const filePath = URI.parse(sourceFile.uri);
     const workspaceRootPath = this.elmWorkspaceMatcher
@@ -114,8 +114,8 @@ export class ElmMakeDiagnostics {
   ): CodeAction[] {
     const result: CodeAction[] = [];
 
-    const elmWorkspace = this.elmWorkspaceMatcher.getProgramFor(URI.parse(uri));
-    const forest = elmWorkspace.getForest();
+    const program = this.elmWorkspaceMatcher.getProgramFor(URI.parse(uri));
+    const forest = program.getForest();
 
     const sourceTree = forest.getByUri(uri);
 
@@ -175,19 +175,14 @@ export class ElmMakeDiagnostics {
         const matches = regex.exec(diagnostic.message);
         if (matches !== null) {
           result.push(
-            ...this.addCaseQuickfixes(
-              sourceTree,
-              diagnostic,
-              uri,
-              elmWorkspace,
-            ),
+            ...this.addCaseQuickfixes(sourceTree, diagnostic, uri, program),
           );
         }
       } else if (
         diagnostic.message.startsWith("MISSING PATTERNS - This `case`")
       ) {
         result.push(
-          ...this.addCaseQuickfixes(sourceTree, diagnostic, uri, elmWorkspace),
+          ...this.addCaseQuickfixes(sourceTree, diagnostic, uri, program),
         );
       }
     });
@@ -195,13 +190,13 @@ export class ElmMakeDiagnostics {
   }
 
   private addCaseQuickfixes(
-    sourceTree: ITreeContainer | undefined,
+    sourceFile: ISourceFile | undefined,
     diagnostic: IDiagnostic,
     uri: string,
-    elmWorkspace: IElmWorkspace,
+    program: IProgram,
   ): CodeAction[] {
     const result = [];
-    const valueNode = sourceTree?.tree.rootNode.namedDescendantForPosition(
+    const valueNode = sourceFile?.tree.rootNode.namedDescendantForPosition(
       {
         column: diagnostic.range.start.character,
         row: diagnostic.range.start.line,
@@ -224,8 +219,8 @@ export class ElmMakeDiagnostics {
 
         const typeDeclarationNode = TreeUtils.getTypeAliasOfCase(
           valueNode.namedChildren[1].firstNamedChild!.firstNamedChild!,
-          sourceTree!,
-          elmWorkspace,
+          sourceFile!,
+          program,
         );
 
         if (typeDeclarationNode) {
@@ -339,7 +334,7 @@ export class ElmMakeDiagnostics {
 
   private async checkForErrors(
     workspaceRootPath: string,
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
   ): Promise<IElmIssue[]> {
     const settings = await this.settings.getClientSettings();
 

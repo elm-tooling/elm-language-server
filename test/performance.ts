@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { container } from "tsyringe";
 import { URI } from "vscode-uri";
-import { ElmWorkspace } from "../src/elmWorkspace";
+import { Program } from "../src/program";
 import { importsTime, resetImportsTime } from "../src/imports";
 import {
   definitionTime,
@@ -75,8 +75,8 @@ export async function runPerformanceTests(uri: string): Promise<void> {
   const numTimes = 10;
 
   for (let i = 0; i < numTimes; i++) {
-    const elmWorkspace = new ElmWorkspace(pathUri, createProgramHost());
-    await elmWorkspace.init(() => {
+    const program = new Program(pathUri, createProgramHost());
+    await program.init(() => {
       //
     });
 
@@ -89,10 +89,10 @@ export async function runPerformanceTests(uri: string): Promise<void> {
 
     const token = new ThrottledCancellationToken(cancellationToken.token);
 
-    elmWorkspace
+    program
       .getForest()
-      .treeMap.forEach((treeContainer) =>
-        elmWorkspace.getTypeChecker().getDiagnostics(treeContainer, token),
+      .treeMap.forEach((sourceFile) =>
+        program.getTypeChecker().getDiagnostics(sourceFile, token),
       );
 
     addTime("BINDING   :", bindTime);

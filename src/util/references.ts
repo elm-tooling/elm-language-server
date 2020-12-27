@@ -1,5 +1,5 @@
-import { IElmWorkspace } from "../elmWorkspace";
-import { ITreeContainer } from "../forest";
+import { IProgram } from "../program";
+import { ISourceFile } from "../forest";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IReferenceNode } from "./referenceNode";
 import { TreeUtils } from "./treeUtils";
@@ -9,20 +9,20 @@ import { IImport, Imports } from "../imports";
 export class References {
   public static find(
     definitionNode: IReferenceNode | undefined,
-    elmWorkspace: IElmWorkspace,
+    program: IProgram,
   ): { node: SyntaxNode; uri: string }[] {
     const references: { node: SyntaxNode; uri: string }[] = [];
 
-    const forest = elmWorkspace.getForest();
-    const checker = elmWorkspace.getTypeChecker();
+    const forest = program.getForest();
+    const checker = program.getTypeChecker();
 
     if (definitionNode) {
       const refSourceTree = forest.getByUri(definitionNode.uri);
 
       if (refSourceTree) {
         const imports: { [uri: string]: Imports } = {};
-        forest.treeMap.forEach((treeContainer) => {
-          imports[treeContainer.uri] = checker.getAllImports(treeContainer);
+        forest.treeMap.forEach((sourceFile) => {
+          imports[sourceFile.uri] = checker.getAllImports(sourceFile);
         });
 
         const moduleNameNode = TreeUtils.getModuleNameNode(refSourceTree.tree);
@@ -658,7 +658,7 @@ export class References {
                     fieldName.text,
                     definitionNode,
                     refSourceTree,
-                    elmWorkspace,
+                    program,
                   ),
                 );
 
@@ -680,7 +680,7 @@ export class References {
                           fieldName.text,
                           definitionNode,
                           treeToCheck,
-                          elmWorkspace,
+                          program,
                         ),
                       );
                     }
@@ -700,12 +700,12 @@ export class References {
 
   public static findOperator(
     node: SyntaxNode,
-    elmWorkspace: IElmWorkspace,
+    program: IProgram,
   ): SyntaxNode | undefined {
     const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(node);
 
     if (functionNameNode) {
-      const infixRef = elmWorkspace
+      const infixRef = program
         .getForest()
         .getByUri(node.tree.uri)
         ?.symbolLinks?.get(node.tree.rootNode)
@@ -801,25 +801,22 @@ export class References {
   private static getFieldReferences(
     fieldName: string,
     definition: { node: SyntaxNode; uri: string },
-    treeContainer: ITreeContainer,
-    elmWorkspace: IElmWorkspace,
+    sourceFile: ISourceFile,
+    program: IProgram,
   ): { node: SyntaxNode; uri: string }[] {
     const references: { node: SyntaxNode; uri: string }[] = [];
 
-    const fieldUsages = References.findFieldUsages(
-      treeContainer.tree,
-      fieldName,
-    );
+    const fieldUsages = References.findFieldUsages(sourceFile.tree, fieldName);
 
     fieldUsages.forEach((field) => {
-      const fieldDef = elmWorkspace
+      const fieldDef = program
         .getTypeChecker()
-        .findDefinition(field, treeContainer);
+        .findDefinition(field, sourceFile);
 
       if (fieldDef?.node.id === definition.node.id) {
         references.push({
           node: field,
-          uri: treeContainer.uri,
+          uri: sourceFile.uri,
         });
       }
     });

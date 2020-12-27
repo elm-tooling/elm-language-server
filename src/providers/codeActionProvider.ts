@@ -15,8 +15,8 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { ElmPackageCache } from "../elmPackageCache";
-import { ElmJson, IElmWorkspace } from "../elmWorkspace";
-import { ITreeContainer } from "../forest";
+import { ElmJson, IProgram } from "../program";
+import { ISourceFile } from "../forest";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { MultiMap } from "../util/multiMap";
 import { Settings } from "../util/settings";
@@ -279,8 +279,8 @@ export class CodeActionProvider {
 
   private onCodeActionResolve(
     codeAction: IRefactorCodeAction,
-    program: IElmWorkspace,
-    sourceFile: ITreeContainer,
+    program: IProgram,
+    sourceFile: ISourceFile,
   ): IRefactorCodeAction {
     const result = CodeActionProvider.refactorRegistrations
       .get(codeAction.data.refactorName)

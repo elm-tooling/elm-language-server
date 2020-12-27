@@ -10,7 +10,7 @@ import {
 import { URI, Utils } from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { ElmToolingJsonManager } from "./elmToolingJsonManager";
-import { ElmWorkspace, IElmWorkspace } from "./elmWorkspace";
+import { Program, IProgram } from "./program";
 import {
   CodeActionProvider,
   CodeLensProvider,
@@ -72,9 +72,9 @@ export class Server implements ILanguageServer {
           `Found ${topLevelElmJsons.size} unique elmWorkspaces for workspace ${globUri}`,
         );
 
-        const elmWorkspaces: ElmWorkspace[] = [];
+        const elmWorkspaces: Program[] = [];
         topLevelElmJsons.forEach((elmWorkspace) => {
-          elmWorkspaces.push(new ElmWorkspace(elmWorkspace));
+          elmWorkspaces.push(new Program(elmWorkspace));
         });
         container.register("ElmWorkspaces", {
           useValue: elmWorkspaces,
@@ -104,7 +104,7 @@ export class Server implements ILanguageServer {
 
   public async init(): Promise<void> {
     this.progress.begin("Indexing Elm", 0);
-    const elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
+    const elmWorkspaces = container.resolve<IProgram[]>("ElmWorkspaces");
     await Promise.all(
       elmWorkspaces
         .map((ws) => ({ ws, indexedPercent: 0 }))

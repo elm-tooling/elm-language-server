@@ -32,18 +32,15 @@ export class ReferencesProvider {
 
     const checker = params.program.getTypeChecker();
 
-    const treeContainer = params.sourceFile;
+    const sourceFile = params.sourceFile;
 
-    if (treeContainer) {
+    if (sourceFile) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        treeContainer.tree.rootNode,
+        sourceFile.tree.rootNode,
         params.position,
       );
 
-      const definitionNode = checker.findDefinition(
-        nodeAtPosition,
-        treeContainer,
-      );
+      const definitionNode = checker.findDefinition(nodeAtPosition, sourceFile);
 
       const references = References.find(definitionNode, params.program);
 

@@ -39,7 +39,7 @@ import {
 } from "./expressionTree";
 import { SyntaxNodeMap } from "./syntaxNodeMap";
 import { TypeExpression } from "./typeExpression";
-import { IElmWorkspace } from "../../elmWorkspace";
+import { IProgram } from "../../program";
 import { Sequence } from "../sequence";
 import { Utils } from "../utils";
 import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
@@ -524,7 +524,7 @@ export class InferenceScope {
 
   constructor(
     private uri: string,
-    private elmWorkspace: IElmWorkspace,
+    private program: IProgram,
     private nonShadowableNames: Set<string>,
     private activeScopes: Set<EValueDeclaration>,
     private recursionAllowed: boolean,
@@ -542,7 +542,7 @@ export class InferenceScope {
       (scope: InferenceScope) => scope.parent,
     );
 
-    this.typeChecker = elmWorkspace.getTypeChecker();
+    this.typeChecker = program.getTypeChecker();
   }
 
   private getBinding(e: Expression): Type | undefined {
@@ -554,7 +554,7 @@ export class InferenceScope {
   public static valueDeclarationInference(
     declaration: EValueDeclaration,
     uri: string,
-    program: IElmWorkspace,
+    program: IProgram,
     activeScopes: Set<EValueDeclaration>,
     recursionAllowed = false,
     cancellationToken?: ICancellationToken,
@@ -874,7 +874,7 @@ export class InferenceScope {
     const result = callback(
       new InferenceScope(
         this.uri,
-        this.elmWorkspace,
+        this.program,
         new Set(this.nonShadowableNames.values()),
         activeScopes,
         recursionAllowed,
@@ -979,11 +979,11 @@ export class InferenceScope {
 
   private inferReferenceElement(e: Expression): Type {
     const definition =
-      findDefinition(e.firstNamedChild?.lastNamedChild, this.elmWorkspace) ??
-      findDefinition(e.firstNamedChild, this.elmWorkspace);
+      findDefinition(e.firstNamedChild?.lastNamedChild, this.program) ??
+      findDefinition(e.firstNamedChild, this.program);
 
     if (!definition) {
-      const sourceFile = this.elmWorkspace.getSourceFile(e.tree.uri);
+      const sourceFile = this.program.getSourceFile(e.tree.uri);
       if (
         nameIsKernel(e.text) &&
         sourceFile &&
@@ -1037,13 +1037,13 @@ export class InferenceScope {
       case "UnionVariant": {
         return TypeExpression.unionVariantInference(
           definition.expr,
-          this.elmWorkspace,
+          this.program,
         ).type;
       }
       case "TypeAliasDeclaration": {
         const ty = TypeExpression.typeAliasDeclarationInference(
           definition.expr,
-          this.elmWorkspace,
+          this.program,
         ).type;
         if (ty.nodeType === "Record" && Object.keys(ty.fields).length > 0) {
           return TFunction(Object.values(ty.fields), ty);
@@ -1059,7 +1059,7 @@ export class InferenceScope {
         if (typeAlias && typeAlias.nodeType === "TypeAliasDeclaration") {
           const fields = (TypeExpression.typeAliasDeclarationInference(
             typeAlias,
-            this.elmWorkspace,
+            this.program,
           ).type as TRecord)?.fields;
 
           if (fields) {
@@ -1072,7 +1072,7 @@ export class InferenceScope {
       case "PortAnnotation": {
         return TypeExpression.portAnnotationInference(
           definition.expr,
-          this.elmWorkspace,
+          this.program,
         ).type;
       }
       default:
@@ -1102,7 +1102,7 @@ export class InferenceScope {
         mapSyntaxNodeToExpression(
           declaration.typeAnnotation,
         ) as ETypeAnnotation,
-        this.elmWorkspace,
+        this.program,
         false,
       )?.type;
     }
@@ -1124,7 +1124,7 @@ export class InferenceScope {
         ? InferenceScope.valueDeclarationInference(
             declaration,
             declaration.tree.uri,
-            this.elmWorkspace,
+            this.program,
             this.activeScopes,
             this.recursionAllowed,
             this.cancellationToken,
@@ -1330,13 +1330,13 @@ export class InferenceScope {
     e: EOperator,
   ): [Type, IOperatorPrecedence] {
     // Find operator reference
-    const definition = findDefinition(e, this.elmWorkspace);
+    const definition = findDefinition(e, this.program);
 
     const opDeclaration = mapSyntaxNodeToExpression(definition?.expr.parent);
 
     const infixDeclarationExpr = mapSyntaxNodeToExpression(
       opDeclaration
-        ? References.findOperator(opDeclaration, this.elmWorkspace)
+        ? References.findOperator(opDeclaration, this.program)
         : undefined,
     );
 
@@ -1386,10 +1386,7 @@ export class InferenceScope {
     operatorFunction: EOperatorAsFunctionExpr,
   ): Type {
     // Find operator reference
-    const definition = findDefinition(
-      operatorFunction.operator,
-      this.elmWorkspace,
-    );
+    const definition = findDefinition(operatorFunction.operator, this.program);
 
     const opDeclaration = mapSyntaxNodeToExpression(definition?.expr.parent);
 
@@ -1420,9 +1417,7 @@ export class InferenceScope {
 
     if (targetTy?.nodeType === "Var") {
       if (targetTy.rigid) {
-        const typeString = this.elmWorkspace
-          .getTypeChecker()
-          .typeToString(targetTy);
+        const typeString = this.program.getTypeChecker().typeToString(targetTy);
         this.diagnostics.push(
           error(expr.target, Diagnostics.RecordBaseId, typeString),
         );
@@ -1651,7 +1646,7 @@ export class InferenceScope {
           mapSyntaxNodeToExpression(
             valueDeclaration.typeAnnotation,
           ) as ETypeAnnotation,
-          this.elmWorkspace,
+          this.program,
           true,
         )
       : undefined;
@@ -1815,7 +1810,7 @@ export class InferenceScope {
         const actualType = TTuple(this.uniqueVars(patterns.length));
         this.diagnostics.push(
           typeMismatchError(
-            this.elmWorkspace.getTypeChecker(),
+            this.program.getTypeChecker(),
             tuplePattern,
             actualType,
             ty,
@@ -1839,7 +1834,7 @@ export class InferenceScope {
   ): void {
     const variant = findDefinition(
       unionPattern.constructor.lastNamedChild,
-      this.elmWorkspace,
+      this.program,
     );
 
     if (variant?.expr.nodeType !== "UnionVariant") {
@@ -1856,7 +1851,7 @@ export class InferenceScope {
 
     const variantType = TypeExpression.unionVariantInference(
       variant.expr,
-      this.elmWorkspace,
+      this.program,
     ).type;
 
     if (!variantType || variantType.nodeType === "Unknown") {
@@ -1930,7 +1925,7 @@ export class InferenceScope {
       if (ty.nodeType !== "Unknown") {
         this.diagnostics.push(
           typeMismatchError(
-            this.elmWorkspace.getTypeChecker(),
+            this.program.getTypeChecker(),
             listPattern,
             TList(TVar("a")),
             ty,
@@ -1992,7 +1987,7 @@ export class InferenceScope {
 
         this.diagnostics.push(
           typeMismatchError(
-            this.elmWorkspace.getTypeChecker(),
+            this.program.getTypeChecker(),
             pattern,
             actualTy,
             ty,
@@ -2064,7 +2059,7 @@ export class InferenceScope {
       const errorExpr = expr.nodeType === "LetInExpr" ? expr.body : expr;
       this.diagnostics.push(
         typeMismatchError(
-          this.elmWorkspace.getTypeChecker(),
+          this.program.getTypeChecker(),
           errorExpr,
           t1,
           t2,

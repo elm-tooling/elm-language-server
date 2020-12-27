@@ -13,7 +13,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
+import { IProgram } from "../program";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { RenameUtils } from "../util/renameUtils";
 import { TreeUtils } from "../util/treeUtils";
@@ -195,7 +195,7 @@ export class RenameProvider {
           }[];
         }
       | undefined,
-    elmWorkspace: IElmWorkspace,
+    program: IProgram,
     params: RenameParams,
     newName: string,
   ): RenameFile | undefined {
@@ -204,7 +204,7 @@ export class RenameProvider {
     ) {
       const newUri = this.generateUriFromModuleName(
         newName,
-        elmWorkspace,
+        program,
         params.textDocument.uri,
       );
 
@@ -241,10 +241,10 @@ export class RenameProvider {
 
   private generateUriFromModuleName(
     moduleName: string,
-    elmWorkspace: IElmWorkspace,
+    program: IProgram,
     file: string,
   ): URI | undefined {
-    const sourceDir = elmWorkspace.getSourceDirectoryOfFile(file);
+    const sourceDir = program.getSourceDirectoryOfFile(file);
 
     // The file is not in a source dir (shouldn't happen)
     if (!sourceDir) {

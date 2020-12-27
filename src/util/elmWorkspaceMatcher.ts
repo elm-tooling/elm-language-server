@@ -1,13 +1,13 @@
 import { container } from "tsyringe";
 import { CancellationToken } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../elmWorkspace";
-import { ITreeContainer } from "../forest";
+import { IProgram } from "../program";
+import { ISourceFile } from "../forest";
 import { NoWorkspaceContainsError } from "./noWorkspaceContainsError";
 
 export interface IParams {
-  program: IElmWorkspace;
-  sourceFile: ITreeContainer;
+  program: IProgram;
+  sourceFile: ISourceFile;
 }
 
 /**
@@ -17,7 +17,7 @@ export interface IParams {
  * which has the program and sourceFile.
  */
 export class ElmWorkspaceMatcher<ParamType> {
-  private elmWorkspaces: IElmWorkspace[];
+  private elmWorkspaces: IProgram[];
 
   constructor(private getUriFor: (param: ParamType) => URI) {
     this.elmWorkspaces = container.resolve("ElmWorkspaces");
@@ -45,8 +45,8 @@ export class ElmWorkspaceMatcher<ParamType> {
   public handleResolve<ResultType>(
     handler: (
       param: ParamType,
-      program: IElmWorkspace,
-      sourceFile: ITreeContainer,
+      program: IProgram,
+      sourceFile: ISourceFile,
       token?: CancellationToken,
     ) => ResultType,
   ): (param: ParamType, token?: CancellationToken) => ResultType {
@@ -61,25 +61,22 @@ export class ElmWorkspaceMatcher<ParamType> {
     };
   }
 
-  public getProgramFor(param: ParamType): IElmWorkspace {
+  public getProgramFor(param: ParamType): IProgram {
     const uri = this.getUriFor(param);
-    const workspace =
-      // first look for a workspace where the file has been parsed to a tree
+    const program =
+      // first look for a program where the file has been parsed to a tree
       this.elmWorkspaces.find((ws) => ws.hasDocument(uri)) ||
-      // fallback: find a workspace where the file is in the source-directories
+      // fallback: find a program where the file is in the source-directories
       this.elmWorkspaces.find((ws) => ws.isInSourceDirectory(uri.fsPath));
 
-    if (!workspace) {
+    if (!program) {
       throw new NoWorkspaceContainsError(this.getUriFor(param));
     }
 
-    return workspace;
+    return program;
   }
 
-  public getSourceFileFor(
-    param: ParamType,
-    program: IElmWorkspace,
-  ): ITreeContainer {
+  public getSourceFileFor(param: ParamType, program: IProgram): ISourceFile {
     const uri = this.getUriFor(param).toString();
 
     return program.getForest().getByUri(uri)!;

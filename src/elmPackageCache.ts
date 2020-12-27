@@ -1,6 +1,6 @@
 import { readdir } from "fs";
 import * as utils from "./util/elmUtils";
-import { ElmJson } from "./elmWorkspace";
+import { ElmJson } from "./program";
 import { promisify } from "util";
 import { IConstraint, IVersion } from "./util/elmUtils";
 import { MultiMap } from "./util/multiMap";

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { ITreeContainer } from "../../forest";
+import { ISourceFile } from "../../forest";
 import { container } from "tsyringe";
 import {
   CodeAction,
@@ -21,7 +21,7 @@ import {
   SyntaxNode,
   Tree,
 } from "web-tree-sitter";
-import { IElmWorkspace } from "../../elmWorkspace";
+import { IProgram } from "../../program";
 import { PositionUtil } from "../../positionUtil";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
@@ -425,14 +425,12 @@ export class ElmLsDiagnostics {
   }
 
   public createDiagnostics = (
-    treeContainer: ITreeContainer,
-    elmWorkspace: IElmWorkspace,
+    sourceFile: ISourceFile,
+    program: IProgram,
   ): IDiagnostic[] => {
-    const elmAnalyseJson = this.getElmAnalyseJson(
-      elmWorkspace.getRootPath().fsPath,
-    );
-    const tree = treeContainer.tree;
-    const uri = treeContainer.uri;
+    const elmAnalyseJson = this.getElmAnalyseJson(program.getRootPath().fsPath);
+    const tree = sourceFile.tree;
+    const uri = sourceFile.uri;
 
     if (
       elmAnalyseJson.excludedPaths?.some((path) =>
@@ -473,7 +471,7 @@ export class ElmLsDiagnostics {
           : this.getUseConsOverConcatDiagnostics(tree)),
         ...(elmAnalyseJson.checks?.SingleFieldRecord === false
           ? []
-          : this.getSingleFieldRecordDiagnostics(tree, uri, elmWorkspace)),
+          : this.getSingleFieldRecordDiagnostics(tree, uri, program)),
         ...(elmAnalyseJson.checks?.UnnecessaryListConcat === false
           ? []
           : this.getUnnecessaryListConcatDiagnostics(tree)),
@@ -534,17 +532,17 @@ export class ElmLsDiagnostics {
   ): CodeAction[] {
     const result: CodeAction[] = [];
 
-    const elmWorkspace = this.elmWorkspaceMatcher.getProgramFor(URI.parse(uri));
+    const program = this.elmWorkspaceMatcher.getProgramFor(URI.parse(uri));
 
-    const forest = elmWorkspace.getForest();
+    const forest = program.getForest();
 
-    const treeContainer = forest.getByUri(uri);
+    const sourceFile = forest.getByUri(uri);
 
-    if (treeContainer) {
+    if (sourceFile) {
       diagnostics.forEach((diagnostic) => {
         if (diagnostic.data.code === "unused_imported_value") {
           const node = TreeUtils.getNamedDescendantForPosition(
-            treeContainer.tree.rootNode,
+            sourceFile.tree.rootNode,
             diagnostic.range.start,
           );
 
@@ -567,7 +565,7 @@ export class ElmLsDiagnostics {
           }
 
           const removeValueEdit = RefactorEditUtils.removeValueFromImport(
-            treeContainer.tree,
+            sourceFile.tree,
             moduleName.text,
             node.text,
           );
@@ -590,7 +588,7 @@ export class ElmLsDiagnostics {
 
         if (diagnostic.data.code === "unused_import") {
           const node = TreeUtils.getNamedDescendantForPosition(
-            treeContainer.tree.rootNode,
+            sourceFile.tree.rootNode,
             diagnostic.range.end,
           );
 
@@ -617,7 +615,7 @@ export class ElmLsDiagnostics {
 
         if (diagnostic.data.code === "unused_alias") {
           const node = TreeUtils.getNamedDescendantForPosition(
-            treeContainer.tree.rootNode,
+            sourceFile.tree.rootNode,
             diagnostic.range.end,
           );
 
@@ -633,7 +631,7 @@ export class ElmLsDiagnostics {
 
         if (diagnostic.data.code === "unused_pattern") {
           const node = TreeUtils.getNamedDescendantForPosition(
-            treeContainer.tree.rootNode,
+            sourceFile.tree.rootNode,
             diagnostic.range.start,
           );
 
@@ -997,7 +995,7 @@ export class ElmLsDiagnostics {
   getSingleFieldRecordDiagnostics(
     tree: Tree,
     uri: string,
-    elmWorkspace: IElmWorkspace,
+    program: IProgram,
   ): IDiagnostic[] {
     const diagnostics: IDiagnostic[] = [];
 
@@ -1009,7 +1007,7 @@ export class ElmLsDiagnostics {
     recordTypes.forEach((recordType) => {
       let isSingleField = true;
       if (recordType.parent?.type === "type_ref" && recordType.parent.parent) {
-        const type = elmWorkspace.getTypeChecker().findType(recordType.parent);
+        const type = program.getTypeChecker().findType(recordType.parent);
 
         const singleField = recordType.descendantsOfType(
           "lower_case_identifier",

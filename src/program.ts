@@ -8,7 +8,7 @@ import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { ICancellationToken } from "./cancellation";
 import { ElmPackageCache, IElmPackageCache } from "./elmPackageCache";
-import { Forest, IForest, ITreeContainer } from "./forest";
+import { Forest, IForest, ISourceFile } from "./forest";
 import * as utils from "./util/elmUtils";
 import { IVersion } from "./util/elmUtils";
 import * as path from "./util/path";
@@ -77,16 +77,16 @@ interface IElmPackageJson {
   };
 }
 
-export interface IElmWorkspace {
+export interface IProgram {
   init(progressCallback: (percent: number) => void): void;
   hasDocument(uri: URI): boolean;
   isInSourceDirectory(uri: string): boolean;
   getSourceDirectoryOfFile(uri: string): string | undefined;
-  getSourceFile(uri: string): ITreeContainer | undefined;
+  getSourceFile(uri: string): ISourceFile | undefined;
   getSourceFileOfImportableModule(
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
     importableModuleName: string,
-  ): ITreeContainer | undefined;
+  ): ISourceFile | undefined;
   getForest(synchronize?: boolean): IForest;
   getRootPath(): URI;
   getTypeCache(): TypeCache;
@@ -95,20 +95,20 @@ export interface IElmWorkspace {
   getPossibleImportsCache(): IPossibleImportsCache;
   getOperatorsCache(): Map<string, DefinitionResult>;
   getSemanticDiagnostics(
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
     cancellationToken?: ICancellationToken,
   ): Diagnostic[];
   getSemanticDiagnosticsAsync(
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
     cancellationToken?: ICancellationToken,
   ): Promise<Diagnostic[]>;
-  getSyntacticDiagnostics(sourceFile: ITreeContainer): Diagnostic[];
+  getSyntacticDiagnostics(sourceFile: ISourceFile): Diagnostic[];
   getSuggestionDiagnostics(
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
     cancellationToken?: ICancellationToken,
   ): Diagnostic[];
   getImportableModules(
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
   ): { moduleName: string; uri: string }[];
 }
 
@@ -141,7 +141,7 @@ export interface IProgramHost {
   watchFile(uri: string, callback: () => void): void;
 }
 
-export class ElmWorkspace implements IElmWorkspace {
+export class Program implements IProgram {
   private parser: Parser;
   private connection: Connection;
   private settings: Settings;
@@ -195,14 +195,14 @@ export class ElmWorkspace implements IElmWorkspace {
     ].find((elmFolder) => uri.startsWith(elmFolder));
   }
 
-  public getSourceFile(uri: string): ITreeContainer | undefined {
+  public getSourceFile(uri: string): ISourceFile | undefined {
     return this.getForest().getByUri(uri);
   }
 
   public getSourceFileOfImportableModule(
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
     importableModuleName: string,
-  ): ITreeContainer | undefined {
+  ): ISourceFile | undefined {
     let moduleUri = sourceFile.project.moduleToUriMap.get(importableModuleName);
 
     if (!moduleUri && sourceFile.isTestFile) {
@@ -259,7 +259,7 @@ export class ElmWorkspace implements IElmWorkspace {
   }
 
   public getSemanticDiagnostics(
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
     cancellationToken?: ICancellationToken,
   ): Diagnostic[] {
     const cached = this.diagnosticsCache.get(sourceFile.uri);
@@ -278,7 +278,7 @@ export class ElmWorkspace implements IElmWorkspace {
   }
 
   public async getSemanticDiagnosticsAsync(
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
     cancellationToken?: ICancellationToken,
   ): Promise<Diagnostic[]> {
     const cached = this.diagnosticsCache.get(sourceFile.uri);
@@ -296,14 +296,14 @@ export class ElmWorkspace implements IElmWorkspace {
     return diagnostics;
   }
 
-  public getSyntacticDiagnostics(sourceFile: ITreeContainer): Diagnostic[] {
+  public getSyntacticDiagnostics(sourceFile: ISourceFile): Diagnostic[] {
     // Getting the type checker will bind the file if its not
     this.getTypeChecker();
     return sourceFile.parseDiagnostics;
   }
 
   public getSuggestionDiagnostics(
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
     cancellationToken?: ICancellationToken,
   ): Diagnostic[] {
     return this.getTypeChecker().getSuggestionDiagnostics(
@@ -313,7 +313,7 @@ export class ElmWorkspace implements IElmWorkspace {
   }
 
   public getImportableModules(
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
   ): { moduleName: string; uri: string }[] {
     return Array.from(sourceFile.project.moduleToUriMap.entries()).map(
       ([moduleName, uri]) => ({
