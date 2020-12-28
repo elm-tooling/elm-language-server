@@ -1,35 +1,36 @@
 import { SyntaxNode } from "web-tree-sitter";
 import { EFieldType } from "./expressionTree";
+import { SyntaxNodeSet } from "./syntaxNodeSet";
 
 export class RecordFieldReferenceTable {
-  private refsByField: Map<string, SyntaxNode[]>;
+  private refsByField: Map<string, SyntaxNodeSet>;
   private _frozen = false;
 
   public get frozen(): boolean {
     return this._frozen;
   }
 
-  constructor(refsByField?: Map<string, SyntaxNode[]>) {
-    this.refsByField = refsByField ?? new Map<string, SyntaxNode[]>();
+  constructor(refsByField?: Map<string, SyntaxNodeSet>) {
+    this.refsByField = refsByField ?? new Map<string, SyntaxNodeSet>();
   }
 
   public static fromExpressions(
     fieldExpressions: EFieldType[],
   ): RecordFieldReferenceTable {
-    const fieldRefs: Map<string, SyntaxNode[]> = new Map<
+    const fieldRefs: Map<string, SyntaxNodeSet> = new Map<
       string,
-      SyntaxNode[]
+      SyntaxNodeSet
     >();
 
     fieldExpressions.forEach((field) => {
-      fieldRefs.set(field.name, [field]);
+      fieldRefs.set(field.name, new SyntaxNodeSet(field));
     });
 
     return new RecordFieldReferenceTable(fieldRefs);
   }
 
   public get(field: string): SyntaxNode[] {
-    return this.refsByField.get(field) ?? [];
+    return this.refsByField.get(field)?.toArray() ?? [];
   }
 
   public addAll(other: RecordFieldReferenceTable): void {
@@ -41,20 +42,26 @@ export class RecordFieldReferenceTable {
       let set = this.refsByField.get(field);
 
       if (!set) {
-        this.refsByField.set(field, []);
-        set = this.refsByField.get(field) ?? [];
+        set = new SyntaxNodeSet();
+        this.refsByField.set(field, set);
       }
 
-      set.push(...refs);
+      set.addAll(refs);
     });
   }
 
   public plus(other: RecordFieldReferenceTable): RecordFieldReferenceTable {
-    const newRefs = new Map<string, SyntaxNode[]>();
+    const newRefs = new Map<string, SyntaxNodeSet>();
 
     this.refsByField.forEach((set, field) => {
-      const otherSet = other.refsByField.get(field) ?? [];
-      newRefs.set(field, [...set, ...otherSet]);
+      const newRefSet = new SyntaxNodeSet().addAll(set);
+      const otherSet = other.refsByField.get(field);
+
+      if (otherSet) {
+        newRefSet.addAll(otherSet);
+      }
+
+      newRefs.set(field, newRefSet);
     });
     other.refsByField.forEach((set, field) => {
       if (!newRefs.get(field)) {

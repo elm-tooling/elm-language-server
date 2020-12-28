@@ -18,11 +18,12 @@ import { baseUri, SourceTreeParser } from "../utils/sourceTreeParser";
 
 const basicsSources = `
 --@ Basics.elm
-module Basics exposing ((+), (|>), (==), Int, Float, Bool(..), Order(..))
+module Basics exposing ((+), (|>), (>>), (==), Int, Float, Bool(..), Order(..), negate)
 
 infix left  0 (|>) = apR
 infix non   4 (==) = eq
 infix left  6 (+)  = add
+infix right 9 (>>) = composeR
 
 type Int = Int
 
@@ -42,7 +43,15 @@ eq : a -> a -> Bool
 eq =
   Elm.Kernel.Utils.equal
 
+composeR : (a -> b) -> (b -> c) -> (a -> c)
+composeR f g x =
+  g (f x)
+
 type Order = LT | EQ | GT
+
+negate : number -> number
+negate n =
+  -n
 `;
 describe("test elm diagnostics", () => {
   const treeParser = new SourceTreeParser();
@@ -217,6 +226,61 @@ field : Comparable a
 field =
     1
   `;
+    await testTypeInference(basicsSources + source, []);
+  });
+
+  test("field references accessed in complex ways", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias TopChart a comparable =
+    { toValue : a -> Int
+    , items : List a
+    , toValueLabel : a -> Int
+    , toLabel : a -> Int
+    , sorter : a -> comparable
+    , filter : a -> Bool
+    }
+
+
+topChart : List { name : Int, amount : Int } -> TopChart { name : Int, amount : Int } Int
+topChart items =
+    default
+        { toValue = .amount
+        , items = items
+        }
+        |> withSorter (.amount >> negate)
+        |> withFilter (.amount >> (\\x -> x > 0))
+
+
+default : { toValue : a -> Int, items : List a } -> TopChart a Int
+default { toValue, items } =
+    { toValue = toValue
+    , items = items
+    , toValueLabel = \\_ -> 1
+    , toLabel = toValue
+    , sorter = toValue
+    , filter = \\_ -> True
+    }
+
+
+withSorter : (a -> comparable2) -> TopChart a comparable -> TopChart a comparable2
+withSorter sorter chart =
+    { toValue = chart.toValue
+    , items = chart.items
+    , toValueLabel = chart.toValueLabel
+    , toLabel = chart.toLabel
+    , sorter = sorter
+    , filter = chart.filter
+    }
+
+
+withFilter : (a -> Bool) -> TopChart a comparable -> TopChart a comparable
+withFilter filter chart =
+    { chart | filter = filter }
+    `;
+
     await testTypeInference(basicsSources + source, []);
   });
 });
