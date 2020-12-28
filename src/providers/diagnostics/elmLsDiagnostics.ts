@@ -25,16 +25,24 @@ import * as path from "path";
 interface IElmAnalyseJson {
   checks?: {
     BooleanCase?: boolean;
+    DebugLog?: boolean; // We don't support this
+    DebugTodo?: boolean; // We don't support this
     DropConcatOfLists?: boolean;
     DropConsOfItemAndList?: boolean;
-    ExposeAll?: boolean;
+    DuplicateImport?: boolean; // We don't support this as elm-format will fix this
+    DuplicateImportedVariable?: boolean; // We don't support this as elm-format will fix this
+    ExposeAll?: boolean; // We don't support this
+    FileLoadFailed?: boolean; // We don't support this as it makes no sense for us
     NoUncurriedPrefix?: boolean;
-    ImportAll?: boolean;
+    FunctionInLet?: boolean; // We don't support this
+    ImportAll?: boolean; // We don't support this
     MapNothingToNothing?: boolean;
-    NoTopLevelSignature?: boolean;
+    MultiLineRecordFormatting?: boolean; // We don't support this
+    NoTopLevelSignature?: boolean; // We don't support this as we get it via type inference already
     SingleFieldRecord?: boolean;
+    TriggerWords?: string[]; // We don't support this
     UnnecessaryListConcat?: boolean;
-    UnnecessaryParens?: boolean;
+    UnnecessaryParens?: boolean; // We don't support this as elm-format will fix these anyway
     UnnecessaryPortModule?: boolean;
     UnusedImport?: boolean;
     UnusedImportAlias?: boolean;
@@ -965,7 +973,7 @@ export class ElmLsDiagnostics {
     ) {
       diagnostics.push({
         range: this.getNodeRange(unusedPortMatches[0].captures[0].node),
-        message: `Module is definined as a \`port\` module, but does not define any ports.`,
+        message: `Module is defined as a \`port\` module, but does not define any ports.`,
         severity: DiagnosticSeverity.Warning,
         source: "ElmLS",
         data: { uri: tree.uri, code: "unnecessary_port_module" },

@@ -1277,7 +1277,7 @@ foo =
   describe("unnecessary port module", () => {
     const diagnosticWithRange = (range: Range): IDiagnostic => {
       return {
-        message: `Module is definined as a \`port\` module, but does not define any ports.`,
+        message: `Module is defined as a \`port\` module, but does not define any ports.`,
         source: "ElmLS",
         severity: DiagnosticSeverity.Warning,
         range,

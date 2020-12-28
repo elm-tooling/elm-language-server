@@ -1,4 +1,3 @@
-import path from "path";
 import { DiagnosticSeverity, Range } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
 import { Diagnostics } from "../../util/types/diagnostics";
