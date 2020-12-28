@@ -11,10 +11,12 @@
   - On file rename, the module name and all references will be updated
 
 - A new "extract function" code action. Select a complete expression and it can be extracted to a function in the top level or the enclosing let expression (if there is one)
-- Show type information on hovers
-- Support linked editing ranges. When editing a function name, the type annotation name will auto rename, or vice versa
+- Replaced elm-analyse with our own diagnostics, there might be missing rules for you due to this
+- Show inferred type information on hovers
+- Support linked editing ranges. When editing a function name, the type annotation name will auto rename, or vice versa (needs to be enabled in most clients)
 - Watch elm.json for changes. The server will restart when a change is detected
 - Run elm make on server init
+- Improve record completions
 
 ### Bug Fixes
 
@@ -22,12 +24,12 @@
 - Fix some type inference cases
 - Fix module resolution to be more like how the compiler resolves modules
 - Fix some incorrect unused value diagnostics
+- Fix how errors from third party binaries are shown
 
 ### Other Changes
 
 - Update package rankings
-- Read elm-analyse.json for ElmLs diagnostics
-- Removed elm-analyse entirely
+- Update our parser
 
 ## 1.13.2
 
