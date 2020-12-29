@@ -7,6 +7,7 @@ import {
   CreateFilesParams,
   DeleteFilesParams,
   HandlerResult,
+  NotificationHandler,
   Position,
   Range,
   RenameFilesParams,
@@ -23,11 +24,7 @@ import { baseUri, SourceTreeParser } from "./utils/sourceTreeParser";
 describe("fileEventsHandler", () => {
   const treeParser = new SourceTreeParser();
 
-  let createFilesHandler: RequestHandler<
-    CreateFilesParams,
-    WorkspaceEdit | null,
-    never
-  >;
+  let createFilesHandler: NotificationHandler<CreateFilesParams>;
   let renameFilesHandler: RequestHandler<
     RenameFilesParams,
     WorkspaceEdit | null,
@@ -38,13 +35,21 @@ describe("fileEventsHandler", () => {
     WorkspaceEdit | null,
     never
   >;
+  let appliedWorkspaceEdit: WorkspaceEdit;
 
   container.register("Connection", {
     useValue: mockDeep<Connection>({
       workspace: {
-        onWillCreateFiles: (handler) => (createFilesHandler = handler),
+        onDidCreateFiles: (handler) => (createFilesHandler = handler),
         onWillRenameFiles: (handler) => (renameFilesHandler = handler),
         onWillDeleteFiles: (handler) => (deleteFilesHandler = handler),
+        applyEdit: (edit) => {
+          if (WorkspaceEdit.is(edit)) {
+            appliedWorkspaceEdit = edit;
+          }
+
+          return Promise.resolve({ applied: true });
+        },
       },
     }),
   });
@@ -95,9 +100,9 @@ describe("fileEventsHandler", () => {
   it("handles file create event", async () => {
     await createProgram("");
     const newPath = uri("New/Module.elm");
-    const result = createFilesHandler({ files: [{ uri: newPath }] }, token);
+    createFilesHandler({ files: [{ uri: newPath }] });
 
-    const edit = await getEditFromResult(result);
+    const edit = appliedWorkspaceEdit;
 
     if (!edit.changes) {
       fail();
@@ -122,12 +127,9 @@ describe("fileEventsHandler", () => {
     await createProgram("");
     const newPath = uri("New/Module.elm");
     const newPath2 = uri("New/Another/Module.elm");
-    const result = createFilesHandler(
-      { files: [{ uri: newPath }, { uri: newPath2 }] },
-      token,
-    );
+    createFilesHandler({ files: [{ uri: newPath }, { uri: newPath2 }] });
 
-    const edit = await getEditFromResult(result);
+    const edit = appliedWorkspaceEdit;
 
     if (!edit.changes) {
       fail();
