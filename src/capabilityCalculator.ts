@@ -42,7 +42,7 @@ export class CapabilityCalculator {
       workspaceSymbolProvider: true,
       workspace: {
         fileOperations: {
-          willCreate: {
+          didCreate: {
             filters: [
               {
                 scheme: "file",

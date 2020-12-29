@@ -34,12 +34,12 @@ export class FileEventsHandler {
     this.connection = container.resolve<Connection>("Connection");
     this.astProvider = container.resolve(ASTProvider);
 
-    this.connection.workspace.onWillCreateFiles((params: CreateFilesParams) => {
+    this.connection.workspace.onDidCreateFiles((params: CreateFilesParams) => {
       const edit: WorkspaceEdit = { changes: {} };
       for (const { uri } of params.files) {
         const changes = new ElmWorkspaceMatcher(({ uri }: FileCreate) =>
           URI.parse(uri),
-        ).handle(this.onWillCreateFile.bind(this))({
+        ).handle(this.onDidCreateFile.bind(this))({
           uri,
         });
 
@@ -47,7 +47,8 @@ export class FileEventsHandler {
           edit.changes[uri] = changes;
         }
       }
-      return edit;
+
+      void this.connection.workspace.applyEdit(edit);
     });
 
     this.connection.workspace.onWillRenameFiles((params: RenameFilesParams) => {
@@ -80,7 +81,7 @@ export class FileEventsHandler {
     });
   }
 
-  private onWillCreateFile({
+  private onDidCreateFile({
     uri,
     program,
   }: ICreateFileParams): TextEdit[] | undefined {
