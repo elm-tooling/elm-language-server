@@ -27,6 +27,7 @@ import {
 } from "./typeChecker";
 import chokidar from "chokidar";
 import { CommandManager } from "../commandManager";
+import { SourceMapWatcher } from "./sourcemap";
 
 const readFile = util.promisify(fs.readFile);
 
@@ -413,6 +414,15 @@ export class Program implements IProgram {
       this.findExposedModulesOfDependencies(this.rootProject);
 
       CommandManager.initHandlers(this.connection);
+
+      const elmToolingJson: { jsOutputFiles: string[] } = await import(
+        path.join(this.rootPath.fsPath, "elm-tooling.json")
+      );
+
+      const sourceMapWatcher = new SourceMapWatcher(this);
+      elmToolingJson.jsOutputFiles.forEach((jsOutputFile: string) => {
+        sourceMapWatcher.watchJsOutput(jsOutputFile);
+      });
 
       this.connection.console.info(
         `Done parsing all files for ${pathToElmJson}`,

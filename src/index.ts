@@ -42,6 +42,7 @@ container.register<Connection>("Connection", {
   }),
 });
 container.registerSingleton<Parser>("Parser", Parser);
+container.registerSingleton<Parser>("JsParser", Parser);
 
 container.registerSingleton("DocumentEvents", DocumentEvents);
 container.registerSingleton<IElmAnalyseJsonService>(
@@ -81,6 +82,11 @@ connection.onInitialize(
     // };
     // parser.setLogger(logger);
     parser.setLanguage(language);
+
+    const absoluteJs = Path.join(__dirname, "tree-sitter-javascript.wasm");
+    const pathToJsWasm = Path.relative(process.cwd(), absoluteJs);
+    const jsLanguage = await Parser.Language.load(pathToJsWasm);
+    container.resolve<Parser>("JsParser").setLanguage(jsLanguage);
 
     container.register(CapabilityCalculator, {
       useValue: new CapabilityCalculator(params.capabilities),

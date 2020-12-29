@@ -4,3 +4,4 @@ node_modules
 tsconfig.tsbuildinfo
 coverage
 elm-stuff
+.temp
