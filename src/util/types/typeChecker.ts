@@ -411,11 +411,15 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     } else if (
       (nodeParentType === "exposed_value" &&
         nodeParent.parent?.parent?.type === "module_declaration") ||
-      nodeParentType === "type_annotation"
+      nodeParentType === "type_annotation" ||
+      nodeParentType === "port_annotation"
     ) {
       const definitionNode = rootSymbols?.get(nodeText);
 
-      if (definitionNode && definitionNode.type === "Function") {
+      if (
+        definitionNode &&
+        (definitionNode.type === "Function" || definitionNode.type === "Port")
+      ) {
         return {
           node: definitionNode.node,
           nodeType: definitionNode.type,
