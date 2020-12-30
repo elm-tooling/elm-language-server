@@ -852,6 +852,7 @@ export class InferenceScope {
     const result = this.inferChild(
       (inference) => inference.inferDeclaration(declaration, false),
       new Set(activeScopes.values()),
+      /* recursionAllowed */ declaration.params.length > 0,
     );
 
     this.resolvedDeclarations.set(declaration, result.type);
