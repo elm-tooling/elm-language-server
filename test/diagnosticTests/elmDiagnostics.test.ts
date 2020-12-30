@@ -64,6 +64,7 @@ describe("test elm diagnostics", () => {
       message: IDiagnosticMessage;
       args: (string | number)[];
     }[],
+    disableSuggestionDiagnostics?: boolean,
   ) {
     await treeParser.init();
 
@@ -88,7 +89,10 @@ describe("test elm diagnostics", () => {
       if (!treeContainer.uri.includes("Basic")) {
         diagnostics.push(...program.getSyntacticDiagnostics(treeContainer));
         diagnostics.push(...program.getSemanticDiagnostics(treeContainer));
-        diagnostics.push(...program.getSuggestionDiagnostics(treeContainer));
+
+        if (!disableSuggestionDiagnostics) {
+          diagnostics.push(...program.getSuggestionDiagnostics(treeContainer));
+        }
       }
     });
 
@@ -282,5 +286,59 @@ withFilter filter chart =
     `;
 
     await testTypeInference(basicsSources + source, []);
+  });
+
+  test("recursion inside a let function with params", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func : Int -> Int
+func =
+    let
+        go n =
+            if n == 1 then
+                2
+
+            else
+                func n + 1
+    in
+    go
+
+
+func2 =
+    let
+        go n =
+            if n == 1 then
+                "text"
+
+            else
+                func2 n 
+    in
+    go
+  `;
+    await testTypeInference(basicsSources + source, [], true);
+
+    const source2 = `
+    --@ Test.elm
+module Test exposing (..)
+
+func =
+     --^
+    let
+        go =
+            if False then
+                "text"
+
+            else
+                func
+    in
+    go
+      `;
+    await testTypeInference(
+      basicsSources + source2,
+      [{ message: Diagnostics.InfiniteRecursion, args: [] }],
+      true,
+    );
   });
 });
