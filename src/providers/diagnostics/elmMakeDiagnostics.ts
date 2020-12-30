@@ -134,6 +134,10 @@ export class ElmMakeDiagnostics {
     return this.convertDiagnosticsToCodeActions(elmMakeDiagnostics, uri);
   }
 
+  private hasType(error: any): error is IElmError | IElmCompilerError {
+    return "type" in error;
+  }
+
   private convertDiagnosticsToCodeActions(
     diagnostics: IDiagnostic[],
     uri: string,
@@ -456,7 +460,7 @@ export class ElmMakeDiagnostics {
         const execaError = error as execa.ExecaReturnValue<string>;
         const lines: IElmIssue[] = [];
         execaError.stderr.split("\n").forEach((line: string) => {
-          let errorObject: any;
+          let errorObject: unknown;
           try {
             errorObject = JSON.parse(line);
           } catch (error) {
@@ -465,8 +469,13 @@ export class ElmMakeDiagnostics {
             );
           }
 
-          if (errorObject && errorObject.type === "compile-errors") {
-            errorObject.errors.forEach((error: IError) => {
+          if (
+            errorObject &&
+            this.hasType(errorObject) &&
+            errorObject.type === "compile-errors"
+          ) {
+            const compilerError = errorObject as IElmCompilerError;
+            compilerError.errors.forEach((error: IError) => {
               const problems: IElmIssue[] = error.problems.map(
                 (problem: IProblem) => ({
                   details: problem.message
@@ -491,18 +500,25 @@ export class ElmMakeDiagnostics {
 
               lines.push(...problems);
             });
-          } else if (errorObject && errorObject.type === "error") {
+          } else if (
+            errorObject &&
+            this.hasType(errorObject) &&
+            errorObject.type === "error"
+          ) {
+            const error = errorObject as IElmError;
+            this.checkIfVersionMismatchesAndCreateMessage(error);
+
             const problem: IElmIssue = {
-              details: errorObject.message
+              details: error.message
                 .map((message: string | IStyledString) =>
                   typeof message === "string" ? message : message.string,
                 )
                 .join(""),
               // elm-test might supply absolute paths to files
-              file: errorObject.path
-                ? path.relative(workspaceRootPath, errorObject.path)
+              file: error.path
+                ? path.relative(workspaceRootPath, error.path)
                 : relativePathsToFiles[0],
-              overview: errorObject.title,
+              overview: error.title,
               region: {
                 end: {
                   column: 1,
@@ -523,6 +539,19 @@ export class ElmMakeDiagnostics {
         });
         return lines;
       }
+    }
+  }
+  private checkIfVersionMismatchesAndCreateMessage(
+    errorObject: IElmError,
+  ): void {
+    if (errorObject.title === "ELM VERSION MISMATCH") {
+      this.connection.window.showErrorMessage(
+        errorObject.message
+          .map((message: string | IStyledString) =>
+            typeof message === "string" ? message : message.string,
+          )
+          .join(""),
+      );
     }
   }
 }
