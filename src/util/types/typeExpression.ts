@@ -231,11 +231,6 @@ export class TypeExpression {
   private inferTypeAliasDeclaration(
     declaration: ETypeAliasDeclaration,
   ): InferenceResult {
-    if (this.activeAliases.has(declaration)) {
-      this.diagnostics.push(error(declaration, Diagnostics.InfiniteRecursion));
-      return this.toResult(TUnknown);
-    }
-
     this.activeAliases.add(declaration);
 
     const type = declaration.typeExpression
@@ -427,11 +422,38 @@ export class TypeExpression {
           ).type;
           break;
         case "TypeAliasDeclaration":
-          declaredType = TypeExpression.typeAliasDeclarationInference(
-            definition.expr,
-            this.workspace,
-            new Set(this.activeAliases.values()),
-          ).type;
+          {
+            // Check for recursion
+            const aliases = Array.from(this.activeAliases);
+            const recursiveAlias = aliases.find(
+              (decl) => decl.id === definition.expr.id,
+            );
+            if (recursiveAlias) {
+              const name = definition.expr.childForFieldName("name");
+              const index = aliases.findIndex(
+                (alias) => alias.id === recursiveAlias.id,
+              );
+              if (name) {
+                const slicedAliases = aliases.slice(index);
+                this.diagnostics.push(
+                  error(
+                    name,
+                    Diagnostics.RecursiveAlias(slicedAliases.length),
+                    ...slicedAliases.map(
+                      (alias) => alias.childForFieldName("name")?.text ?? "",
+                    ),
+                  ),
+                );
+              }
+              declaredType = TUnknown;
+            } else {
+              declaredType = TypeExpression.typeAliasDeclarationInference(
+                definition.expr,
+                this.workspace,
+                new Set(this.activeAliases.values()),
+              ).type;
+            }
+          }
           break;
         default:
           throw new Error("Unexpected type reference");

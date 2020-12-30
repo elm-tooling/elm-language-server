@@ -82,11 +82,6 @@ export const Diagnostics = {
     "Could not find a module to import named `{0}` in `dependencies` or `source-directories`.",
     DiagnosticSeverity.Error,
   ),
-  InfiniteRecursion: diag(
-    "infinite_recursion",
-    "Infinite recursion.",
-    DiagnosticSeverity.Error,
-  ),
   InvalidPattern: diag(
     "invalid_pattern",
     "Invalid pattern error.\nExpected: `{0}`\nFound: `{1}`",
@@ -128,6 +123,42 @@ export const Diagnostics = {
     "The record does not have a `{0}` field.",
     DiagnosticSeverity.Error,
   ),
+  RecursiveAlias: (n: number): IDiagnosticMessage =>
+    diag(
+      "recursive_alias",
+      n < 2
+        ? "Alias problem. This type alias is recursive, forming an infinite type."
+        : `Alias problem. This type alias is part of a mutually recursive set of type aliases:\n${Array.from(
+            Array(n).keys(),
+          )
+            .map((i) => `{${i}}`)
+            .join(" -> ")}`,
+      DiagnosticSeverity.Error,
+    ),
+  RecursiveDeclaration: (n: number): IDiagnosticMessage =>
+    diag(
+      "recursive_declaration",
+      n < 2
+        ? "Cyclic definition. The value `{0}` is defined directly in terms of itself, causing an infinite loop."
+        : `Cyclic definition. The value \`{0}\`  depends on itself through the following chain of definitions:\n${Array.from(
+            Array(n).keys(),
+          )
+            .map((i) => `{${i}}`)
+            .join(" -> ")}`,
+      DiagnosticSeverity.Error,
+    ),
+  RecursiveLet: (n: number): IDiagnosticMessage =>
+    diag(
+      "recursive_let",
+      n < 2
+        ? "Cyclic value. The value `{0}` is defined directly in terms of itself, causing an infinite loop."
+        : `Cyclic value. The value \`{0}\` depends on itself through the following chain of definitions:\n${Array.from(
+            Array(n).keys(),
+          )
+            .map((i) => `{${i}}`)
+            .join(" -> ")}`,
+      DiagnosticSeverity.Error,
+    ),
   Redefinition: diag(
     "redefinition",
     "A value named `{0}` is already defined.",

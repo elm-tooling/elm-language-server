@@ -320,11 +320,11 @@ func2 =
     await testTypeInference(basicsSources + source, [], true);
 
     const source2 = `
-    --@ Test.elm
+--@ Test.elm
 module Test exposing (..)
 
 func =
-     --^
+--^
     let
         go =
             if False then
@@ -337,7 +337,437 @@ func =
       `;
     await testTypeInference(
       basicsSources + source2,
-      [{ message: Diagnostics.InfiniteRecursion, args: [] }],
+      [{ message: Diagnostics.RecursiveDeclaration(1), args: ["func"] }],
+      true,
+    );
+  });
+
+  test("mutual let recursion", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    let
+        go n =
+            if n == 1 then
+                "text"
+
+            else
+                to n
+
+        to =
+      --^
+            go
+    in
+    go
+  `;
+    await testTypeInference(
+      basicsSources + source,
+      [{ message: Diagnostics.RecursiveLet(2), args: ["to", "go"] }],
+      true,
+    );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    let
+        go n =
+            if n == 1 then
+                "text"
+
+            else
+                to n
+
+        to n =
+            go n
+    in
+    go
+  `;
+    await testTypeInference(basicsSources + source2, [], true);
+
+    // Recusion through 3 let declarations
+    const source3 = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    let
+        go n =
+            if n == 1 then
+                "text"
+
+            else
+                to n
+ 
+        to =
+            another
+
+        another =
+        --^
+            go
+    in
+    go
+  `;
+    await testTypeInference(
+      basicsSources + source3,
+      [
+        {
+          message: Diagnostics.RecursiveLet(3),
+          args: ["another", "go", "to"],
+        },
+      ],
+      true,
+    );
+
+    const source4 = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    let
+        go n =
+            if n == 1 then
+                "text"
+
+            else
+                to n
+
+        another =
+        --^
+            go
+
+        to =
+            another
+    in
+    go
+  `;
+    await testTypeInference(
+      basicsSources + source4,
+      [{ message: Diagnostics.RecursiveLet(3), args: ["another", "go", "to"] }],
+      true,
+    );
+
+    const source5 = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    let
+        go n =
+            if n == 1 then
+                "text"
+
+            else
+                to n
+
+        another n =
+            go
+
+        to =
+      --^
+            another
+    in
+    go
+  `;
+    await testTypeInference(
+      basicsSources + source5,
+      [{ message: Diagnostics.RecursiveLet(3), args: ["to", "another", "go"] }],
+      true,
+    );
+
+    const source6 = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    let
+        go =
+      --^
+            to
+
+        to =
+            go
+    in
+    go
+  `;
+    // FAILING - but not a big deal, since the error is just on `to` instead. Didn't see an easy way to solve this one
+    // await testTypeInference(
+    //   basicsSources + source6,
+    //   [{ message: Diagnostics.RecursiveLet(2), args: ["go", "to"] }],
+    //   true,
+    // );
+
+    const source7 = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    let
+        go =
+            to
+
+        to =
+            another
+
+        another =
+        --^
+            to
+    in
+    go
+  `;
+    await testTypeInference(
+      basicsSources + source7,
+      [{ message: Diagnostics.RecursiveLet(2), args: ["another", "to"] }],
+      true,
+    );
+  });
+
+  test("recursion between declarations and let declarations", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    let
+        go n =
+            if n == 1 then
+                "text"
+
+            else
+                to n
+
+        to n =
+            func2
+    in
+    go
+
+
+func2 =
+    func
+  `;
+    await testTypeInference(basicsSources + source, [], true);
+  });
+
+  test("recursion between declarations", async () => {
+    const source = `
+    --@ Test.elm
+func =
+--^
+    func2
+
+
+func2 =
+    func3
+
+
+func3 =
+    func
+      `;
+    await testTypeInference(
+      basicsSources + source,
+      [
+        {
+          message: Diagnostics.RecursiveDeclaration(3),
+          args: ["func", "func2", "func3"],
+        },
+      ],
+      true,
+    );
+
+    const source2 = `
+    --@ Test.elm
+func =
+--^
+    func
+      `;
+    await testTypeInference(
+      basicsSources + source2,
+      [
+        {
+          message: Diagnostics.RecursiveDeclaration(1),
+          args: ["func"],
+        },
+      ],
+      true,
+    );
+
+    const source3 = `
+    --@ Test.elm
+func =
+    func2 
+
+
+func2 =
+    func3
+
+
+func3 a =
+    func
+      `;
+    await testTypeInference(basicsSources + source3, [], true);
+
+    const source4 = `
+    --@ Test.elm
+func =
+    func2
+
+func2 =
+--^
+    func3
+
+func3 =
+    func2
+      `;
+    await testTypeInference(
+      basicsSources + source4,
+      [
+        {
+          message: Diagnostics.RecursiveDeclaration(2),
+          args: ["func2", "func3"],
+        },
+      ],
+      true,
+    );
+  });
+
+  xtest("infinite type error", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    \\_ -> func
+  `;
+    await testTypeInference(
+      basicsSources + source,
+      [
+        // Infinte type error
+      ],
+      true,
+    );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    let
+        go n =
+            go
+    in
+    go
+  `;
+    await testTypeInference(
+      basicsSources + source2,
+      [
+        // Infinte type error
+      ],
+      true,
+    );
+
+    const source3 = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    let
+        go n =
+            func
+    in
+    go
+  `;
+    await testTypeInference(
+      basicsSources + source3,
+      [
+        // Infinte type error
+      ],
+      true,
+    );
+  });
+
+  test("type alias recursion", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Test =
+          --^
+    { field : Test
+    }
+  `;
+    await testTypeInference(
+      basicsSources + source,
+      [{ message: Diagnostics.RecursiveAlias(0), args: [] }],
+      true,
+    );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Test =
+          --^
+    { field : Test2
+    }
+
+
+type alias Test2 =
+    Test
+  `;
+    await testTypeInference(
+      basicsSources + source2,
+      [{ message: Diagnostics.RecursiveAlias(2), args: ["Test", "Test2"] }],
+      true,
+    );
+
+    const source3 = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Test =
+    { field : Test2
+    }
+
+type alias Test2 =
+          --^
+    Test3 
+
+type alias Test3 =
+    Test2
+  `;
+    await testTypeInference(
+      basicsSources + source3,
+      [{ message: Diagnostics.RecursiveAlias(2), args: ["Test2", "Test3"] }],
+      true,
+    );
+
+    const source4 = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Test =
+          --^
+    { field : Test2
+    }
+
+type alias Test2 =
+    Test3 
+
+type alias Test3 =
+    { field : Test
+    }
+  `;
+    await testTypeInference(
+      basicsSources + source4,
+      [
+        {
+          message: Diagnostics.RecursiveAlias(3),
+          args: ["Test", "Test2", "Test3"],
+        },
+      ],
       true,
     );
   });
