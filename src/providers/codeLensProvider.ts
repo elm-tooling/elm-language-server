@@ -268,38 +268,14 @@ export class CodeLensProvider {
         node.type === "type_declaration" ||
         node.type === "type_alias_declaration"
       ) {
-        const typeNode = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
-          node,
-        );
+        const typeNode = node.childForFieldName("name");
 
         if (typeNode) {
           codeLens.push(this.createReferenceCodeLens(typeNode, uri));
         }
       }
-    });
 
-    TreeUtils.descendantsOfType(tree.rootNode, "value_declaration").forEach(
-      (node) => {
-        const functionName = TreeUtils.getFunctionNameNodeFromDefinition(node);
-
-        if (functionName) {
-          if (
-            node.previousNamedSibling &&
-            node.previousNamedSibling.type === "type_annotation"
-          ) {
-            codeLens.push(
-              this.createReferenceCodeLens(node.previousNamedSibling, uri),
-            );
-          } else {
-            codeLens.push(this.createReferenceCodeLens(node, uri));
-          }
-        }
-      },
-    );
-
-    TreeUtils.descendantsOfType(tree.rootNode, "port_annotation").forEach(
-      (node) => {
+      if (node.type === "port_annotation") {
         const portNameNode = TreeUtils.findFirstNamedChildOfType(
           "lower_case_identifier",
           node,
@@ -307,6 +283,19 @@ export class CodeLensProvider {
         if (portNameNode) {
           codeLens.push(this.createReferenceCodeLens(portNameNode, uri));
         }
+      }
+    });
+
+    TreeUtils.descendantsOfType(tree.rootNode, "value_declaration").forEach(
+      (node) => {
+        codeLens.push(
+          this.createReferenceCodeLens(
+            node.previousNamedSibling?.type === "type_annotation"
+              ? node.previousNamedSibling
+              : node,
+            uri,
+          ),
+        );
       },
     );
 
