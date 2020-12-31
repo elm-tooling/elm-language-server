@@ -1073,21 +1073,21 @@ export class CompletionProvider {
   ): IPossibleImport[] {
     const forest = workspace.getForest();
     const possibleImportsCache = workspace.getPossibleImportsCache();
-    const treeContainer = forest.getByUri(uri);
+    const sourceFile = forest.getByUri(uri);
 
-    if (treeContainer) {
+    if (sourceFile) {
       const allImportedValues = workspace
         .getTypeChecker()
-        .getAllImports(treeContainer);
+        .getAllImports(sourceFile);
 
       const importedModules =
-        TreeUtils.findAllImportClauseNodes(treeContainer.tree)?.map(
+        TreeUtils.findAllImportClauseNodes(sourceFile.tree)?.map(
           (n) => TreeUtils.findFirstNamedChildOfType("upper_case_qid", n)?.text,
         ) ?? [];
 
       const cached = possibleImportsCache.get(uri);
       const possibleImports =
-        cached ?? ImportUtils.getPossibleImports(forest, uri);
+        cached ?? ImportUtils.getPossibleImports(sourceFile, forest);
 
       if (!cached) {
         possibleImportsCache.set(uri, possibleImports);

@@ -14,17 +14,21 @@ export interface IPossibleImport {
 
 export class ImportUtils {
   public static getPossibleImports(
+    sourceFile: ITreeContainer,
     forest: IForest,
-    uri: string,
   ): IPossibleImport[] {
-    const currentModule = forest.getByUri(uri)?.moduleName;
+    const currentModule = sourceFile?.moduleName;
 
     const exposedValues: IPossibleImport[] = [];
 
     // Find all exposed values that could be imported
-    forest.treeMap.forEach((tree) => {
-      if (tree.uri !== uri && tree.moduleName !== "Basics") {
-        exposedValues.push(...ImportUtils.getPossibleImportsOfTree(tree));
+    sourceFile.project.moduleToUriMap.forEach((uri, module) => {
+      if (uri !== sourceFile.uri && module !== "Basics") {
+        const tree = forest.getByUri(uri);
+
+        if (tree) {
+          exposedValues.push(...ImportUtils.getPossibleImportsOfTree(tree));
+        }
       }
     });
 
