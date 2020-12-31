@@ -68,8 +68,7 @@ export class TreeUtils {
 
     if (moduleNode) {
       return [
-        ...TreeUtils.descendantsOfType(moduleNode, "exposed_value"),
-        ...TreeUtils.descendantsOfType(moduleNode, "exposed_type"),
+        ...moduleNode.descendantsOfType(["exposed_value", "exposed_type"]),
       ];
     }
 

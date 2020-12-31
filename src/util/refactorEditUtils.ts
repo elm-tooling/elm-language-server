@@ -132,8 +132,7 @@ export class RefactorEditUtils {
 
     if (importClause) {
       const exposedValuesAndTypes = [
-        ...TreeUtils.descendantsOfType(importClause, "exposed_value"),
-        ...TreeUtils.descendantsOfType(importClause, "exposed_type"),
+        ...importClause.descendantsOfType(["exposed_value", "exposed_type"]),
       ];
 
       if (
