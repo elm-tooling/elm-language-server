@@ -227,8 +227,7 @@ main r =
     await testBase.testDefinition(source);
   });
 
-  // Problem with the tree parsing an error
-  xit(`test nested decl mapper`, async () => {
+  it(`test nested decl mapper`, async () => {
     const source = `                                        
 type alias R = 
   { field : () }                          
