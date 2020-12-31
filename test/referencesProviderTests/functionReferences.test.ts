@@ -88,4 +88,32 @@ func = Mod.foo
 `;
     await testBase.testReferences(source);
   });
+
+  it(`local calls to a function`, async () => {
+    const source = `
+
+--@ Module.elm
+module Module exposing (foo)
+                        --X
+foo = 42
+--^
+
+bar = foo
+     --X
+`;
+    await testBase.testReferences(source);
+  });
+
+  // getFunctionAnnotationNameNodeFromDefinition doesn't find the annotation due to the comment inbetween
+  xit(`function annotation gets a reference`, async () => {
+    const source = `
+
+--@ Module.elm
+foo : Int
+--X
+foo = 42
+--^
+`;
+    await testBase.testReferences(source);
+  });
 });
