@@ -117,7 +117,10 @@ export class TreeUtils {
     }
   }
 
-  public static isExposedFunction(tree: Tree, functionName: string): boolean {
+  public static isExposedFunctionOrPort(
+    tree: Tree,
+    functionName: string,
+  ): boolean {
     const module = this.findModuleDeclaration(tree);
     if (module) {
       const exposingList = this.findFirstNamedChildOfType(
@@ -401,7 +404,7 @@ export class TreeUtils {
     }
   }
 
-  public static getTypeOrTypeAliasNameNodeFromDefinition(
+  public static getTypeOrTypeAliasOrPortNameNodeFromDefinition(
     node: SyntaxNode,
   ): SyntaxNode | undefined {
     return node.childForFieldName("name") ?? undefined;

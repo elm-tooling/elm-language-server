@@ -72,7 +72,7 @@ export class References {
                   );
                 }
 
-                const isExposedFunction = TreeUtils.isExposedFunction(
+                const isExposedFunction = TreeUtils.isExposedFunctionOrPort(
                   refSourceTree.tree,
                   functionName,
                 );
@@ -174,7 +174,7 @@ export class References {
             break;
           case "Port":
             {
-              const portNameNode = TreeUtils.getTypeOrTypeAliasNameNodeFromDefinition(
+              const portNameNode = TreeUtils.getTypeOrTypeAliasOrPortNameNodeFromDefinition(
                 definitionNode.node,
               );
               if (portNameNode) {
@@ -199,7 +199,7 @@ export class References {
                   );
                 }
 
-                const isExposedPort = TreeUtils.isExposedFunction(
+                const isExposedPort = TreeUtils.isExposedFunctionOrPort(
                   refSourceTree.tree,
                   portName,
                 );
@@ -302,7 +302,7 @@ export class References {
           case "Type":
           case "TypeAlias":
             {
-              const typeOrTypeAliasNameNode = TreeUtils.getTypeOrTypeAliasNameNodeFromDefinition(
+              const typeOrTypeAliasNameNode = TreeUtils.getTypeOrTypeAliasOrPortNameNodeFromDefinition(
                 definitionNode.node,
               );
 
