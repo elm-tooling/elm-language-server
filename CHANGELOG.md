@@ -17,6 +17,7 @@
 - Watch elm.json for changes. The server will restart when a change is detected
 - Run elm make on server init
 - Improve record completions
+- Ports now have codeLenses, can find references and have correct types on mouseover
 
 ### Bug Fixes
 
