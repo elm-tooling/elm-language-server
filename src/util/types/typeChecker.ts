@@ -231,6 +231,13 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         return findTypeOrParentType(node, inferenceResult) ?? TUnknown;
       }
 
+      const portAnnotation = mapSyntaxNodeToExpression(node);
+
+      if (portAnnotation && portAnnotation.nodeType === "PortAnnotation") {
+        return TypeExpression.portAnnotationInference(portAnnotation, workspace)
+          .type;
+      }
+
       return TUnknown;
     } catch (error) {
       const connection = container.resolve<Connection>("Connection");

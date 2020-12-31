@@ -17,6 +17,11 @@ export class HintHelper {
         return this.createHintFromDefinitionInLet(node, typeString);
       } else if (node.type === "field_type") {
         return this.createHintFromFieldType(node);
+      } else if (node.type === "port_annotation") {
+        const name = node.childForFieldName("name");
+        if (name && typeString) {
+          return this.formatHint(`${name.text} : ${typeString}`, "");
+        }
       } else {
         return this.createHintFromDefinition(node);
       }
