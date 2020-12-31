@@ -890,6 +890,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       valueDeclaration.tree.uri,
       workspace,
       new Set(),
+      /* recursionAllowed */ false,
       cancellationToken,
     );
     result.diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));

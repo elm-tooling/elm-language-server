@@ -73,4 +73,13 @@ export class Utils {
 
     return [startIndex, endIndex];
   }
+
+  public static rotateArray<T>(array: T[], newStartIndex: number): T[] {
+    const newArray = [];
+    for (let i = 0; i < array.length; i++) {
+      newArray.push(array[newStartIndex]);
+      newStartIndex = (newStartIndex + 1) % array.length;
+    }
+    return newArray;
+  }
 }

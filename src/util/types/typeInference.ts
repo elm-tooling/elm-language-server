@@ -555,6 +555,7 @@ export class InferenceScope {
     uri: string,
     program: IElmWorkspace,
     activeScopes: Set<EValueDeclaration>,
+    recursionAllowed = false,
     cancellationToken?: ICancellationToken,
   ): InferenceResult {
     const nonShadowableNames =
@@ -567,7 +568,7 @@ export class InferenceScope {
         program,
         nonShadowableNames,
         new Set(activeScopes.values()),
-        /* recursionAllowed */ false,
+        recursionAllowed,
         cancellationToken,
       ).inferDeclaration(declaration, true);
 
@@ -640,20 +641,67 @@ export class InferenceScope {
   }
 
   private checkRecursion(declaration: EValueDeclaration): boolean {
-    const isRecursive = !!Array.from(this.activeScopes.values()).find(
-      (d) => d.id === declaration.id,
-    );
+    let scopes = Array.from(this.activeScopes.values());
+    const index = scopes.findIndex((decl) => decl.id === declaration.id);
 
-    const functionDeclaration = mapSyntaxNodeToExpression(
-      declaration.childForFieldName("functionDeclarationLeft"),
-    );
+    const isRecursive = index >= 0;
+
+    if (isRecursive) {
+      // We only want scopes in the recursion loop
+      scopes = scopes.slice(index);
+    }
+
+    // Handle top level declaration recursion
     if (
       isRecursive &&
       !this.recursionAllowed &&
-      (functionDeclaration?.nodeType !== "FunctionDeclarationLeft" ||
-        !functionDeclaration.params[0])
+      declaration.parent?.type === "file"
     ) {
-      this.diagnostics.push(error(declaration, Diagnostics.InfiniteRecursion));
+      const callChain = scopes.filter(
+        (decl) => decl.parent?.id === declaration.parent?.id,
+      );
+
+      if (callChain.every((decl) => decl.params.length === 0)) {
+        const mapped = callChain.map(
+          (decl) => decl.firstNamedChild?.firstNamedChild?.text ?? "",
+        );
+
+        this.diagnostics.push(
+          error(
+            declaration.firstNamedChild!,
+            Diagnostics.RecursiveDeclaration(mapped.length),
+            ...mapped,
+          ),
+        );
+      }
+    }
+
+    // Handle let recursion
+    if (isRecursive && declaration.parent?.type === "let_in_expr") {
+      const callChain = scopes
+        .filter((decl) => decl.parent?.id === declaration.parent?.id)
+        .reverse();
+
+      const recursiveLet = callChain.find((decl) => decl.params.length === 0);
+
+      if (recursiveLet?.firstNamedChild) {
+        const reversed = callChain
+          .reverse()
+          .map((decl) => decl.firstNamedChild?.firstNamedChild?.text ?? "");
+
+        const rotated = Utils.rotateArray(
+          reversed,
+          reversed.indexOf(recursiveLet.firstNamedChild.text),
+        );
+
+        this.diagnostics.push(
+          error(
+            recursiveLet.firstNamedChild,
+            Diagnostics.RecursiveLet(callChain.length),
+            ...rotated,
+          ),
+        );
+      }
     }
 
     return isRecursive;
@@ -1068,6 +1116,7 @@ export class InferenceScope {
             declaration.tree.uri,
             this.elmWorkspace,
             this.activeScopes,
+            this.recursionAllowed,
             this.cancellationToken,
           ).type
         : parentScope.inferChildDeclaration(declaration, this.activeScopes)
