@@ -232,7 +232,7 @@ type Page = Home
     await testBase.testDefinition(source);
   });
 
-  xit(`test union constructor ref preceeded by incomplete import`, async () => {
+  it(`test union constructor ref preceeded by incomplete import`, async () => {
     const source = `
 --@ main.elm
 import Foo as

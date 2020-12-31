@@ -1,5 +1,4 @@
 import { CodeActionKind } from "vscode-languageserver";
-import { TextEdit } from "vscode-languageserver-textdocument";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import {
@@ -26,7 +25,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
     ) {
       const functionName = nodeAtPosition.text;
 
-      if (TreeUtils.isExposedFunction(tree, functionName)) {
+      if (TreeUtils.isExposedFunctionOrPort(tree, functionName)) {
         result.push({
           title: "Unexpose Function",
           kind: CodeActionKind.Refactor,

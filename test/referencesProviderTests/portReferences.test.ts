@@ -1,16 +1,16 @@
 import { ReferencesProviderTestBase } from "./referencesProviderTestBase";
 
-describe("functionReferences", () => {
+describe("portReferences", () => {
   const testBase = new ReferencesProviderTestBase();
 
-  it(`function references in other files`, async () => {
+  it(`port references in other files`, async () => {
     const source = `
 
 --@ Module.elm
-module Module exposing (foo)
-                       --X
-foo = 42
---^
+port module Module exposing (foo)
+                            --X
+port foo : String -> Cmd msg
+    --^
 
 --@ Bar.elm
 module Bar exposing (..)
@@ -33,14 +33,14 @@ func = foo
     await testBase.testReferences(source);
   });
 
-  it(`function references used with module prefix in other files`, async () => {
+  it(`port references used with module prefix in other files`, async () => {
     const source = `
 
 --@ Module.elm
-module Module exposing (foo)
-                       --X
-foo = 42
---^
+port module Module exposing (foo)
+                            --X
+port foo : String -> Cmd msg
+    --^
 
 --@ Bar.elm
 module Bar exposing (..)
@@ -61,14 +61,14 @@ func = Module.foo
     await testBase.testReferences(source);
   });
 
-  it(`function references used with module alias prefix in other files`, async () => {
+  it(`port references used with module alias prefix in other files`, async () => {
     const source = `
 
 --@ Module.elm
-module Module exposing (foo)
-                       --X
-foo = 42
---^
+port module Module exposing (foo)
+                            --X
+port foo : String -> Cmd msg
+    --^
 
 --@ Bar.elm
 module Bar exposing (..)
@@ -89,30 +89,17 @@ func = Mod.foo
     await testBase.testReferences(source);
   });
 
-  it(`local calls to a function`, async () => {
+  it(`local calls to a port`, async () => {
     const source = `
 
 --@ Module.elm
-module Module exposing (foo)
-                        --X
-foo = 42
---^
+port module Module exposing (foo)
+                            --X
+port foo : String -> Cmd msg
+    --^
 
 bar = foo
      --X
-`;
-    await testBase.testReferences(source);
-  });
-
-  // getFunctionAnnotationNameNodeFromDefinition doesn't find the annotation due to the comment inbetween
-  xit(`function annotation gets a reference`, async () => {
-    const source = `
-
---@ Module.elm
-foo : Int
---X
-foo = 42
---^
 `;
     await testBase.testReferences(source);
   });

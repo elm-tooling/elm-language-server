@@ -5,7 +5,6 @@ import { IReferenceNode } from "./referenceNode";
 import { TreeUtils } from "./treeUtils";
 import { Utils } from "./utils";
 import { IImport, Imports } from "../imports";
-import { container } from "tsyringe";
 
 export class References {
   public static find(
@@ -73,7 +72,7 @@ export class References {
                   );
                 }
 
-                const isExposedFunction = TreeUtils.isExposedFunction(
+                const isExposedFunction = TreeUtils.isExposedFunctionOrPort(
                   refSourceTree.tree,
                   functionName,
                 );
@@ -173,10 +172,137 @@ export class References {
             }
 
             break;
+          case "Port":
+            {
+              const portNameNode = TreeUtils.getTypeOrTypeAliasOrPortNameNodeFromDefinition(
+                definitionNode.node,
+              );
+              if (portNameNode) {
+                const portName = portNameNode.text;
+                if (refSourceTree.writeable) {
+                  references.push({
+                    node: portNameNode,
+                    uri: definitionNode.uri,
+                  });
+                }
+
+                const localCallsToPort = this.findFunctionCalls(
+                  refSourceTree.tree.rootNode,
+                  portName,
+                );
+
+                if (localCallsToPort && refSourceTree.writeable) {
+                  references.push(
+                    ...localCallsToPort.map((node) => {
+                      return { node, uri: definitionNode.uri };
+                    }),
+                  );
+                }
+
+                const isExposedPort = TreeUtils.isExposedFunctionOrPort(
+                  refSourceTree.tree,
+                  portName,
+                );
+                if (isExposedPort) {
+                  const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
+                    refSourceTree.tree,
+                  );
+                  if (moduleDeclarationNode) {
+                    const exposedNode = TreeUtils.findExposedFunctionNode(
+                      moduleDeclarationNode,
+                      portName,
+                    );
+
+                    if (exposedNode && refSourceTree.writeable) {
+                      references.push({
+                        node: exposedNode,
+                        uri: definitionNode.uri,
+                      });
+                    }
+                  }
+
+                  if (isExposedPort && moduleNameNode) {
+                    const moduleName = moduleNameNode.text;
+
+                    for (const uri in imports) {
+                      if (uri === definitionNode.uri) {
+                        continue;
+                      }
+
+                      const otherTreeContainer = forest.getByUri(uri);
+
+                      if (!otherTreeContainer) {
+                        continue;
+                      }
+
+                      const importedModuleAlias =
+                        TreeUtils.findImportAliasOfModule(
+                          moduleName,
+                          otherTreeContainer.tree,
+                        ) ?? moduleName;
+
+                      const element = imports[uri];
+                      const filter = (imp: IImport): boolean =>
+                        imp.type === "Port" &&
+                        imp.fromModuleName === moduleName;
+
+                      // Find the function in the other module's imports
+                      const found =
+                        element.get(portName, filter) ??
+                        element.get(
+                          `${importedModuleAlias}.${portName}`,
+                          filter,
+                        );
+
+                      if (found) {
+                        if (
+                          otherTreeContainer &&
+                          otherTreeContainer.writeable
+                        ) {
+                          const importClause = otherTreeContainer.symbolLinks
+                            ?.get(otherTreeContainer.tree.rootNode)
+                            ?.get(importedModuleAlias);
+
+                          // Add node from exposing list
+                          if (importClause?.type === "Import") {
+                            const exposedNode = TreeUtils.findExposedFunctionNode(
+                              importClause.node,
+                              portName,
+                            );
+
+                            if (exposedNode) {
+                              references.push({
+                                node: exposedNode,
+                                uri,
+                              });
+                            }
+                          }
+
+                          // Find all function calls in the other tree
+                          const functions = this.findFunctionCalls(
+                            otherTreeContainer.tree.rootNode,
+                            found?.alias,
+                          );
+                          if (functions) {
+                            references.push(
+                              ...functions.map((node) => {
+                                return { node, uri };
+                              }),
+                            );
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            break;
           case "Type":
           case "TypeAlias":
             {
-              const typeOrTypeAliasNameNode = TreeUtils.getTypeOrTypeAliasNameNodeFromDefinition(
+              const typeOrTypeAliasNameNode = TreeUtils.getTypeOrTypeAliasOrPortNameNodeFromDefinition(
                 definitionNode.node,
               );
 

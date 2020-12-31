@@ -231,6 +231,13 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         return findTypeOrParentType(node, inferenceResult) ?? TUnknown;
       }
 
+      const portAnnotation = mapSyntaxNodeToExpression(node);
+
+      if (portAnnotation && portAnnotation.nodeType === "PortAnnotation") {
+        return TypeExpression.portAnnotationInference(portAnnotation, workspace)
+          .type;
+      }
+
       return TUnknown;
     } catch (error) {
       const connection = container.resolve<Connection>("Connection");
@@ -411,11 +418,15 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     } else if (
       (nodeParentType === "exposed_value" &&
         nodeParent.parent?.parent?.type === "module_declaration") ||
-      nodeParentType === "type_annotation"
+      nodeParentType === "type_annotation" ||
+      nodeParentType === "port_annotation"
     ) {
       const definitionNode = rootSymbols?.get(nodeText);
 
-      if (definitionNode && definitionNode.type === "Function") {
+      if (
+        definitionNode &&
+        (definitionNode.type === "Function" || definitionNode.type === "Port")
+      ) {
         return {
           node: definitionNode.node,
           nodeType: definitionNode.type,
