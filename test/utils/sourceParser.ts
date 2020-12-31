@@ -215,7 +215,7 @@ export function getReferencesTestFromSource(
       do {
         result = regex.exec(s);
         const referenceCharacter = result?.index;
-        if (referenceCharacter && referenceCharacter >= 0) {
+        if (referenceCharacter !== undefined && referenceCharacter >= 0) {
           references.push({
             referencePosition: {
               line: line - 1,
