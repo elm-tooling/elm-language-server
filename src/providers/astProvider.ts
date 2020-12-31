@@ -130,11 +130,19 @@ export class ASTProvider {
     tree = newTree;
 
     if (tree) {
+      // Reuse old source file for most cases
+      const isTestFile = params.sourceFile
+        ? params.sourceFile.isTestFile
+        : params.program
+            .getSourceDirectoryOfFile(document.uri)
+            ?.endsWith("tests") ?? false;
+
       const treeContainer = forest.setTree(
         pendingRenameUri ?? document.uri,
         true,
         true,
         tree,
+        isTestFile,
       );
 
       // The workspace now needs to be synchronized

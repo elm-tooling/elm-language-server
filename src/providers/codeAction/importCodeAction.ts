@@ -78,8 +78,8 @@ function getPossibleImports(
   );
 
   const possibleImports = ImportUtils.getPossibleImports(
+    params.program,
     params.sourceFile,
-    params.program.getForest(),
   );
 
   // Add import quick fixes
