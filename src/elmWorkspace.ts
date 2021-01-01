@@ -33,6 +33,7 @@ interface IElmFile {
   path: string;
   maintainerAndPackageName?: string;
   project: ElmProject;
+  isTestFile: boolean;
 }
 
 export type ElmJson = IElmApplicationJson | IElmPackageJson;
@@ -81,6 +82,10 @@ export interface IElmWorkspace {
   isInSourceDirectory(uri: string): boolean;
   getSourceDirectoryOfFile(uri: string): string | undefined;
   getSourceFile(uri: string): ITreeContainer | undefined;
+  getSourceFileOfImportableModule(
+    sourceFile: ITreeContainer,
+    importableModuleName: string,
+  ): ITreeContainer | undefined;
   getForest(synchronize?: boolean): IForest;
   getRootPath(): URI;
   getTypeCache(): TypeCache;
@@ -101,7 +106,9 @@ export interface IElmWorkspace {
     sourceFile: ITreeContainer,
     cancellationToken?: ICancellationToken,
   ): Diagnostic[];
-  hasAccessibleModule(moduleName: string): boolean;
+  getImportableModules(
+    sourceFile: ITreeContainer,
+  ): { moduleName: string; uri: string }[];
 }
 
 export type ElmProject = IElmApplication | IElmPackage;
@@ -114,6 +121,7 @@ interface IElmProject {
   sourceDirectories: string[];
   testDirectories: string[];
   moduleToUriMap: Map<string, string>;
+  testModuleToUriMap: Map<string, string>;
 }
 
 interface IElmApplication extends IElmProject {
@@ -189,6 +197,23 @@ export class ElmWorkspace implements IElmWorkspace {
 
   public getSourceFile(uri: string): ITreeContainer | undefined {
     return this.getForest().getByUri(uri);
+  }
+
+  public getSourceFileOfImportableModule(
+    sourceFile: ITreeContainer,
+    importableModuleName: string,
+  ): ITreeContainer | undefined {
+    let moduleUri = sourceFile.project.moduleToUriMap.get(importableModuleName);
+
+    if (!moduleUri && sourceFile.isTestFile) {
+      moduleUri = sourceFile.project.testModuleToUriMap.get(
+        importableModuleName,
+      );
+    }
+
+    if (moduleUri) {
+      return this.getSourceFile(moduleUri);
+    }
   }
 
   public getForest(synchronize = true): IForest {
@@ -287,8 +312,15 @@ export class ElmWorkspace implements IElmWorkspace {
     );
   }
 
-  public hasAccessibleModule(moduleName: string): boolean {
-    return this.rootProject.moduleToUriMap.has(moduleName);
+  public getImportableModules(
+    sourceFile: ITreeContainer,
+  ): { moduleName: string; uri: string }[] {
+    return Array.from(sourceFile.project.moduleToUriMap.entries()).map(
+      ([moduleName, uri]) => ({
+        moduleName,
+        uri,
+      }),
+    );
   }
 
   private async initWorkspace(
@@ -422,6 +454,7 @@ export class ElmWorkspace implements IElmWorkspace {
           allDependencies,
         ),
         moduleToUriMap: new Map<string, string>(),
+        testModuleToUriMap: new Map<string, string>(),
       } as IElmApplication;
     } else {
       const deps = new Map(
@@ -459,6 +492,7 @@ export class ElmWorkspace implements IElmWorkspace {
           this.flatternExposedModules(elmJson["exposed-modules"]),
         ),
         moduleToUriMap: new Map<string, string>(),
+        testModuleToUriMap: new Map<string, string>(),
       } as IElmPackage;
     }
   }
@@ -506,6 +540,7 @@ export class ElmWorkspace implements IElmWorkspace {
           this.flatternExposedModules(elmJson["exposed-modules"]),
         ),
         moduleToUriMap: new Map<string, string>(),
+        testModuleToUriMap: new Map<string, string>(),
       } as IElmPackage;
 
       this.resolvedPackageCache.set(cacheKey, resolvedPackage);
@@ -589,12 +624,26 @@ export class ElmWorkspace implements IElmWorkspace {
 
       const moduleName = utils.getModuleName(matchingPath, sourceDir);
 
-      project.moduleToUriMap.set(moduleName, URI.file(matchingPath).toString());
+      // We could track this using the separate `testDirectories`
+      // But those are just hardcodeded to ./tests anyways, so this should be fine
+      const isTestDir = sourceDir.endsWith("tests");
+      if (isTestDir) {
+        project.testModuleToUriMap.set(
+          moduleName,
+          URI.file(matchingPath).toString(),
+        );
+      } else {
+        project.moduleToUriMap.set(
+          moduleName,
+          URI.file(matchingPath).toString(),
+        );
+      }
 
       elmFiles.push({
         maintainerAndPackageName,
         path: matchingPath,
         project,
+        isTestFile: isTestDir,
       });
     });
 
@@ -643,6 +692,7 @@ export class ElmWorkspace implements IElmWorkspace {
         filePath.project === this.rootProject,
         true,
         tree,
+        filePath.isTestFile,
         filePath.project,
         filePath.maintainerAndPackageName,
       );
@@ -653,22 +703,24 @@ export class ElmWorkspace implements IElmWorkspace {
   }
 
   private findExposedModulesOfDependencies(project: ElmProject): void {
-    const loadForDependencies = (deps: Map<string, IElmPackage>): void => {
-      // For each dependecy, find every exposed module
-      deps.forEach((dep) => {
-        dep.moduleToUriMap.forEach((uri, module) => {
-          if (dep.exposedModules.has(module)) {
-            project.moduleToUriMap.set(module, uri);
-          }
-        });
-        this.findExposedModulesOfDependencies(dep);
+    // For each dependency, find every exposed module
+    project.dependencies.forEach((dep) => {
+      dep.moduleToUriMap.forEach((uri, module) => {
+        if (dep.exposedModules.has(module)) {
+          project.moduleToUriMap.set(module, uri);
+        }
       });
-    };
-
-    loadForDependencies(project.dependencies);
+      this.findExposedModulesOfDependencies(dep);
+    });
 
     if (project === this.rootProject) {
-      loadForDependencies(project.testDependencies);
+      project.testDependencies.forEach((dep) => {
+        dep.moduleToUriMap.forEach((uri, module) => {
+          if (dep.exposedModules.has(module)) {
+            project.testModuleToUriMap.set(module, uri);
+          }
+        });
+      });
     }
   }
 

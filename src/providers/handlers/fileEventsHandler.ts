@@ -139,8 +139,13 @@ export class FileEventsHandler {
       );
 
       if (sourceFile.moduleName) {
-        sourceFile.project.moduleToUriMap.delete(sourceFile.moduleName);
-        sourceFile.project.moduleToUriMap.set(newModuleName, newUri);
+        if (!sourceFile.isTestFile) {
+          sourceFile.project.moduleToUriMap.delete(sourceFile.moduleName);
+          sourceFile.project.moduleToUriMap.set(newModuleName, newUri);
+        }
+
+        sourceFile.project.testModuleToUriMap.delete(sourceFile.moduleName);
+        sourceFile.project.testModuleToUriMap.set(newModuleName, newUri);
       }
 
       this.astProvider.addPendingRename(oldUri, newUri);

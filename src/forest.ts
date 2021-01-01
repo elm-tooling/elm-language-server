@@ -13,6 +13,7 @@ export interface ITreeContainer {
   maintainerAndPackageName?: string;
   tree: Tree;
   project: ElmProject; // The project this source file is associated with
+  isTestFile: boolean;
 
   parseDiagnostics: Diagnostic[];
 
@@ -29,13 +30,13 @@ export interface ITreeContainer {
 export interface IForest {
   treeMap: Map<string, ITreeContainer>;
   getTree(uri: string): Tree | undefined;
-  getByModuleName(moduleName: string): ITreeContainer | undefined;
   getByUri(uri: string): ITreeContainer | undefined;
   setTree(
     uri: string,
     writeable: boolean,
     referenced: boolean,
     tree: Tree,
+    isTestFile: boolean,
     project?: ElmProject,
     packageName?: string,
   ): ITreeContainer;
@@ -56,10 +57,6 @@ export class Forest implements IForest {
     return this.getByUri(uri)?.tree;
   }
 
-  public getByModuleName(moduleName: string): ITreeContainer | undefined {
-    return this.getByUri(this.rootProject.moduleToUriMap.get(moduleName) ?? "");
-  }
-
   public getByUri(uri: string): ITreeContainer | undefined {
     return this.treeMap.get(uri);
   }
@@ -69,6 +66,7 @@ export class Forest implements IForest {
     writeable: boolean,
     referenced: boolean,
     tree: Tree,
+    isTestFile: boolean,
     project: ElmProject = this.rootProject,
     maintainerAndPackageName?: string,
   ): ITreeContainer {
@@ -81,6 +79,7 @@ export class Forest implements IForest {
       uri,
       writeable,
       project,
+      isTestFile,
       parseDiagnostics: [],
     };
 
@@ -94,24 +93,23 @@ export class Forest implements IForest {
   }
 
   public synchronize(): void {
-    this.treeMap.forEach((treeContainer) => {
+    this.treeMap.forEach((sourceFile) => {
       // Resolve import modules
-      if (!treeContainer.resolvedModules) {
-        treeContainer.resolvedModules = this.resolveModules(treeContainer);
+      if (!sourceFile.resolvedModules) {
+        sourceFile.resolvedModules = this.resolveModules(sourceFile);
       }
 
-      if (!treeContainer.moduleName) {
-        const moduleName = TreeUtils.getModuleNameNode(treeContainer.tree)
-          ?.text;
+      if (!sourceFile.moduleName) {
+        const moduleName = TreeUtils.getModuleNameNode(sourceFile.tree)?.text;
 
         if (moduleName) {
-          treeContainer.moduleName = moduleName;
+          sourceFile.moduleName = moduleName;
 
           if (
-            treeContainer.project === this.rootProject &&
-            !this.rootProject.moduleToUriMap.has(moduleName)
+            sourceFile.project === this.rootProject &&
+            !this.getModuleMap(sourceFile).has(moduleName)
           ) {
-            this.rootProject.moduleToUriMap.set(moduleName, treeContainer.uri);
+            this.getModuleMap(sourceFile).set(moduleName, sourceFile.uri);
           }
         }
       }
@@ -136,7 +134,11 @@ export class Forest implements IForest {
       const moduleName = importClause.childForFieldName("moduleName")?.text;
 
       if (moduleName) {
-        const found = sourceFile.project.moduleToUriMap.get(moduleName);
+        let found = sourceFile.project.moduleToUriMap.get(moduleName);
+
+        if (!found && sourceFile.isTestFile) {
+          found = sourceFile.project.testModuleToUriMap.get(moduleName);
+        }
 
         if (found) {
           resolvedModules.set(moduleName, found);
@@ -145,5 +147,11 @@ export class Forest implements IForest {
     });
 
     return resolvedModules;
+  }
+
+  private getModuleMap(sourceFile: ITreeContainer): Map<string, string> {
+    return sourceFile.isTestFile
+      ? sourceFile.project.testModuleToUriMap
+      : sourceFile.project.moduleToUriMap;
   }
 }

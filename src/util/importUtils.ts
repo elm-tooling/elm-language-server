@@ -1,7 +1,8 @@
-import { IForest, ITreeContainer } from "../forest";
+import { ITreeContainer } from "../forest";
 import RANKING_LIST from "../providers/ranking";
 import { TreeUtils, NodeType } from "./treeUtils";
 import { SyntaxNode } from "web-tree-sitter";
+import { IElmWorkspace } from "../elmWorkspace";
 
 export interface IPossibleImport {
   module: string;
@@ -14,17 +15,21 @@ export interface IPossibleImport {
 
 export class ImportUtils {
   public static getPossibleImports(
-    forest: IForest,
-    uri: string,
+    program: IElmWorkspace,
+    sourceFile: ITreeContainer,
   ): IPossibleImport[] {
-    const currentModule = forest.getByUri(uri)?.moduleName;
+    const currentModule = sourceFile?.moduleName;
 
     const exposedValues: IPossibleImport[] = [];
 
     // Find all exposed values that could be imported
-    forest.treeMap.forEach((tree) => {
-      if (tree.uri !== uri && tree.moduleName !== "Basics") {
-        exposedValues.push(...ImportUtils.getPossibleImportsOfTree(tree));
+    program.getImportableModules(sourceFile).forEach(({ uri, moduleName }) => {
+      if (uri !== sourceFile.uri && moduleName !== "Basics") {
+        const tree = program.getSourceFile(uri);
+
+        if (tree) {
+          exposedValues.push(...ImportUtils.getPossibleImportsOfTree(tree));
+        }
       }
     });
 

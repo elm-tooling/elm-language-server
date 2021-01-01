@@ -909,7 +909,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     if (!declaration.typeAnnotation) {
       const typeString: string = typeToString(
         result.type,
-        forest.getByUri(declaration.tree.uri),
+        getSourceFileOfNode(declaration),
       );
 
       if (
@@ -933,7 +933,12 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
     if (moduleNameNode) {
       const moduleName = moduleNameNode.text;
-      if (!workspace.hasAccessibleModule(moduleName)) {
+      if (
+        !workspace.getSourceFileOfImportableModule(
+          getSourceFileOfNode(importClause),
+          moduleName,
+        )
+      ) {
         diagnostics.add(
           error(moduleNameNode, Diagnostics.ImportMissing, moduleName),
         );
@@ -970,5 +975,9 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       mapSyntaxNodeToExpression(portAnnotation) as EPortAnnotation,
       workspace,
     ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
+  }
+
+  function getSourceFileOfNode(node: SyntaxNode): ITreeContainer {
+    return forest.getByUri(node.tree.uri)!;
   }
 }

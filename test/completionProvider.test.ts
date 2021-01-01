@@ -35,7 +35,11 @@ describe("CompletionProvider", () => {
    */
   async function testCompletions(
     source: string,
-    expectedCompletions: (string | CompletionItem)[],
+    expectedCompletions: (
+      | string
+      | CompletionItem
+      | { name: string; shouldNotExist: boolean }
+    )[],
     testExactCompletions: exactCompletions = "partialMatch",
     testDotCompletion: dotCompletions = "normal",
   ) {
@@ -97,9 +101,11 @@ describe("CompletionProvider", () => {
       }
 
       expectedCompletions.forEach((completion) => {
-        const result = completionsList.find((c) => {
+        let result = !!completionsList.find((c) => {
           if (typeof completion === "string") {
             return c.label === completion;
+          } else if ("shouldNotExist" in completion) {
+            return c.label === completion.name;
           } else {
             // Compare label, detail, and text edit text
             return (
@@ -115,6 +121,15 @@ describe("CompletionProvider", () => {
           }
         });
 
+        // Flip result if it should not exist
+        if (
+          typeof completion === "object" &&
+          "shouldNotExist" in completion &&
+          completion.shouldNotExist
+        ) {
+          result = !result;
+        }
+
         if (!result && debug) {
           console.log(
             `Could not find ${completion} in ${JSON.stringify(
@@ -123,7 +138,7 @@ describe("CompletionProvider", () => {
           );
         }
 
-        expect(result).toBeTruthy();
+        expect(result).toBe(true);
       });
     }
 
@@ -1350,5 +1365,49 @@ func model =
 `;
 
     await testCompletions(source, ["prop1", "prop2"], "exactMatch");
+  });
+
+  it("Test dependencies should be seperate from normal ones", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+test =
+    {-caret-}
+
+--@ tests/TestFile.elm
+module TestFile exposing (..)
+
+func =
+    ""
+`;
+
+    await testCompletions(
+      source,
+      [{ name: "func", shouldNotExist: true }],
+      "partialMatch",
+    );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+test =
+    ""
+
+--@ tests/TestFile.elm
+module TestFile exposing (..)
+
+func =
+    ""
+
+--@ tests/TestFile2.elm
+module TestFile2 exposing (..)
+
+func2 =
+    {-caret-}
+`;
+
+    await testCompletions(source2, ["func", "test"], "partialMatch");
   });
 });

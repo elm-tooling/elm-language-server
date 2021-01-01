@@ -251,7 +251,8 @@ export class CompletionProvider {
         nodeAtPosition.parent.firstNamedChild?.type === "exposing"
       ) {
         return this.getExposedFromModule(
-          forest,
+          params.program,
+          params.sourceFile,
           nodeAtPosition.parent,
           replaceRange,
         );
@@ -265,7 +266,8 @@ export class CompletionProvider {
           nodeAtPosition.parent?.parent?.type === "exposing_list")
       ) {
         return this.getExposedFromModule(
-          forest,
+          params.program,
+          params.sourceFile,
           nodeAtPosition.parent.parent,
           replaceRange,
         );
@@ -416,14 +418,15 @@ export class CompletionProvider {
     range: Range,
     targetModule?: string,
   ): CompletionItem[] {
-    return Array.from(sourceFile.project.moduleToUriMap.entries())
+    return program
+      .getImportableModules(sourceFile)
       .filter(
-        ([moduleName]) =>
+        ({ moduleName }) =>
           (!targetModule || moduleName?.startsWith(targetModule + ".")) &&
           moduleName !== sourceFile.moduleName &&
           moduleName !== targetModule,
       )
-      .map(([moduleName, uri]) => {
+      .map(({ moduleName, uri }) => {
         const sourceFileToImport = program.getSourceFile(uri)!;
         const moduleNode = TreeUtils.findModuleDeclaration(
           sourceFileToImport.tree,
@@ -443,7 +446,8 @@ export class CompletionProvider {
   }
 
   private getExposedFromModule(
-    forest: IForest,
+    program: IElmWorkspace,
+    sourceFile: ITreeContainer,
     exposingListNode: SyntaxNode,
     range: Range,
   ): CompletionItem[] | undefined {
@@ -462,7 +466,10 @@ export class CompletionProvider {
     ) {
       const sortPrefix = "c";
       const moduleName = exposingListNode.previousNamedSibling.text;
-      const exposedByModule = forest.getByModuleName(moduleName)?.exposing;
+      const exposedByModule = program.getSourceFileOfImportableModule(
+        sourceFile,
+        moduleName,
+      )?.exposing;
       if (exposedByModule) {
         return Array.from(exposedByModule.values())
           .map((a) => {
@@ -1067,27 +1074,27 @@ export class CompletionProvider {
   }
 
   private getPossibleImportsFiltered(
-    workspace: IElmWorkspace,
+    program: IElmWorkspace,
     uri: string,
     filterText: string,
   ): IPossibleImport[] {
-    const forest = workspace.getForest();
-    const possibleImportsCache = workspace.getPossibleImportsCache();
-    const treeContainer = forest.getByUri(uri);
+    const forest = program.getForest();
+    const possibleImportsCache = program.getPossibleImportsCache();
+    const sourceFile = forest.getByUri(uri);
 
-    if (treeContainer) {
-      const allImportedValues = workspace
+    if (sourceFile) {
+      const allImportedValues = program
         .getTypeChecker()
-        .getAllImports(treeContainer);
+        .getAllImports(sourceFile);
 
       const importedModules =
-        TreeUtils.findAllImportClauseNodes(treeContainer.tree)?.map(
+        TreeUtils.findAllImportClauseNodes(sourceFile.tree)?.map(
           (n) => TreeUtils.findFirstNamedChildOfType("upper_case_qid", n)?.text,
         ) ?? [];
 
       const cached = possibleImportsCache.get(uri);
       const possibleImports =
-        cached ?? ImportUtils.getPossibleImports(forest, uri);
+        cached ?? ImportUtils.getPossibleImports(program, sourceFile);
 
       if (!cached) {
         possibleImportsCache.set(uri, possibleImports);
@@ -1235,7 +1242,10 @@ export class CompletionProvider {
       moduleTree = program.getSourceFile(definitionNode.uri);
     } else {
       // Try to find this module in the forest to import
-      moduleTree = forest.getByModuleName(targetModule);
+      moduleTree = program.getSourceFileOfImportableModule(
+        sourceFile,
+        targetModule,
+      );
       alreadyImported = false;
     }
 
