@@ -14,6 +14,7 @@ import * as path from "../../src/util/path";
 import { Utils } from "../../src/util/utils";
 
 export const baseUri = path.join(__dirname, "../sources/src/");
+const testUri = path.join(baseUri, "tests");
 
 export class SourceTreeParser {
   private parser?: Parser;
@@ -56,8 +57,20 @@ export class SourceTreeParser {
         `;
       }
 
-      return sources[path.relative(baseUri, uri)];
+      return (
+        sources[path.relative(baseUri, uri)] ??
+        testSources[path.relative(testUri, uri)]
+      );
     };
+
+    // Seperate test sources
+    const testSources: { [K: string]: string } = {};
+    for (const key in sources) {
+      if (key.startsWith("tests/")) {
+        testSources[key.substring(6, key.length)] = sources[key];
+        delete sources[key];
+      }
+    }
 
     const program = new ElmWorkspace(URI.file(baseUri), {
       readFile: (uri: string): Promise<string> =>
@@ -67,6 +80,8 @@ export class SourceTreeParser {
           path.normalizeUri(uri) ===
             path.normalizeUri(baseUri.substr(0, baseUri.length - 1)) // Remove trailing / from baseUri
             ? Object.keys(sources).map((sourceUri) => path.join(uri, sourceUri))
+            : path.normalizeUri(uri) === path.normalizeUri(testUri)
+            ? Object.keys(testSources).map((testUri) => path.join(uri, testUri))
             : [],
         );
       },
