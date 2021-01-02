@@ -26,6 +26,7 @@
 - Fix module resolution to be more like how the compiler resolves modules
 - Fix some incorrect unused value diagnostics
 - Fix how errors from third party binaries are shown
+- Fixed test dependencies being available in non test modules
 
 ### Other Changes
 
