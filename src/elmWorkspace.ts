@@ -26,6 +26,7 @@ import {
   TypeChecker,
 } from "./util/types/typeChecker";
 import chokidar from "chokidar";
+import { CommandManager } from "./commandManager";
 
 const readFile = util.promisify(fs.readFile);
 
@@ -151,7 +152,6 @@ export class ElmWorkspace implements IElmWorkspace {
   private operatorsCache: Map<string, DefinitionResult>;
   private diagnosticsCache: Map<string, Diagnostic[]>;
   private rootProject!: ElmProject;
-  private packagesRoot!: string;
   private forest!: IForest;
   private elmPackageCache!: IElmPackageCache;
   private resolvedPackageCache = new Map<string, IElmPackage>();
@@ -365,7 +365,7 @@ export class ElmWorkspace implements IElmWorkspace {
 
     try {
       const elmHome = this.findElmHome();
-      this.packagesRoot = `${elmHome}/${elmVersion}/${this.packageOrPackagesFolder(
+      ElmPackageCache.packagesRoot = `${elmHome}/${elmVersion}/${this.packageOrPackagesFolder(
         elmVersion,
       )}/`;
 
@@ -382,10 +382,7 @@ export class ElmWorkspace implements IElmWorkspace {
         // On application projects, this will give a NO INPUT error message, but will still download the dependencies
       }
 
-      this.elmPackageCache = new ElmPackageCache(
-        this.packagesRoot,
-        this.loadElmJson.bind(this),
-      );
+      this.elmPackageCache = new ElmPackageCache(this.loadElmJson.bind(this));
       this.rootProject = await this.loadRootProject(pathToElmJson);
       this.forest = new Forest(this.rootProject);
 
@@ -414,6 +411,8 @@ export class ElmWorkspace implements IElmWorkspace {
       await Promise.all(promiseList);
 
       this.findExposedModulesOfDependencies(this.rootProject);
+
+      CommandManager.initHandlers(this.connection);
 
       this.connection.console.info(
         `Done parsing all files for ${pathToElmJson}`,
@@ -489,7 +488,7 @@ export class ElmWorkspace implements IElmWorkspace {
           solvedVersions,
         ),
         exposedModules: new Set(
-          this.flatternExposedModules(elmJson["exposed-modules"]),
+          utils.flattenExposedModules(elmJson["exposed-modules"]),
         ),
         moduleToUriMap: new Map<string, string>(),
         testModuleToUriMap: new Map<string, string>(),
@@ -520,7 +519,7 @@ export class ElmWorkspace implements IElmWorkspace {
       packageName.length,
     );
 
-    const pathToPackageWithVersion = `${this.packagesRoot}${maintainer}/${name}/${version.string}`;
+    const pathToPackageWithVersion = `${ElmPackageCache.packagesRoot}${maintainer}/${name}/${version.string}`;
 
     const elmJsonPath = path.join(pathToPackageWithVersion, "elm.json");
     const elmJson = await this.loadElmJson(elmJsonPath);
@@ -537,7 +536,7 @@ export class ElmWorkspace implements IElmWorkspace {
         ),
         testDependencies: new Map<string, IElmPackage>(),
         exposedModules: new Set(
-          this.flatternExposedModules(elmJson["exposed-modules"]),
+          utils.flattenExposedModules(elmJson["exposed-modules"]),
         ),
         moduleToUriMap: new Map<string, string>(),
         testModuleToUriMap: new Map<string, string>(),
@@ -648,16 +647,6 @@ export class ElmWorkspace implements IElmWorkspace {
     });
 
     return elmFiles;
-  }
-
-  private flatternExposedModules(
-    exposedModules: string[] | { [name: string]: string[] },
-  ): string[] {
-    if (Array.isArray(exposedModules)) {
-      return exposedModules;
-    }
-
-    return Object.values(exposedModules).reduce((a, b) => a.concat(b), []);
   }
 
   private packageOrPackagesFolder(elmVersion: string | undefined): string {

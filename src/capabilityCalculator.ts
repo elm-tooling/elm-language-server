@@ -3,6 +3,7 @@ import {
   ServerCapabilities,
   TextDocumentSyncKind,
 } from "vscode-languageserver";
+import { CommandManager } from "./commandManager";
 import * as ElmMakeDiagnostics from "./providers/diagnostics/elmMakeDiagnostics";
 
 export class CapabilityCalculator {
@@ -29,7 +30,10 @@ export class CapabilityCalculator {
       documentFormattingProvider: true,
       documentSymbolProvider: { label: "Elm" },
       executeCommandProvider: {
-        commands: [ElmMakeDiagnostics.CODE_ACTION_ELM_MAKE],
+        commands: [
+          ElmMakeDiagnostics.CODE_ACTION_ELM_MAKE,
+          ...CommandManager.commands,
+        ],
       },
       foldingRangeProvider: true,
       hoverProvider: true,

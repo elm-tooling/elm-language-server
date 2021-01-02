@@ -387,3 +387,13 @@ export function constraintIntersect(
 export function getModuleName(uri: string, sourceDir: string): string {
   return path.relative(sourceDir, uri).replace(".elm", "").split("/").join(".");
 }
+
+export function flattenExposedModules(
+  exposedModules: string[] | { [name: string]: string[] },
+): string[] {
+  if (Array.isArray(exposedModules)) {
+    return exposedModules;
+  }
+
+  return Object.values(exposedModules).reduce((a, b) => a.concat(b), []);
+}
