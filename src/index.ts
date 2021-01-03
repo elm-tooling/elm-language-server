@@ -13,6 +13,7 @@ import { createConnection } from "vscode-languageserver/node";
 import Parser from "web-tree-sitter";
 import { getCancellationStrategyFromArgv } from "./cancellation";
 import { CapabilityCalculator } from "./capabilityCalculator";
+import { ASTProvider } from "./providers";
 import { ILanguageServer } from "./server";
 import { DocumentEvents } from "./util/documentEvents";
 import { Settings } from "./util/settings";
@@ -75,6 +76,10 @@ connection.onInitialize(
     const { Server } = await import("./server");
     server = new Server(params, progress);
     await server.init();
+
+    container.register(ASTProvider, {
+      useValue: new ASTProvider(),
+    });
 
     return server.capabilities;
   },
