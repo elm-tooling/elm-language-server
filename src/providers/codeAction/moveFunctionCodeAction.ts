@@ -1,5 +1,5 @@
 import { container } from "tsyringe";
-import { CodeActionKind, TextEdit } from "vscode-languageserver";
+import { CodeActionKind } from "vscode-languageserver";
 import { Settings } from "../../util/settings";
 import { TreeUtils } from "../../util/treeUtils";
 import {

@@ -14,7 +14,7 @@ import {
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { IElmWorkspace } from "../elmWorkspace";
-import { IForest, ITreeContainer } from "../forest";
+import { ITreeContainer } from "../forest";
 import { comparePosition, PositionUtil } from "../positionUtil";
 import { getEmptyTypes } from "../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
@@ -69,7 +69,6 @@ export class CompletionProvider {
     this.connection.console.info(`A completion was requested`);
     const completions: CompletionItem[] = [];
 
-    const forest = params.program.getForest();
     const checker = params.program.getTypeChecker();
     const treeContainer = params.sourceFile;
 
@@ -1217,7 +1216,6 @@ export class CompletionProvider {
   ): CompletionItem[] {
     const result: CompletionItem[] = [];
 
-    const forest = program.getForest();
     const checker = program.getTypeChecker();
     const tree = sourceFile.tree;
 

@@ -3,7 +3,6 @@ import { TextEdit } from "vscode-languageserver-textdocument";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../util/types/diagnostics";
-import { TFunction } from "../../util/types/typeInference";
 import { CodeActionProvider } from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
 
