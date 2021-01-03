@@ -11,7 +11,6 @@ import { URI, Utils } from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { ElmWorkspace, IElmWorkspace } from "./elmWorkspace";
 import {
-  ASTProvider,
   CodeActionProvider,
   CodeLensProvider,
   CompletionProvider,
@@ -130,10 +129,6 @@ export class Server implements ILanguageServer {
 
     container.register("ClientSettings", {
       useValue: clientSettings,
-    });
-
-    container.register(ASTProvider, {
-      useValue: new ASTProvider(),
     });
 
     container.register(DiagnosticsProvider, {

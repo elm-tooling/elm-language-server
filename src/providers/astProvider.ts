@@ -73,7 +73,9 @@ export class ASTProvider {
     // Source file could be undefined here
     let tree: Tree = params.sourceFile?.tree;
 
+    let hasContentChanges = false;
     if ("contentChanges" in params) {
+      hasContentChanges = true;
       for (const change of params.contentChanges) {
         if ("range" in change) {
           tree?.edit(this.getEditFromChange(change, tree.rootNode.text));
@@ -93,7 +95,10 @@ export class ASTProvider {
       this.documentEvents.get(document.uri)?.getText() ??
       readFileSync(URI.parse(document.uri).fsPath, "utf8");
 
-    const newTree = this.parser.parse(newText, tree);
+    const newTree = this.parser.parse(
+      newText,
+      hasContentChanges ? tree : undefined,
+    );
 
     let changedDeclaration: SyntaxNode | undefined;
 
