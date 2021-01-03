@@ -166,6 +166,7 @@ export class DiagnosticsProvider {
       this.requestAllDiagnostics();
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     astProvider.onTreeChange(({ treeContainer, declaration }) => {
       if (!clientInitiatedDiagnostics) {
         this.requestDiagnostics(treeContainer.uri);
