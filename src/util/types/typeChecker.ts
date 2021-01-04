@@ -978,6 +978,12 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   }
 
   function getSourceFileOfNode(node: SyntaxNode): ITreeContainer {
-    return forest.getByUri(node.tree.uri)!;
+    const treeContainer = forest.getByUri(node.tree.uri);
+
+    if (!treeContainer) {
+      throw new Error(`Can't find treeContainer by uri "${node.tree.uri}"`);
+    } else {
+      return treeContainer;
+    }
   }
 }
