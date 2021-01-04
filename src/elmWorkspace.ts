@@ -335,9 +335,9 @@ export class ElmWorkspace implements IElmWorkspace {
         this.rootPath,
         this.connection,
       );
-    } catch (e) {
+    } catch (error) {
       this.connection.console.warn(
-        `Could not figure out elm version, this will impact how good the server works. \n ${e.stack}`,
+        `Could not figure out elm version, this will impact how good the server works. \n ${error.stack}`,
       );
     }
 
@@ -625,7 +625,7 @@ export class ElmWorkspace implements IElmWorkspace {
       const moduleName = utils.getModuleName(matchingPath, sourceDir);
 
       // We could track this using the separate `testDirectories`
-      // But those are just hardcodeded to ./tests anyways, so this should be fine
+      // But those are just hardcoded to ./tests anyways, so this should be fine
       const isTestDir = sourceDir.endsWith("tests");
       if (isTestDir) {
         project.testModuleToUriMap.set(

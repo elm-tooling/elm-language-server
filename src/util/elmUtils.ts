@@ -149,7 +149,7 @@ async function solveDependenciesWorker(
     restDeps.delete(firstDep);
 
     return [
-      firstDep
+      firstDep && deps.has(firstDep)
         ? { name: firstDep, constraint: deps.get(firstDep)! }
         : undefined,
       restDeps,
