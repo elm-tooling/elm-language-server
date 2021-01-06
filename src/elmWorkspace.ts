@@ -492,6 +492,7 @@ export class ElmWorkspace implements IElmWorkspace {
           this.flatternExposedModules(elmJson["exposed-modules"]),
         ),
         moduleToUriMap: new Map<string, string>(),
+        maintainerAndPackageName: elmJson.name,
         testModuleToUriMap: new Map<string, string>(),
       } as IElmPackage;
     }
@@ -540,6 +541,7 @@ export class ElmWorkspace implements IElmWorkspace {
           this.flatternExposedModules(elmJson["exposed-modules"]),
         ),
         moduleToUriMap: new Map<string, string>(),
+        maintainerAndPackageName: elmJson.name,
         testModuleToUriMap: new Map<string, string>(),
       } as IElmPackage;
 
