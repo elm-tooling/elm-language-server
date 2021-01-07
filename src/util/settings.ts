@@ -8,6 +8,7 @@ export interface IClientSettings {
   trace: { server: string };
   extendedCapabilities?: IExtendedCapabilites;
   disableElmLSDiagnostics: boolean;
+  skipInstallPackageConfirmation: boolean;
 }
 
 export interface IExtendedCapabilites {
@@ -24,6 +25,7 @@ export class Settings {
     elmTestPath: "",
     trace: { server: "off" },
     disableElmLSDiagnostics: false,
+    skipInstallPackageConfirmation: false,
   };
   private connection: Connection;
 

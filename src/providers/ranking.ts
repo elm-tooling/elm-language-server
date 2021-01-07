@@ -1,4 +1,24 @@
-const RANKING_LIST = {
+export function comparePackageRanking(
+  package1: string,
+  package2: string,
+): number {
+  const aRanking = RANKING_LIST[package1];
+  const bRanking = RANKING_LIST[package2];
+
+  if (aRanking && bRanking) {
+    return aRanking.localeCompare(bRanking);
+  } else if (aRanking) {
+    return 1;
+  } else if (bRanking) {
+    return -1;
+  } else {
+    return 0;
+  }
+}
+
+const RANKING_LIST: {
+  [index: string]: string;
+} = {
   "elm/core": "0001",
   "elm/html": "0002",
   "elm/browser": "0003",

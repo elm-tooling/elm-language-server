@@ -55,6 +55,10 @@ export class ElmDiagnosticsHelper {
       code = Diagnostics.MissingValue.code;
     }
 
+    if (issue.overview.startsWith("MODULE NOT FOUND")) {
+      code = Diagnostics.ImportMissing.code;
+    }
+
     return {
       range: lineRange,
       message: `${messagePrefix}${issue.details.replace(/\[\d+m/g, "")}`,

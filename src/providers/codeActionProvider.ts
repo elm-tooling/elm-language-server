@@ -1,9 +1,12 @@
+import { readFile } from "fs";
 import { container } from "tsyringe";
+import { promisify } from "util";
 import {
   CodeAction,
   CodeActionKind,
   CodeActionParams,
   CodeActionResolveRequest,
+  Command,
   Connection,
   Diagnostic as LspDiagnostic,
   Position,
@@ -11,7 +14,8 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../elmWorkspace";
+import { ElmPackageCache } from "../elmPackageCache";
+import { ElmJson, IElmWorkspace } from "../elmWorkspace";
 import { ITreeContainer } from "../forest";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { MultiMap } from "../util/multiMap";
@@ -105,6 +109,15 @@ export class CodeActionProvider {
     }
 
     new ExposeUnexposeHandler();
+
+    setTimeout(() => {
+      void new ElmPackageCache(
+        async (path) =>
+          JSON.parse(
+            await promisify(readFile)(path, { encoding: "utf-8" }),
+          ) as ElmJson,
+      ).loadAllPackageModules();
+    }, 5000);
   }
 
   public static registerCodeAction(
@@ -149,6 +162,7 @@ export class CodeActionProvider {
     params: ICodeActionParams,
     title: string,
     edits: TextEdit[],
+    command?: Command,
   ): CodeAction {
     const changes = { [params.sourceFile.uri]: edits };
     return {
@@ -156,6 +170,7 @@ export class CodeActionProvider {
       kind: CodeActionKind.QuickFix,
       edit: { changes },
       isPreferred: true,
+      command,
     };
   }
 

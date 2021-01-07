@@ -89,6 +89,9 @@ describe("module resolution solver", () => {
                 .find((p) => p.version.string === version.string)
                 ?.dependencies ?? new Map(),
             ),
+          loadAllPackageModules: () => {
+            return Promise.resolve();
+          },
         },
         new Map(deps),
       ),
