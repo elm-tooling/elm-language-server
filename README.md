@@ -87,11 +87,11 @@ Or use local versions from your `node_modules` directory, if you want to do that
 
 ## Configuration
 
-Create an [elm-tooling.json](https://github.com/lydell/elm-tooling.json) file next to your `elm.json` to configure the language server.
+Create an [elm-tooling.json](https://elm-tooling.github.io/elm-tooling-cli/spec) file next to your `elm.json` to configure the language server.
 
 Currently there’s just one thing that you can configure: entrypoints. The language server runs `elm make` to get type errors. By default `elm make` is run on the current file only. To get errors for the entire project you can specify your entrypoint files – basically, those with `main =` in them. Then the language server will run `elm make` on those instead.
 
-Example:
+Example `elm-tooling.json`:
 
 ```json
 {
@@ -101,7 +101,11 @@ Example:
 
 The entrypoints are relative to the directory where your `elm.json` and `elm-tooling.json` is and must start with `./`.
 
-Check out the [elm-tooling](https://github.com/lydell/elm-tooling.json/tree/main/cli#readme) CLI for creating and validating your `elm-tooling.json`!
+Check out the [elm-tooling](https://elm-tooling.github.io/elm-tooling-cli/) CLI for creating and validating your `elm-tooling.json`! You can run it without installing:
+
+```
+npx elm-tooling init
+```
 
 ## Features
 
