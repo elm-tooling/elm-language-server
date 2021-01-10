@@ -11,6 +11,7 @@
   - On file rename, the module name and all references will be updated
 
 - A new "extract function" code action. Select a complete expression and it can be extracted to a function in the top level or the enclosing let expression (if there is one)
+- A new "install package" code action. When you try to import a module that is not installed, a code action will offer to install it. (we only check your local elm cache for possible packages and there is a setting to control skipping confirmation)
 - Replaced elm-analyse with our own diagnostics, there might be missing rules for you due to this
 - Show inferred type information on hovers
 - Support linked editing ranges. When editing a function name, the type annotation name will auto rename, or vice versa (needs to be enabled in most clients)
