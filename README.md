@@ -6,6 +6,7 @@ This is the language server implementation for the Elm programming language.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Installation](#installation)
@@ -75,21 +76,24 @@ npm link
 nix-env -i -A nixpkgs.elmPackages.elm-language-server
 ```
 
+You might want to set `elmLS.useElmToolingJsonForTools` to `false`. This prevents us trying to install the dependencies via `elm-tooling-cli`.
+
 ## Requirements
 
-You will need to install `elm` and `elm-test` to get all diagnostics and `elm-format` for formatting. Alternatively you can also just install these to your local npm `package.json`.
+You will need to provide `elm` and `elm-test` to get all diagnostics and `elm-format` for formatting.
+Normally your editor should prompt you to install everything that's needed. If you set `elmLS.useElmToolingJsonForTools` to `false`, you will need to handle this on your own.
+
+Alternatively you can also just install these to your local npm `package.json`.
 
 ```sh
 npm install -g elm elm-test elm-format
 ```
 
-Or use local versions from your `node_modules` directory, if you want to do that you need to set the paths, via the settings (e.g. set `elmPath` to `./node_modules/.bin/elm`).
-
 ## Configuration
 
 Create an [elm-tooling.json](https://elm-tooling.github.io/elm-tooling-cli/spec) file next to your `elm.json` to configure the language server.
 
-Currently there’s just one thing that you can configure: entrypoints. The language server runs `elm make` to get type errors. By default `elm make` is run on the current file only. To get errors for the entire project you can specify your entrypoint files – basically, those with `main =` in them. Then the language server will run `elm make` on those instead.
+Currently there’s just one thing that we use: entrypoints. The language server runs `elm make` to get type errors. By default `elm make` is run on the current file only. To get errors for the entire project you can specify your entrypoint files – basically, those with `main =` in them. Then the language server will run `elm make` on those instead.
 
 Example `elm-tooling.json`:
 
@@ -322,6 +326,7 @@ You should now be able to use the integrations from Sublime. You might want to r
 - [elm-format](https://github.com/avh4/elm-format)
 - [elm-test](https://github.com/rtfeldman/node-test-runner)
 - [tree-sitter-elm](https://github.com/Razzeee/tree-sitter-elm)
+- [elm-tooling-cli](https://github.com/elm-tooling/elm-tooling-cli)
 
 ## Contributing
 
