@@ -369,6 +369,7 @@ export class ElmWorkspace implements IElmWorkspace {
         try {
           await runElmToolingCliInstall(options);
         } catch (error) {
+          this.connection.window.showErrorMessage(`${error}`);
           this.connection.console.error(`Unexpected error ${error}`);
         }
       } else {
@@ -384,7 +385,7 @@ export class ElmWorkspace implements IElmWorkspace {
               const initExitCode = await elmToolingCli(["init"], options);
 
               if (initExitCode !== 0) {
-                throw "elm-tooling  init failed";
+                throw "Creating a new 'elm-tooling.json' failed";
               }
 
               await runElmToolingCliInstall(options);
@@ -411,6 +412,7 @@ export class ElmWorkspace implements IElmWorkspace {
             }
           })
           .catch((error) => {
+            this.connection.window.showErrorMessage(`${error}`);
             this.connection.console.error(`Unexpected error "${error}"`);
           });
       }
@@ -812,6 +814,6 @@ async function runElmToolingCliInstall(options: {
 }): Promise<void> {
   const installExitCode = await elmToolingCli(["install"], options);
   if (installExitCode !== 0) {
-    throw "elm-tooling install failed";
+    throw "Failed to install one of the dependencies";
   }
 }
