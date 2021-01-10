@@ -9,6 +9,7 @@ export interface IClientSettings {
   extendedCapabilities?: IExtendedCapabilites;
   disableElmLSDiagnostics: boolean;
   skipInstallPackageConfirmation: boolean;
+  useElmToolingJsonForTools: boolean;
 }
 
 export interface IExtendedCapabilites {
@@ -26,6 +27,7 @@ export class Settings {
     trace: { server: "off" },
     disableElmLSDiagnostics: false,
     skipInstallPackageConfirmation: false,
+    useElmToolingJsonForTools: true,
   };
   private connection: Connection;
 

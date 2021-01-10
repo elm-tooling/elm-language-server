@@ -27,6 +27,7 @@ import {
 } from "./util/types/typeChecker";
 import chokidar from "chokidar";
 import { CommandManager } from "./commandManager";
+import elmToolingCli from "elm-tooling";
 
 const readFile = util.promisify(fs.readFile);
 
@@ -328,18 +329,6 @@ export class ElmWorkspace implements IElmWorkspace {
   ): Promise<void> {
     const clientSettings = await this.settings.getClientSettings();
     let progress = 0;
-    let elmVersion;
-    try {
-      elmVersion = utils.getElmVersion(
-        clientSettings,
-        this.rootPath,
-        this.connection,
-      );
-    } catch (error) {
-      this.connection.console.warn(
-        `Could not figure out elm version, this will impact how good the server works. \n ${error.stack}`,
-      );
-    }
 
     const pathToElmJson = path.join(this.rootPath.fsPath, "elm.json");
     this.connection.console.info(`Reading elm.json from ${pathToElmJson}`);
@@ -361,6 +350,83 @@ export class ElmWorkspace implements IElmWorkspace {
           });
       });
       this.filesWatching.add(pathToElmJson);
+    }
+
+    if (clientSettings.useElmToolingJsonForTools) {
+      const pathToElmToolingJson = path.join(
+        this.rootPath.fsPath,
+        "elm-tooling.json",
+      );
+      const options = {
+        cwd: this.rootPath.fsPath,
+        env: process.env,
+        stdin: process.stdin,
+        stderr: process.stderr,
+        stdout: process.stdout,
+      };
+      if (fs.existsSync(pathToElmToolingJson)) {
+        this.connection.console.info(`elm-tooling.json exists - installing`);
+        try {
+          await runElmToolingCliInstall(options);
+        } catch (error) {
+          this.connection.console.error(`Unexpected error ${error}`);
+        }
+      } else {
+        this.connection.console.info(`elm-tooling.json does not exist`);
+        this.connection.window
+          .showInformationMessage(
+            "Create elm-tooling.json, to store elm tool versions and download them?",
+            { title: "Yes", value: "y" },
+            { title: "No", value: "n" },
+          )
+          .then(async (choice) => {
+            if (choice?.value === "y") {
+              const initExitCode = await elmToolingCli(["init"], options);
+
+              if (initExitCode !== 0) {
+                throw "elm-tooling  init failed";
+              }
+
+              await runElmToolingCliInstall(options);
+
+              await this.connection.window.showDocument({
+                uri: pathToElmToolingJson,
+              });
+
+              // we might want to restart, as the used packages might not match the elm version
+              // or we had no elm before and probably were crashing
+              await this.connection.window
+                .createWorkDoneProgress()
+                .then((progress) => {
+                  progress.begin("Restarting Elm Language Server", 0);
+
+                  this.initWorkspace((percent: number) => {
+                    progress.report(percent, `${percent.toFixed(0)}%`);
+                  })
+                    .then(() => progress.done())
+                    .catch(() => {
+                      //
+                    });
+                });
+            }
+          })
+          .catch((error) => {
+            this.connection.console.error(`Unexpected error "${error}"`);
+          });
+      }
+    }
+
+    let elmVersion;
+    try {
+      elmVersion = utils.getElmVersion(
+        clientSettings,
+        this.rootPath,
+        this.connection,
+      );
+    } catch (error) {
+      this.connection.console.warn(
+        `Could not figure out elm version, this will impact how good the server works. \n ${error.stack}`,
+      );
     }
 
     try {
@@ -734,5 +800,18 @@ export class ElmWorkspace implements IElmWorkspace {
         chokidar.watch(uri).on("change", callback);
       },
     };
+  }
+}
+
+async function runElmToolingCliInstall(options: {
+  cwd: string;
+  env: NodeJS.ProcessEnv;
+  stdin: NodeJS.ReadStream;
+  stderr: NodeJS.WriteStream;
+  stdout: NodeJS.WriteStream;
+}): Promise<void> {
+  const installExitCode = await elmToolingCli(["install"], options);
+  if (installExitCode !== 0) {
+    throw "elm-tooling install failed";
   }
 }

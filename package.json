@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "chokidar": "^3.5.0",
+    "elm-tooling": "^1.0.0",
     "escape-string-regexp": "^4.0.0",
     "execa": "^5.0.0",
     "fast-diff": "^1.2.0",
