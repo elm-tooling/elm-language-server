@@ -63,7 +63,7 @@ export class SourceTreeParser {
       );
     };
 
-    // Seperate test sources
+    // Separate test sources
     const testSources: { [K: string]: string } = {};
     for (const key in sources) {
       if (key.startsWith("tests/")) {
