@@ -47,7 +47,7 @@ interface ICompletionOptions {
 }
 
 export class CompletionProvider {
-  private qidRegex = /[a-zA-Z0-9.]+/;
+  private qidRegex = /[_\d\p{L}.]+/u;
   private connection: Connection;
   private diagnostics: DiagnosticsProvider;
 
