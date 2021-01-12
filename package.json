@@ -29,7 +29,7 @@
     "vscode-languageserver": "^7.0.0",
     "vscode-languageserver-textdocument": "1.0.1",
     "vscode-uri": "^3.0.2",
-    "web-tree-sitter": "^0.18.0"
+    "web-tree-sitter": "^0.17.1"
   },
   "devDependencies": {
     "@types/jest": "^26.0.20",
@@ -44,8 +44,8 @@
     "jest": "^26.6.3",
     "jest-mock-extended": "^1.0.10",
     "prettier": "^2.2.1",
-    "tree-sitter-cli": "^0.18.0",
-    "tree-sitter-elm": "^4.5.0",
+    "tree-sitter-cli": "^0.17.1",
+    "tree-sitter-elm": "^4.4.0",
     "ts-jest": "^26.4.4",
     "ts-node": "^9.1.1",
     "typescript": "4.1.3"
