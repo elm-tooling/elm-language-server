@@ -1,7 +1,7 @@
 {
   "name": "@elm-tooling/elm-language-server",
   "description": "Implementation of an elm language server in node.",
-  "version": "2.0.0-RC4",
+  "version": "2.0.0",
   "author": "Kolja Lampe",
   "license": "MIT",
   "main": "./out/module.js",
@@ -16,7 +16,7 @@
     "url": "https://github.com/elm-tooling/elm-language-server"
   },
   "dependencies": {
-    "chokidar": "^3.5.0",
+    "chokidar": "^3.5.1",
     "escape-string-regexp": "^4.0.0",
     "execa": "^5.0.0",
     "fast-diff": "^1.2.0",
@@ -24,7 +24,7 @@
     "globby": "^11.0.2",
     "pjson": "1.0.9",
     "reflect-metadata": "^0.1.13",
-    "ts-debounce": "^2.1.0",
+    "ts-debounce": "^2.2.0",
     "tsyringe": "^4.4.0",
     "vscode-languageserver": "^7.0.0",
     "vscode-languageserver-textdocument": "1.0.1",
@@ -33,12 +33,12 @@
   },
   "devDependencies": {
     "@types/jest": "^26.0.20",
-    "@types/node": "14.14.20",
-    "@typescript-eslint/eslint-plugin": "^4.12.0",
-    "@typescript-eslint/parser": "^4.12.0",
+    "@types/node": "14.14.21",
+    "@typescript-eslint/eslint-plugin": "^4.13.0",
+    "@typescript-eslint/parser": "^4.13.0",
     "copyfiles": "^2.4.1",
     "doctoc": "^2.0.0",
-    "eslint": "^7.17.0",
+    "eslint": "^7.18.0",
     "eslint-config-prettier": "^7.1.0",
     "eslint-plugin-prettier": "^3.3.1",
     "jest": "^26.6.3",
