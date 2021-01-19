@@ -1,5 +1,9 @@
 # Change Log
 
+## 2.0.1
+
+- Remove `file` entry from symbolproviders (Outline, Go to symbol and breadcrumbs)
+
 ## 2.0.0
 
 ### Features
