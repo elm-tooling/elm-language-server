@@ -636,4 +636,20 @@ func a =
 `;
     await testTypeInference(basicsSources + source, "number -> number");
   });
+
+  test("partially applied functions", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+text : Int -> Int
+text int =
+    int + 1
+
+func =
+--^
+  text (.greeting { greeting = \\name -> 1 + name + 3 } 4)
+`;
+    await testTypeInference(basicsSources + source, "Int");
+  });
 });
