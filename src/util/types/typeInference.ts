@@ -1191,7 +1191,7 @@ export class InferenceScope {
         return argCountError(e, e, e.args.length, targetType.params.length);
       }
 
-      for (let i = targetType.params.length; i < e.args.length - 1; i++) {
+      for (let i = targetType.params.length; i < e.args.length; i++) {
         if (appliedType.nodeType !== "Function") {
           return argCountError(e.target, e.args[i], 1, 0);
         }
