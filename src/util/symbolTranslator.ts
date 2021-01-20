@@ -12,8 +12,6 @@ export class SymbolInformationTranslator {
     node: SyntaxNode,
   ): SymbolInformation | undefined {
     switch (node.type) {
-      case "file":
-        return this.createSymbolInformation("file", node, SymbolKind.File, uri);
       case "value_declaration":
         {
           const functionName = node.firstChild?.firstChild?.text;
