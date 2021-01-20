@@ -667,7 +667,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
           uri,
           nodeType: "Operator",
         };
-        operatorsCache.set(nodeText, result);
+        operatorsCache.set(nodeText, Object.freeze(result));
         return result;
       } else {
         const definitionFromOtherFile = findImportOfType(
@@ -677,7 +677,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         );
 
         if (definitionFromOtherFile) {
-          operatorsCache.set(nodeText, definitionFromOtherFile);
+          operatorsCache.set(nodeText, Object.freeze(definitionFromOtherFile));
           return definitionFromOtherFile;
         }
       }
