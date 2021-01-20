@@ -46,7 +46,7 @@ export class HoverProvider {
         params.position,
       );
 
-      const definitionNode = checker.findDefinition(
+      let definitionNode = checker.findDefinition(
         nodeAtPosition,
         treeContainer,
       );
@@ -56,7 +56,10 @@ export class HoverProvider {
           definitionNode.node.type === "function_declaration_left" &&
           definitionNode.node.parent
         ) {
-          definitionNode.node = definitionNode.node.parent;
+          definitionNode = {
+            ...definitionNode,
+            node: definitionNode.node.parent,
+          };
         }
 
         const typeString = checker.typeToString(
