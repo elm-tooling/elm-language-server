@@ -110,19 +110,22 @@ export class ElmMakeDiagnostics {
   }
 
   public createDiagnostics = async (
-    filePath: URI,
+    sourceFile: ITreeContainer,
   ): Promise<Map<string, IDiagnostic[]>> => {
+    const filePath = URI.parse(sourceFile.uri);
     const workspaceRootPath = this.elmWorkspaceMatcher
       .getProgramFor(filePath)
       .getRootPath();
-    return await this.checkForErrors(
-      workspaceRootPath.fsPath,
-      filePath.fsPath,
-    ).then((issues) => {
-      return issues.length === 0
-        ? new Map([[filePath.toString(), []]])
-        : ElmDiagnosticsHelper.issuesToDiagnosticMap(issues, workspaceRootPath);
-    });
+    return await this.checkForErrors(workspaceRootPath.fsPath, sourceFile).then(
+      (issues) => {
+        return issues.length === 0
+          ? new Map([[filePath.toString(), []]])
+          : ElmDiagnosticsHelper.issuesToDiagnosticMap(
+              issues,
+              workspaceRootPath,
+            );
+      },
+    );
   };
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
@@ -369,14 +372,14 @@ export class ElmMakeDiagnostics {
 
   private async checkForErrors(
     workspaceRootPath: string,
-    filePath: string,
+    sourceFile: ITreeContainer,
   ): Promise<IElmIssue[]> {
     const settings = await this.settings.getClientSettings();
 
     const elmToolingPath = path.join(workspaceRootPath, "elm-tooling.json");
     const defaultRelativePathToFile = path.relative(
       workspaceRootPath,
-      filePath,
+      URI.parse(sourceFile.uri).fsPath,
     );
     const [relativePathsToFiles, message]: [
       NonEmptyArray<string>,
@@ -430,7 +433,7 @@ export class ElmMakeDiagnostics {
 
     const makeCommand: string = settings.elmPath;
     const testCommand: string = settings.elmTestPath;
-    const isTestFile = utils.isTestFile(filePath, workspaceRootPath);
+    const isTestFile = sourceFile.isTestFile;
     const args = isTestFile ? argsTest : argsMake;
     const testOrMakeCommand = isTestFile ? testCommand : makeCommand;
     const testOrMakeCommandWithOmittedSettings = isTestFile

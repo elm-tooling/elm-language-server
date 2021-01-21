@@ -55,14 +55,6 @@ export function execCmdSync(
   }
 }
 
-export function isTestFile(filename: string, rootPath: string): boolean {
-  const testFolder = path.join(rootPath, "tests");
-  if (filename.startsWith(testFolder)) {
-    return true;
-  }
-  return false;
-}
-
 // Special type that has no core mock https://github.com/elm/compiler/blob/51e20357137ebc9c3f6136cf0a3fe21c24027f39/compiler/src/Canonicalize/Environment/Foreign.hs#L62
 export function getEmptyTypes(): {
   markdown: string;

@@ -410,8 +410,16 @@ export class DiagnosticsProvider {
   }
 
   private async getElmMakeDiagnostics(uri: string): Promise<void> {
+    const sourceFile = this.elmWorkspaceMatcher
+      .getProgramFor(URI.parse(uri))
+      .getSourceFile(uri);
+
+    if (!sourceFile) {
+      return;
+    }
+
     const elmMakeDiagnostics = await this.elmMakeDiagnostics.createDiagnostics(
-      URI.parse(uri),
+      sourceFile,
     );
 
     this.resetDiagnostics(elmMakeDiagnostics, DiagnosticKind.ElmMake);
