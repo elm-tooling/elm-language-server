@@ -53,6 +53,14 @@ negate : number -> number
 negate n =
   -n
 `;
+
+const stringSources = `
+--@ String.elm
+module String exposing (String)
+
+type String = String
+`;
+
 describe("test elm diagnostics", () => {
   const treeParser = new SourceTreeParser();
 
@@ -770,5 +778,30 @@ type alias Test3 =
       ],
       true,
     );
+  });
+
+  test("test case expr used as the first arg of bin op expr", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+foo : Int -> String
+foo input =
+    let
+        transform1 a =
+            ""
+
+        transform2 a =
+            ""
+    in
+    (case input of
+        _ ->
+            1
+    )
+        |> transform1
+        |> transform2
+
+  `;
+    await testTypeInference(basicsSources + stringSources + source, []);
   });
 });
