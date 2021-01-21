@@ -2021,7 +2021,10 @@ export class InferenceScope {
 
     let assignable: boolean;
 
-    if (expr.nodeType === "CaseOfExpr") {
+    if (
+      expr.nodeType === "CaseOfExpr" &&
+      (!endExpr || endExpr.id === expr.id)
+    ) {
       return this.isBranchesAssignable(expr, type1, type2);
     }
 
