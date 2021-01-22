@@ -4,6 +4,7 @@ import {
   LinkedEditingRangeParams,
   LinkedEditingRangeRequest,
   LinkedEditingRanges,
+  Position,
   Range,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -57,6 +58,30 @@ export class LinkedEditingRangesProvider {
     ) {
       ranges.push(range);
       ranges.push(this.addLinesToRange(range, 1));
+    }
+
+    if (ranges.length === 0) {
+      const lines = params.sourceFile.tree.rootNode.text.split(/\r\n|\r|\n/);
+      const line = lines[params.position.line].trim();
+
+      const positionRange = Range.create(
+        Position.create(params.position.line, 0),
+        Position.create(params.position.line, 0),
+      );
+
+      if (line.startsWith(":")) {
+        const nextLine = lines[params.position.line + 1].trim();
+        if (nextLine.endsWith("=")) {
+          ranges.push(positionRange);
+          ranges.push(this.addLinesToRange(positionRange, 1));
+        }
+      } else if (line.endsWith("=")) {
+        const previousLine = lines[params.position.line - 1].trim();
+        if (previousLine.startsWith(":")) {
+          ranges.push(this.addLinesToRange(positionRange, -1));
+          ranges.push(positionRange);
+        }
+      }
     }
 
     return { ranges };
