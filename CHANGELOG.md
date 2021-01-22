@@ -2,6 +2,9 @@
 
 ## 2.0.1
 
+- Fixed test files not being recognized correctly on windows
+- Fixed some type inference problems
+- Fixed linked editing ranges breaking, when deleting a whole word
 - Remove `file` entry from symbolproviders (Outline, Go to symbol and breadcrumbs)
 - Don't show files from dependencies in WorkspaceSymbolProvider (Go to symbol in workspace)
 
