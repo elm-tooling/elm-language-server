@@ -409,7 +409,7 @@ function typeMismatchError(
     }
     if (diff.mismatched.size > 0) {
       s += `\nMismatched fields: `;
-      diff.mismatched.forEach(([expected, found], field) => {
+      diff.mismatched.forEach(([found, expected], field) => {
         s += `\n Field \`${field}\` expected \`${checker.typeToString(
           expected,
         )}\`, found \`${checker.typeToString(found)}\``;
