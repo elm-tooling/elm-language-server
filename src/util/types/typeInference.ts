@@ -53,6 +53,7 @@ import {
   errorWithEndNode,
 } from "./diagnostics";
 import fromEntries from "fromentries";
+import { isKernelProject, nameIsKernel } from "../elmUtils";
 
 export let inferTime = 0;
 export function resetInferTime(): void {
@@ -982,6 +983,15 @@ export class InferenceScope {
       findDefinition(e.firstNamedChild, this.elmWorkspace);
 
     if (!definition) {
+      const sourceFile = this.elmWorkspace.getSourceFile(e.tree.uri);
+      if (
+        nameIsKernel(e.text) &&
+        sourceFile &&
+        isKernelProject(sourceFile.project)
+      ) {
+        return TUnknown;
+      }
+
       this.diagnostics.push(error(e, Diagnostics.MissingValue, e.text));
       return TVar("a");
     }

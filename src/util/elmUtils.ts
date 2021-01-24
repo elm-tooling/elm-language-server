@@ -4,6 +4,7 @@ import { Connection, CompletionItemKind } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { IElmPackageCache } from "../elmPackageCache";
 import { IClientSettings } from "./settings";
+import { ElmProject } from "../elmWorkspace";
 
 export const isWindows = process.platform === "win32";
 
@@ -388,4 +389,17 @@ export function flattenExposedModules(
   }
 
   return Object.values(exposedModules).reduce((a, b) => a.concat(b), []);
+}
+
+export function nameIsKernel(name: string): boolean {
+  return name.startsWith("Elm.Kernel.");
+}
+
+export function isKernelProject(project: ElmProject): boolean {
+  if (project.type === "package") {
+    const author = project.maintainerAndPackageName.split("/")[0];
+    return author === "elm" || author === "elm-explorations";
+  }
+
+  return false;
 }
