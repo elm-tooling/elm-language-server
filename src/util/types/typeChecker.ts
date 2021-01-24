@@ -495,25 +495,6 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
       let definitionFromOtherFile;
 
-      // Make sure the next node is a dot, or else it isn't a Module
-      if (TreeUtils.nextNode(nodeAtPosition)?.type === "dot") {
-        const endPos = upperCaseQidText.indexOf(nodeText) + nodeText.length;
-
-        const moduleNameOrAlias = nodeParent.text.substring(0, endPos);
-        const moduleName =
-          findImportModuleNameNode(moduleNameOrAlias, treeContainer)?.text ??
-          moduleNameOrAlias;
-
-        const definitionFromOtherFile = findImportOfType(
-          treeContainer,
-          moduleName,
-          "Module",
-        );
-        if (definitionFromOtherFile) {
-          return definitionFromOtherFile;
-        }
-      }
-
       if (isTypeUsage) {
         definitionFromOtherFile = findImportOfType(
           treeContainer,
@@ -541,6 +522,25 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       );
       if (definitionFromOtherFile) {
         return definitionFromOtherFile;
+      }
+
+      // Make sure the next node is a dot, or else it isn't a Module
+      if (TreeUtils.nextNode(nodeAtPosition)?.type === "dot") {
+        const endPos = upperCaseQidText.indexOf(nodeText) + nodeText.length;
+
+        const moduleNameOrAlias = nodeParent.text.substring(0, endPos);
+        const moduleName =
+          findImportModuleNameNode(moduleNameOrAlias, treeContainer)?.text ??
+          moduleNameOrAlias;
+
+        const definitionFromOtherFile = findImportOfType(
+          treeContainer,
+          moduleName,
+          "Module",
+        );
+        if (definitionFromOtherFile) {
+          return definitionFromOtherFile;
+        }
       }
 
       definitionFromOtherFile = findImportOfType(

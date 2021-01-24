@@ -556,4 +556,24 @@ type Expression = Expression
 `;
     await testBase.testDefinition(source);
   });
+
+  it(`test union constructor that is before a record accessor function`, async () => {
+    const source = `
+--@ main.elm
+import App exposing (..)
+
+fooLens =
+    FieldLens .foo (\\newFoo r -> { r | foo = newFoo })
+    --^App.elm
+
+--@ App.elm
+module App exposing (..)
+
+type alias FieldLens a b c d =
+--X
+    { get : a -> b, set : c -> a -> d }
+                    
+`;
+    await testBase.testDefinition(source);
+  });
 });
