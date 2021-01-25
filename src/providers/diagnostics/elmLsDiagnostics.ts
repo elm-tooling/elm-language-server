@@ -8,6 +8,7 @@ import {
   Connection,
   DiagnosticSeverity,
   DiagnosticTag,
+  Position,
   Range,
   TextEdit,
 } from "vscode-languageserver";
@@ -529,6 +530,33 @@ export class ElmLsDiagnostics {
           }
         }
 
+        if (diagnostic.data.code === "unused_import") {
+          const node = TreeUtils.getNamedDescendantForPosition(
+            treeContainer.tree.rootNode,
+            diagnostic.range.end,
+          );
+
+          const moduleName = node.childForFieldName("moduleName");
+
+          result.push({
+            diagnostics: [diagnostic],
+            edit: {
+              changes: {
+                [uri]: [
+                  TextEdit.del(
+                    Range.create(
+                      diagnostic.range.start,
+                      Position.create(diagnostic.range.end.line + 1, 0),
+                    ),
+                  ),
+                ],
+              },
+            },
+            kind: CodeActionKind.QuickFix,
+            title: `Remove unused import \`${moduleName?.text ?? node.text}\``,
+          });
+        }
+
         if (diagnostic.data.code === "unused_alias") {
           const node = TreeUtils.getNamedDescendantForPosition(
             treeContainer.tree.rootNode,
@@ -576,11 +604,14 @@ export class ElmLsDiagnostics {
     const moduleImports = this.moduleImportsQuery
       .matches(tree.rootNode)
       .map((match) => match.captures[0].node)
-      .filter(
-        (node) =>
-          node.nextNamedSibling?.type !== "exposing_list" &&
-          node.nextNamedSibling?.type !== "as_clause",
-      );
+      .filter((node) => !node.parent?.childForFieldName("exposing"))
+      .map((node) => {
+        const alias = node.parent
+          ?.childForFieldName("asClause")
+          ?.childForFieldName("name");
+
+        return alias ? alias : node;
+      });
 
     // Would need to adjust tree-sitter (use fields) to get a better query
     moduleImports.forEach((moduleImport) => {
@@ -595,9 +626,13 @@ export class ElmLsDiagnostics {
         .map((match) => match.captures.map((n) => n.node.text).join("."))
         .filter((moduleReference) => moduleReference === moduleImport.text);
 
-      if (references.length === 0 && moduleImport.parent) {
+      const importNode =
+        moduleImport.parent?.type === "as_clause"
+          ? moduleImport.parent?.parent
+          : moduleImport.parent;
+      if (references.length === 0 && importNode) {
         diagnostics.push({
-          range: this.getNodeRange(moduleImport.parent),
+          range: this.getNodeRange(importNode),
           message: `Unused import \`${moduleImport.text}\``,
           severity: DiagnosticSeverity.Warning,
           source: "ElmLS",
@@ -666,6 +701,11 @@ export class ElmLsDiagnostics {
       .map((match) => match.captures[0].node);
 
     moduleAliases.forEach((moduleAlias) => {
+      // This case is handled by unused_import
+      if (!moduleAlias.parent?.parent?.childForFieldName("exposing")) {
+        return;
+      }
+
       const references = this.moduleAliasReferencesQuery
         .matches(tree.rootNode)
         .filter(Utils.notUndefined.bind(this))
