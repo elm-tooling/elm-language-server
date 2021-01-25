@@ -701,6 +701,7 @@ export class ElmLsDiagnostics {
       .map((match) => match.captures[0].node);
 
     moduleAliases.forEach((moduleAlias) => {
+      // This case is handled by unused_import
       if (!moduleAlias.parent?.parent?.childForFieldName("exposing")) {
         return;
       }

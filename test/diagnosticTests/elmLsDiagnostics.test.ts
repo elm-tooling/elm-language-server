@@ -459,6 +459,7 @@ foo = (+) 1 2
       ]);
     });
 
+    // This case is handled by unused_import
     it("unused alias but no exposing", async () => {
       const source = `
 module Foo exposing (..)
@@ -475,7 +476,7 @@ foo = 1
       const source = `
 module Foo exposing (..)
 
-import Bar as B
+import Bar as B exposing (..)
 
 foo = B.add 1
 			`;
@@ -487,7 +488,7 @@ foo = B.add 1
       const source = `
 module Main exposing (..)
 
-import X as Y
+import X as Y exposing (..)
 
 z a =
     case a of
@@ -502,7 +503,7 @@ z a =
       const source = `
 module Foo exposing (..)
 
-import Bar as B
+import Bar as B exposing (..)
 
 foo : B.Thing
 foo = bar
@@ -515,7 +516,7 @@ foo = bar
       const source = `
 module Foo exposing (..)
 
-import Bar as B
+import Bar as B exposing (..)
 
 foo = B.math.add 1
 			`;
@@ -528,7 +529,7 @@ foo = B.math.add 1
 module Foo exposing (..)
 
 
-import Bar as B
+import Bar as B exposing (..)
 
 type alias Thing = { name : B.Name }
 			`;
