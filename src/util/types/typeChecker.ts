@@ -29,6 +29,10 @@ import { Utils } from "../utils";
 import { TypeExpression } from "./typeExpression";
 import { ICancellationToken } from "../../cancellation";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
+import { isKernelProject, nameIsKernel } from "../elmUtils";
+import { existsSync } from "fs";
+import * as path from "../path";
+import { URI } from "vscode-uri";
 
 export let bindTime = 0;
 export function resetBindTime(): void {
@@ -939,9 +943,22 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
           moduleName,
         )
       ) {
-        diagnostics.add(
-          error(moduleNameNode, Diagnostics.ImportMissing, moduleName),
-        );
+        const project = getSourceFileOfNode(importClause).project;
+        if (
+          !nameIsKernel(moduleName) ||
+          !isKernelProject(project) ||
+          !existsSync(
+            path.join(
+              URI.parse(project.uri).fsPath,
+              "src",
+              moduleName.split(".").join("/") + ".js",
+            ),
+          )
+        ) {
+          diagnostics.add(
+            error(moduleNameNode, Diagnostics.ImportMissing, moduleName),
+          );
+        }
       }
     }
   }
