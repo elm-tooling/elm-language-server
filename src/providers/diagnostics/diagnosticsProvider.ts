@@ -146,6 +146,10 @@ export class DiagnosticsProvider {
         );
       } else {
         this.workspaces.forEach((workspace) => {
+          if (!workspace.getForest(false)) {
+            return;
+          }
+
           workspace.getForest().treeMap.forEach((treeContainer) => {
             if (treeContainer.writeable) {
               this.updateDiagnostics(
@@ -210,6 +214,10 @@ export class DiagnosticsProvider {
 
   private requestAllDiagnostics(): void {
     this.workspaces.forEach((workspace) => {
+      if (!workspace.getForest(false)) {
+        return;
+      }
+
       workspace.getForest().treeMap.forEach(({ uri, writeable }) => {
         if (writeable) {
           this.pendingDiagnostics.set(uri, Date.now());
