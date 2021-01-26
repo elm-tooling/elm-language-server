@@ -1,9 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import { randomBytes } from "crypto";
-import * as fs from "fs";
 import * as path from "path";
 import { container } from "tsyringe";
-import util from "util";
 import {
   CodeAction,
   CodeActionKind,
@@ -17,17 +15,17 @@ import * as utils from "../../util/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
 import { TreeUtils } from "../../util/treeUtils";
-import { Utils } from "../../util/utils";
+import { NonEmptyArray, Utils } from "../../util/utils";
 import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
 import { IElmWorkspace } from "../../elmWorkspace";
+import { ElmToolingJsonManager } from "../../elmToolingJsonManager";
 
 const ELM_MAKE = "Elm";
 export const NAMING_ERROR = "NAMING ERROR";
 const RANDOM_ID = randomBytes(16).toString("hex");
 export const CODE_ACTION_ELM_MAKE = `elmLS.elmMakeFixer-${RANDOM_ID}`;
-const readFile = util.promisify(fs.readFile);
 
 export interface IElmCompilerError {
   type: string;
@@ -63,49 +61,18 @@ export interface IStyledString {
   string: string;
 }
 
-type NonEmptyArray<T> = [T, ...T[]];
-
-function elmToolingEntrypointsDecoder(json: unknown): NonEmptyArray<string> {
-  if (typeof json === "object" && json !== null && !Array.isArray(json)) {
-    if ("entrypoints" in json) {
-      const { entrypoints } = json as { [key: string]: unknown };
-      if (Array.isArray(entrypoints) && entrypoints.length > 0) {
-        const result: Array<string> = [];
-        for (const [index, item] of entrypoints.entries()) {
-          if (typeof item === "string" && item.startsWith("./")) {
-            result.push(item);
-          } else {
-            throw new Error(
-              `Expected "entrypoints" to contain string paths starting with "./" but got: ${JSON.stringify(
-                item,
-              )} at index ${index}`,
-            );
-          }
-        }
-        return [result[0], ...result.slice(1)];
-      } else {
-        throw new Error(
-          `Expected "entrypoints" to be a non-empty array but got: ${JSON.stringify(
-            json,
-          )}`,
-        );
-      }
-    } else {
-      throw new Error(`There is no "entrypoints" field.`);
-    }
-  } else {
-    throw new Error(`Expected a JSON object but got: ${JSON.stringify(json)}`);
-  }
-}
-
 export class ElmMakeDiagnostics {
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
   private settings: Settings;
+  private elmToolingJsonManager: ElmToolingJsonManager;
   private connection: Connection;
 
   constructor() {
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<Connection>("Connection");
+    this.elmToolingJsonManager = container.resolve<ElmToolingJsonManager>(
+      "ElmToolingJsonManager",
+    );
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
   }
 
@@ -376,39 +343,14 @@ export class ElmMakeDiagnostics {
   ): Promise<IElmIssue[]> {
     const settings = await this.settings.getClientSettings();
 
-    const elmToolingPath = path.join(workspaceRootPath, "elm-tooling.json");
-    const defaultRelativePathToFile = path.relative(
-      workspaceRootPath,
-      URI.parse(sourceFile.uri).fsPath,
-    );
     const [relativePathsToFiles, message]: [
       NonEmptyArray<string>,
       string,
-    ] = await readFile(elmToolingPath, {
-      encoding: "utf-8",
-    })
-      .then(JSON.parse)
-      .then(elmToolingEntrypointsDecoder)
-      .then(
-        (entrypoints) => [
-          entrypoints,
-          `Using entrypoints from ${elmToolingPath}: ${JSON.stringify(
-            entrypoints,
-          )}`,
-        ],
-        (error: Error & { code?: string }) => {
-          const innerMessage =
-            error.code === "ENOENT"
-              ? `No elm-tooling.json found in ${workspaceRootPath}.`
-              : error.code === "EISDIR"
-              ? `Skipping ${elmToolingPath} because it is a directory, not a file.`
-              : error instanceof SyntaxError
-              ? `Skipping ${elmToolingPath} because it contains invalid JSON: ${error.message}.`
-              : `Skipping ${elmToolingPath} because: ${error.message}.`;
-          const fullMessage = `Using default entrypoint: ${defaultRelativePathToFile}. ${innerMessage}`;
-          return [[defaultRelativePathToFile], fullMessage];
-        },
-      );
+    ] = await this.elmToolingJsonManager.getEntrypoints(
+      workspaceRootPath,
+      sourceFile,
+    );
+
     this.connection.console.info(
       `Find entrypoints: ${message}. See https://github.com/elm-tooling/elm-language-server#configuration for more information.`,
     );
