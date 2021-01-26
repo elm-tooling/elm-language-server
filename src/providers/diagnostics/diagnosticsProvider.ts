@@ -391,18 +391,22 @@ export class DiagnosticsProvider {
                     return;
                   }
 
-                  next.immediate(() => {
-                    this.updateDiagnostics(
-                      uri,
-                      DiagnosticKind.ElmLS,
-                      this.elmLsDiagnostics.createDiagnostics(
-                        sourceFile,
-                        program,
-                      ),
-                    );
+                  if (!this.clientSettings.disableElmLSDiagnostics) {
+                    next.immediate(() => {
+                      this.updateDiagnostics(
+                        uri,
+                        DiagnosticKind.ElmLS,
+                        this.elmLsDiagnostics.createDiagnostics(
+                          sourceFile,
+                          program,
+                        ),
+                      );
 
+                      goNext();
+                    });
+                  } else {
                     goNext();
-                  });
+                  }
                 });
               });
             });
