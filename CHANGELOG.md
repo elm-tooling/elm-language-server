@@ -1,5 +1,15 @@
 # Change Log
 
+## 2.0.2
+
+- Updated dependency, so that Apple M1 based laptops should work
+- Improve unused import diagnostics
+- Fix the `disableElmLSDiagnostics` setting not working
+- Don't crash if server fails to initialize
+- Fix wrong display of fix record diff
+- Handle kernel code usages better
+- More type checker improvements
+
 ## 2.0.1
 
 - Fixed test files not being recognized correctly on windows
