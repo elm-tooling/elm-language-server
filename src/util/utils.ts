@@ -1,5 +1,7 @@
 import { Range } from "vscode-languageserver";
 
+export type NonEmptyArray<T> = [T, ...T[]];
+
 export class Utils {
   public static notUndefined<T>(x: T | undefined): x is T {
     return x !== undefined;

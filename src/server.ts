@@ -9,6 +9,7 @@ import {
 } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
+import { ElmToolingJsonManager } from "./elmToolingJsonManager";
 import { ElmWorkspace, IElmWorkspace } from "./elmWorkspace";
 import {
   CodeActionProvider,
@@ -77,6 +78,9 @@ export class Server implements ILanguageServer {
         });
         container.register("ElmWorkspaces", {
           useValue: elmWorkspaces,
+        });
+        container.register<ElmToolingJsonManager>("ElmToolingJsonManager", {
+          useValue: new ElmToolingJsonManager(),
         });
       } else {
         this.connection.window.showErrorMessage(
