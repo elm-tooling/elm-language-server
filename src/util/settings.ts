@@ -9,6 +9,7 @@ export interface IClientSettings {
   extendedCapabilities?: IExtendedCapabilites;
   disableElmLSDiagnostics: boolean;
   skipInstallPackageConfirmation: boolean;
+  onlyUpdateDiagnosticsOnSave: boolean;
 }
 
 export interface IExtendedCapabilites {
@@ -26,6 +27,7 @@ export class Settings {
     trace: { server: "off" },
     disableElmLSDiagnostics: false,
     skipInstallPackageConfirmation: false,
+    onlyUpdateDiagnosticsOnSave: false,
   };
   private connection: Connection;
 
