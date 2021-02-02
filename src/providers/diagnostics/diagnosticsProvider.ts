@@ -9,6 +9,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import { ServerCancellationToken } from "../../cancellation";
 import { IElmWorkspace } from "../../elmWorkspace";
+import { ITreeContainer } from "../../forest";
 import { GetDiagnosticsRequest } from "../../protocol";
 import { Delayer } from "../../util/delayer";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
@@ -105,16 +106,37 @@ export class DiagnosticsProvider {
     this.pendingDiagnostics = new PendingDiagnostics();
     this.diagnosticsDelayer = new Delayer(300);
 
-    this.events.on(
-      "open",
-      (d: { document: TextDocument }) =>
-        void this.getElmMakeDiagnostics(d.document.uri),
-    );
-    this.events.on(
-      "save",
-      (d: { document: TextDocument }) =>
-        void this.getElmMakeDiagnostics(d.document.uri),
-    );
+    const clientInitiatedDiagnostics =
+      this.clientSettings.extendedCapabilities?.clientInitiatedDiagnostics ??
+      false;
+
+    const disableDiagnosticsOnChange = this.clientSettings
+      .onlyUpdateDiagnosticsOnSave;
+
+    const handleSaveOrOpen = (d: { document: TextDocument }): void => {
+      const program = this.elmWorkspaceMatcher.getProgramFor(
+        URI.parse(d.document.uri),
+      );
+      const sourceFile = program.getSourceFile(d.document.uri);
+
+      if (!sourceFile) {
+        return;
+      }
+
+      void this.getElmMakeDiagnostics(sourceFile);
+
+      // If we aren't doing them on change, we need to trigger them here
+      if (disableDiagnosticsOnChange) {
+        this.updateDiagnostics(
+          sourceFile.uri,
+          DiagnosticKind.ElmLS,
+          this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
+        );
+      }
+    };
+
+    this.events.on("open", handleSaveOrOpen);
+    this.events.on("save", handleSaveOrOpen);
 
     this.connection.onDidChangeWatchedFiles((event) => {
       const newDeleteEvents = event.changes
@@ -124,10 +146,6 @@ export class DiagnosticsProvider {
         this.deleteDiagnostics(uri);
       });
     });
-
-    const clientInitiatedDiagnostics =
-      this.clientSettings.extendedCapabilities?.clientInitiatedDiagnostics ??
-      false;
 
     if (clientInitiatedDiagnostics) {
       this.connection.onRequest(
@@ -166,13 +184,13 @@ export class DiagnosticsProvider {
       }
     });
 
-    if (!clientInitiatedDiagnostics) {
+    if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
       this.requestAllDiagnostics();
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     astProvider.onTreeChange(({ treeContainer, declaration }) => {
-      if (!clientInitiatedDiagnostics) {
+      if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
         this.requestDiagnostics(treeContainer.uri);
       }
     });
@@ -181,7 +199,7 @@ export class DiagnosticsProvider {
       this.change();
 
       // We need to cancel the request as soon as possible
-      if (!clientInitiatedDiagnostics) {
+      if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
         if (this.pendingRequest) {
           this.pendingRequest.cancel();
           this.pendingRequest = undefined;
@@ -421,15 +439,9 @@ export class DiagnosticsProvider {
     );
   }
 
-  private async getElmMakeDiagnostics(uri: string): Promise<void> {
-    const sourceFile = this.elmWorkspaceMatcher
-      .getProgramFor(URI.parse(uri))
-      .getSourceFile(uri);
-
-    if (!sourceFile) {
-      return;
-    }
-
+  private async getElmMakeDiagnostics(
+    sourceFile: ITreeContainer,
+  ): Promise<void> {
     const elmMakeDiagnostics = await this.elmMakeDiagnostics.createDiagnostics(
       sourceFile,
     );

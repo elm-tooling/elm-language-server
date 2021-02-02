@@ -6,6 +6,7 @@ This is the language server implementation for the Elm programming language.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Installation](#installation)
@@ -137,6 +138,7 @@ This server contributes the following settings:
 - `elmLS.elmTestPath`: The path to your `elm-test` executable. Should be empty by default, in that case it will assume the name and try to first get it from a local npm installation or a global one. If you set it manually it will not try to load from the npm folder.
 - `elmLS.disableElmLSDiagnostics`: Enable/Disable linting diagnostics from the language server.
 - `elmLS.skipInstallPackageConfirmation`: Skip confirmation for the Install Package code action.
+- `elmLS.onlyUpdateDiagnosticsOnSave`: Only update compiler diagnostics on save, not on document change.
 
 Settings may need a restart to be applied.
 
