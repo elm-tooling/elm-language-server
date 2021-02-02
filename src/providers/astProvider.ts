@@ -91,6 +91,8 @@ export class ASTProvider {
       forest.removeTree(document.uri);
     }
 
+    const oldNodes = tree.rootNode.namedChildren;
+
     const newText =
       this.documentEvents.get(document.uri)?.getText() ??
       readFileSync(URI.parse(document.uri).fsPath, "utf8");
@@ -133,6 +135,18 @@ export class ASTProvider {
     }
 
     tree = newTree;
+
+    const newIds = new Set(
+      newTree.rootNode.namedChildren.map((n) => n.id).values(),
+    );
+
+    oldNodes.forEach((node) => {
+      if (!newIds.has(node.id)) {
+        params.program.getTypeCache().invalidateValueDeclaration(node);
+        params.program.getTypeCache().invalidateTypeAnnotation(node);
+        params.program.getTypeCache().invalidateTypeOrTypeAlias(node);
+      }
+    });
 
     if (tree) {
       // Reuse old source file for most cases

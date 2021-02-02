@@ -83,6 +83,14 @@ export class TypeCache {
       ?.forEach((annotation) => this.projectTypeAnnotation.delete(annotation));
   }
 
+  public invalidateTypeAnnotation(node: SyntaxNode): void {
+    this.projectTypeAnnotation.delete(node);
+  }
+
+  public invalidateTypeOrTypeAlias(node: SyntaxNode): void {
+    this.projectTypeAndTypeAlias.delete(node);
+  }
+
   /**
    * Track a type annotation
    *
