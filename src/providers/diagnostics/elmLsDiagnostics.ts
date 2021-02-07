@@ -13,7 +13,14 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { Language, Parser, Query, SyntaxNode, Tree } from "web-tree-sitter";
+import {
+  Language,
+  Parser,
+  Query,
+  QueryResult,
+  SyntaxNode,
+  Tree,
+} from "web-tree-sitter";
 import { IElmWorkspace } from "../../elmWorkspace";
 import { PositionUtil } from "../../positionUtil";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
@@ -22,6 +29,7 @@ import { TreeUtils } from "../../util/treeUtils";
 import { Utils } from "../../util/utils";
 import { IDiagnostic } from "./diagnosticsProvider";
 import * as path from "path";
+import { SyntaxNodeMap } from "../../util/types/syntaxNodeMap";
 
 interface IElmAnalyseJson {
   checks?: {
@@ -64,6 +72,7 @@ export class ElmLsDiagnostics {
   private elmAnalyseJson = new Map<string, IElmAnalyseJson>();
 
   private readonly exposedValuesAndTypesQuery: Query;
+  private readonly exposedValueAndTypeUsagesQuery: Query;
   private readonly moduleImportsQuery: Query;
   private readonly moduleReferencesQuery: Query;
   private readonly importModuleAliasesQuery: Query;
@@ -79,7 +88,9 @@ export class ElmLsDiagnostics {
   private readonly unusedPortModuleQuery: Query;
   private readonly operatorFunctionsQuery: Query;
   private readonly typeAliasesQuery: Query;
+  private readonly typeAliasUsagesQuery: Query;
   private readonly unionVariantsQuery: Query;
+  private readonly unionVariantUsagesQuery: Query;
   private readonly patternReferencesQuery: Query;
 
   constructor() {
@@ -99,6 +110,20 @@ export class ElmLsDiagnostics {
             (exposed_type) @exposedType
           )
         )
+      `,
+    );
+
+    this.exposedValueAndTypeUsagesQuery = this.language.query(
+      `
+      (
+        [
+          (value_expr)
+          (record_base_identifier)
+        ] @value.reference
+      )
+      ((type_ref
+        (upper_case_qid) @type.reference)
+      )
       `,
     );
 
@@ -335,6 +360,20 @@ export class ElmLsDiagnostics {
         `,
     );
 
+    this.typeAliasUsagesQuery = this.language.query(
+      `
+        (
+          [
+            (value_expr)
+            (exposed_type)
+          ] @value.reference
+        )
+        ((type_ref
+          (upper_case_qid) @type.reference)
+        )
+        `,
+    );
+
     this.unionVariantsQuery = this.language.query(
       `
         (type_declaration
@@ -344,6 +383,25 @@ export class ElmLsDiagnostics {
           )
         )
         `,
+    );
+
+    this.unionVariantUsagesQuery = this.language.query(
+      `
+      (
+        (exposed_type) @exposed.reference
+      )
+      (
+        (value_expr) @value.reference
+      )
+      ((type_ref
+        (upper_case_qid) @type.reference)
+      )
+      ((case_of_branch
+        (pattern
+          (union_pattern
+            (upper_case_qid) @variant.reference)))
+      )
+      `,
     );
 
     this.patternReferencesQuery = this.language.query(
@@ -613,18 +671,21 @@ export class ElmLsDiagnostics {
         return alias ? alias : node;
       });
 
+    const moduleReferences = this.moduleReferencesQuery
+      .matches(tree.rootNode)
+      .filter(Utils.notUndefined.bind(this))
+      .filter(
+        (match) =>
+          match.captures.length > 0 &&
+          match.captures[0].node.parent?.type !== "import_clause",
+      )
+      .map((match) => match.captures.map((n) => n.node.text).join("."));
+
     // Would need to adjust tree-sitter (use fields) to get a better query
     moduleImports.forEach((moduleImport) => {
-      const references = this.moduleReferencesQuery
-        .matches(tree.rootNode)
-        .filter(Utils.notUndefined.bind(this))
-        .filter(
-          (match) =>
-            match.captures.length > 0 &&
-            match.captures[0].node.parent?.type !== "import_clause",
-        )
-        .map((match) => match.captures.map((n) => n.node.text).join("."))
-        .filter((moduleReference) => moduleReference === moduleImport.text);
+      const references = moduleReferences.filter(
+        (moduleReference) => moduleReference === moduleImport.text,
+      );
 
       const importNode =
         moduleImport.parent?.type === "as_clause"
@@ -652,29 +713,17 @@ export class ElmLsDiagnostics {
       .matches(tree.rootNode)
       .map((match) => match.captures[0].node);
 
+    const allUsages = this.exposedValueAndTypeUsagesQuery
+      .matches(tree.rootNode)
+      .filter(Utils.notUndefined.bind(this));
     exposedValuesAndTypes.forEach((exposedValueOrType) => {
       if (exposedValueOrType.text.endsWith("(..)")) {
         return;
       }
 
-      const references = this.language
-        .query(
-          `
-          (
-            [
-              (value_expr)
-              (record_base_identifier)
-            ] @value.reference
-            (#eq? @value.reference "${exposedValueOrType.text}")
-          )
-          ((type_ref
-            (upper_case_qid) @type.reference)
-            (#eq? @type.reference "${exposedValueOrType.text}")
-          )
-          `,
-        )
-        .matches(tree.rootNode)
-        .filter(Utils.notUndefined.bind(this));
+      const references = allUsages.filter(
+        (result) => result.captures[0].node.text === exposedValueOrType.text,
+      );
 
       if (references.length === 0) {
         diagnostics.push({
@@ -700,18 +749,21 @@ export class ElmLsDiagnostics {
       .matches(tree.rootNode)
       .map((match) => match.captures[0].node);
 
+    const allAliasReferences = this.moduleAliasReferencesQuery
+      .matches(tree.rootNode)
+      .filter(Utils.notUndefined.bind(this))
+      .filter((match) => match.captures.length > 0)
+      .map((match) => match.captures[0].node.text);
+
     moduleAliases.forEach((moduleAlias) => {
       // This case is handled by unused_import
       if (!moduleAlias.parent?.parent?.childForFieldName("exposing")) {
         return;
       }
 
-      const references = this.moduleAliasReferencesQuery
-        .matches(tree.rootNode)
-        .filter(Utils.notUndefined.bind(this))
-        .filter((match) => match.captures.length > 0)
-        .map((match) => match.captures[0].node.text)
-        .filter((moduleReference) => moduleReference === moduleAlias.text);
+      const references = allAliasReferences.filter(
+        (moduleReference) => moduleReference === moduleAlias.text,
+      );
 
       if (references.length === 0 && moduleAlias.parent) {
         diagnostics.push({
@@ -732,6 +784,8 @@ export class ElmLsDiagnostics {
     const diagnostics: IDiagnostic[] = [];
 
     const patternMatches = this.patternsQuery.matches(tree.rootNode);
+
+    const scopeCache = new SyntaxNodeMap<SyntaxNode, QueryResult[]>();
 
     patternMatches
       .filter(Utils.notUndefined.bind(this))
@@ -765,9 +819,12 @@ export class ElmLsDiagnostics {
       })
       .reduce((a, b) => a.concat(b), [])
       .forEach(({ scope, pattern }) => {
-        const references = this.patternReferencesQuery
-          .matches(scope)
-          .filter(Utils.notUndefined.bind(this))
+        const references = scopeCache
+          .getOrSet(scope, () =>
+            this.patternReferencesQuery
+              .matches(scope)
+              .filter(Utils.notUndefined.bind(this)),
+          )
           .filter(
             (result) =>
               result.captures[0].name !== "patternVariable.reference" ||
@@ -1054,26 +1111,14 @@ export class ElmLsDiagnostics {
       .map((match) => match.captures[0].node)
       .filter(Utils.notUndefinedOrNull.bind(this));
 
-    typeAliases.forEach((typeAlias) => {
-      const references = this.language
-        .query(
-          `
-          (
-            [
-              (value_expr)
-              (exposed_type)
-            ] @value.reference
-            (#eq? @value.reference "${typeAlias.text}")
-          )
-          ((type_ref
-            (upper_case_qid) @type.reference)
-            (#eq? @type.reference "${typeAlias.text}")
-          )
-          `,
-        )
-        .matches(tree.rootNode)
-        .filter(Utils.notUndefined.bind(this));
+    const typeAliasUsages = this.typeAliasUsagesQuery
+      .matches(tree.rootNode)
+      .filter(Utils.notUndefined.bind(this));
 
+    typeAliases.forEach((typeAlias) => {
+      const references = typeAliasUsages.filter(
+        (result) => result.captures[0].node.text === typeAlias.text,
+      );
       if (references.length === 0 && typeAlias.parent) {
         diagnostics.push({
           range: this.getNodeRange(typeAlias.parent),
@@ -1097,32 +1142,18 @@ export class ElmLsDiagnostics {
       .map((match) => [match.captures[1].node, match.captures[0].node])
       .filter(Utils.notUndefinedOrNull.bind(this));
 
+    const unionVariantUsages = this.unionVariantUsagesQuery
+      .matches(tree.rootNode)
+      .filter(Utils.notUndefined.bind(this));
+
     unionVariants.forEach(([unionVariant, typeName]) => {
-      const references = this.language
-        .query(
-          `
-          (
-            (exposed_type) @exposed.reference
-            (#eq? @exposed.reference "${typeName.text}(..)")
-          )
-          (
-            (value_expr) @value.reference
-            (#eq? @value.reference "${unionVariant.text}")
-          )
-          ((type_ref
-            (upper_case_qid) @type.reference)
-            (#eq? @type.reference "${unionVariant.text}")
-          )
-          ((case_of_branch
-            (pattern
-              (union_pattern
-                (upper_case_qid) @variant.reference)))
-            (#eq? @variant.reference "${unionVariant.text}")
-          )
-          `,
-        )
-        .matches(tree.rootNode)
-        .filter(Utils.notUndefined.bind(this));
+      const references = unionVariantUsages.filter(
+        (result) =>
+          result.captures[0].node.text ===
+          (result.captures[0].name === "exposed.reference"
+            ? `${typeName.text}(..)`
+            : unionVariant.text),
+      );
 
       if (references.length === 0 && unionVariant.parent) {
         diagnostics.push({
