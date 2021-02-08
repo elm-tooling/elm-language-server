@@ -1410,4 +1410,55 @@ func2 =
 
     await testCompletions(source2, ["func", "test"], "partialMatch");
   });
+
+  it("Record completions in record patterns", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func : { prop1: String, prop2: Int } -> String
+func {{-caret-}} =
+    ""
+`;
+
+    await testCompletions(source, ["prop1", "prop2"], "exactMatch");
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+func : { prop1: String, prop2: Int } -> String
+func {p{-caret-}} =
+    ""
+`;
+
+    await testCompletions(source2, ["prop1", "prop2"], "exactMatch");
+
+    const source3 = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    let
+      {{-caret-}} = { prop1 = "", prop2 = 2 }
+    in
+    ""
+`;
+
+    await testCompletions(source3, ["prop1", "prop2"], "exactMatch");
+  });
+
+  it("Case branch patterns should have completions", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func model =
+    case model of 
+      Just { details } ->
+        d{-caret-}
+`;
+
+    await testCompletions(source, ["details"]);
+  });
 });
