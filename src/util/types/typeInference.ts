@@ -2007,6 +2007,7 @@ export class InferenceScope {
         this.bindPattern(field, TUnknown, isParameter);
       });
 
+      this.expressionTypes.set(pattern, type);
       return;
     }
 

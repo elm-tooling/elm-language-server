@@ -142,6 +142,30 @@ export class CompletionProvider {
         // Don't complete in comments
         return [];
       } else if (
+        nodeAtPosition.parent?.type === "lower_pattern" ||
+        nodeAtPosition.parent?.type === "record_pattern"
+      ) {
+        if (
+          nodeAtPosition.parent.parent?.type === "record_pattern" ||
+          nodeAtPosition.parent.type === "record_pattern"
+        ) {
+          return this.getRecordCompletionsUsingInference(
+            checker,
+            TreeUtils.findParentOfType("record_pattern", nodeAtPosition) ??
+              nodeAtPosition.parent,
+            replaceRange,
+          );
+        } else {
+          // Don't complete on pattern names
+          return [];
+        }
+      } else if (
+        nodeAtPosition.parent?.type === "as_clause" &&
+        nodeAtPosition.parent.parent?.type === "import_clause"
+      ) {
+        // Don't complete on import alias
+        return [];
+      } else if (
         isAtStartOfLine &&
         nodeAtLineBefore.type === "lower_case_identifier" &&
         nodeAtLineBefore.parent &&
@@ -565,6 +589,7 @@ export class CompletionProvider {
       // Try to determine if just the value is being typed
       if (
         !valuesAlreadyExposed &&
+        element.fromModuleName !== "Basics" &&
         valuePart.toLowerCase().startsWith(inputText.toLowerCase())
       ) {
         filterText = valuePart;
@@ -966,13 +991,10 @@ export class CompletionProvider {
       if (node.parent.type === "let_in_expr") {
         node.parent.children.forEach((nodeToProcess) => {
           if (
-            nodeToProcess &&
             nodeToProcess.type === "value_declaration" &&
-            nodeToProcess.firstNamedChild !== null &&
-            nodeToProcess.firstNamedChild.type ===
+            nodeToProcess.firstNamedChild?.type ===
               "function_declaration_left" &&
-            nodeToProcess.firstNamedChild.firstNamedChild !== null &&
-            nodeToProcess.firstNamedChild.firstNamedChild.type ===
+            nodeToProcess.firstNamedChild.firstNamedChild?.type ===
               "lower_case_identifier"
           ) {
             const markdownDocumentation = HintHelper.createHintFromDefinitionInLet(
@@ -1105,13 +1127,13 @@ export class CompletionProvider {
         .filter(
           (possibleImport): boolean =>
             !allImportedValues.get(
-              possibleImport.valueToImport ?? possibleImport.value,
+              possibleImport.value,
               (imp) => imp.fromModuleName === possibleImport.module,
             ),
         )
         .sort((a, b) => {
-          const aValue = (a.valueToImport ?? a.value).toLowerCase();
-          const bValue = (b.valueToImport ?? b.value).toLowerCase();
+          const aValue = a.value.toLowerCase();
+          const bValue = b.value.toLowerCase();
 
           filterText = filterText.toLowerCase();
 
