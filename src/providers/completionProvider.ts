@@ -898,6 +898,13 @@ export class CompletionProvider {
     return this.createCompletion(options);
   }
 
+  private createVariableCompletion(
+    options: ICompletionOptions,
+  ): CompletionItem {
+    options.kind = CompletionItemKind.Variable;
+    return this.createCompletion(options);
+  }
+
   private createFieldOrParameterCompletion(
     markdownDocumentation: string | undefined,
     label: string,
@@ -1011,30 +1018,26 @@ export class CompletionProvider {
           }
         });
       }
-      if (
-        node.parent.type === "case_of_branch" &&
-        node.parent.firstNamedChild &&
-        node.parent.firstNamedChild.type === "pattern" &&
-        node.parent.firstNamedChild.firstNamedChild &&
-        node.parent.firstNamedChild.firstNamedChild.type === "union_pattern" &&
-        node.parent.firstNamedChild.firstNamedChild.childCount > 1 // Ignore cases of case branches with no params
-      ) {
-        const caseBranchVariableNodes = TreeUtils.findAllNamedChildrenOfType(
-          "lower_pattern",
-          node.parent.firstNamedChild.firstNamedChild,
-        );
-        if (caseBranchVariableNodes) {
-          caseBranchVariableNodes.forEach((a) => {
-            const markdownDocumentation = HintHelper.createHintFromDefinitionInCaseBranch();
-            result.push(
-              this.createFunctionCompletion({
-                markdownDocumentation,
-                label: a.text,
-                range,
-                sortPrefix,
-              }),
-            );
-          });
+      if (node.parent.type === "case_of_branch") {
+        const pattern = node.parent.childForFieldName("pattern");
+
+        if (pattern) {
+          const caseBranchVariableNodes = pattern.descendantsOfType(
+            "lower_pattern",
+          );
+          if (caseBranchVariableNodes) {
+            caseBranchVariableNodes.forEach((a) => {
+              const markdownDocumentation = HintHelper.createHintFromDefinitionInCaseBranch();
+              result.push(
+                this.createVariableCompletion({
+                  markdownDocumentation,
+                  label: a.text,
+                  range,
+                  sortPrefix,
+                }),
+              );
+            });
+          }
         }
       }
       if (
@@ -1048,11 +1051,12 @@ export class CompletionProvider {
               child,
             );
             result.push(
-              this.createFieldOrParameterCompletion(
+              this.createVariableCompletion({
                 markdownDocumentation,
-                child.text,
+                label: child.text,
                 range,
-              ),
+                sortPrefix,
+              }),
             );
 
             const annotationTypeNode = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
