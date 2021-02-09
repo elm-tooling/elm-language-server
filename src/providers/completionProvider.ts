@@ -394,7 +394,6 @@ export class CompletionProvider {
         ...this.getCompletionsFromOtherFile(
           checker,
           treeContainer,
-          params.textDocument.uri,
           replaceRange,
           targetWord,
         ),
@@ -550,7 +549,6 @@ export class CompletionProvider {
   private getCompletionsFromOtherFile(
     checker: TypeChecker,
     treeContainer: ITreeContainer,
-    uri: string,
     range: Range,
     inputText: string,
   ): CompletionItem[] {
@@ -575,9 +573,9 @@ export class CompletionProvider {
       const dotIndex = label.lastIndexOf(".");
       const valuePart = label.slice(dotIndex + 1);
 
-      const importNode = TreeUtils.findImportClauseByName(
-        treeContainer.tree,
+      const importNode = checker.findImportModuleNameNode(
         element.fromModuleName,
+        treeContainer,
       );
 
       // Check if a value is already imported for this module using the exposing list
@@ -1108,14 +1106,8 @@ export class CompletionProvider {
     const sourceFile = forest.getByUri(uri);
 
     if (sourceFile) {
-      const allImportedValues = program
-        .getTypeChecker()
-        .getAllImports(sourceFile);
-
-      const importedModules =
-        TreeUtils.findAllImportClauseNodes(sourceFile.tree)?.map(
-          (n) => TreeUtils.findFirstNamedChildOfType("upper_case_qid", n)?.text,
-        ) ?? [];
+      const checker = program.getTypeChecker();
+      const allImportedValues = checker.getAllImports(sourceFile);
 
       const cached = possibleImportsCache.get(uri);
       const possibleImports =
@@ -1158,8 +1150,14 @@ export class CompletionProvider {
             } else if (!aMatches && bMatches) {
               return 1;
             } else {
-              const aModuleImported = importedModules.includes(a.module);
-              const bModuleImported = importedModules.includes(b.module);
+              const aModuleImported = !!checker.findImportModuleNameNode(
+                a.module,
+                sourceFile,
+              );
+              const bModuleImported = !!checker.findImportModuleNameNode(
+                b.module,
+                sourceFile,
+              );
 
               if (aModuleImported && !bModuleImported) {
                 return -1;
