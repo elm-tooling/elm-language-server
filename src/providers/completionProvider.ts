@@ -576,7 +576,7 @@ export class CompletionProvider {
       const importNode = checker.findImportModuleNameNode(
         element.fromModuleName,
         treeContainer,
-      );
+      )?.parent;
 
       // Check if a value is already imported for this module using the exposing list
       // In this case, we want to prefex the unqualified value since they are using the import exposing list

@@ -1245,7 +1245,7 @@ export class InferenceScope {
       if (part.nodeType === "Operator") {
         const [type, precedence] = this.inferOperatorAndPrecedence(part);
         if (type.nodeType !== "Function" || type.params.length < 2) {
-          return TUnknown;
+          throw new Error("Could not find operator function");
         }
 
         if (
