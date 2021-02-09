@@ -1473,7 +1473,7 @@ export class InferenceScope {
       }
     }
 
-    const type = targetTy.fields[fieldIdentifierText] ?? TUnknown;
+    const type = targetTy.fields[fieldIdentifierText] ?? TVar("a");
     this.expressionTypes.set(expr, type);
     return type;
   }
@@ -1592,6 +1592,7 @@ export class InferenceScope {
               record,
               this.calculateRecordDiff(TRecord(mappedFields), baseType),
             );
+            this.expressionTypes.set(field, type);
           }
         } else if (baseType.nodeType === "MutableRecord") {
           baseType.fields[fieldText] = type;
