@@ -1,5 +1,12 @@
 # Change Log
 
+## 2.0.3
+
+- Add setting to disable diagnostics on change
+- Improve performance of unused diagnostic
+- Improve completions
+- Fix problem with type inference caching
+
 ## 2.0.2
 
 - Updated dependency, so that Apple M1 based laptops should work
