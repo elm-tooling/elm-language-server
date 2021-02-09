@@ -18,12 +18,13 @@ import { baseUri, SourceTreeParser } from "../utils/sourceTreeParser";
 
 const basicsSources = `
 --@ Basics.elm
-module Basics exposing ((+), (|>), (>>), (==), Int, Float, Bool(..), Order(..), negate)
+module Basics exposing ((+), (|>), (>>), (==), (>), Int, Float, Bool(..), Order(..), negate)
 
 infix left  0 (|>) = apR
 infix non   4 (==) = eq
 infix left  6 (+)  = add
 infix right 9 (>>) = composeR
+infix non   4 (>)  = gt
 
 type Int = Int
 
@@ -47,6 +48,10 @@ composeR : (a -> b) -> (b -> c) -> (a -> c)
 composeR f g x =
   g (f x)
 
+gt : comparable -> comparable -> Bool
+gt =
+  Elm.Kernel.Utils.gt
+  
 type Order = LT | EQ | GT
 
 negate : number -> number
