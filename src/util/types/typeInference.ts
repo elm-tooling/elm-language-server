@@ -1921,7 +1921,11 @@ export class InferenceScope {
   ): void {
     const ty = this.bindIfVar(listPattern, type, TList(TVar("a")));
 
-    if (ty.nodeType !== "Union" || !typeIsList(ty)) {
+    if (
+      ty.nodeType === "Unknown" ||
+      ty.nodeType !== "Union" ||
+      !typeIsList(ty)
+    ) {
       if (ty.nodeType !== "Unknown") {
         this.diagnostics.push(
           typeMismatchError(
@@ -1942,8 +1946,7 @@ export class InferenceScope {
     const innerType = ty.params[0];
 
     parts.slice(0, parts.length - 1).forEach((part) => {
-      const t = part.nodeType === "ListPattern" ? ty : innerType;
-      this.bindPattern(part, t, false);
+      this.bindPattern(part, innerType, false);
     });
 
     if (parts.length > 0) {
