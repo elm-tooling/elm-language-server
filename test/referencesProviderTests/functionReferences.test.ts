@@ -104,8 +104,7 @@ bar = foo
     await testBase.testReferences(source);
   });
 
-  // getFunctionAnnotationNameNodeFromDefinition doesn't find the annotation due to the comment inbetween
-  xit(`function annotation gets a reference`, async () => {
+  it(`function annotation gets a reference`, async () => {
     const source = `
 
 --@ Module.elm

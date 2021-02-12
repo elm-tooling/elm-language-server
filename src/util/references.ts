@@ -29,14 +29,17 @@ export class References {
         switch (definitionNode.nodeType) {
           case "Function":
             {
-              const annotationNameNode = this.getFunctionAnnotationNameNodeFromDefinition(
-                definitionNode.node,
-              );
-              if (annotationNameNode && refSourceTree.writeable) {
-                references.push({
-                  node: annotationNameNode,
-                  uri: definitionNode.uri,
-                });
+              if (definitionNode.node.parent) {
+                const annotationNameNode = TreeUtils.getTypeAnnotation(
+                  definitionNode.node.parent,
+                )?.childForFieldName("name");
+
+                if (annotationNameNode && refSourceTree.writeable) {
+                  references.push({
+                    node: annotationNameNode,
+                    uri: definitionNode.uri,
+                  });
+                }
               }
 
               const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(
@@ -753,21 +756,6 @@ export class References {
 
   private static findAllRecordBaseIdentifiers(node: SyntaxNode): SyntaxNode[] {
     return TreeUtils.descendantsOfType(node, "record_base_identifier");
-  }
-
-  private static getFunctionAnnotationNameNodeFromDefinition(
-    node: SyntaxNode,
-  ): SyntaxNode | undefined {
-    if (
-      node.parent &&
-      node.parent.previousNamedSibling &&
-      node.parent.previousNamedSibling.type === "type_annotation" &&
-      node.parent.previousNamedSibling.firstChild &&
-      node.parent.previousNamedSibling.firstChild.type ===
-        "lower_case_identifier"
-    ) {
-      return node.parent.previousNamedSibling.firstChild;
-    }
   }
 
   private static findFieldUsages(tree: Tree, fieldName: string): SyntaxNode[] {

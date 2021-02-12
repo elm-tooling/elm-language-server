@@ -571,7 +571,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       // The function name should resolve to itself
       if (nodeParent.firstNamedChild?.text === nodeText) {
         return {
-          node: nodeParent.parent,
+          node: nodeParent,
           nodeType: "Function",
           uri: treeContainer.uri,
         };
