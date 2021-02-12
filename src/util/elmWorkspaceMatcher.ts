@@ -61,21 +61,6 @@ export class ElmWorkspaceMatcher<ParamType> {
     };
   }
 
-  /**
-   * @deprecated Use handle() instead, which returns a params with the program and source file in it
-   */
-  public handlerForWorkspace<ResultType>(
-    handler: (
-      param: ParamType,
-      program: IElmWorkspace,
-      token?: CancellationToken,
-    ) => ResultType,
-  ): (param: ParamType, token?: CancellationToken) => ResultType {
-    return (param: ParamType, token?: CancellationToken): ResultType => {
-      return handler(param, this.getProgramFor(param), token);
-    };
-  }
-
   public getProgramFor(param: ParamType): IElmWorkspace {
     const uri = this.getUriFor(param);
     const workspace =

@@ -9,7 +9,7 @@ import {
   Connection,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import Parser, { Tree, Edit, Point, SyntaxNode } from "web-tree-sitter";
+import Parser, { Edit, Point, SyntaxNode } from "web-tree-sitter";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Position, Range } from "vscode-languageserver-textdocument";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
@@ -71,7 +71,9 @@ export class ASTProvider {
     const document: VersionedTextDocumentIdentifier = params.textDocument;
 
     // Source file could be undefined here
-    let tree: Tree = params.sourceFile?.tree;
+    const sourceFile = <ITreeContainer | undefined>params.sourceFile;
+
+    let tree = sourceFile?.tree;
 
     let hasContentChanges = false;
     if ("contentChanges" in params) {
@@ -91,7 +93,7 @@ export class ASTProvider {
       forest.removeTree(document.uri);
     }
 
-    const oldNodes = tree.rootNode.namedChildren;
+    const oldNodes = tree?.rootNode.namedChildren ?? [];
 
     const newText =
       this.documentEvents.get(document.uri)?.getText() ??
