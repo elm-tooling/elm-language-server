@@ -11,9 +11,9 @@ import {
 } from "vscode-languageserver";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { IProgram } from "../../program";
+import { IProgram } from "../../compiler/program";
 import { PositionUtil } from "../../positionUtil";
-import { getModuleName } from "../../util/elmUtils";
+import { getModuleName } from "../../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { RenameUtils } from "../../util/renameUtils";

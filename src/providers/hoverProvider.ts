@@ -8,7 +8,7 @@ import {
 import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
 import { DiagnosticsProvider } from ".";
-import { getEmptyTypes } from "../util/elmUtils";
+import { getEmptyTypes } from "../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
 import { NodeType, TreeUtils } from "../util/treeUtils";

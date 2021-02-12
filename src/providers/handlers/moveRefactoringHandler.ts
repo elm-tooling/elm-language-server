@@ -10,7 +10,7 @@ import {
 } from "../../protocol";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
-import { References } from "../../util/references";
+import { References } from "../../compiler/references";
 import { TreeUtils } from "../../util/treeUtils";
 
 export class MoveRefactoringHandler {

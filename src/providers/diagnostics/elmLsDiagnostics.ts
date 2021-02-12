@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { ISourceFile } from "../../forest";
+import { ISourceFile } from "../../compiler/forest";
 import { container } from "tsyringe";
 import {
   CodeAction,
@@ -21,7 +21,7 @@ import {
   SyntaxNode,
   Tree,
 } from "web-tree-sitter";
-import { IProgram } from "../../program";
+import { IProgram } from "../../compiler/program";
 import { PositionUtil } from "../../positionUtil";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
@@ -29,7 +29,7 @@ import { TreeUtils } from "../../util/treeUtils";
 import { Utils } from "../../util/utils";
 import { IDiagnostic } from "./diagnosticsProvider";
 import * as path from "path";
-import { SyntaxNodeMap } from "../../util/types/syntaxNodeMap";
+import { SyntaxNodeMap } from "../../compiler/utils/syntaxNodeMap";
 
 interface IElmAnalyseJson {
   checks?: {

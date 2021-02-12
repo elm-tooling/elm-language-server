@@ -1,7 +1,7 @@
 import { container } from "tsyringe";
 import { CodeAction } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../../src/elmWorkspace";
+import { IProgram } from "../../src/compiler/program";
 import {
   CodeActionProvider,
   convertFromAnalyzerDiagnostic,
@@ -85,7 +85,7 @@ export async function testCodeAction(
 
   if (!sourceFile) throw new Error("Getting tree failed");
 
-  const workspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
+  const workspaces = container.resolve<IProgram[]>("ElmWorkspaces");
   workspaces.splice(0, workspaces.length);
   workspaces.push(program);
 

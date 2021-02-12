@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
-import { flatMap, TreeUtils } from "../treeUtils";
-import { References } from "../references";
+import { flatMap, TreeUtils } from "../util/treeUtils";
+import { References } from "./references";
 import {
   BinaryExprTree,
   IOperatorPrecedence,
   Operand,
   Binary,
 } from "./operatorPrecedence";
-import { DisjointSet } from "./disjointSet";
+import { DisjointSet } from "./utils/disjointSet";
 import { TypeReplacement } from "./typeReplacement";
 import {
   Expression,
@@ -36,16 +36,16 @@ import {
   EFieldAccessExpr,
   ENegateExpr,
   ETypeAnnotation,
-} from "./expressionTree";
-import { SyntaxNodeMap } from "./syntaxNodeMap";
+} from "./utils/expressionTree";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
 import { TypeExpression } from "./typeExpression";
-import { IProgram } from "../../program";
-import { Sequence } from "../sequence";
-import { Utils } from "../utils";
-import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
+import { IProgram } from "./program";
+import { Sequence } from "../util/sequence";
+import { Utils } from "../util/utils";
+import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable";
 import { TypeChecker } from "./typeChecker";
 import { performance } from "perf_hooks";
-import { ICancellationToken } from "../../cancellation";
+import { ICancellationToken } from "../cancellation";
 import {
   Diagnostic,
   Diagnostics,
@@ -53,7 +53,7 @@ import {
   errorWithEndNode,
 } from "./diagnostics";
 import fromEntries from "fromentries";
-import { isKernelProject, nameIsKernel } from "../elmUtils";
+import { isKernelProject, nameIsKernel } from "./utils/elmUtils";
 
 export let inferTime = 0;
 export function resetInferTime(): void {

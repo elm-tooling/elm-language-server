@@ -1,9 +1,9 @@
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { Imports } from "./imports";
-import { IExposing, TreeUtils } from "./util/treeUtils";
-import { SyntaxNodeMap } from "./util/types/syntaxNodeMap";
-import { SymbolMap } from "./util/types/binder";
-import { Diagnostic } from "./util/types/diagnostics";
+import { IExposing, TreeUtils } from "../util/treeUtils";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
+import { SymbolMap } from "./binder";
+import { Diagnostic } from "./diagnostics";
 import { ElmProject } from "./program";
 
 export interface ISourceFile {

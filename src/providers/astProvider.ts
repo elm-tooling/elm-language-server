@@ -14,7 +14,7 @@ import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Position, Range } from "vscode-languageserver-textdocument";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 import { TreeUtils } from "../util/treeUtils";
-import { ISourceFile } from "../forest";
+import { ISourceFile } from "../compiler/forest";
 import {
   IDidChangeTextDocumentParams,
   IDidOpenTextDocumentParams,
@@ -71,7 +71,7 @@ export class ASTProvider {
     const document: VersionedTextDocumentIdentifier = params.textDocument;
 
     // Source file could be undefined here
-    const sourceFile = <ITreeContainer | undefined>params.sourceFile;
+    const sourceFile = <ISourceFile | undefined>params.sourceFile;
 
     let tree = sourceFile?.tree;
 

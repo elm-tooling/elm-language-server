@@ -13,7 +13,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
-import { IProgram } from "../program";
+import { IProgram } from "../compiler/program";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { RenameUtils } from "../util/renameUtils";
 import { TreeUtils } from "../util/treeUtils";

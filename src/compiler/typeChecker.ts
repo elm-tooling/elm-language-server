@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
-import { flatMap, NodeType, TreeUtils } from "../treeUtils";
+import { flatMap, NodeType, TreeUtils } from "../util/treeUtils";
 import {
   Expression,
   EValueDeclaration,
@@ -9,8 +9,8 @@ import {
   ETypeDeclaration,
   EUnionVariant,
   EPortAnnotation,
-} from "./expressionTree";
-import { IProgram } from "../../program";
+} from "./utils/expressionTree";
+import { IProgram } from "./program";
 import { container } from "tsyringe";
 import { Connection } from "vscode-languageserver";
 import {
@@ -19,19 +19,19 @@ import {
   InferenceScope,
   InferenceResult,
 } from "./typeInference";
-import { ISourceFile } from "../../forest";
-import { IImport, Imports } from "../../imports";
+import { ISourceFile } from "./forest";
+import { IImport, Imports } from "./imports";
 import { TypeRenderer } from "./typeRenderer";
 import { performance } from "perf_hooks";
 import { bindTreeContainer } from "./binder";
-import { Sequence } from "../sequence";
-import { Utils } from "../utils";
+import { Sequence } from "../util/sequence";
+import { Utils } from "../util/utils";
 import { TypeExpression } from "./typeExpression";
-import { ICancellationToken } from "../../cancellation";
+import { ICancellationToken } from "../cancellation";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
-import { isKernelProject, nameIsKernel } from "../elmUtils";
+import { isKernelProject, nameIsKernel } from "./utils/elmUtils";
 import { existsSync } from "fs";
-import * as path from "../path";
+import * as path from "../util/path";
 import { URI } from "vscode-uri";
 
 export let bindTime = 0;

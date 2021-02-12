@@ -5,7 +5,7 @@ import { promisify } from "util";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import Parser from "web-tree-sitter";
-import { Program, IProgram, IProgramHost } from "../../src/program";
+import { Program, IProgram, IProgramHost } from "../../src/compiler/program";
 import * as path from "../../src/util/path";
 import { Utils } from "../../src/util/utils";
 

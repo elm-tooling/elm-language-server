@@ -13,10 +13,10 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IProgram } from "../program";
-import { ISourceFile } from "../forest";
+import { IProgram } from "../compiler/program";
+import { ISourceFile } from "../compiler/forest";
 import { comparePosition, PositionUtil } from "../positionUtil";
-import { getEmptyTypes } from "../util/elmUtils";
+import { getEmptyTypes } from "../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
 import { ImportUtils, IPossibleImport } from "../util/importUtils";
@@ -24,9 +24,9 @@ import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { TreeUtils } from "../util/treeUtils";
 import RANKING_LIST from "./ranking";
 import { DiagnosticsProvider } from ".";
-import { TypeChecker } from "../util/types/typeChecker";
+import { TypeChecker } from "../compiler/typeChecker";
 import escapeStringRegexp from "escape-string-regexp";
-import { TRecord } from "../util/types/typeInference";
+import { TRecord } from "../compiler/typeInference";
 import { ICompletionParams } from "./paramsExtensions";
 
 export type CompletionResult =

@@ -1,8 +1,8 @@
 import Parser, { SyntaxNode } from "web-tree-sitter";
 import { IForest, ISourceFile } from "./forest";
-import { IExposed, IExposing, NodeType, TreeUtils } from "./util/treeUtils";
+import { IExposed, IExposing, NodeType, TreeUtils } from "../util/treeUtils";
 import { container } from "tsyringe";
-import { MultiMap } from "./util/multiMap";
+import { MultiMap } from "../util/multiMap";
 import { performance } from "perf_hooks";
 
 export let importsTime = 0;

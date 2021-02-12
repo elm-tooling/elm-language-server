@@ -10,8 +10,8 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { ISourceFile } from "../../forest";
-import * as utils from "../../util/elmUtils";
+import { ISourceFile } from "../../compiler/forest";
+import * as utils from "../../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
 import { TreeUtils } from "../../util/treeUtils";
@@ -20,7 +20,7 @@ import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
 import { ElmToolingJsonManager } from "../../elmToolingJsonManager";
-import { IProgram } from "../../program";
+import { IProgram } from "../../compiler/program";
 
 const ELM_MAKE = "Elm";
 export const NAMING_ERROR = "NAMING ERROR";

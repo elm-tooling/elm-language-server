@@ -8,7 +8,7 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { References } from "../util/references";
+import { References } from "../compiler/references";
 import { TreeUtils } from "../util/treeUtils";
 import { IReferenceParams } from "./paramsExtensions";
 

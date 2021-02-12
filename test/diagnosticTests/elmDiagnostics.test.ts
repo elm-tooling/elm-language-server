@@ -8,7 +8,7 @@ import {
   Diagnostics,
   error,
   IDiagnosticMessage,
-} from "../../src/util/types/diagnostics";
+} from "../../src/compiler/diagnostics";
 import { Utils } from "../../src/util/utils";
 import {
   getSourceFiles,

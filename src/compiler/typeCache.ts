@@ -1,7 +1,7 @@
 import { SyntaxNode } from "web-tree-sitter";
-import { MultiMap } from "../multiMap";
-import { TreeUtils } from "../treeUtils";
-import { SyntaxNodeMap } from "./syntaxNodeMap";
+import { MultiMap } from "../util/multiMap";
+import { TreeUtils } from "../util/treeUtils";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
 import { InferenceResult } from "./typeInference";
 
 type CacheKey =

@@ -1,9 +1,9 @@
-import { ISourceFile } from "../../forest";
+import { ISourceFile } from "./forest";
 import { SyntaxNode } from "web-tree-sitter";
-import { MultiMap } from "../multiMap";
-import { IExposed, IExposing, NodeType, TreeUtils } from "../treeUtils";
-import { Utils } from "../utils";
-import { SyntaxNodeMap } from "./syntaxNodeMap";
+import { MultiMap } from "../util/multiMap";
+import { IExposed, IExposing, NodeType, TreeUtils } from "../util/treeUtils";
+import { Utils } from "../util/utils";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
 import { Diagnostics, error } from "./diagnostics";
 
 export type SymbolMap = MultiMap<string, ISymbol>;

@@ -1,13 +1,13 @@
 import { Position } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ISourceFile } from "../forest";
+import { ISourceFile } from "../compiler/forest";
 import { comparePosition } from "../positionUtil";
-import { TRecord, Type } from "./types/typeInference";
-import { IProgram } from "../program";
+import { TRecord, Type } from "../compiler/typeInference";
+import { IProgram } from "../compiler/program";
 import {
   EFunctionCallExpr,
   mapSyntaxNodeToExpression,
-} from "./types/expressionTree";
+} from "../compiler/utils/expressionTree";
 import { Range } from "vscode-languageserver-textdocument";
 
 export type NodeType =

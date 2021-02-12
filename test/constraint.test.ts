@@ -4,7 +4,7 @@ import {
   IVersion,
   parseConstraint,
   versionSatifiesConstraint,
-} from "../src/util/elmUtils";
+} from "../src/compiler/utils/elmUtils";
 
 describe("constraint test", () => {
   function v(

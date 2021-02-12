@@ -1,4 +1,4 @@
-import { ISourceFile } from "../../forest";
+import { ISourceFile } from "./forest";
 import { TypeChecker } from "./typeChecker";
 import {
   getTypeclassName,

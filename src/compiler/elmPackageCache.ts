@@ -1,10 +1,10 @@
 import { readdir } from "fs";
-import * as utils from "./util/elmUtils";
+import * as utils from "./utils/elmUtils";
 import { ElmJson } from "./program";
 import { promisify } from "util";
-import { IConstraint, IVersion } from "./util/elmUtils";
-import { MultiMap } from "./util/multiMap";
-import * as path from "./util/path";
+import { IConstraint, IVersion } from "./utils/elmUtils";
+import { MultiMap } from "../util/multiMap";
+import * as path from "../util/path";
 
 const readDir = promisify(readdir);
 

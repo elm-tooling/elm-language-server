@@ -1,5 +1,5 @@
 import { performance } from "perf_hooks";
-import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
+import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable";
 import {
   TVar,
   Type,

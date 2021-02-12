@@ -10,7 +10,7 @@ import {
 import { URI, Utils } from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { ElmToolingJsonManager } from "./elmToolingJsonManager";
-import { Program, IProgram } from "./program";
+import { Program, IProgram } from "./compiler/program";
 import {
   CodeActionProvider,
   CodeLensProvider,

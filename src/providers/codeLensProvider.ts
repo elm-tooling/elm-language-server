@@ -10,10 +10,10 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IProgram } from "../program";
-import { ISourceFile } from "../forest";
+import { IProgram } from "../compiler/program";
+import { ISourceFile } from "../compiler/forest";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { References } from "../util/references";
+import { References } from "../compiler/references";
 import { Settings } from "../util/settings";
 import { TreeUtils } from "../util/treeUtils";
 import { ICodeLensParams } from "./paramsExtensions";

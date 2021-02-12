@@ -1,10 +1,10 @@
-import { IProgram } from "../program";
-import { ISourceFile } from "../forest";
+import { IProgram } from "./program";
+import { ISourceFile } from "./forest";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IReferenceNode } from "./referenceNode";
-import { TreeUtils } from "./treeUtils";
-import { Utils } from "./utils";
-import { IImport, Imports } from "../imports";
+import { IReferenceNode } from "../util/referenceNode";
+import { TreeUtils } from "../util/treeUtils";
+import { Utils } from "../util/utils";
+import { IImport, Imports } from "./imports";
 
 export class References {
   public static find(

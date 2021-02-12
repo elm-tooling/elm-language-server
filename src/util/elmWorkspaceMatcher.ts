@@ -1,8 +1,8 @@
 import { container } from "tsyringe";
 import { CancellationToken } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IProgram } from "../program";
-import { ISourceFile } from "../forest";
+import { IProgram } from "../compiler/program";
+import { ISourceFile } from "../compiler/forest";
 import { NoWorkspaceContainsError } from "./noWorkspaceContainsError";
 
 export interface IParams {

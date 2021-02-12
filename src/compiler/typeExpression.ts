@@ -28,13 +28,13 @@ import {
   mapTypeDeclaration,
   mapTypeAliasDeclaration,
   mapTypeAnnotation,
-} from "./expressionTree";
-import { TreeUtils } from "../treeUtils";
+} from "./utils/expressionTree";
+import { TreeUtils } from "../util/treeUtils";
 import { TypeReplacement } from "./typeReplacement";
-import { SyntaxNodeMap } from "./syntaxNodeMap";
-import { Utils } from "../utils";
-import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
-import { IProgram } from "../../program";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
+import { Utils } from "../util/utils";
+import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable";
+import { IProgram } from "./program";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
 
 export class TypeExpression {

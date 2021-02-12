@@ -8,21 +8,21 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import { ServerCancellationToken } from "../../cancellation";
-import { ISourceFile } from "../../forest";
-import { IProgram } from "../../program";
+import { IProgram } from "../../compiler/program";
 import { GetDiagnosticsRequest } from "../../protocol";
 import { Delayer } from "../../util/delayer";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { MultistepOperation } from "../../util/multistepOperation";
 import { IClientSettings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
-import { Diagnostic } from "../../util/types/diagnostics";
+import { Diagnostic } from "../../compiler/diagnostics";
 import { ASTProvider } from "../astProvider";
 import { DiagnosticSource } from "./diagnosticSource";
 import { DiagnosticsRequest } from "./diagnosticsRequest";
 import { ElmLsDiagnostics } from "./elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics";
+import { ISourceFile } from "../../compiler/forest";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };

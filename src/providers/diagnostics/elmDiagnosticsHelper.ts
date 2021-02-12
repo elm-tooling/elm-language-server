@@ -1,6 +1,6 @@
 import { DiagnosticSeverity, Range } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import { Diagnostics } from "../../util/types/diagnostics";
+import { Diagnostics } from "../../compiler/diagnostics";
 import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { NAMING_ERROR } from "./elmMakeDiagnostics";
 

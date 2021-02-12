@@ -1,23 +1,20 @@
 import "reflect-metadata";
 import { container } from "tsyringe";
 import { URI } from "vscode-uri";
-import { Program } from "../src/program";
-import { importsTime, resetImportsTime } from "../src/imports";
+import { Program } from "../src/compiler/program";
+import { importsTime, resetImportsTime } from "../src/compiler/imports";
 import {
   definitionTime,
   mappingTime,
   resetDefinitionAndMappingTime,
-} from "../src/util/types/expressionTree";
-import { bindTime, resetBindTime } from "../src/util/types/typeChecker";
-import { inferTime, resetInferTime } from "../src/util/types/typeInference";
+} from "../src/compiler/utils/expressionTree";
+import { bindTime, resetBindTime } from "../src/compiler/typeChecker";
+import { inferTime, resetInferTime } from "../src/compiler/typeInference";
 import * as path from "path";
 import { argv } from "process";
 import { Settings } from "../src/util/settings";
 import Parser from "web-tree-sitter";
-import {
-  replaceTime,
-  resetReplaceTime,
-} from "../src/util/types/typeReplacement";
+import { replaceTime, resetReplaceTime } from "../src/compiler/typeReplacement";
 import {
   getCancellationFilePath,
   FileBasedCancellationTokenSource,

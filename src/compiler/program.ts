@@ -6,27 +6,27 @@ import util from "util";
 import { Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
-import { ICancellationToken } from "./cancellation";
+import { ICancellationToken } from "../cancellation";
 import { ElmPackageCache, IElmPackageCache } from "./elmPackageCache";
 import { Forest, IForest, ISourceFile } from "./forest";
-import * as utils from "./util/elmUtils";
-import { IVersion } from "./util/elmUtils";
-import * as path from "./util/path";
-import { normalizeUri } from "./util/path";
+import * as utils from "./utils/elmUtils";
+import { IVersion } from "./utils/elmUtils";
+import * as path from "../util/path";
+import { normalizeUri } from "../util/path";
 import {
   IPossibleImportsCache,
   PossibleImportsCache,
-} from "./util/possibleImportsCache";
-import { Settings } from "./util/settings";
-import { Diagnostic } from "./util/types/diagnostics";
-import { TypeCache } from "./util/types/typeCache";
+} from "../util/possibleImportsCache";
+import { Settings } from "../util/settings";
+import { Diagnostic } from "./diagnostics";
+import { TypeCache } from "./typeCache";
 import {
   createTypeChecker,
   DefinitionResult,
   TypeChecker,
-} from "./util/types/typeChecker";
+} from "./typeChecker";
 import chokidar from "chokidar";
-import { CommandManager } from "./commandManager";
+import { CommandManager } from "../commandManager";
 
 const readFile = util.promisify(fs.readFile);
 

@@ -1,8 +1,8 @@
 import { SyntaxNode } from "web-tree-sitter";
-import { OperatorAssociativity } from "./operatorPrecedence";
-import { TreeUtils } from "../treeUtils";
-import { Utils } from "../utils";
-import { IProgram } from "../../program";
+import { OperatorAssociativity } from "../operatorPrecedence";
+import { TreeUtils } from "../../util/treeUtils";
+import { Utils } from "../../util/utils";
+import { IProgram } from "../program";
 import { performance } from "perf_hooks";
 /* eslint-disable @typescript-eslint/naming-convention */
 

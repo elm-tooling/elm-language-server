@@ -1,12 +1,12 @@
 import { CodeAction, Range, TextEdit } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
 import { CodeActionProvider } from "..";
-import { ITreeContainer } from "../../forest";
+import { ISourceFile } from "../../compiler/forest";
 import { getSpaces } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
-import { Diagnostics } from "../../util/types/diagnostics";
-import { TypeChecker } from "../../util/types/typeChecker";
-import { Type } from "../../util/types/typeInference";
+import { Diagnostics } from "../../compiler/diagnostics";
+import { TypeChecker } from "../../compiler/typeChecker";
+import { Type } from "../../compiler/typeInference";
 import { ICodeActionParams } from "../paramsExtensions";
 
 const errorCodes = [Diagnostics.RecordField.code];
@@ -98,7 +98,7 @@ function createFields(
   fields: [string, Type][],
   targetRecord: SyntaxNode,
   checker: TypeChecker,
-  sourceFile: ITreeContainer,
+  sourceFile: ISourceFile,
 ): { [uri: string]: TextEdit[] } {
   const type = checker.findType(targetRecord);
 

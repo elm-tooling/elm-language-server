@@ -14,14 +14,13 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { ElmPackageCache } from "../elmPackageCache";
-import { ElmJson, IProgram } from "../program";
-import { ISourceFile } from "../forest";
+import { ElmJson, IProgram } from "../compiler/program";
+import { ISourceFile } from "../compiler/forest";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { MultiMap } from "../util/multiMap";
 import { Settings } from "../util/settings";
 import { flatMap } from "../util/treeUtils";
-import { Diagnostic } from "../util/types/diagnostics";
+import { Diagnostic } from "../compiler/diagnostics";
 import {
   convertFromAnalyzerDiagnostic,
   DiagnosticsProvider,
@@ -33,6 +32,7 @@ import { diagnosticsEquals } from "./diagnostics/fileDiagnostics";
 import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 import { ICodeActionParams } from "./paramsExtensions";
+import { ElmPackageCache } from "../compiler/elmPackageCache";
 
 export interface ICodeActionRegistration {
   errorCodes: string[];
