@@ -5,3 +5,4 @@ import "./extractFunctionCodeAction";
 import "./exposeUnexposeCodeAction";
 import "./moveFunctionCodeAction";
 import "./installPackageCodeAction";
+import "./addMissingRecordFieldCodeAction";

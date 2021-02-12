@@ -161,10 +161,12 @@ export class CodeActionProvider {
   public static getCodeAction(
     params: ICodeActionParams,
     title: string,
-    edits: TextEdit[],
+    edits: TextEdit[] | { [uri: string]: TextEdit[] },
     command?: Command,
   ): CodeAction {
-    const changes = { [params.sourceFile.uri]: edits };
+    const changes = Array.isArray(edits)
+      ? { [params.sourceFile.uri]: edits }
+      : edits;
     return {
       title,
       kind: CodeActionKind.QuickFix,
@@ -180,16 +182,26 @@ export class CodeActionProvider {
     errorCodes: string[],
     fixId: string,
     callback: (edits: TextEdit[], diagnostic: LspDiagnostic) => void,
+    callbackChanges?: (
+      edits: { [uri: string]: TextEdit[] },
+      diagnostic: LspDiagnostic,
+    ) => void,
   ): CodeAction {
     const edits: TextEdit[] = [];
-    const changes = {
-      [params.sourceFile.uri]: edits,
-    };
+    const changes = callbackChanges
+      ? {}
+      : {
+          [params.sourceFile.uri]: edits,
+        };
 
     const diagnostics: LspDiagnostic[] = [];
     CodeActionProvider.forEachDiagnostic(params, errorCodes, (diagnostic) => {
       diagnostics.push(diagnostic);
-      callback(edits, diagnostic);
+      if (callbackChanges) {
+        callbackChanges(changes, diagnostic);
+      } else {
+        callback(edits, diagnostic);
+      }
     });
 
     return {
