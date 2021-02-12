@@ -809,4 +809,27 @@ foo input =
   `;
     await testTypeInference(basicsSources + stringSources + source, []);
   });
+
+  test("test cons pattern with list", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+test : List (List Float) -> Float
+test listList =
+    case listList of
+        [ a, b ] :: _ ->
+            let
+                product : Float
+                product =
+                    a + b
+            in
+            product
+
+        _ ->
+            0
+
+  `;
+    await testTypeInference(basicsSources + source, []);
+  });
 });
