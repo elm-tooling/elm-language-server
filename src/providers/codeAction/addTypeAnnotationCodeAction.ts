@@ -7,7 +7,7 @@ import {
 import { PositionUtil } from "../../positionUtil";
 import { getSpaces } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
-import { Diagnostics } from "../../util/types/diagnostics";
+import { Diagnostics } from "../../compiler/diagnostics";
 import {
   CodeActionProvider,
   IRefactorCodeAction,

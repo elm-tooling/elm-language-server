@@ -36,18 +36,15 @@ export class DefinitionProvider {
   ): DefinitionResult => {
     this.connection.console.info(`A definition was requested`);
     const checker = param.program.getTypeChecker();
-    const treeContainer = param.sourceFile;
+    const sourceFile = param.sourceFile;
 
-    if (treeContainer) {
+    if (sourceFile) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        treeContainer.tree.rootNode,
+        sourceFile.tree.rootNode,
         param.position,
       );
 
-      const definitionNode = checker.findDefinition(
-        nodeAtPosition,
-        treeContainer,
-      );
+      const definitionNode = checker.findDefinition(nodeAtPosition, sourceFile);
 
       if (definitionNode) {
         return this.createLocationFromDefinition(

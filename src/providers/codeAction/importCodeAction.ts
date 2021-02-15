@@ -1,11 +1,11 @@
 import { CodeAction, TextEdit } from "vscode-languageserver";
 import { Range } from "vscode-languageserver-textdocument";
 import { SyntaxNode } from "web-tree-sitter";
-import { ITreeContainer } from "../../forest";
+import { ISourceFile } from "../../compiler/forest";
 import { ImportUtils, IPossibleImport } from "../../util/importUtils";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
-import { Diagnostics } from "../../util/types/diagnostics";
+import { Diagnostics } from "../../compiler/diagnostics";
 import { CodeActionProvider } from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
 
@@ -102,7 +102,7 @@ function getPossibleImports(
 }
 
 function getEditFromPossibleImport(
-  sourceFile: ITreeContainer,
+  sourceFile: ISourceFile,
   range: Range,
   possibleImport: IPossibleImport,
 ): TextEdit | undefined {

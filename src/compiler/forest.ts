@@ -1,12 +1,12 @@
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { Imports } from "./imports";
-import { IExposing, TreeUtils } from "./util/treeUtils";
-import { SyntaxNodeMap } from "./util/types/syntaxNodeMap";
-import { SymbolMap } from "./util/types/binder";
-import { Diagnostic } from "./util/types/diagnostics";
-import { ElmProject } from "./elmWorkspace";
+import { IExposing, TreeUtils } from "../util/treeUtils";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
+import { SymbolMap } from "./binder";
+import { Diagnostic } from "./diagnostics";
+import { ElmProject } from "./program";
 
-export interface ITreeContainer {
+export interface ISourceFile {
   uri: string;
   writeable: boolean;
   referenced: boolean;
@@ -28,9 +28,9 @@ export interface ITreeContainer {
 }
 
 export interface IForest {
-  treeMap: Map<string, ITreeContainer>;
+  treeMap: Map<string, ISourceFile>;
   getTree(uri: string): Tree | undefined;
-  getByUri(uri: string): ITreeContainer | undefined;
+  getByUri(uri: string): ISourceFile | undefined;
   setTree(
     uri: string,
     writeable: boolean,
@@ -39,17 +39,14 @@ export interface IForest {
     isTestFile: boolean,
     project?: ElmProject,
     packageName?: string,
-  ): ITreeContainer;
+  ): ISourceFile;
   removeTree(uri: string): void;
   synchronize(): void;
   invalidateResolvedModules(): void;
 }
 
 export class Forest implements IForest {
-  public treeMap: Map<string, ITreeContainer> = new Map<
-    string,
-    ITreeContainer
-  >();
+  public treeMap: Map<string, ISourceFile> = new Map<string, ISourceFile>();
 
   constructor(private rootProject: ElmProject) {}
 
@@ -57,7 +54,7 @@ export class Forest implements IForest {
     return this.getByUri(uri)?.tree;
   }
 
-  public getByUri(uri: string): ITreeContainer | undefined {
+  public getByUri(uri: string): ISourceFile | undefined {
     return this.treeMap.get(uri);
   }
 
@@ -69,10 +66,10 @@ export class Forest implements IForest {
     isTestFile: boolean,
     project: ElmProject = this.rootProject,
     maintainerAndPackageName?: string,
-  ): ITreeContainer {
+  ): ISourceFile {
     tree.uri = uri;
 
-    const treeContainer: ITreeContainer = {
+    const sourceFile: ISourceFile = {
       maintainerAndPackageName,
       referenced,
       tree,
@@ -83,9 +80,9 @@ export class Forest implements IForest {
       parseDiagnostics: [],
     };
 
-    this.treeMap.set(uri, treeContainer);
+    this.treeMap.set(uri, sourceFile);
 
-    return treeContainer;
+    return sourceFile;
   }
 
   public removeTree(uri: string): void {
@@ -117,12 +114,12 @@ export class Forest implements IForest {
   }
 
   public invalidateResolvedModules(): void {
-    this.treeMap.forEach((treeContainer) => {
-      treeContainer.resolvedModules = undefined;
+    this.treeMap.forEach((sourceFile) => {
+      sourceFile.resolvedModules = undefined;
     });
   }
 
-  private resolveModules(sourceFile: ITreeContainer): Map<string, string> {
+  private resolveModules(sourceFile: ISourceFile): Map<string, string> {
     const importClauses = [
       ...Imports.getVirtualImports(),
       ...(TreeUtils.findAllImportClauseNodes(sourceFile.tree) ?? []),
@@ -149,7 +146,7 @@ export class Forest implements IForest {
     return resolvedModules;
   }
 
-  private getModuleMap(sourceFile: ITreeContainer): Map<string, string> {
+  private getModuleMap(sourceFile: ISourceFile): Map<string, string> {
     return sourceFile.isTestFile
       ? sourceFile.project.testModuleToUriMap
       : sourceFile.project.moduleToUriMap;

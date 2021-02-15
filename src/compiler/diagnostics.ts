@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { DiagnosticSeverity, Range } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { PositionUtil } from "../../positionUtil";
-import { DiagnosticSource } from "../../providers/diagnostics/diagnosticSource";
+import { PositionUtil } from "../positionUtil";
+import { DiagnosticSource } from "../providers/diagnostics/diagnosticSource";
 
 export interface Diagnostic {
   code: string;

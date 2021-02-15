@@ -2,7 +2,7 @@ import { CodeAction, Range } from "vscode-languageserver";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
-import { Diagnostics } from "../../util/types/diagnostics";
+import { Diagnostics } from "../../compiler/diagnostics";
 import { CodeActionProvider } from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
 

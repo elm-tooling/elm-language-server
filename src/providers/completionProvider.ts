@@ -13,10 +13,10 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
-import { ITreeContainer } from "../forest";
+import { IProgram } from "../compiler/program";
+import { ISourceFile } from "../compiler/forest";
 import { comparePosition, PositionUtil } from "../positionUtil";
-import { getEmptyTypes } from "../util/elmUtils";
+import { getEmptyTypes } from "../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
 import { ImportUtils, IPossibleImport } from "../util/importUtils";
@@ -24,9 +24,9 @@ import { RefactorEditUtils } from "../util/refactorEditUtils";
 import { TreeUtils } from "../util/treeUtils";
 import RANKING_LIST from "./ranking";
 import { DiagnosticsProvider } from ".";
-import { TypeChecker } from "../util/types/typeChecker";
+import { TypeChecker } from "../compiler/typeChecker";
 import escapeStringRegexp from "escape-string-regexp";
-import { TRecord } from "../util/types/typeInference";
+import { TRecord } from "../compiler/typeInference";
 import { ICompletionParams } from "./paramsExtensions";
 
 export type CompletionResult =
@@ -70,10 +70,10 @@ export class CompletionProvider {
     const completions: CompletionItem[] = [];
 
     const checker = params.program.getTypeChecker();
-    const treeContainer = params.sourceFile;
+    const sourceFile = params.sourceFile;
 
-    if (treeContainer) {
-      const tree = treeContainer?.tree;
+    if (sourceFile) {
+      const tree = sourceFile?.tree;
 
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
         tree.rootNode,
@@ -297,7 +297,7 @@ export class CompletionProvider {
       } else if (nodeAtPosition.parent?.parent?.type === "record_expr") {
         return this.getRecordCompletions(
           nodeAtPosition,
-          treeContainer,
+          sourceFile,
           replaceRange,
           params.program,
         );
@@ -355,7 +355,7 @@ export class CompletionProvider {
       if (targetNode) {
         const moduleCompletions = this.getSubmodulesOrValues(
           targetNode,
-          treeContainer,
+          sourceFile,
           params.program,
           replaceRange,
           targetWord,
@@ -367,7 +367,7 @@ export class CompletionProvider {
 
         const recordCompletions = this.getRecordCompletions(
           targetNode,
-          treeContainer,
+          sourceFile,
           replaceRange,
           params.program,
         );
@@ -393,7 +393,7 @@ export class CompletionProvider {
       completions.push(
         ...this.getCompletionsFromOtherFile(
           checker,
-          treeContainer,
+          sourceFile,
           replaceRange,
           targetWord,
         ),
@@ -435,8 +435,8 @@ export class CompletionProvider {
   }
 
   private getImportableModules(
-    program: IElmWorkspace,
-    sourceFile: ITreeContainer,
+    program: IProgram,
+    sourceFile: ISourceFile,
     range: Range,
     targetModule?: string,
   ): CompletionItem[] {
@@ -468,8 +468,8 @@ export class CompletionProvider {
   }
 
   private getExposedFromModule(
-    program: IElmWorkspace,
-    sourceFile: ITreeContainer,
+    program: IProgram,
+    sourceFile: ISourceFile,
     exposingListNode: SyntaxNode,
     range: Range,
   ): CompletionItem[] | undefined {
@@ -548,13 +548,13 @@ export class CompletionProvider {
 
   private getCompletionsFromOtherFile(
     checker: TypeChecker,
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
     range: Range,
     inputText: string,
   ): CompletionItem[] {
     const completions: CompletionItem[] = [];
 
-    checker.getAllImports(treeContainer).forEach((element): void => {
+    checker.getAllImports(sourceFile).forEach((element): void => {
       const markdownDocumentation = HintHelper.createHint(element.node);
       let sortPrefix = "d";
       if (element.maintainerAndPackageName) {
@@ -575,7 +575,7 @@ export class CompletionProvider {
 
       const importNode = checker.findImportModuleNameNode(
         element.fromModuleName,
-        treeContainer,
+        sourceFile,
       )?.parent;
 
       // Check if a value is already imported for this module using the exposing list
@@ -775,24 +775,24 @@ export class CompletionProvider {
 
   private getRecordCompletions(
     node: SyntaxNode,
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
     range: Range,
-    elmWorkspace: IElmWorkspace,
+    program: IProgram,
   ): CompletionItem[] {
-    const checker = elmWorkspace.getTypeChecker();
+    const checker = program.getTypeChecker();
 
     const result: CompletionItem[] = [];
     let typeDeclarationNode = TreeUtils.getTypeAliasOfRecord(
       node,
-      treeContainer,
-      elmWorkspace,
+      sourceFile,
+      program,
     )?.node;
 
     if (!typeDeclarationNode && node.parent?.parent) {
       typeDeclarationNode = TreeUtils.getTypeAliasOfRecordField(
         node.parent.parent,
-        treeContainer,
-        elmWorkspace,
+        sourceFile,
+        program,
       )?.node;
     }
 
@@ -800,7 +800,7 @@ export class CompletionProvider {
     if (!typeDeclarationNode && node.parent?.parent) {
       recordType = TreeUtils.getRecordTypeOfFunctionRecordParameter(
         node.parent.parent,
-        elmWorkspace,
+        program,
       );
     }
 
@@ -1097,7 +1097,7 @@ export class CompletionProvider {
   }
 
   private getPossibleImportsFiltered(
-    program: IElmWorkspace,
+    program: IProgram,
     uri: string,
     filterText: string,
   ): IPossibleImport[] {
@@ -1175,7 +1175,7 @@ export class CompletionProvider {
   }
 
   private getPossibleImports(
-    workspace: IElmWorkspace,
+    program: IProgram,
     range: Range,
     tree: Tree,
     uri: string,
@@ -1183,7 +1183,7 @@ export class CompletionProvider {
   ): { list: CompletionItem[]; isIncomplete: boolean } {
     const result: CompletionItem[] = [];
     const possibleImports = this.getPossibleImportsFiltered(
-      workspace,
+      program,
       uri,
       filterText,
     );
@@ -1233,8 +1233,8 @@ export class CompletionProvider {
 
   private getSubmodulesOrValues(
     node: SyntaxNode,
-    sourceFile: ITreeContainer,
-    program: IElmWorkspace,
+    sourceFile: ISourceFile,
+    program: IProgram,
     range: Range,
     targetModule: string,
   ): CompletionItem[] {
@@ -1258,7 +1258,7 @@ export class CompletionProvider {
     // Try to find the module definition that is already imported
     const definitionNode = checker.findDefinition(node, sourceFile);
 
-    let moduleTree: ITreeContainer | undefined;
+    let moduleTree: ISourceFile | undefined;
 
     if (definitionNode && definitionNode.nodeType === "Module") {
       moduleTree = program.getSourceFile(definitionNode.uri);

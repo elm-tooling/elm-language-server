@@ -8,21 +8,21 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import { ServerCancellationToken } from "../../cancellation";
-import { IElmWorkspace } from "../../elmWorkspace";
-import { ITreeContainer } from "../../forest";
+import { IProgram } from "../../compiler/program";
 import { GetDiagnosticsRequest } from "../../protocol";
 import { Delayer } from "../../util/delayer";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { MultistepOperation } from "../../util/multistepOperation";
 import { IClientSettings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
-import { Diagnostic } from "../../util/types/diagnostics";
+import { Diagnostic } from "../../compiler/diagnostics";
 import { ASTProvider } from "../astProvider";
 import { DiagnosticSource } from "./diagnosticSource";
 import { DiagnosticsRequest } from "./diagnosticsRequest";
 import { ElmLsDiagnostics } from "./elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics";
+import { ISourceFile } from "../../compiler/forest";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -76,7 +76,7 @@ export class DiagnosticsProvider {
   private events: TextDocumentEvents;
   private connection: Connection;
   private clientSettings: IClientSettings;
-  private workspaces: IElmWorkspace[];
+  private workspaces: IProgram[];
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
   private documentEvents: TextDocumentEvents;
 
@@ -163,20 +163,17 @@ export class DiagnosticsProvider {
           this.updateDiagnostics(uri, DiagnosticKind.ElmLS, []),
         );
       } else {
-        this.workspaces.forEach((workspace) => {
-          if (!workspace.getForest(false)) {
+        this.workspaces.forEach((program) => {
+          if (!program.getForest(false)) {
             return;
           }
 
-          workspace.getForest().treeMap.forEach((treeContainer) => {
-            if (treeContainer.writeable) {
+          program.getForest().treeMap.forEach((sourceFile) => {
+            if (sourceFile.writeable) {
               this.updateDiagnostics(
-                treeContainer.uri,
+                sourceFile.uri,
                 DiagnosticKind.ElmLS,
-                this.elmLsDiagnostics.createDiagnostics(
-                  treeContainer,
-                  workspace,
-                ),
+                this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
               );
             }
           });
@@ -189,9 +186,9 @@ export class DiagnosticsProvider {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    astProvider.onTreeChange(({ treeContainer, declaration }) => {
+    astProvider.onTreeChange(({ sourceFile, declaration }) => {
       if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
-        this.requestDiagnostics(treeContainer.uri);
+        this.requestDiagnostics(sourceFile.uri);
       }
     });
 
@@ -231,12 +228,12 @@ export class DiagnosticsProvider {
   }
 
   private requestAllDiagnostics(): void {
-    this.workspaces.forEach((workspace) => {
-      if (!workspace.getForest(false)) {
+    this.workspaces.forEach((program) => {
+      if (!program.getForest(false)) {
         return;
       }
 
-      workspace.getForest().treeMap.forEach(({ uri, writeable }) => {
+      program.getForest().treeMap.forEach(({ uri, writeable }) => {
         if (writeable) {
           this.pendingDiagnostics.set(uri, Date.now());
         }
@@ -439,9 +436,7 @@ export class DiagnosticsProvider {
     );
   }
 
-  private async getElmMakeDiagnostics(
-    sourceFile: ITreeContainer,
-  ): Promise<void> {
+  private async getElmMakeDiagnostics(sourceFile: ISourceFile): Promise<void> {
     const elmMakeDiagnostics = await this.elmMakeDiagnostics.createDiagnostics(
       sourceFile,
     );

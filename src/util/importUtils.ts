@@ -1,8 +1,8 @@
-import { ITreeContainer } from "../forest";
 import { comparePackageRanking } from "../providers/ranking";
+import { ISourceFile } from "../compiler/forest";
 import { TreeUtils, NodeType } from "./treeUtils";
 import { SyntaxNode } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
+import { IProgram } from "../compiler/program";
 
 export interface IPossibleImport {
   module: string;
@@ -15,8 +15,8 @@ export interface IPossibleImport {
 
 export class ImportUtils {
   public static getPossibleImports(
-    program: IElmWorkspace,
-    sourceFile: ITreeContainer,
+    program: IProgram,
+    sourceFile: ISourceFile,
   ): IPossibleImport[] {
     const currentModule = sourceFile?.moduleName;
 
@@ -62,9 +62,7 @@ export class ImportUtils {
     return exposedValues;
   }
 
-  public static getPossibleImportsOfTree(
-    tree: ITreeContainer,
-  ): IPossibleImport[] {
+  public static getPossibleImportsOfTree(tree: ISourceFile): IPossibleImport[] {
     const exposedValues: IPossibleImport[] = [];
 
     tree.exposing?.forEach((exposed) => {

@@ -1,12 +1,12 @@
-import { IElmWorkspace } from "../elmWorkspace";
+import { IProgram } from "../compiler/program";
 import { Position, ResponseError } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { References } from "./references";
+import { References } from "../compiler/references";
 import { TreeUtils } from "./treeUtils";
 
 export class RenameUtils {
   static getRenameAffectedNodes(
-    program: IElmWorkspace,
+    program: IProgram,
     uri: string,
     position: Position,
   ):

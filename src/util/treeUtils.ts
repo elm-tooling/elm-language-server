@@ -1,13 +1,13 @@
 import { Position } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ITreeContainer } from "../forest";
+import { ISourceFile } from "../compiler/forest";
 import { comparePosition } from "../positionUtil";
-import { TRecord, Type } from "./types/typeInference";
-import { IElmWorkspace } from "../elmWorkspace";
+import { TRecord, Type } from "../compiler/typeInference";
+import { IProgram } from "../compiler/program";
 import {
   EFunctionCallExpr,
   mapSyntaxNodeToExpression,
-} from "./types/expressionTree";
+} from "../compiler/utils/expressionTree";
 import { Range } from "vscode-languageserver-textdocument";
 
 export type NodeType =
@@ -291,12 +291,10 @@ export class TreeUtils {
   }
 
   public static findOperator(
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
     operatorName: string,
   ): SyntaxNode | undefined {
-    const rootSymbols = treeContainer.symbolLinks?.get(
-      treeContainer.tree.rootNode,
-    );
+    const rootSymbols = sourceFile.symbolLinks?.get(sourceFile.tree.rootNode);
 
     const operatorNode = rootSymbols?.get(operatorName)?.node;
 
@@ -523,9 +521,9 @@ export class TreeUtils {
 
   public static getRecordTypeOfFunctionRecordParameter(
     node: SyntaxNode | undefined,
-    elmWorkspace: IElmWorkspace,
+    program: IProgram,
   ): TRecord | undefined {
-    const checker = elmWorkspace.getTypeChecker();
+    const checker = program.getTypeChecker();
     if (
       node?.parent?.type === "function_call_expr" &&
       node.parent.firstNamedChild
@@ -552,29 +550,23 @@ export class TreeUtils {
 
   public static getTypeAliasOfRecordField(
     node: SyntaxNode | undefined,
-    treeContainer: ITreeContainer,
-    elmWorkspace: IElmWorkspace,
+    sourceFile: ISourceFile,
+    program: IProgram,
   ): { node: SyntaxNode; uri: string } | undefined {
     const fieldName = node?.parent?.firstNamedChild?.text;
 
-    let recordType = TreeUtils.getTypeAliasOfRecord(
-      node,
-      treeContainer,
-      elmWorkspace,
-    );
+    let recordType = TreeUtils.getTypeAliasOfRecord(node, sourceFile, program);
 
     while (!recordType && node?.parent?.parent) {
       node = node.parent.parent;
       recordType = TreeUtils.getTypeAliasOfRecordField(
         node,
-        treeContainer,
-        elmWorkspace,
+        sourceFile,
+        program,
       );
     }
 
-    const recordTypeTree = elmWorkspace
-      .getForest()
-      .getByUri(recordType?.uri ?? "");
+    const recordTypeTree = program.getForest().getByUri(recordType?.uri ?? "");
 
     if (recordType && recordTypeTree) {
       const fieldTypes = TreeUtils.descendantsOfType(
@@ -601,7 +593,7 @@ export class TreeUtils {
           );
 
           if (typeNode.length > 0) {
-            const typeAliasNode = elmWorkspace
+            const typeAliasNode = program
               .getTypeChecker()
               .findDefinition(typeNode[0], recordTypeTree);
 
@@ -616,18 +608,16 @@ export class TreeUtils {
 
   public static getTypeAliasOfCase(
     type: SyntaxNode | undefined,
-    treeContainer: ITreeContainer,
-    elmWorkspace: IElmWorkspace,
+    sourceFile: ISourceFile,
+    program: IProgram,
   ): { node: SyntaxNode; uri: string } | undefined {
     if (type) {
-      const definitionNode = elmWorkspace
+      const definitionNode = program
         .getTypeChecker()
-        .findDefinition(type, treeContainer);
+        .findDefinition(type, sourceFile);
 
       if (definitionNode) {
-        const definitionTree = elmWorkspace
-          .getForest()
-          .getByUri(definitionNode.uri);
+        const definitionTree = program.getForest().getByUri(definitionNode.uri);
 
         let aliasNode;
         if (definitionNode.nodeType === "FunctionParameter") {
@@ -654,7 +644,7 @@ export class TreeUtils {
           );
 
           if (childNode.length > 0) {
-            const typeNode = elmWorkspace
+            const typeNode = program
               .getTypeChecker()
               .findDefinition(childNode[0], definitionTree);
 
@@ -669,8 +659,8 @@ export class TreeUtils {
 
   public static getTypeAliasOfRecord(
     node: SyntaxNode | undefined,
-    treeContainer: ITreeContainer,
-    elmWorkspace: IElmWorkspace,
+    sourceFile: ISourceFile,
+    program: IProgram,
   ): { node: SyntaxNode; uri: string } | undefined {
     if (node?.parent?.parent) {
       let type: SyntaxNode | undefined | null =
@@ -696,15 +686,15 @@ export class TreeUtils {
       }
 
       if (type) {
-        const definitionNode = elmWorkspace
+        const definitionNode = program
           .getTypeChecker()
           .findDefinition(
             type.firstNamedChild ? type.firstNamedChild : type,
-            treeContainer,
+            sourceFile,
           );
 
         if (definitionNode) {
-          const definitionTree = elmWorkspace
+          const definitionTree = program
             .getForest()
             .getByUri(definitionNode.uri);
 
@@ -736,7 +726,7 @@ export class TreeUtils {
             );
 
             if (childNode.length > 0) {
-              const typeNode = elmWorkspace
+              const typeNode = program
                 .getTypeChecker()
                 .findDefinition(childNode[0], definitionTree);
 
@@ -812,7 +802,7 @@ export class TreeUtils {
   }
 
   public static getNamedDescendantForRange(
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
     range: Range,
   ): SyntaxNode {
     return sourceFile.tree.rootNode.namedDescendantForPosition(

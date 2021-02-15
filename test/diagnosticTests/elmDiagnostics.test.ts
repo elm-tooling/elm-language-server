@@ -8,7 +8,7 @@ import {
   Diagnostics,
   error,
   IDiagnosticMessage,
-} from "../../src/util/types/diagnostics";
+} from "../../src/compiler/diagnostics";
 import { Utils } from "../../src/util/utils";
 import {
   getSourceFiles,
@@ -92,19 +92,19 @@ describe("test elm diagnostics", () => {
     const testUri = URI.file(baseUri + "Test.elm").toString();
 
     const program = await treeParser.getProgram(result.sources);
-    const treeContainer = program.getForest().getByUri(testUri);
+    const sourceFile = program.getForest().getByUri(testUri);
 
-    if (!treeContainer) throw new Error("Getting tree failed");
+    if (!sourceFile) throw new Error("Getting tree failed");
 
     const diagnostics: Diagnostic[] = [];
 
-    program.getForest().treeMap.forEach((treeContainer) => {
-      if (!treeContainer.uri.includes("Basic")) {
-        diagnostics.push(...program.getSyntacticDiagnostics(treeContainer));
-        diagnostics.push(...program.getSemanticDiagnostics(treeContainer));
+    program.getForest().treeMap.forEach((sourceFile) => {
+      if (!sourceFile.uri.includes("Basic")) {
+        diagnostics.push(...program.getSyntacticDiagnostics(sourceFile));
+        diagnostics.push(...program.getSemanticDiagnostics(sourceFile));
 
         if (!disableSuggestionDiagnostics) {
-          diagnostics.push(...program.getSuggestionDiagnostics(treeContainer));
+          diagnostics.push(...program.getSuggestionDiagnostics(sourceFile));
         }
       }
     });

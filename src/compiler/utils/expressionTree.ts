@@ -1,8 +1,8 @@
 import { SyntaxNode } from "web-tree-sitter";
-import { OperatorAssociativity } from "./operatorPrecedence";
-import { TreeUtils } from "../treeUtils";
-import { Utils } from "../utils";
-import { IElmWorkspace } from "../../elmWorkspace";
+import { OperatorAssociativity } from "../operatorPrecedence";
+import { TreeUtils } from "../../util/treeUtils";
+import { Utils } from "../../util/utils";
+import { IProgram } from "../program";
 import { performance } from "perf_hooks";
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -787,22 +787,22 @@ export function mapTypeAnnotation(typeAnnotation: ETypeAnnotation): void {
 
 export function findDefinition(
   e: SyntaxNode | undefined | null,
-  elmWorkspace: IElmWorkspace,
+  program: IProgram,
 ): { expr: Expression; uri: string } | undefined {
   if (!e) {
     return;
   }
 
-  const treeContainer = elmWorkspace.getForest().getByUri(e.tree.uri);
+  const sourceFile = program.getForest().getByUri(e.tree.uri);
 
-  if (!treeContainer) {
+  if (!sourceFile) {
     return;
   }
 
   const start = performance.now();
-  const definition = elmWorkspace
+  const definition = program
     .getTypeChecker()
-    .findDefinitionShallow(e, treeContainer);
+    .findDefinitionShallow(e, sourceFile);
   definitionTime += performance.now() - start;
 
   const mappedNode = mapSyntaxNodeToExpression(definition?.node);

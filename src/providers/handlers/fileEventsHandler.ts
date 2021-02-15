@@ -11,9 +11,9 @@ import {
 } from "vscode-languageserver";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../../elmWorkspace";
+import { IProgram } from "../../compiler/program";
 import { PositionUtil } from "../../positionUtil";
-import { getModuleName } from "../../util/elmUtils";
+import { getModuleName } from "../../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { RenameUtils } from "../../util/renameUtils";
@@ -162,11 +162,9 @@ export class FileEventsHandler {
 
   private getModuleNameFromFile(
     uri: string,
-    elmWorkspace: IElmWorkspace,
+    program: IProgram,
   ): string | undefined {
-    const sourceDir = elmWorkspace.getSourceDirectoryOfFile(
-      URI.parse(uri).fsPath,
-    );
+    const sourceDir = program.getSourceDirectoryOfFile(URI.parse(uri).fsPath);
 
     // The file is not in a source dir (shouldn't happen)
     if (!sourceDir) {

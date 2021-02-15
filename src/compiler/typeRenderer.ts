@@ -1,4 +1,4 @@
-import { ITreeContainer } from "../../forest";
+import { ISourceFile } from "./forest";
 import { TypeChecker } from "./typeChecker";
 import {
   getTypeclassName,
@@ -13,7 +13,7 @@ export class TypeRenderer {
 
   constructor(
     private typeChecker: TypeChecker,
-    private treeContainer?: ITreeContainer,
+    private sourceFile?: ISourceFile,
   ) {}
 
   public render(t: Type): string {
@@ -71,10 +71,10 @@ export class TypeRenderer {
         .join(" ")}`;
     }
 
-    if (this.treeContainer) {
+    if (this.sourceFile) {
       return `${
         this.typeChecker.getQualifierForName(
-          this.treeContainer,
+          this.sourceFile,
           t.module,
           t.name,
         ) ?? ""

@@ -8,7 +8,7 @@ import {
 import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
 import { DiagnosticsProvider } from ".";
-import { getEmptyTypes } from "../util/elmUtils";
+import { getEmptyTypes } from "../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
 import { NodeType, TreeUtils } from "../util/treeUtils";
@@ -38,18 +38,15 @@ export class HoverProvider {
     this.connection.console.info(`A hover was requested`);
 
     const checker = params.program.getTypeChecker();
-    const treeContainer = params.sourceFile;
+    const sourceFile = params.sourceFile;
 
-    if (treeContainer) {
+    if (sourceFile) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-        treeContainer.tree.rootNode,
+        sourceFile.tree.rootNode,
         params.position,
       );
 
-      let definitionNode = checker.findDefinition(
-        nodeAtPosition,
-        treeContainer,
-      );
+      let definitionNode = checker.findDefinition(nodeAtPosition, sourceFile);
 
       if (definitionNode) {
         if (
@@ -64,7 +61,7 @@ export class HoverProvider {
 
         const typeString = checker.typeToString(
           checker.findType(definitionNode.node),
-          treeContainer,
+          sourceFile,
         );
 
         return this.createMarkdownHoverFromDefinition(

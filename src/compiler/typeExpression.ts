@@ -28,13 +28,13 @@ import {
   mapTypeDeclaration,
   mapTypeAliasDeclaration,
   mapTypeAnnotation,
-} from "./expressionTree";
-import { TreeUtils } from "../treeUtils";
+} from "./utils/expressionTree";
+import { TreeUtils } from "../util/treeUtils";
 import { TypeReplacement } from "./typeReplacement";
-import { SyntaxNodeMap } from "./syntaxNodeMap";
-import { Utils } from "../utils";
-import { RecordFieldReferenceTable } from "./recordFieldReferenceTable";
-import { IElmWorkspace } from "../../elmWorkspace";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
+import { Utils } from "../util/utils";
+import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable";
+import { IProgram } from "./program";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
 
 export class TypeExpression {
@@ -53,20 +53,20 @@ export class TypeExpression {
 
   constructor(
     private root: Expression,
-    private workspace: IElmWorkspace,
+    private program: IProgram,
     private rigidVars: boolean,
     private activeAliases: Set<ETypeAliasDeclaration> = new Set(),
   ) {}
 
   public static typeDeclarationInference(
     e: ETypeDeclaration,
-    workspace: IElmWorkspace,
+    program: IProgram,
   ): InferenceResult {
     const setter = (): InferenceResult => {
       mapTypeDeclaration(e); // Fill in values only when needed
       const inferenceResult = new TypeExpression(
         e,
-        workspace,
+        program,
         /* rigidVars */ false,
       ).inferTypeDeclaration(e);
 
@@ -78,12 +78,12 @@ export class TypeExpression {
       };
     };
 
-    if (!workspace.getForest().getByUri(e.tree.uri)?.writeable) {
-      return workspace
+    if (!program.getForest().getByUri(e.tree.uri)?.writeable) {
+      return program
         .getTypeCache()
         .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter);
     } else {
-      return workspace
+      return program
         .getTypeCache()
         .getOrSet("PROJECT_TYPE_AND_TYPE_ALIAS", e, setter);
     }
@@ -91,14 +91,14 @@ export class TypeExpression {
 
   public static typeAliasDeclarationInference(
     e: ETypeAliasDeclaration,
-    workspace: IElmWorkspace,
+    program: IProgram,
     activeAliases = new Set<ETypeAliasDeclaration>(),
   ): InferenceResult {
     const setter = (): InferenceResult => {
       mapTypeAliasDeclaration(e);
       const inferenceResult = new TypeExpression(
         e,
-        workspace,
+        program,
         /* rigidVars */ false,
         activeAliases,
       ).inferTypeAliasDeclaration(e);
@@ -111,12 +111,12 @@ export class TypeExpression {
       };
     };
 
-    if (!workspace.getForest().getByUri(e.tree.uri)?.writeable) {
-      return workspace
+    if (!program.getForest().getByUri(e.tree.uri)?.writeable) {
+      return program
         .getTypeCache()
         .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter);
     } else {
-      return workspace
+      return program
         .getTypeCache()
         .getOrSet("PROJECT_TYPE_AND_TYPE_ALIAS", e, setter);
     }
@@ -124,28 +124,28 @@ export class TypeExpression {
 
   public static typeAnnotationInference(
     e: ETypeAnnotation,
-    workspace: IElmWorkspace,
+    program: IProgram,
     rigid = true,
   ): InferenceResult | undefined {
     const setter = (): InferenceResult => {
       mapTypeAnnotation(e);
       const inferenceResult = new TypeExpression(
         e,
-        workspace,
+        program,
         /* rigidVars */ true,
       ).inferTypeExpression(e.typeExpression!);
 
       const type = TypeReplacement.replace(inferenceResult.type, new Map());
       TypeReplacement.freeze(inferenceResult.type);
 
-      workspace.getTypeCache().trackTypeAnnotation(e);
+      program.getTypeCache().trackTypeAnnotation(e);
 
       return { ...inferenceResult, type };
     };
 
-    const result = !workspace.getForest().getByUri(e.tree.uri)?.writeable
-      ? workspace.getTypeCache().getOrSet("PACKAGE_TYPE_ANNOTATION", e, setter)
-      : workspace.getTypeCache().getOrSet("PROJECT_TYPE_ANNOTATION", e, setter);
+    const result = !program.getForest().getByUri(e.tree.uri)?.writeable
+      ? program.getTypeCache().getOrSet("PACKAGE_TYPE_ANNOTATION", e, setter)
+      : program.getTypeCache().getOrSet("PROJECT_TYPE_ANNOTATION", e, setter);
 
     if (!rigid) {
       result.type = TypeReplacement.flexify(result.type);
@@ -156,11 +156,11 @@ export class TypeExpression {
 
   public static unionVariantInference(
     e: EUnionVariant,
-    workspace: IElmWorkspace,
+    program: IProgram,
   ): InferenceResult {
     const inferenceResult = new TypeExpression(
       e,
-      workspace,
+      program,
       /* rigidVars */ false,
     ).inferUnionConstructor(e);
     TypeReplacement.freeze(inferenceResult.type);
@@ -173,11 +173,11 @@ export class TypeExpression {
 
   public static portAnnotationInference(
     e: EPortAnnotation,
-    workspace: IElmWorkspace,
+    program: IProgram,
   ): InferenceResult {
     const inferenceResult = new TypeExpression(
       e,
-      workspace,
+      program,
       /* rigidVars */ false,
     ).inferPortAnnotation(e);
     TypeReplacement.freeze(inferenceResult.type);
@@ -307,7 +307,7 @@ export class TypeExpression {
   private typeVariableType(typeVariable: ETypeVariable): Type {
     const definition = findDefinition(
       typeVariable.firstNamedChild,
-      this.workspace,
+      this.program,
     );
 
     // The type variable doesn't reference anything
@@ -349,7 +349,7 @@ export class TypeExpression {
     const type =
       TypeExpression.typeAnnotationInference(
         annotation as ETypeAnnotation,
-        this.workspace,
+        this.program,
         /* rigid */ true,
       )?.expressionTypes.get(definition.expr) ?? TUnknown;
 
@@ -376,7 +376,7 @@ export class TypeExpression {
       fieldExpressions,
     );
 
-    const baseTypeDefinition = findDefinition(record.baseType, this.workspace)
+    const baseTypeDefinition = findDefinition(record.baseType, this.program)
       ?.expr;
 
     const baseType = baseTypeDefinition
@@ -409,7 +409,7 @@ export class TypeExpression {
 
     const definition = findDefinition(
       typeRef.firstNamedChild?.lastNamedChild,
-      this.workspace,
+      this.program,
     );
 
     let declaredType: Type = TUnknown;
@@ -418,7 +418,7 @@ export class TypeExpression {
         case "TypeDeclaration":
           declaredType = TypeExpression.typeDeclarationInference(
             definition.expr,
-            this.workspace,
+            this.program,
           ).type;
           break;
         case "TypeAliasDeclaration":
@@ -449,7 +449,7 @@ export class TypeExpression {
             } else {
               declaredType = TypeExpression.typeAliasDeclarationInference(
                 definition.expr,
-                this.workspace,
+                this.program,
                 new Set(this.activeAliases.values()),
               ).type;
             }
@@ -511,8 +511,8 @@ export class TypeExpression {
     );
 
     return TUnion(
-      this.workspace.getForest().getByUri(typeDeclaration.tree.uri)
-        ?.moduleName ?? "",
+      this.program.getForest().getByUri(typeDeclaration.tree.uri)?.moduleName ??
+        "",
       typeDeclaration.name,
       params,
     );

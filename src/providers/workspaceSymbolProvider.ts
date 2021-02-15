@@ -5,15 +5,15 @@ import {
   WorkspaceSymbolParams,
 } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
+import { IProgram } from "../compiler/program";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 
 export class WorkspaceSymbolProvider {
   private readonly connection: Connection;
-  private readonly elmWorkspaces: IElmWorkspace[];
+  private readonly elmWorkspaces: IProgram[];
 
   constructor() {
-    this.elmWorkspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
+    this.elmWorkspaces = container.resolve<IProgram[]>("ElmWorkspaces");
     this.connection = container.resolve<Connection>("Connection");
     this.connection.onWorkspaceSymbol(this.workspaceSymbolRequest);
   }
@@ -27,8 +27,8 @@ export class WorkspaceSymbolProvider {
       SymbolInformation[]
     >();
 
-    this.elmWorkspaces.forEach((elmWorkspace) => {
-      elmWorkspace.getForest().treeMap.forEach((tree) => {
+    this.elmWorkspaces.forEach((program) => {
+      program.getForest().treeMap.forEach((tree) => {
         if (!tree.writeable) {
           return;
         }

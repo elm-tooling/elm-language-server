@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
-import { flatMap, NodeType, TreeUtils } from "../treeUtils";
+import { flatMap, NodeType, TreeUtils } from "../util/treeUtils";
 import {
   Expression,
   EValueDeclaration,
@@ -9,8 +9,8 @@ import {
   ETypeDeclaration,
   EUnionVariant,
   EPortAnnotation,
-} from "./expressionTree";
-import { IElmWorkspace } from "../../elmWorkspace";
+} from "./utils/expressionTree";
+import { IProgram } from "./program";
 import { container } from "tsyringe";
 import { Connection } from "vscode-languageserver";
 import {
@@ -19,19 +19,19 @@ import {
   InferenceScope,
   InferenceResult,
 } from "./typeInference";
-import { ITreeContainer } from "../../forest";
-import { IImport, Imports } from "../../imports";
+import { ISourceFile } from "./forest";
+import { IImport, Imports } from "./imports";
 import { TypeRenderer } from "./typeRenderer";
 import { performance } from "perf_hooks";
 import { bindTreeContainer } from "./binder";
-import { Sequence } from "../sequence";
-import { Utils } from "../utils";
+import { Sequence } from "../util/sequence";
+import { Utils } from "../util/utils";
 import { TypeExpression } from "./typeExpression";
-import { ICancellationToken } from "../../cancellation";
+import { ICancellationToken } from "../cancellation";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
-import { isKernelProject, nameIsKernel } from "../elmUtils";
+import { isKernelProject, nameIsKernel } from "./utils/elmUtils";
 import { existsSync } from "fs";
-import * as path from "../path";
+import * as path from "../util/path";
 import { URI } from "vscode-uri";
 
 export let bindTime = 0;
@@ -66,40 +66,40 @@ export interface TypeChecker {
   findType: (node: SyntaxNode) => Type;
   findDefinition: (
     node: SyntaxNode,
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
   ) => DefinitionResult | undefined;
   findDefinitionShallow: (
     node: SyntaxNode,
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
   ) => DefinitionResult | undefined;
-  getAllImports: (treeContainer: ITreeContainer) => Imports;
+  getAllImports: (sourceFile: ISourceFile) => Imports;
   getQualifierForName: (
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
     module: string,
     name: string,
   ) => string | undefined;
-  typeToString: (t: Type, treeContainer?: ITreeContainer) => string;
+  typeToString: (t: Type, sourceFile?: ISourceFile) => string;
   getDiagnostics: (
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
     cancellationToken?: ICancellationToken,
   ) => Diagnostic[];
   getDiagnosticsAsync: (
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
     token?: ICancellationToken,
     cancelCallback?: () => boolean,
   ) => Promise<Diagnostic[]>;
   getSuggestionDiagnostics: (
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
     cancellationToken?: ICancellationToken,
   ) => Diagnostic[];
   findImportModuleNameNode: (
     moduleNameOrAlias: string,
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
   ) => SyntaxNode | undefined;
 }
 
-export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
-  const forest = workspace.getForest();
+export function createTypeChecker(program: IProgram): TypeChecker {
+  const forest = program.getForest();
   const imports = new Map<string, Imports>();
 
   const diagnostics = new DiagnosticsCollection();
@@ -109,8 +109,8 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   const checkedNodes = new Set<number>();
 
   const start = performance.now();
-  forest.treeMap.forEach((treeContainer) => {
-    bindTreeContainer(treeContainer);
+  forest.treeMap.forEach((sourceFile) => {
+    bindTreeContainer(sourceFile);
   });
   bindTime = performance.now() - start;
 
@@ -164,7 +164,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         const inferenceResult = InferenceScope.valueDeclarationInference(
           declaration,
           uri,
-          workspace,
+          program,
           new Set<EValueDeclaration>(),
         );
 
@@ -202,7 +202,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       ) {
         const inferenceResult = TypeExpression.typeAliasDeclarationInference(
           typeAliasDeclaration,
-          workspace,
+          program,
         );
 
         if (node.type === "type_alias_declaration") {
@@ -218,8 +218,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
           : undefined;
 
       if (unionVariant && unionVariant.nodeType === "UnionVariant") {
-        return TypeExpression.unionVariantInference(unionVariant, workspace)
-          .type;
+        return TypeExpression.unionVariantInference(unionVariant, program).type;
       }
 
       const typeDeclaration = mapSyntaxNodeToExpression(
@@ -229,7 +228,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       if (typeDeclaration && typeDeclaration.nodeType === "TypeDeclaration") {
         const inferenceResult = TypeExpression.typeDeclarationInference(
           typeDeclaration,
-          workspace,
+          program,
         );
 
         return findTypeOrParentType(node, inferenceResult) ?? TUnknown;
@@ -238,7 +237,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       const portAnnotation = mapSyntaxNodeToExpression(node);
 
       if (portAnnotation && portAnnotation.nodeType === "PortAnnotation") {
-        return TypeExpression.portAnnotationInference(portAnnotation, workspace)
+        return TypeExpression.portAnnotationInference(portAnnotation, program)
           .type;
       }
 
@@ -251,29 +250,29 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   }
 
   function getDiagnostics(
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
     token?: ICancellationToken,
   ): Diagnostic[] {
     try {
       cancellationToken = token;
 
-      checkNode(treeContainer.tree.rootNode);
+      checkNode(sourceFile.tree.rootNode);
 
-      return diagnostics.get(treeContainer.uri);
+      return diagnostics.get(sourceFile.uri);
     } finally {
       cancellationToken = undefined;
     }
   }
 
   function getDiagnosticsAsync(
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
     token?: ICancellationToken,
     cancelCallback?: () => boolean,
   ): Promise<Diagnostic[]> {
     cancellationToken = token;
 
     return new Promise((resolve, reject) => {
-      const children = treeContainer.tree.rootNode.children;
+      const children = sourceFile.tree.rootNode.children;
       let index = 0;
 
       const goNext = (): void => {
@@ -282,7 +281,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
           setImmediate(checkOne);
         } else {
           cancellationToken = undefined;
-          resolve(diagnostics.get(treeContainer.uri));
+          resolve(diagnostics.get(sourceFile.uri));
         }
       };
 
@@ -308,38 +307,38 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   }
 
   function getSuggestionDiagnostics(
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
     token?: ICancellationToken,
   ): Diagnostic[] {
     try {
       cancellationToken = token;
 
-      checkNode(treeContainer.tree.rootNode);
+      checkNode(sourceFile.tree.rootNode);
 
-      return suggestionDiagnostics.get(treeContainer.uri);
+      return suggestionDiagnostics.get(sourceFile.uri);
     } finally {
       cancellationToken = undefined;
     }
   }
 
-  function getAllImports(treeContainer: ITreeContainer): Imports {
-    const cached = imports.get(treeContainer.uri);
+  function getAllImports(sourceFile: ISourceFile): Imports {
+    const cached = imports.get(sourceFile.uri);
 
     if (cached) {
       return cached;
     }
 
-    const allImports = Imports.getImports(treeContainer, forest);
-    imports.set(treeContainer.uri, allImports);
+    const allImports = Imports.getImports(sourceFile, forest);
+    imports.set(sourceFile.uri, allImports);
     return allImports;
   }
 
   function findImport(
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
     name: string,
     filter?: (imp: IImport) => boolean,
   ): DefinitionResult | undefined {
-    const possibleImport = getAllImports(treeContainer).get(name, filter);
+    const possibleImport = getAllImports(sourceFile).get(name, filter);
 
     if (possibleImport) {
       return {
@@ -351,18 +350,18 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   }
 
   function findImportOfType(
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
     name: string,
     type: NodeType,
   ): DefinitionResult | undefined {
-    return findImport(treeContainer, name, (imp) => imp.type === type);
+    return findImport(sourceFile, name, (imp) => imp.type === type);
   }
 
   function findDefinition(
     nodeAtPosition: SyntaxNode,
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
   ): DefinitionResult | undefined {
-    const definition = findDefinitionShallow(nodeAtPosition, treeContainer);
+    const definition = findDefinitionShallow(nodeAtPosition, sourceFile);
 
     if (
       definition?.node.type === "lower_pattern" &&
@@ -370,7 +369,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     ) {
       const innerDefinition = findDefinitionShallow(
         definition.node.firstNamedChild,
-        treeContainer,
+        sourceFile,
       );
 
       if (innerDefinition) {
@@ -383,9 +382,9 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
   function findDefinitionShallow(
     nodeAtPosition: SyntaxNode,
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
   ): DefinitionResult | undefined {
-    const uri = treeContainer.uri;
+    const uri = sourceFile.uri;
     const nodeText = nodeAtPosition.text;
     const nodeParent = nodeAtPosition.parent;
 
@@ -395,9 +394,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
     const nodeParentType = nodeParent.type;
 
-    const rootSymbols = treeContainer.symbolLinks?.get(
-      treeContainer.tree.rootNode,
-    );
+    const rootSymbols = sourceFile.symbolLinks?.get(sourceFile.tree.rootNode);
 
     if (
       nodeParentType === "upper_case_qid" &&
@@ -418,7 +415,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     ) {
       const upperCaseQid = nodeParent;
       const upperCaseQidText = upperCaseQid.text;
-      return findImportOfType(treeContainer, upperCaseQidText, "Module");
+      return findImportOfType(sourceFile, upperCaseQidText, "Module");
     } else if (
       (nodeParentType === "exposed_value" &&
         nodeParent.parent?.parent?.type === "module_declaration") ||
@@ -457,7 +454,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         nodeParentType === "exposed_type") &&
       nodeParent.parent?.parent?.type === "import_clause"
     ) {
-      return findImport(treeContainer, nodeText);
+      return findImport(sourceFile, nodeText);
     } else if (nodeParentType === "union_variant") {
       const definitionNode = nodeParent;
       return {
@@ -501,7 +498,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
       if (isTypeUsage) {
         definitionFromOtherFile = findImportOfType(
-          treeContainer,
+          sourceFile,
           upperCaseQidText,
           "Type",
         );
@@ -510,7 +507,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         }
       } else {
         definitionFromOtherFile = findImportOfType(
-          treeContainer,
+          sourceFile,
           upperCaseQidText,
           "UnionConstructor",
         );
@@ -520,7 +517,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       }
 
       definitionFromOtherFile = findImportOfType(
-        treeContainer,
+        sourceFile,
         upperCaseQidText,
         "TypeAlias",
       );
@@ -534,11 +531,11 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
 
         const moduleNameOrAlias = nodeParent.text.substring(0, endPos);
         const moduleName =
-          findImportModuleNameNode(moduleNameOrAlias, treeContainer)?.text ??
+          findImportModuleNameNode(moduleNameOrAlias, sourceFile)?.text ??
           moduleNameOrAlias;
 
         const definitionFromOtherFile = findImportOfType(
-          treeContainer,
+          sourceFile,
           moduleName,
           "Module",
         );
@@ -548,8 +545,8 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       }
 
       definitionFromOtherFile = findImportOfType(
-        treeContainer,
-        findImportModuleNameNode(upperCaseQidText, treeContainer)?.text ??
+        sourceFile,
+        findImportModuleNameNode(upperCaseQidText, sourceFile)?.text ??
           upperCaseQidText,
         "Module",
       );
@@ -573,7 +570,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         return {
           node: nodeParent,
           nodeType: "Function",
-          uri: treeContainer.uri,
+          uri: sourceFile.uri,
         };
       }
     } else if (
@@ -595,7 +592,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         (node) => node.parent ?? undefined,
       )
         .map((node) =>
-          treeContainer.symbolLinks
+          sourceFile.symbolLinks
             ?.get(node)
             ?.get(
               nodeAtPositionText,
@@ -608,7 +605,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         return {
           node: localBinding.node,
           nodeType: localBinding.type,
-          uri: treeContainer.uri,
+          uri: sourceFile.uri,
         };
       } else {
         const nodeParentText = nodeParent.text;
@@ -623,11 +620,11 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
               ?.map((node) => node.text)
               .join(".") ?? "";
           const moduleName =
-            findImportModuleNameNode(moduleNameOrAlias, treeContainer)?.text ??
+            findImportModuleNameNode(moduleNameOrAlias, sourceFile)?.text ??
             moduleNameOrAlias;
 
           const moduleDefinitionFromOtherFile = findImportOfType(
-            treeContainer,
+            sourceFile,
             moduleName,
             "Module",
           );
@@ -638,7 +635,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         }
 
         const portDefinitionFromOtherFile = findImportOfType(
-          treeContainer,
+          sourceFile,
           nodeParentText,
           "Port",
         );
@@ -648,7 +645,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         }
 
         const functionDefinitionFromOtherFile = findImportOfType(
-          treeContainer,
+          sourceFile,
           nodeParentText,
           "Function",
         );
@@ -658,13 +655,13 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         }
       }
     } else if (nodeAtPosition.type === "operator_identifier") {
-      const operatorsCache = workspace.getOperatorsCache();
+      const operatorsCache = program.getOperatorsCache();
       const cached = operatorsCache.get(nodeText);
       if (cached) {
         return cached;
       }
 
-      const definitionNode = TreeUtils.findOperator(treeContainer, nodeText);
+      const definitionNode = TreeUtils.findOperator(sourceFile, nodeText);
       if (definitionNode) {
         const result: DefinitionResult = {
           node: definitionNode,
@@ -675,7 +672,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
         return result;
       } else {
         const definitionFromOtherFile = findImportOfType(
-          treeContainer,
+          sourceFile,
           nodeText,
           "Operator",
         );
@@ -742,8 +739,8 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       }
 
       return findImportOfType(
-        treeContainer,
-        findImportModuleNameNode(fullModuleName, treeContainer)?.text ??
+        sourceFile,
+        findImportModuleNameNode(fullModuleName, sourceFile)?.text ??
           fullModuleName,
         "Module",
       );
@@ -806,12 +803,12 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   }
 
   function getQualifierForName(
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
     module: string,
     name: string,
   ): string | undefined {
     const found = findImport(
-      treeContainer,
+      sourceFile,
       name,
       (imp) =>
         imp.fromModuleName === module &&
@@ -823,8 +820,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
       return "";
     }
 
-    const moduleImport = findImportModuleNameNode(module, treeContainer)
-      ?.parent;
+    const moduleImport = findImportModuleNameNode(module, sourceFile)?.parent;
 
     if (!moduleImport) {
       return;
@@ -842,8 +838,8 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     return `${module}.`;
   }
 
-  function typeToString(t: Type, treeContainer?: ITreeContainer): string {
-    return new TypeRenderer(typeChecker, treeContainer).render(t);
+  function typeToString(t: Type, sourceFile?: ISourceFile): string {
+    return new TypeRenderer(typeChecker, sourceFile).render(t);
   }
 
   /**
@@ -851,11 +847,11 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
    */
   function findImportModuleNameNode(
     moduleNameOrAlias: string,
-    treeContainer: ITreeContainer,
+    sourceFile: ISourceFile,
   ): SyntaxNode | undefined {
     return (
-      treeContainer.symbolLinks
-        ?.get(treeContainer.tree.rootNode)
+      sourceFile.symbolLinks
+        ?.get(sourceFile.tree.rootNode)
         ?.get(moduleNameOrAlias, (s) => s.type === "Import")
         ?.node.childForFieldName("moduleName") ?? undefined
     );
@@ -903,7 +899,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     const result = InferenceScope.valueDeclarationInference(
       declaration,
       valueDeclaration.tree.uri,
-      workspace,
+      program,
       new Set(),
       /* recursionAllowed */ false,
       cancellationToken,
@@ -938,7 +934,7 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
     if (moduleNameNode) {
       const moduleName = moduleNameNode.text;
       if (
-        !workspace.getSourceFileOfImportableModule(
+        !program.getSourceFileOfImportableModule(
           getSourceFileOfNode(importClause),
           moduleName,
         )
@@ -966,14 +962,14 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   function checkTypeAliasDeclaration(typeAliasDeclaration: SyntaxNode): void {
     TypeExpression.typeAliasDeclarationInference(
       mapSyntaxNodeToExpression(typeAliasDeclaration) as ETypeAliasDeclaration,
-      workspace,
+      program,
     ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
   }
 
   function checkTypeDeclaration(typeDeclaration: SyntaxNode): void {
     TypeExpression.typeDeclarationInference(
       mapSyntaxNodeToExpression(typeDeclaration) as ETypeDeclaration,
-      workspace,
+      program,
     ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
 
     // Need to check union variants
@@ -983,18 +979,18 @@ export function createTypeChecker(workspace: IElmWorkspace): TypeChecker {
   function checkUnionVariant(unionVariant: SyntaxNode): void {
     TypeExpression.unionVariantInference(
       mapSyntaxNodeToExpression(unionVariant) as EUnionVariant,
-      workspace,
+      program,
     ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
   }
 
   function checkPortAnnotation(portAnnotation: SyntaxNode): void {
     TypeExpression.portAnnotationInference(
       mapSyntaxNodeToExpression(portAnnotation) as EPortAnnotation,
-      workspace,
+      program,
     ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
   }
 
-  function getSourceFileOfNode(node: SyntaxNode): ITreeContainer {
+  function getSourceFileOfNode(node: SyntaxNode): ISourceFile {
     const treeContainer = forest.getByUri(node.tree.uri);
 
     if (!treeContainer) {

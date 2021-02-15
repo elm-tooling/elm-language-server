@@ -1,6 +1,6 @@
 import path from "path";
 import { URI } from "vscode-uri";
-import { ITreeContainer } from "./forest";
+import { ISourceFile } from "./compiler/forest";
 import { NonEmptyArray } from "./util/utils";
 import util from "util";
 import * as fs from "fs";
@@ -10,7 +10,7 @@ const readFile = util.promisify(fs.readFile);
 export class ElmToolingJsonManager {
   public async getEntrypoints(
     workspaceRootPath: string,
-    sourceFile: ITreeContainer,
+    sourceFile: ISourceFile,
   ): Promise<[NonEmptyArray<string>, string]> {
     const elmToolingPath = path.join(workspaceRootPath, "elm-tooling.json");
     const defaultRelativePathToFile = path.relative(

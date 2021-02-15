@@ -14,7 +14,7 @@ import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Position, Range } from "vscode-languageserver-textdocument";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 import { TreeUtils } from "../util/treeUtils";
-import { ITreeContainer } from "../forest";
+import { ISourceFile } from "../compiler/forest";
 import {
   IDidChangeTextDocumentParams,
   IDidOpenTextDocumentParams,
@@ -27,11 +27,11 @@ export class ASTProvider {
   private documentEvents: TextDocumentEvents;
 
   private treeChangeEvent = new Emitter<{
-    treeContainer: ITreeContainer;
+    sourceFile: ISourceFile;
     declaration?: SyntaxNode;
   }>();
   readonly onTreeChange: Event<{
-    treeContainer: ITreeContainer;
+    sourceFile: ISourceFile;
     declaration?: SyntaxNode;
   }> = this.treeChangeEvent.event;
 
@@ -71,7 +71,7 @@ export class ASTProvider {
     const document: VersionedTextDocumentIdentifier = params.textDocument;
 
     // Source file could be undefined here
-    const sourceFile = <ITreeContainer | undefined>params.sourceFile;
+    const sourceFile = <ISourceFile | undefined>params.sourceFile;
 
     let tree = sourceFile?.tree;
 
@@ -158,7 +158,7 @@ export class ASTProvider {
             .getSourceDirectoryOfFile(document.uri)
             ?.endsWith("tests") ?? false;
 
-      const treeContainer = forest.setTree(
+      const sourceFile = forest.setTree(
         pendingRenameUri ?? document.uri,
         true,
         true,
@@ -166,13 +166,13 @@ export class ASTProvider {
         isTestFile,
       );
 
-      // The workspace now needs to be synchronized
+      // The program now needs to be synchronized
       params.program.markAsDirty();
 
       setImmediate(() => {
         if (tree) {
           this.treeChangeEvent.fire({
-            treeContainer,
+            sourceFile,
             declaration: changedDeclaration,
           });
         }

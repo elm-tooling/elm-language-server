@@ -10,10 +10,10 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IElmWorkspace } from "../elmWorkspace";
-import { ITreeContainer } from "../forest";
+import { IProgram } from "../compiler/program";
+import { ISourceFile } from "../compiler/forest";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { References } from "../util/references";
+import { References } from "../compiler/references";
 import { Settings } from "../util/settings";
 import { TreeUtils } from "../util/treeUtils";
 import { ICodeLensParams } from "./paramsExtensions";
@@ -78,17 +78,16 @@ export class CodeLensProvider {
 
   protected handleCodeLensResolveRequest = (
     codelens: ICodeLens,
-    program: IElmWorkspace,
-    sourceFile: ITreeContainer,
+    program: IProgram,
+    sourceFile: ISourceFile,
   ): ICodeLens => {
     const data = codelens.data;
     this.connection.console.info(
       `A code lens resolve was requested for ${data.uri}`,
     );
     const checker = program.getTypeChecker();
-    const treeContainer = sourceFile;
-    if (treeContainer) {
-      const tree = treeContainer.tree;
+    if (sourceFile) {
+      const tree = sourceFile.tree;
 
       switch (data.codeLensType) {
         case "exposed": {
@@ -119,7 +118,7 @@ export class CodeLensProvider {
           );
           const definitionNode = checker.findDefinition(
             nodeAtPosition,
-            treeContainer,
+            sourceFile,
           );
 
           const references = References.find(definitionNode, program);

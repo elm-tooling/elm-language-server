@@ -1,8 +1,8 @@
 import Parser, { SyntaxNode } from "web-tree-sitter";
-import { IForest, ITreeContainer } from "./forest";
-import { IExposed, IExposing, NodeType, TreeUtils } from "./util/treeUtils";
+import { IForest, ISourceFile } from "./forest";
+import { IExposed, IExposing, NodeType, TreeUtils } from "../util/treeUtils";
 import { container } from "tsyringe";
-import { MultiMap } from "./util/multiMap";
+import { MultiMap } from "../util/multiMap";
 import { performance } from "perf_hooks";
 
 export let importsTime = 0;
@@ -32,22 +32,19 @@ export class Imports extends MultiMap<string, IImport> {
   }
   private static cachedVirtualImports: SyntaxNode[];
 
-  public static getImports(
-    treeContainer: ITreeContainer,
-    forest: IForest,
-  ): Imports {
+  public static getImports(sourceFile: ISourceFile, forest: IForest): Imports {
     const start = performance.now();
     const result = new Imports();
 
     const importNodes = [
       ...Imports.getVirtualImports(),
-      ...(TreeUtils.findAllImportClauseNodes(treeContainer.tree) ?? []),
+      ...(TreeUtils.findAllImportClauseNodes(sourceFile.tree) ?? []),
     ];
 
     importNodes.forEach((importNode) => {
       const moduleName = importNode.childForFieldName("moduleName")?.text;
       if (moduleName) {
-        const uri = treeContainer.resolvedModules?.get(moduleName);
+        const uri = sourceFile.resolvedModules?.get(moduleName);
 
         if (!uri) {
           return;
@@ -319,7 +316,7 @@ export class Imports extends MultiMap<string, IImport> {
   private static exposedNodesToImports(
     exposedNode: IExposed,
     moduleName: string,
-    foundModule: ITreeContainer,
+    foundModule: ISourceFile,
     includeUnionConstructors = false,
   ): IImport[] {
     return [

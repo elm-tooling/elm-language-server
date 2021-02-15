@@ -1,4 +1,4 @@
-import { Type, TVar } from "./typeInference";
+import { Type, TVar } from "../typeInference";
 
 export class DisjointSet {
   private map: Map<TVar, Type> = new Map<TVar, Type>();

@@ -1,10 +1,10 @@
 import execa, { ExecaSyncReturnValue } from "execa";
-import * as path from "./path";
+import * as path from "../../util/path";
 import { Connection, CompletionItemKind } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { IElmPackageCache } from "../elmPackageCache";
-import { IClientSettings } from "./settings";
-import { ElmProject } from "../elmWorkspace";
+import { IClientSettings } from "../../util/settings";
+import { ElmProject } from "../program";
 
 export const isWindows = process.platform === "win32";
 

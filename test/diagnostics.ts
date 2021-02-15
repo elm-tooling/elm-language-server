@@ -1,13 +1,13 @@
 import "reflect-metadata";
 import { container } from "tsyringe";
 import { URI } from "vscode-uri";
-import { ElmWorkspace } from "../src/elmWorkspace";
+import { Program } from "../src/compiler/program";
 import * as path from "path";
 import { Settings } from "../src/util/settings";
 import Parser from "web-tree-sitter";
 import { spawnSync } from "child_process";
 import { readFileSync } from "fs";
-import { Diagnostic } from "../src/util/types/diagnostics";
+import { Diagnostic } from "../src/compiler/diagnostics";
 import { performance } from "perf_hooks";
 import { createProgramHost } from "./utils/sourceTreeParser";
 
@@ -54,14 +54,14 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
   const pathUri = URI.file(uri);
 
   try {
-    let elmWorkspace = new ElmWorkspace(pathUri, createProgramHost());
-    await elmWorkspace.init(() => {
+    let program = new Program(pathUri, createProgramHost());
+    await program.init(() => {
       //
     });
 
     const start = performance.now();
     let diagnostics: Diagnostic[] = [];
-    for (const sourceFile of elmWorkspace.getForest().treeMap.values()) {
+    for (const sourceFile of program.getForest().treeMap.values()) {
       if (!sourceFile.writeable) {
         continue;
       }
@@ -74,8 +74,8 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
 
       diagnostics.push(
         ...[
-          ...elmWorkspace.getSyntacticDiagnostics(sourceFile),
-          ...elmWorkspace.getSemanticDiagnostics(sourceFile),
+          ...program.getSyntacticDiagnostics(sourceFile),
+          ...program.getSemanticDiagnostics(sourceFile),
         ].filter((d) => !d.uri.includes("test")),
       );
     }
@@ -97,10 +97,10 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
       // process.exitCode = 1;
     }
 
-    elmWorkspace.getForest().treeMap.forEach((sourceFile) => {
+    program.getForest().treeMap.forEach((sourceFile) => {
       sourceFile.tree.delete();
     });
-    elmWorkspace = undefined!;
+    program = undefined!;
   } catch (e) {
     console.log(e);
     failed.push(path.basename(uri));

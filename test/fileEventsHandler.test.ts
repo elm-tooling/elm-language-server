@@ -16,7 +16,7 @@ import {
 } from "vscode-languageserver";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { IElmWorkspace } from "../src/elmWorkspace";
+import { IProgram } from "../src/compiler/program";
 import { FileEventsHandler } from "../src/providers/handlers/fileEventsHandler";
 import { getSourceFiles } from "./utils/sourceParser";
 import { baseUri, SourceTreeParser } from "./utils/sourceTreeParser";
@@ -56,12 +56,12 @@ describe("fileEventsHandler", () => {
 
   const token = new CancellationTokenSource().token;
 
-  async function createProgram(source: string): Promise<IElmWorkspace> {
+  async function createProgram(source: string): Promise<IProgram> {
     await treeParser.init();
     new FileEventsHandler();
 
     const program = await treeParser.getProgram(getSourceFiles(source));
-    const workspaces = container.resolve<IElmWorkspace[]>("ElmWorkspaces");
+    const workspaces = container.resolve<IProgram[]>("ElmWorkspaces");
     workspaces.splice(0, workspaces.length);
     workspaces.push(program);
 

@@ -5,11 +5,7 @@ import { promisify } from "util";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import Parser from "web-tree-sitter";
-import {
-  ElmWorkspace,
-  IElmWorkspace,
-  IProgramHost,
-} from "../../src/elmWorkspace";
+import { Program, IProgram, IProgramHost } from "../../src/compiler/program";
 import * as path from "../../src/util/path";
 import { Utils } from "../../src/util/utils";
 
@@ -33,9 +29,7 @@ export class SourceTreeParser {
     container.resolve<Parser>("Parser").setLanguage(language);
   }
 
-  public async getProgram(sources: {
-    [K: string]: string;
-  }): Promise<IElmWorkspace> {
+  public async getProgram(sources: { [K: string]: string }): Promise<IProgram> {
     const readFile = (uri: string): string => {
       if (uri.endsWith("elm.json")) {
         return `
@@ -72,7 +66,7 @@ export class SourceTreeParser {
       }
     }
 
-    const program = new ElmWorkspace(URI.file(baseUri), {
+    const program = new Program(URI.file(baseUri), {
       readFile: (uri: string): Promise<string> =>
         Promise.resolve(readFile(uri)),
       readDirectory: (uri: string): Promise<string[]> => {
