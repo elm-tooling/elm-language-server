@@ -532,11 +532,11 @@ export function createTypeChecker(program: IProgram): TypeChecker {
             imports.length > 1
               ? [
                   error(
-                    nodeAtPosition,
+                    upperCaseQid,
                     isTypeUsage
                       ? Diagnostics.AmbiguousType
                       : Diagnostics.AmbiguousVariant,
-                    nodeAtPosition.text,
+                    upperCaseQidText,
                   ),
                 ]
               : [],
@@ -661,13 +661,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
           symbol: imports.length === 1 ? imports[0] : undefined,
           diagnostics:
             imports.length > 1
-              ? [
-                  error(
-                    nodeAtPosition,
-                    Diagnostics.AmbiguousVar,
-                    nodeAtPosition.text,
-                  ),
-                ]
+              ? [error(nodeParent, Diagnostics.AmbiguousVar, nodeParentText)]
               : [],
         };
       }

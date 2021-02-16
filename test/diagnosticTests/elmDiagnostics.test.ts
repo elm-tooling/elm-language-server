@@ -1232,4 +1232,40 @@ type alias Program = Int
       true,
     );
   });
+
+  test("test duplicate imports should not cause an error", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+import App exposing (bar)
+import App exposing (bar)
+
+foo =
+    bar
+
+--@ App.elm
+module App exposing (..)
+
+bar = ""
+`;
+    await testTypeInference(basicsSources + stringSources + source, [], true);
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+import App
+import App
+
+foo =
+    App.bar
+
+--@ App.elm
+module App exposing (..)
+
+bar = ""
+`;
+    await testTypeInference(basicsSources + stringSources + source2, [], true);
+  });
 });

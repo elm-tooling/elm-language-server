@@ -23,6 +23,14 @@ export interface IImport extends ISymbol {
   fromModule: FromModule;
 }
 
+function importModuleEqual(a: IImport, b: IImport): boolean {
+  return (
+    a.fromModule.name === b.fromModule.name &&
+    a.fromModule.maintainerAndPackageName ===
+      b.fromModule.maintainerAndPackageName
+  );
+}
+
 /**
  * Imports class that extends a map to handle multiple named imports
  */
@@ -120,27 +128,39 @@ export class Imports {
                 switch (symbol.type) {
                   case "Function":
                   case "Port":
-                    result.vars.set(qualifiedName, {
-                      ...symbol,
-                      name: qualifiedName,
-                      fromModule,
-                    });
+                    result.vars.set(
+                      qualifiedName,
+                      {
+                        ...symbol,
+                        name: qualifiedName,
+                        fromModule,
+                      },
+                      importModuleEqual,
+                    );
                     break;
 
                   case "Type":
                   case "TypeAlias":
-                    result.types.set(qualifiedName, {
-                      ...symbol,
-                      name: qualifiedName,
-                      fromModule,
-                    });
-                    symbol.constructors?.forEach((ctor) => {
-                      const qualifiedName = `${importPrefix}.${ctor.name}`;
-                      result.constructors.set(qualifiedName, {
-                        ...ctor,
+                    result.types.set(
+                      qualifiedName,
+                      {
+                        ...symbol,
                         name: qualifiedName,
                         fromModule,
-                      });
+                      },
+                      importModuleEqual,
+                    );
+                    symbol.constructors?.forEach((ctor) => {
+                      const qualifiedName = `${importPrefix}.${ctor.name}`;
+                      result.constructors.set(
+                        qualifiedName,
+                        {
+                          ...ctor,
+                          name: qualifiedName,
+                          fromModule,
+                        },
+                        importModuleEqual,
+                      );
                     });
                 }
               });
@@ -154,15 +174,23 @@ export class Imports {
                     switch (exposed.type) {
                       case "Type":
                       case "TypeAlias":
-                        result.types.set(exposed.name, {
-                          ...exposed,
-                          fromModule,
-                        });
-                        exposed.constructors?.forEach((ctor) => {
-                          result.constructors.set(ctor.name, {
-                            ...ctor,
+                        result.types.set(
+                          exposed.name,
+                          {
+                            ...exposed,
                             fromModule,
-                          });
+                          },
+                          importModuleEqual,
+                        );
+                        exposed.constructors?.forEach((ctor) => {
+                          result.constructors.set(
+                            ctor.name,
+                            {
+                              ...ctor,
+                              fromModule,
+                            },
+                            importModuleEqual,
+                          );
                         });
 
                         break;
@@ -170,10 +198,14 @@ export class Imports {
                       case "Function":
                       case "Port":
                       case "Operator":
-                        result.vars.set(exposed.name, {
-                          ...exposed,
-                          fromModule,
-                        });
+                        result.vars.set(
+                          exposed.name,
+                          {
+                            ...exposed,
+                            fromModule,
+                          },
+                          importModuleEqual,
+                        );
                     }
                   });
                 } else {
@@ -186,10 +218,14 @@ export class Imports {
                       exposedOperator.text,
                     );
                     if (symbol) {
-                      result.vars.set(symbol.name, {
-                        ...symbol,
-                        fromModule,
-                      });
+                      result.vars.set(
+                        symbol.name,
+                        {
+                          ...symbol,
+                          fromModule,
+                        },
+                        importModuleEqual,
+                      );
                     } else {
                       result.diagnostics.push(
                         error(
@@ -211,10 +247,14 @@ export class Imports {
                       exposedValue.text,
                     );
                     if (symbol) {
-                      result.vars.set(symbol.name, {
-                        ...symbol,
-                        fromModule,
-                      });
+                      result.vars.set(
+                        symbol.name,
+                        {
+                          ...symbol,
+                          fromModule,
+                        },
+                        importModuleEqual,
+                      );
                     } else {
                       result.diagnostics.push(
                         error(
@@ -255,10 +295,14 @@ export class Imports {
                             });
 
                             symbol.constructors?.forEach((ctor) => {
-                              result.constructors.set(ctor.name, {
-                                ...ctor,
-                                fromModule,
-                              });
+                              result.constructors.set(
+                                ctor.name,
+                                {
+                                  ...ctor,
+                                  fromModule,
+                                },
+                                importModuleEqual,
+                              );
                             });
                           } else if (symbol.type === "TypeAlias") {
                             result.diagnostics.push(
@@ -292,10 +336,14 @@ export class Imports {
                           }
                           if (symbol.type === "TypeAlias") {
                             symbol.constructors?.forEach((ctor) => {
-                              result.constructors.set(ctor.name, {
-                                ...ctor,
-                                fromModule,
-                              });
+                              result.constructors.set(
+                                ctor.name,
+                                {
+                                  ...ctor,
+                                  fromModule,
+                                },
+                                importModuleEqual,
+                              );
                             });
                           }
                         } else {
