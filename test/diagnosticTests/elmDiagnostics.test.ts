@@ -109,7 +109,7 @@ describe("test elm diagnostics", () => {
       }
     });
 
-    let nodeAtPosition: SyntaxNode;
+    let nodeAtPosition: SyntaxNode = undefined!;
 
     if ("position" in result) {
       const rootNode = program.getSourceFile(testUri)!.tree.rootNode;
@@ -117,6 +117,11 @@ describe("test elm diagnostics", () => {
         rootNode,
         result.position,
       );
+    }
+
+    // Adjust for Type(..)
+    if (nodeAtPosition?.nextNamedSibling?.text === "(..)") {
+      nodeAtPosition = nodeAtPosition.parent ?? nodeAtPosition;
     }
 
     const expected = expectedDiagnostics.map((exp) =>
@@ -831,5 +836,400 @@ test listList =
 
   `;
     await testTypeInference(basicsSources + source, []);
+  });
+
+  test("test duplicate type imports produce an error", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+import App exposing (Program)
+import Platform exposing (..)
+
+foo : Program
+      --^ 
+foo =
+    ""
+
+--@ App.elm
+module App exposing (..)
+
+type alias Program = String
+
+--@ Platform.elm
+module Platform exposing (..)
+
+type Program flags model msg = Program
+`;
+    await testTypeInference(basicsSources + stringSources + source, [
+      {
+        message: Diagnostics.AmbiguousType,
+        args: ["Program"],
+      },
+    ]);
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+import Platform exposing (..)
+import App exposing (Program)
+
+foo : Program
+foo =
+    ""
+
+--@ App.elm
+module App exposing (..)
+
+type alias Program = String
+
+--@ Platform.elm
+module Platform exposing (..)
+
+type Program flags model msg = Program
+`;
+    await testTypeInference(basicsSources + stringSources + source2, []);
+  });
+
+  test("test duplicate variant imports produce an error", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+import App exposing (Program(..))
+import Platform exposing (..)
+
+foo =
+    Program
+    --^
+
+--@ App.elm
+module App exposing (..)
+
+type Program = Program
+
+--@ Platform.elm
+module Platform exposing (..)
+
+type Program = Program
+`;
+    await testTypeInference(
+      basicsSources + stringSources + source,
+      [
+        {
+          message: Diagnostics.AmbiguousVariant,
+          args: ["Program"],
+        },
+      ],
+      true,
+    );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+import App exposing (Program)
+import Platform exposing (..)
+
+foo =
+    Program
+    --^
+
+--@ App.elm
+module App exposing (..)
+
+type Program = Program
+
+--@ Platform.elm
+module Platform exposing (..)
+
+type Program = Program
+`;
+    await testTypeInference(basicsSources + stringSources + source2, [], true);
+
+    const source3 = `
+--@ Test.elm
+module Test exposing (..)
+
+import Platform exposing (..)
+import App exposing (Program(..))
+
+foo =
+    Program
+    --^
+
+--@ App.elm
+module App exposing (..)
+
+type Program = Program
+
+--@ Platform.elm
+module Platform exposing (..)
+
+type Program = Program
+`;
+    await testTypeInference(
+      basicsSources + stringSources + source3,
+      [
+        {
+          message: Diagnostics.AmbiguousVariant,
+          args: ["Program"],
+        },
+      ],
+      true,
+    );
+  });
+
+  test("test duplicate value imports produce an error", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+import App exposing (bar)
+import Platform exposing (..)
+
+foo =
+    bar
+   --^
+
+--@ App.elm
+module App exposing (..)
+
+bar = ""
+
+--@ Platform.elm
+module Platform exposing (..)
+
+bar = ""
+`;
+    await testTypeInference(
+      basicsSources + stringSources + source,
+      [
+        {
+          message: Diagnostics.AmbiguousVar,
+          args: ["bar"],
+        },
+      ],
+      true,
+    );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+import Platform exposing (..)
+import App exposing (bar)
+
+foo =
+    bar
+   --^
+
+--@ App.elm
+module App exposing (..)
+
+bar = ""
+
+--@ Platform.elm
+module Platform exposing (..)
+
+bar = ""
+`;
+    await testTypeInference(
+      basicsSources + stringSources + source2,
+      [
+        {
+          message: Diagnostics.AmbiguousVar,
+          args: ["bar"],
+        },
+      ],
+      true,
+    );
+  });
+
+  test("test exposing unknown value or type", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (foo, Program)
+                            --^
+foo =
+    ""
+`;
+    await testTypeInference(
+      basicsSources + stringSources + source,
+      [
+        {
+          message: Diagnostics.ExportNotFound,
+          args: ["type", "Program"],
+        },
+      ],
+      true,
+    );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (foo, bar)
+                          --^
+foo =
+    ""
+`;
+    await testTypeInference(
+      basicsSources + stringSources + source2,
+      [
+        {
+          message: Diagnostics.ExportNotFound,
+          args: ["value", "bar"],
+        },
+      ],
+      true,
+    );
+
+    const source3 = `
+--@ Test.elm
+module Test exposing (foo, Program(..))
+                            --^
+foo =
+    ""
+`;
+    await testTypeInference(
+      basicsSources + stringSources + source3,
+      [
+        {
+          message: Diagnostics.ExportNotFound,
+          args: ["type", "Program(..)"],
+        },
+      ],
+      true,
+    );
+  });
+
+  test("test exposing union constructor on a type alias", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (Program(..))
+                        --^
+type alias Program = Int
+`;
+    await testTypeInference(
+      basicsSources + stringSources + source,
+      [
+        {
+          message: Diagnostics.ExportOpenAlias,
+          args: ["Program"],
+        },
+      ],
+      true,
+    );
+  });
+
+  test("test importing unknown value or type", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+import App exposing (Program)
+                     --^
+
+foo =
+    ""
+
+--@ App.elm
+module App exposing (..)
+
+foo = 
+    ""
+`;
+    await testTypeInference(
+      basicsSources + stringSources + source,
+      [
+        {
+          message: Diagnostics.ImportExposingNotFound,
+          args: ["App", "Program"],
+        },
+      ],
+      true,
+    );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+import App exposing (bar)
+                    --^
+
+foo =
+    ""
+
+--@ App.elm
+module App exposing (..)
+
+foo = 
+    ""
+`;
+    await testTypeInference(
+      basicsSources + stringSources + source2,
+      [
+        {
+          message: Diagnostics.ImportExposingNotFound,
+          args: ["App", "bar"],
+        },
+      ],
+      true,
+    );
+
+    const source3 = `
+--@ Test.elm
+module Test exposing (..)
+
+import App exposing (Program(..))
+                     --^
+
+foo =
+    ""
+
+--@ App.elm
+module App exposing (..)
+
+foo = 
+    ""
+`;
+    await testTypeInference(
+      basicsSources + stringSources + source3,
+      [
+        {
+          message: Diagnostics.ImportExposingNotFound,
+          args: ["App", "Program"],
+        },
+      ],
+      true,
+    );
+  });
+
+  test("test importing union constructor on a type alias", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+import App exposing (Program(..))
+                      --^
+
+foo =
+    ""
+
+--@ App.elm
+module App exposing (..)
+
+type alias Program = Int
+`;
+    await testTypeInference(
+      basicsSources + stringSources + source,
+      [
+        {
+          message: Diagnostics.ImportOpenAlias,
+          args: ["Program"],
+        },
+      ],
+      true,
+    );
   });
 });

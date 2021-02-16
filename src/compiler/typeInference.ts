@@ -982,7 +982,7 @@ export class InferenceScope {
       e.firstNamedChild?.lastNamedChild,
       this.program,
     );
-    if (!definition.expr) {
+    if (!definition.expr && definition.diagnostics.length === 0) {
       definition = findDefinition(e.firstNamedChild, this.program);
     }
 
@@ -998,7 +998,10 @@ export class InferenceScope {
         return TUnknown;
       }
 
-      this.diagnostics.push(error(e, Diagnostics.MissingValue, e.text));
+      if (definition.diagnostics.length === 0) {
+        this.diagnostics.push(error(e, Diagnostics.MissingValue, e.text));
+      }
+
       return TVar("a");
     }
 

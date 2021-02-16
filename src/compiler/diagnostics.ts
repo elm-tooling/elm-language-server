@@ -61,6 +61,21 @@ function diag(
 }
 
 export const Diagnostics = {
+  AmbiguousType: diag(
+    "ambiguous_type",
+    "The usage of the type `{0}` is ambiguous because it is exposed by multiple imports.",
+    DiagnosticSeverity.Error,
+  ),
+  AmbiguousVar: diag(
+    "ambiguous_variant",
+    "The usage of the variable `{0}` is ambiguous because it is exposed by multiple imports.",
+    DiagnosticSeverity.Error,
+  ),
+  AmbiguousVariant: diag(
+    "ambiguous_variant",
+    "The usage of the variant `{0}` is ambiguous because it is exposed by multiple imports.",
+    DiagnosticSeverity.Error,
+  ),
   ArgumentCount: diag(
     "argument_count",
     "`{0}` is not a function, but it was given {1} arguments.",
@@ -73,7 +88,7 @@ export const Diagnostics = {
   ),
   ExportNotFound: diag(
     "export_not_found",
-    "Cannot find a type named `{0}` to expose.",
+    "Cannot find a {0} named `{1}` to expose.",
     DiagnosticSeverity.Error,
   ),
   ExportOpenAlias: diag(

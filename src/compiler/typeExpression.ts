@@ -412,6 +412,8 @@ export class TypeExpression {
       this.program,
     );
 
+    this.diagnostics.push(...definition.diagnostics);
+
     let declaredType: Type = TUnknown;
     if (definition.expr) {
       switch (definition.expr.nodeType) {
@@ -461,7 +463,10 @@ export class TypeExpression {
     } else {
       if (typeRef.firstNamedChild?.firstNamedChild?.text === "List") {
         declaredType = TList(TVar("a"));
-      } else if (typeRef.firstNamedChild) {
+      } else if (
+        typeRef.firstNamedChild &&
+        definition.diagnostics.length === 0
+      ) {
         this.diagnostics.push(
           error(
             typeRef.firstNamedChild,

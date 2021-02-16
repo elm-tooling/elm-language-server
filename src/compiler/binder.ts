@@ -322,7 +322,12 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
               });
             } else {
               sourceFile.bindDiagnostics.push(
-                error(value, Diagnostics.ExportNotFound, value.text),
+                error(
+                  value,
+                  Diagnostics.ExportNotFound,
+                  "operator",
+                  value.text,
+                ),
               );
             }
           }
@@ -339,6 +344,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
                   error(
                     exposedValue,
                     Diagnostics.ExportNotFound,
+                    "value",
                     exposedValue.text,
                   ),
                 );
@@ -379,6 +385,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
                     error(
                       exposedType,
                       Diagnostics.ExportNotFound,
+                      "type",
                       exposedType.text,
                     ),
                   );
@@ -403,6 +410,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
                   error(
                     exposedType,
                     Diagnostics.ExportNotFound,
+                    "type",
                     exposedType.text,
                   ),
                 );

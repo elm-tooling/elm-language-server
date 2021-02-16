@@ -576,4 +576,29 @@ type alias FieldLens a b c d =
 `;
     await testBase.testDefinition(source);
   });
+
+  it(`test two types with the same name resolves to second one`, async () => {
+    const source = `
+--@ main.elm
+import Platform exposing (Program)
+import App exposing (Program)
+
+foo : Program 
+      --^App.elm
+foo =
+    ""
+
+--@ App.elm
+module App exposing (..)
+
+type alias Program = String
+--X
+
+--@ Platform.elm
+module Platform exposing (..)
+
+type Program flags model msg = Program
+`;
+    await testBase.testDefinition(source);
+  });
 });

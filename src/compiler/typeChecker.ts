@@ -525,11 +525,21 @@ export function createTypeChecker(program: IProgram): TypeChecker {
         isTypeUsage ? "Type" : "Constructor",
       );
 
-      // TODO: Error checking for multiple
       if (imports.length > 0) {
         return {
-          symbol: imports[0],
-          diagnostics: [],
+          symbol: imports.length === 1 ? imports[0] : undefined,
+          diagnostics:
+            imports.length > 1
+              ? [
+                  error(
+                    nodeAtPosition,
+                    isTypeUsage
+                      ? Diagnostics.AmbiguousType
+                      : Diagnostics.AmbiguousVariant,
+                    nodeAtPosition.text,
+                  ),
+                ]
+              : [],
         };
       }
 
@@ -647,10 +657,18 @@ export function createTypeChecker(program: IProgram): TypeChecker {
 
         const imports = findImport(sourceFile, nodeParentText, "Var");
 
-        // TODO: Error checking for multiple
         return {
-          symbol: imports[0],
-          diagnostics: [],
+          symbol: imports.length === 1 ? imports[0] : undefined,
+          diagnostics:
+            imports.length > 1
+              ? [
+                  error(
+                    nodeAtPosition,
+                    Diagnostics.AmbiguousVar,
+                    nodeAtPosition.text,
+                  ),
+                ]
+              : [],
         };
       }
     } else if (nodeAtPosition.type === "operator_identifier") {
