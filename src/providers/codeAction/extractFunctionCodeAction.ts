@@ -148,14 +148,14 @@ CodeActionProvider.registerRefactorAction(refactorName, {
         );
 
         // Reference in other file will be visible
-        if (ref?.uri !== params.sourceFile.uri) {
+        if (ref.symbol?.node.tree.uri !== params.sourceFile.uri) {
           return;
         }
 
         // Reference inside self will be visible
         if (
-          node.startIndex <= ref.node.startIndex &&
-          node.endIndex >= ref.node.endIndex
+          node.startIndex <= ref.symbol.node.startIndex &&
+          node.endIndex >= ref.symbol.node.endIndex
         ) {
           return;
         }

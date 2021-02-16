@@ -226,7 +226,7 @@ export class ElmMakeDiagnostics {
         if (typeDeclarationNode) {
           const fields = TreeUtils.findAllNamedChildrenOfType(
             "union_variant",
-            typeDeclarationNode.node,
+            typeDeclarationNode,
           );
 
           const alreadyAvailableBranches = TreeUtils.findAllNamedChildrenOfType(

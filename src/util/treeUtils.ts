@@ -9,6 +9,7 @@ import {
   mapSyntaxNodeToExpression,
 } from "../compiler/utils/expressionTree";
 import { Range } from "vscode-languageserver-textdocument";
+import { ISymbol } from "../compiler/binder";
 
 export type NodeType =
   | "Function"
@@ -26,18 +27,6 @@ export type NodeType =
   | "Import";
 
 const functionNameRegex = new RegExp("[a-zA-Z0-9_]+");
-
-export interface IExposed {
-  name: string;
-  syntaxNode: SyntaxNode;
-  type: NodeType;
-  exposedUnionConstructors?: {
-    name: string;
-    syntaxNode: SyntaxNode;
-  }[];
-}
-
-export type IExposing = Map<string, IExposed>;
 
 export function flatMap<T, U>(
   array: T[] | undefined,
@@ -552,7 +541,7 @@ export class TreeUtils {
     node: SyntaxNode | undefined,
     sourceFile: ISourceFile,
     program: IProgram,
-  ): { node: SyntaxNode; uri: string } | undefined {
+  ): SyntaxNode | undefined {
     const fieldName = node?.parent?.firstNamedChild?.text;
 
     let recordType = TreeUtils.getTypeAliasOfRecord(node, sourceFile, program);
@@ -566,13 +555,12 @@ export class TreeUtils {
       );
     }
 
-    const recordTypeTree = program.getForest().getByUri(recordType?.uri ?? "");
+    const recordTypeTree = program
+      .getForest()
+      .getByUri(recordType?.tree.uri ?? "");
 
     if (recordType && recordTypeTree) {
-      const fieldTypes = TreeUtils.descendantsOfType(
-        recordType.node,
-        "field_type",
-      );
+      const fieldTypes = TreeUtils.descendantsOfType(recordType, "field_type");
       const fieldNode = fieldTypes.find((a) => {
         return (
           TreeUtils.findFirstNamedChildOfType("lower_case_identifier", a)
@@ -595,10 +583,10 @@ export class TreeUtils {
           if (typeNode.length > 0) {
             const typeAliasNode = program
               .getTypeChecker()
-              .findDefinition(typeNode[0], recordTypeTree);
+              .findDefinition(typeNode[0], recordTypeTree).symbol;
 
             if (typeAliasNode) {
-              return { node: typeAliasNode.node, uri: typeAliasNode.uri };
+              return typeAliasNode.node;
             }
           }
         }
@@ -610,31 +598,33 @@ export class TreeUtils {
     type: SyntaxNode | undefined,
     sourceFile: ISourceFile,
     program: IProgram,
-  ): { node: SyntaxNode; uri: string } | undefined {
+  ): SyntaxNode | undefined {
     if (type) {
       const definitionNode = program
         .getTypeChecker()
-        .findDefinition(type, sourceFile);
+        .findDefinition(type, sourceFile).symbol;
 
       if (definitionNode) {
-        const definitionTree = program.getForest().getByUri(definitionNode.uri);
+        const definitionTree = program
+          .getForest()
+          .getByUri(definitionNode.node.tree.uri);
 
         let aliasNode;
-        if (definitionNode.nodeType === "FunctionParameter") {
+        if (definitionNode.type === "FunctionParameter") {
           aliasNode = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
             definitionNode.node,
           );
-        } else if (definitionNode.nodeType === "Function") {
+        } else if (definitionNode.type === "Function") {
           aliasNode = TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
             definitionNode.node,
           );
-        } else if (definitionNode.nodeType === "FieldType") {
+        } else if (definitionNode.type === "FieldType") {
           aliasNode = TreeUtils.findFirstNamedChildOfType(
             "type_expression",
             definitionNode.node,
           );
-        } else if (definitionNode.nodeType === "TypeAlias") {
-          return { node: definitionNode.node, uri: definitionNode.uri };
+        } else if (definitionNode.type === "TypeAlias") {
+          return definitionNode.node;
         }
 
         if (aliasNode && definitionTree) {
@@ -646,10 +636,10 @@ export class TreeUtils {
           if (childNode.length > 0) {
             const typeNode = program
               .getTypeChecker()
-              .findDefinition(childNode[0], definitionTree);
+              .findDefinition(childNode[0], definitionTree).symbol;
 
             if (typeNode) {
-              return { node: typeNode.node, uri: typeNode.uri };
+              return typeNode.node;
             }
           }
         }
@@ -661,7 +651,7 @@ export class TreeUtils {
     node: SyntaxNode | undefined,
     sourceFile: ISourceFile,
     program: IProgram,
-  ): { node: SyntaxNode; uri: string } | undefined {
+  ): SyntaxNode | undefined {
     if (node?.parent?.parent) {
       let type: SyntaxNode | undefined | null =
         TreeUtils.findFirstNamedChildOfType(
@@ -691,32 +681,32 @@ export class TreeUtils {
           .findDefinition(
             type.firstNamedChild ? type.firstNamedChild : type,
             sourceFile,
-          );
+          ).symbol;
 
         if (definitionNode) {
           const definitionTree = program
             .getForest()
-            .getByUri(definitionNode.uri);
+            .getByUri(definitionNode.node.tree.uri);
 
           let aliasNode;
           if (
-            definitionNode.nodeType === "FunctionParameter" &&
+            definitionNode.type === "FunctionParameter" &&
             definitionNode.node.firstNamedChild
           ) {
             aliasNode = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
               definitionNode.node.firstNamedChild,
             );
-          } else if (definitionNode.nodeType === "Function") {
+          } else if (definitionNode.type === "Function") {
             aliasNode = TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
               definitionNode.node,
             );
-          } else if (definitionNode.nodeType === "FieldType") {
+          } else if (definitionNode.type === "FieldType") {
             aliasNode = TreeUtils.findFirstNamedChildOfType(
               "type_expression",
               definitionNode.node,
             );
-          } else if (definitionNode.nodeType === "TypeAlias") {
-            return { node: definitionNode.node, uri: definitionNode.uri };
+          } else if (definitionNode.type === "TypeAlias") {
+            return definitionNode.node;
           }
 
           if (aliasNode && definitionTree) {
@@ -728,10 +718,10 @@ export class TreeUtils {
             if (childNode.length > 0) {
               const typeNode = program
                 .getTypeChecker()
-                .findDefinition(childNode[0], definitionTree);
+                .findDefinition(childNode[0], definitionTree).symbol;
 
               if (typeNode) {
-                return { node: typeNode.node, uri: typeNode.uri };
+                return typeNode.node;
               }
             }
           }
@@ -1051,20 +1041,12 @@ export class TreeUtils {
   public static findFieldReference(
     type: Type,
     fieldName: string,
-  ): { node: SyntaxNode; uri: string; nodeType: NodeType } | undefined {
+  ): ISymbol | undefined {
     if (type.nodeType === "Record") {
       const fieldRefs = type.fieldReferences.get(fieldName);
 
       if (fieldRefs.length > 0) {
-        const refUri = fieldRefs[0]?.tree.uri;
-
-        if (refUri) {
-          return {
-            node: fieldRefs[0],
-            nodeType: "FieldType",
-            uri: refUri,
-          };
-        }
+        return { name: fieldName, node: fieldRefs[0], type: "FieldType" };
       }
     }
   }

@@ -47,6 +47,10 @@ export class MultiMap<K, V> extends Map<K, V | V[]> {
     return this;
   }
 
+  public replace(key: K, val: V): this {
+    return super.set(key, val);
+  }
+
   public forEach(
     callbackfn: (value: V, key: K, map: Map<K, V | V[]>) => void,
   ): void {

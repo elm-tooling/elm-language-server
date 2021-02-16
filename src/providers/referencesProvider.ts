@@ -7,8 +7,8 @@ import {
   ReferenceParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { References } from "../compiler/references";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
 import { IReferenceParams } from "./paramsExtensions";
 
@@ -40,7 +40,8 @@ export class ReferencesProvider {
         params.position,
       );
 
-      const definitionNode = checker.findDefinition(nodeAtPosition, sourceFile);
+      const definitionNode = checker.findDefinition(nodeAtPosition, sourceFile)
+        .symbol;
 
       const references = References.find(definitionNode, params.program);
 

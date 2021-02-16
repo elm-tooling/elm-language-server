@@ -299,7 +299,7 @@ export class Program implements IProgram {
   public getSyntacticDiagnostics(sourceFile: ISourceFile): Diagnostic[] {
     // Getting the type checker will bind the file if its not
     this.getTypeChecker();
-    return sourceFile.parseDiagnostics;
+    return [...sourceFile.parseDiagnostics, ...sourceFile.bindDiagnostics];
   }
 
   public getSuggestionDiagnostics(

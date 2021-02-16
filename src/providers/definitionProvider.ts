@@ -44,12 +44,13 @@ export class DefinitionProvider {
         param.position,
       );
 
-      const definitionNode = checker.findDefinition(nodeAtPosition, sourceFile);
+      const definitionNode = checker.findDefinition(nodeAtPosition, sourceFile)
+        .symbol;
 
       if (definitionNode) {
         return this.createLocationFromDefinition(
           definitionNode.node,
-          definitionNode.uri,
+          definitionNode.node.tree.uri,
         );
       }
     }

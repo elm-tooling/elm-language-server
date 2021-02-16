@@ -311,7 +311,7 @@ export class TypeExpression {
     );
 
     // The type variable doesn't reference anything
-    if (!definition || definition.expr.id === typeVariable.id) {
+    if (!definition.expr || definition.expr.id === typeVariable.id) {
       const type = this.getTypeVar(typeVariable);
       this.expressionTypes.set(typeVariable, type);
       return type;
@@ -413,7 +413,7 @@ export class TypeExpression {
     );
 
     let declaredType: Type = TUnknown;
-    if (definition) {
+    if (definition.expr) {
       switch (definition.expr.nodeType) {
         case "TypeDeclaration":
           declaredType = TypeExpression.typeDeclarationInference(
@@ -426,7 +426,7 @@ export class TypeExpression {
             // Check for recursion
             const aliases = Array.from(this.activeAliases);
             const recursiveAlias = aliases.find(
-              (decl) => decl.id === definition.expr.id,
+              (decl) => decl.id === definition.expr?.id,
             );
             if (recursiveAlias) {
               const name = definition.expr.childForFieldName("name");

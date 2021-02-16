@@ -495,7 +495,7 @@ export class CompletionProvider {
       if (exposedByModule) {
         return Array.from(exposedByModule.values())
           .map((a) => {
-            const markdownDocumentation = HintHelper.createHint(a.syntaxNode);
+            const markdownDocumentation = HintHelper.createHint(a.node);
             switch (a.type) {
               case "TypeAlias":
                 return [
@@ -507,7 +507,7 @@ export class CompletionProvider {
                   }),
                 ];
               case "Type":
-                return a.exposedUnionConstructors
+                return a.constructors?.length
                   ? [
                       this.createTypeCompletion({
                         markdownDocumentation,
@@ -557,24 +557,24 @@ export class CompletionProvider {
     checker.getAllImports(sourceFile).forEach((element): void => {
       const markdownDocumentation = HintHelper.createHint(element.node);
       let sortPrefix = "d";
-      if (element.maintainerAndPackageName) {
+      if (element.fromModule.maintainerAndPackageName) {
         const matchedRanking: string = (RANKING_LIST as {
           [index: string]: string;
-        })[element.maintainerAndPackageName];
+        })[element.fromModule.maintainerAndPackageName];
 
         if (matchedRanking) {
           sortPrefix = `e${matchedRanking}`;
         }
       }
 
-      const label = element.alias;
+      const label = element.name;
       let filterText = label;
 
       const dotIndex = label.lastIndexOf(".");
       const valuePart = label.slice(dotIndex + 1);
 
       const importNode = checker.findImportModuleNameNode(
-        element.fromModuleName,
+        element.fromModule.name,
         sourceFile,
       )?.parent;
 
@@ -587,7 +587,7 @@ export class CompletionProvider {
       // Try to determine if just the value is being typed
       if (
         !valuesAlreadyExposed &&
-        element.fromModuleName !== "Basics" &&
+        element.fromModule.name !== "Basics" &&
         valuePart.toLowerCase().startsWith(inputText.toLowerCase())
       ) {
         filterText = valuePart;
@@ -647,7 +647,6 @@ export class CompletionProvider {
             }),
           );
           break;
-        // Do not handle operators, they are not valid if prefixed
       }
     });
 
@@ -786,14 +785,14 @@ export class CompletionProvider {
       node,
       sourceFile,
       program,
-    )?.node;
+    );
 
     if (!typeDeclarationNode && node.parent?.parent) {
       typeDeclarationNode = TreeUtils.getTypeAliasOfRecordField(
         node.parent.parent,
         sourceFile,
         program,
-      )?.node;
+      );
     }
 
     let recordType: TRecord | undefined;
@@ -1122,10 +1121,10 @@ export class CompletionProvider {
       return possibleImports
         .filter(
           (possibleImport): boolean =>
-            !allImportedValues.get(
-              possibleImport.value,
-              (imp) => imp.fromModuleName === possibleImport.module,
-            ),
+            ![
+              ...allImportedValues.getVar(possibleImport.value),
+              ...allImportedValues.getType(possibleImport.value),
+            ].filter((imp) => imp.fromModule.name === possibleImport.module)[0],
         )
         .sort((a, b) => {
           const aValue = a.value.toLowerCase();
@@ -1256,12 +1255,15 @@ export class CompletionProvider {
     let alreadyImported = true;
 
     // Try to find the module definition that is already imported
-    const definitionNode = checker.findDefinition(node, sourceFile);
+    const definitionNode = checker.findDefinition(node, sourceFile).symbol;
 
     let moduleTree: ISourceFile | undefined;
 
-    if (definitionNode && definitionNode.nodeType === "Module") {
-      moduleTree = program.getSourceFile(definitionNode.uri);
+    if (
+      definitionNode?.node &&
+      TreeUtils.findParentOfType("module_declaration", definitionNode.node)
+    ) {
+      moduleTree = program.getSourceFile(definitionNode.node.tree.uri);
     } else {
       // Try to find this module in the forest to import
       moduleTree = program.getSourceFileOfImportableModule(

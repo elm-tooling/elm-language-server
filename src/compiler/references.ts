@@ -1,14 +1,14 @@
 import { IProgram } from "./program";
 import { ISourceFile } from "./forest";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IReferenceNode } from "../util/referenceNode";
 import { TreeUtils } from "../util/treeUtils";
 import { Utils } from "../util/utils";
-import { IImport, Imports } from "./imports";
+import { Imports } from "./imports";
+import { ISymbol } from "./binder";
 
 export class References {
   public static find(
-    definitionNode: IReferenceNode | undefined,
+    definitionNode: ISymbol | undefined,
     program: IProgram,
   ): { node: SyntaxNode; uri: string }[] {
     const references: { node: SyntaxNode; uri: string }[] = [];
@@ -17,7 +17,7 @@ export class References {
     const checker = program.getTypeChecker();
 
     if (definitionNode) {
-      const refSourceTree = forest.getByUri(definitionNode.uri);
+      const refSourceTree = forest.getByUri(definitionNode.node.tree.uri);
 
       if (refSourceTree) {
         const imports: { [uri: string]: Imports } = {};
@@ -26,7 +26,7 @@ export class References {
         });
 
         const moduleNameNode = TreeUtils.getModuleNameNode(refSourceTree.tree);
-        switch (definitionNode.nodeType) {
+        switch (definitionNode.type) {
           case "Function":
             {
               if (definitionNode.node.parent) {
@@ -37,7 +37,7 @@ export class References {
                 if (annotationNameNode && refSourceTree.writeable) {
                   references.push({
                     node: annotationNameNode,
-                    uri: definitionNode.uri,
+                    uri: definitionNode.node.tree.uri,
                   });
                 }
               }
@@ -50,7 +50,7 @@ export class References {
                 if (refSourceTree.writeable) {
                   references.push({
                     node: functionNameNode,
-                    uri: definitionNode.uri,
+                    uri: definitionNode.node.tree.uri,
                   });
                 }
 
@@ -70,7 +70,7 @@ export class References {
                 if (localFunctions && refSourceTree.writeable) {
                   references.push(
                     ...localFunctions.map((node) => {
-                      return { node, uri: definitionNode.uri };
+                      return { node, uri: definitionNode.node.tree.uri };
                     }),
                   );
                 }
@@ -92,7 +92,7 @@ export class References {
                     if (exposedNode && refSourceTree.writeable) {
                       references.push({
                         node: exposedNode,
-                        uri: definitionNode.uri,
+                        uri: definitionNode.node.tree.uri,
                       });
                     }
                   }
@@ -101,7 +101,7 @@ export class References {
                     const moduleName = moduleNameNode.text;
 
                     for (const uri in imports) {
-                      if (uri === definitionNode.uri) {
+                      if (uri === definitionNode.node.tree.uri) {
                         continue;
                       }
 
@@ -117,18 +117,15 @@ export class References {
                           otherTreeContainer.tree,
                         ) ?? moduleName;
 
-                      const element = imports[uri];
-                      const filter = (imp: IImport): boolean =>
-                        imp.type === "Function" &&
-                        imp.fromModuleName === moduleName;
+                      const allImports = imports[uri];
 
                       // Find the function in the other module's imports
                       const found =
-                        element.get(functionName, filter) ??
-                        element.get(
+                        allImports.getVar(functionName, moduleName)[0] ??
+                        allImports.getVar(
                           `${importedModuleAlias}.${functionName}`,
-                          filter,
-                        );
+                          moduleName,
+                        )[0];
 
                       if (found) {
                         if (
@@ -157,7 +154,7 @@ export class References {
                           // Find all function calls in the other tree
                           const functions = this.findFunctionCalls(
                             otherTreeContainer.tree.rootNode,
-                            found?.alias,
+                            found?.name,
                           );
                           if (functions) {
                             references.push(
@@ -185,7 +182,7 @@ export class References {
                 if (refSourceTree.writeable) {
                   references.push({
                     node: portNameNode,
-                    uri: definitionNode.uri,
+                    uri: definitionNode.node.tree.uri,
                   });
                 }
 
@@ -197,7 +194,7 @@ export class References {
                 if (localCallsToPort && refSourceTree.writeable) {
                   references.push(
                     ...localCallsToPort.map((node) => {
-                      return { node, uri: definitionNode.uri };
+                      return { node, uri: definitionNode.node.tree.uri };
                     }),
                   );
                 }
@@ -219,7 +216,7 @@ export class References {
                     if (exposedNode && refSourceTree.writeable) {
                       references.push({
                         node: exposedNode,
-                        uri: definitionNode.uri,
+                        uri: definitionNode.node.tree.uri,
                       });
                     }
                   }
@@ -228,7 +225,7 @@ export class References {
                     const moduleName = moduleNameNode.text;
 
                     for (const uri in imports) {
-                      if (uri === definitionNode.uri) {
+                      if (uri === definitionNode.node.tree.uri) {
                         continue;
                       }
 
@@ -244,18 +241,15 @@ export class References {
                           otherTreeContainer.tree,
                         ) ?? moduleName;
 
-                      const element = imports[uri];
-                      const filter = (imp: IImport): boolean =>
-                        imp.type === "Port" &&
-                        imp.fromModuleName === moduleName;
+                      const allImports = imports[uri];
 
                       // Find the function in the other module's imports
                       const found =
-                        element.get(portName, filter) ??
-                        element.get(
+                        allImports.getVar(portName, moduleName)[0] ??
+                        allImports.getVar(
                           `${importedModuleAlias}.${portName}`,
-                          filter,
-                        );
+                          moduleName,
+                        )[0];
 
                       if (found) {
                         if (
@@ -284,7 +278,7 @@ export class References {
                           // Find all function calls in the other tree
                           const functions = this.findFunctionCalls(
                             otherTreeContainer.tree.rootNode,
-                            found?.alias,
+                            found?.name,
                           );
                           if (functions) {
                             references.push(
@@ -314,7 +308,7 @@ export class References {
                 if (refSourceTree.writeable) {
                   references.push({
                     node: typeOrTypeAliasNameNode,
-                    uri: definitionNode.uri,
+                    uri: definitionNode.node.tree.uri,
                   });
                 }
 
@@ -325,7 +319,7 @@ export class References {
                 if (localFunctions && refSourceTree.writeable) {
                   references.push(
                     ...localFunctions.map((node) => {
-                      return { node, uri: definitionNode.uri };
+                      return { node, uri: definitionNode.node.tree.uri };
                     }),
                   );
                 }
@@ -347,7 +341,7 @@ export class References {
                     if (exposedNode && refSourceTree.writeable) {
                       references.push({
                         node: exposedNode,
-                        uri: definitionNode.uri,
+                        uri: definitionNode.node.tree.uri,
                       });
                     }
                   }
@@ -355,7 +349,7 @@ export class References {
                   if (isExposed && moduleNameNode) {
                     const moduleName = moduleNameNode.text;
                     for (const uri in imports) {
-                      if (uri === definitionNode.uri) {
+                      if (uri === definitionNode.node.tree.uri) {
                         continue;
                       }
 
@@ -371,18 +365,18 @@ export class References {
                           otherTreeContainer.tree,
                         ) ?? moduleName;
 
-                      const element = imports[uri];
-                      const filter = (imp: IImport): boolean =>
-                        (imp.type === "Type" || imp.type === "TypeAlias") &&
-                        imp.fromModuleName === moduleName;
+                      const allImports = imports[uri];
 
                       // Find the type or type alias in the other module's imports
                       const found =
-                        element.get(typeOrTypeAliasName, filter) ??
-                        element.get(
+                        allImports.getType(
+                          typeOrTypeAliasName,
+                          moduleName,
+                        )[0] ??
+                        allImports.getType(
                           `${importedModuleAlias}.${typeOrTypeAliasName}`,
-                          filter,
-                        );
+                          moduleName,
+                        )[0];
 
                       if (found) {
                         if (
@@ -409,7 +403,7 @@ export class References {
 
                           const typeOrTypeAliasCalls = TreeUtils.findTypeOrTypeAliasCalls(
                             otherTreeContainer.tree,
-                            found.alias,
+                            found.name,
                           );
                           if (typeOrTypeAliasCalls) {
                             references.push(
@@ -433,12 +427,12 @@ export class References {
               if (refSourceTree.writeable) {
                 references.push({
                   node: moduleNameNode,
-                  uri: definitionNode.uri,
+                  uri: definitionNode.node.tree.uri,
                 });
               }
 
               for (const uri in imports) {
-                if (uri === definitionNode.uri) {
+                if (uri === definitionNode.node.tree.uri) {
                   continue;
                 }
 
@@ -495,7 +489,7 @@ export class References {
             if (refSourceTree.writeable) {
               references.push({
                 node: definitionNode.node,
-                uri: definitionNode.uri,
+                uri: definitionNode.node.tree.uri,
               });
 
               const valueDeclaration = TreeUtils.findParentOfType(
@@ -517,7 +511,7 @@ export class References {
                   if (parameters) {
                     references.push(
                       ...parameters.map((node) => {
-                        return { node, uri: definitionNode.uri };
+                        return { node, uri: definitionNode.node.tree.uri };
                       }),
                     );
                   }
@@ -530,7 +524,7 @@ export class References {
             if (refSourceTree.writeable) {
               references.push({
                 node: definitionNode.node,
-                uri: definitionNode.uri,
+                uri: definitionNode.node.tree.uri,
               });
 
               if (
@@ -549,7 +543,7 @@ export class References {
                   if (parameters) {
                     references.push(
                       ...parameters.map((node) => {
-                        return { node, uri: definitionNode.uri };
+                        return { node, uri: definitionNode.node.tree.uri };
                       }),
                     );
                   }
@@ -562,7 +556,7 @@ export class References {
             if (refSourceTree.writeable) {
               references.push({
                 node: definitionNode.node,
-                uri: definitionNode.uri,
+                uri: definitionNode.node.tree.uri,
               });
 
               if (
@@ -578,7 +572,7 @@ export class References {
                   if (parameters) {
                     references.push(
                       ...parameters.map((node) => {
-                        return { node, uri: definitionNode.uri };
+                        return { node, uri: definitionNode.node.tree.uri };
                       }),
                     );
                   }
@@ -593,7 +587,7 @@ export class References {
               if (refSourceTree.writeable) {
                 references.push({
                   node: nameNode,
-                  uri: definitionNode.uri,
+                  uri: definitionNode.node.tree.uri,
                 });
                 const unionConstructorCalls = TreeUtils.findUnionConstructorCalls(
                   refSourceTree.tree,
@@ -603,27 +597,28 @@ export class References {
                 if (unionConstructorCalls) {
                   references.push(
                     ...unionConstructorCalls.map((a) => {
-                      return { node: a, uri: definitionNode.uri };
+                      return { node: a, uri: definitionNode.node.tree.uri };
                     }),
                   );
                 }
               }
 
               for (const uri in imports) {
-                if (uri === definitionNode.uri) {
+                if (uri === definitionNode.node.tree.uri) {
                   continue;
                 }
 
-                const element = imports[uri];
+                const moduleName = moduleNameNode.text;
+
+                const allImports = imports[uri];
                 const found =
-                  element.get(nameNode.text) ??
-                  element.get(`${moduleNameNode.text}.${nameNode.text}`);
+                  allImports.getConstructor(nameNode.text, moduleName)[0] ??
+                  allImports.getConstructor(
+                    `${moduleNameNode.text}.${nameNode.text}`,
+                    moduleName,
+                  )[0];
 
-                const needsToBeChecked =
-                  found?.fromModuleName === moduleNameNode.text &&
-                  found.type === "UnionConstructor";
-
-                if (needsToBeChecked) {
+                if (found && found.type === "UnionConstructor") {
                   const treeToCheck = forest.getByUri(uri);
                   if (treeToCheck && treeToCheck.writeable) {
                     const unionConstructorCallsFromOtherFiles = TreeUtils.findUnionConstructorCalls(
@@ -650,7 +645,7 @@ export class References {
               if (fieldName) {
                 references.push({
                   node: fieldName,
-                  uri: definitionNode.uri,
+                  uri: definitionNode.node.tree.uri,
                 });
 
                 references.push(
@@ -663,7 +658,7 @@ export class References {
                 );
 
                 for (const uri in imports) {
-                  if (uri === definitionNode.uri) {
+                  if (uri === definitionNode.node.tree.uri) {
                     continue;
                   }
 
@@ -800,7 +795,7 @@ export class References {
 
   private static getFieldReferences(
     fieldName: string,
-    definition: { node: SyntaxNode; uri: string },
+    definition: ISymbol,
     sourceFile: ISourceFile,
     program: IProgram,
   ): { node: SyntaxNode; uri: string }[] {
@@ -811,7 +806,7 @@ export class References {
     fieldUsages.forEach((field) => {
       const fieldDef = program
         .getTypeChecker()
-        .findDefinition(field, sourceFile);
+        .findDefinition(field, sourceFile).symbol;
 
       if (fieldDef?.node.id === definition.node.id) {
         references.push({

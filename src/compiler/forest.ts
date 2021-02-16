@@ -1,8 +1,8 @@
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { Imports } from "./imports";
-import { IExposing, TreeUtils } from "../util/treeUtils";
+import { TreeUtils } from "../util/treeUtils";
 import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
-import { SymbolMap } from "./binder";
+import { IExposing, SymbolMap } from "./binder";
 import { Diagnostic } from "./diagnostics";
 import { ElmProject } from "./program";
 
@@ -16,6 +16,7 @@ export interface ISourceFile {
   isTestFile: boolean;
 
   parseDiagnostics: Diagnostic[];
+  bindDiagnostics: Diagnostic[];
 
   // These are resolved in the synchronize step and are cached until the file is changed
   moduleName?: string;
@@ -78,6 +79,7 @@ export class Forest implements IForest {
       project,
       isTestFile,
       parseDiagnostics: [],
+      bindDiagnostics: [],
     };
 
     this.treeMap.set(uri, sourceFile);

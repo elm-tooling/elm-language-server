@@ -6,12 +6,12 @@ import {
   TextDocumentPositionParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode } from "web-tree-sitter";
 import { DiagnosticsProvider } from ".";
+import { ISymbol } from "../compiler/binder";
 import { getEmptyTypes } from "../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
-import { NodeType, TreeUtils } from "../util/treeUtils";
+import { TreeUtils } from "../util/treeUtils";
 import { ITextDocumentPositionParams } from "./paramsExtensions";
 
 type HoverResult = Hover | null | undefined;
@@ -46,7 +46,8 @@ export class HoverProvider {
         params.position,
       );
 
-      let definitionNode = checker.findDefinition(nodeAtPosition, sourceFile);
+      let definitionNode = checker.findDefinition(nodeAtPosition, sourceFile)
+        .symbol;
 
       if (definitionNode) {
         if (
@@ -85,16 +86,14 @@ export class HoverProvider {
   };
 
   private createMarkdownHoverFromDefinition(
-    definitionNode:
-      | { node: SyntaxNode; uri: string; nodeType: NodeType }
-      | undefined,
+    definitionNode: ISymbol | undefined,
     typeString: string,
   ): Hover | undefined {
     if (definitionNode) {
       const value =
-        definitionNode.nodeType === "FunctionParameter" ||
-        definitionNode.nodeType === "AnonymousFunctionParameter" ||
-        definitionNode.nodeType === "CasePattern"
+        definitionNode.type === "FunctionParameter" ||
+        definitionNode.type === "AnonymousFunctionParameter" ||
+        definitionNode.type === "CasePattern"
           ? HintHelper.createHintFromFunctionParameter(
               definitionNode.node,
               typeString,

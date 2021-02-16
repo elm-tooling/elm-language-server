@@ -978,11 +978,17 @@ export class InferenceScope {
   }
 
   private inferReferenceElement(e: Expression): Type {
-    const definition =
-      findDefinition(e.firstNamedChild?.lastNamedChild, this.program) ??
-      findDefinition(e.firstNamedChild, this.program);
+    let definition = findDefinition(
+      e.firstNamedChild?.lastNamedChild,
+      this.program,
+    );
+    if (!definition.expr) {
+      definition = findDefinition(e.firstNamedChild, this.program);
+    }
 
-    if (!definition) {
+    this.diagnostics.push(...definition.diagnostics);
+
+    if (!definition.expr) {
       const sourceFile = this.program.getSourceFile(e.tree.uri);
       if (
         nameIsKernel(e.text) &&
@@ -1332,7 +1338,7 @@ export class InferenceScope {
     // Find operator reference
     const definition = findDefinition(e, this.program);
 
-    const opDeclaration = mapSyntaxNodeToExpression(definition?.expr.parent);
+    const opDeclaration = mapSyntaxNodeToExpression(definition.expr?.parent);
 
     const infixDeclarationExpr = mapSyntaxNodeToExpression(
       opDeclaration
@@ -1388,9 +1394,9 @@ export class InferenceScope {
     // Find operator reference
     const definition = findDefinition(operatorFunction.operator, this.program);
 
-    const opDeclaration = mapSyntaxNodeToExpression(definition?.expr.parent);
+    const opDeclaration = mapSyntaxNodeToExpression(definition.expr?.parent);
 
-    if (opDeclaration?.nodeType === "ValueDeclaration" && definition?.uri) {
+    if (opDeclaration?.nodeType === "ValueDeclaration" && definition?.expr) {
       return this.inferReferencedValueDeclaration(opDeclaration);
     } else {
       return TUnknown;
@@ -1837,7 +1843,7 @@ export class InferenceScope {
       this.program,
     );
 
-    if (variant?.expr.nodeType !== "UnionVariant") {
+    if (variant.expr?.nodeType !== "UnionVariant") {
       unionPattern.namedParams.forEach((p) => this.setBinding(p, TUnknown));
       this.diagnostics.push(
         error(

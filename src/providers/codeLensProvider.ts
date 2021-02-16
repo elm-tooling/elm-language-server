@@ -119,7 +119,7 @@ export class CodeLensProvider {
           const definitionNode = checker.findDefinition(
             nodeAtPosition,
             sourceFile,
-          );
+          ).symbol;
 
           const references = References.find(definitionNode, program);
 

@@ -4,6 +4,7 @@ import { TreeUtils } from "../../util/treeUtils";
 import { Utils } from "../../util/utils";
 import { IProgram } from "../program";
 import { performance } from "perf_hooks";
+import { Diagnostic } from "../diagnostics";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export let definitionTime = 0;
@@ -788,15 +789,15 @@ export function mapTypeAnnotation(typeAnnotation: ETypeAnnotation): void {
 export function findDefinition(
   e: SyntaxNode | undefined | null,
   program: IProgram,
-): { expr: Expression; uri: string } | undefined {
+): { expr?: Expression; diagnostics: Diagnostic[] } {
   if (!e) {
-    return;
+    return { diagnostics: [] };
   }
 
   const sourceFile = program.getForest().getByUri(e.tree.uri);
 
   if (!sourceFile) {
-    return;
+    return { diagnostics: [] };
   }
 
   const start = performance.now();
@@ -805,12 +806,10 @@ export function findDefinition(
     .findDefinitionShallow(e, sourceFile);
   definitionTime += performance.now() - start;
 
-  const mappedNode = mapSyntaxNodeToExpression(definition?.node);
+  const mappedNode = mapSyntaxNodeToExpression(definition.symbol?.node);
 
-  if (mappedNode && definition) {
-    return {
-      expr: mappedNode,
-      uri: definition.uri,
-    };
-  }
+  return {
+    expr: mappedNode,
+    diagnostics: definition.diagnostics,
+  };
 }
