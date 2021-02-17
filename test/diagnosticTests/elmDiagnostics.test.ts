@@ -838,7 +838,7 @@ test listList =
     await testTypeInference(basicsSources + source, []);
   });
 
-  test("test duplicate type imports produce an error", async () => {
+  test("test duplicate type imports produce an error if ambiguous", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)

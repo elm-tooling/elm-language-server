@@ -67,7 +67,7 @@ export const Diagnostics = {
     DiagnosticSeverity.Error,
   ),
   AmbiguousVar: diag(
-    "ambiguous_variant",
+    "ambiguous_var",
     "The usage of the variable `{0}` is ambiguous because it is exposed by multiple imports.",
     DiagnosticSeverity.Error,
   ),
