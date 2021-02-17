@@ -32,19 +32,27 @@ export class MultiMap<K, V> extends Map<K, V | V[]> {
     }
   }
 
-  public set(key: K, val: V): this {
+  public set(key: K, val: V, equal?: (a: V, b: V) => boolean): this {
     if (super.has(key)) {
       const existing = super.get(key);
 
       if (Array.isArray(existing)) {
-        existing.push(val);
+        if (!equal || !existing.some((imp) => equal(imp, val))) {
+          existing.push(val);
+        }
       } else if (existing) {
-        super.set(key, [existing, val]);
+        if (!equal || !equal(existing, val)) {
+          super.set(key, [existing, val]);
+        }
       }
     } else {
       super.set(key, val);
     }
     return this;
+  }
+
+  public replace(key: K, val: V): this {
+    return super.set(key, val);
   }
 
   public forEach(

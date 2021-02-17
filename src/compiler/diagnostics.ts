@@ -61,6 +61,21 @@ function diag(
 }
 
 export const Diagnostics = {
+  AmbiguousType: diag(
+    "ambiguous_type",
+    "The usage of the type `{0}` is ambiguous because it is exposed by multiple imports.",
+    DiagnosticSeverity.Error,
+  ),
+  AmbiguousVar: diag(
+    "ambiguous_var",
+    "The usage of the variable `{0}` is ambiguous because it is exposed by multiple imports.",
+    DiagnosticSeverity.Error,
+  ),
+  AmbiguousVariant: diag(
+    "ambiguous_variant",
+    "The usage of the variant `{0}` is ambiguous because it is exposed by multiple imports.",
+    DiagnosticSeverity.Error,
+  ),
   ArgumentCount: diag(
     "argument_count",
     "`{0}` is not a function, but it was given {1} arguments.",
@@ -71,15 +86,35 @@ export const Diagnostics = {
     "Value cannot be defined in terms of itself.",
     DiagnosticSeverity.Error,
   ),
+  ExportNotFound: diag(
+    "export_not_found",
+    "Cannot find a {0} named `{1}` to expose.",
+    DiagnosticSeverity.Error,
+  ),
+  ExportOpenAlias: diag(
+    "export_open_alias",
+    "Cannot use (..) when exposing a type alias.",
+    DiagnosticSeverity.Error,
+  ),
   FieldAccessOnNonRecord: diag(
     "field_access_on_non_record",
     "Cannot access fields on non-record type: `{0}`.",
     DiagnosticSeverity.Error,
   ),
   General: diag("general", "General error: {0}", DiagnosticSeverity.Error),
+  ImportExposingNotFound: diag(
+    "import_exposing_not_found",
+    "The `{0}` module does not expose `{1}`.",
+    DiagnosticSeverity.Error,
+  ),
   ImportMissing: diag(
     "import_resolve",
     "Could not find a module to import named `{0}` in `dependencies` or `source-directories`.",
+    DiagnosticSeverity.Error,
+  ),
+  ImportOpenAlias: diag(
+    "import_open_alias",
+    "The `{0}` type alias cannot be followed by (..).",
     DiagnosticSeverity.Error,
   ),
   InvalidPattern: diag(

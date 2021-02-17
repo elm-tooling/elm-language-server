@@ -73,14 +73,14 @@ export class ImportUtils {
           value: exposed.name,
           package: tree.maintainerAndPackageName,
           type: exposed.type,
-          node: exposed.syntaxNode,
+          node: exposed.node,
         });
 
-        exposed.exposedUnionConstructors?.forEach((exp) => {
-          if (exp.syntaxNode.parent) {
+        exposed.constructors?.forEach((exp) => {
+          if (exp.node.parent) {
             const value = TreeUtils.findFirstNamedChildOfType(
               "upper_case_identifier",
-              exp.syntaxNode.parent,
+              exp.node.parent,
             )?.text;
 
             if (value) {
@@ -90,7 +90,7 @@ export class ImportUtils {
                 valueToImport: `${value}(..)`,
                 package: tree.maintainerAndPackageName,
                 type: "UnionConstructor",
-                node: exp.syntaxNode,
+                node: exp.node,
               });
             }
           }

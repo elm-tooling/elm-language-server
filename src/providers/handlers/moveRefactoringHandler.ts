@@ -150,9 +150,9 @@ export class MoveRefactoringHandler {
         // Update references
         const references = References.find(
           {
+            name: declarationNode.text,
             node: declarationNode,
-            nodeType: "Function",
-            uri: params.sourceUri,
+            type: "Function",
           },
           params.program,
         ).map((ref) => {

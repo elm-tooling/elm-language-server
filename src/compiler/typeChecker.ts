@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
-import { flatMap, NodeType, TreeUtils } from "../util/treeUtils";
+import { flatMap, TreeUtils } from "../util/treeUtils";
 import {
   Expression,
   EValueDeclaration,
@@ -23,7 +23,7 @@ import { ISourceFile } from "./forest";
 import { IImport, Imports } from "./imports";
 import { TypeRenderer } from "./typeRenderer";
 import { performance } from "perf_hooks";
-import { bindTreeContainer } from "./binder";
+import { bindTreeContainer, ISymbol } from "./binder";
 import { Sequence } from "../util/sequence";
 import { Utils } from "../util/utils";
 import { TypeExpression } from "./typeExpression";
@@ -40,9 +40,8 @@ export function resetBindTime(): void {
 }
 
 export interface DefinitionResult {
-  node: SyntaxNode;
-  uri: string;
-  nodeType: NodeType;
+  symbol?: ISymbol;
+  diagnostics: Diagnostic[];
 }
 
 class DiagnosticsCollection extends Map<string, Diagnostic[]> {
@@ -67,11 +66,11 @@ export interface TypeChecker {
   findDefinition: (
     node: SyntaxNode,
     sourceFile: ISourceFile,
-  ) => DefinitionResult | undefined;
+  ) => DefinitionResult;
   findDefinitionShallow: (
     node: SyntaxNode,
     sourceFile: ISourceFile,
-  ) => DefinitionResult | undefined;
+  ) => DefinitionResult;
   getAllImports: (sourceFile: ISourceFile) => Imports;
   getQualifierForName: (
     sourceFile: ISourceFile,
@@ -329,6 +328,10 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     }
 
     const allImports = Imports.getImports(sourceFile, forest);
+    allImports.getDiagnostics().forEach((diagnostic) => {
+      diagnostics.add(diagnostic);
+    });
+
     imports.set(sourceFile.uri, allImports);
     return allImports;
   }
@@ -336,43 +339,55 @@ export function createTypeChecker(program: IProgram): TypeChecker {
   function findImport(
     sourceFile: ISourceFile,
     name: string,
-    filter?: (imp: IImport) => boolean,
-  ): DefinitionResult | undefined {
-    const possibleImport = getAllImports(sourceFile).get(name, filter);
-
-    if (possibleImport) {
-      return {
-        node: possibleImport.node,
-        nodeType: possibleImport.type,
-        uri: possibleImport.fromUri,
-      };
+    type?: "Var" | "Type" | "Constructor" | "Module",
+  ): IImport[] {
+    const allImports = getAllImports(sourceFile);
+    if (type === "Type") {
+      return allImports.getType(name);
+    } else if (type === "Constructor") {
+      return allImports.getConstructor(name);
+    } else if (type === "Module") {
+      const module = allImports.getModule(name);
+      if (module) {
+        return [module];
+      } else {
+        return [];
+      }
+    } else if (type === "Var") {
+      return allImports.getVar(name);
     }
-  }
 
-  function findImportOfType(
-    sourceFile: ISourceFile,
-    name: string,
-    type: NodeType,
-  ): DefinitionResult | undefined {
-    return findImport(sourceFile, name, (imp) => imp.type === type);
+    let result = allImports.getVar(name);
+
+    if (result.length > 0) {
+      return result;
+    }
+
+    result = allImports.getType(name);
+
+    if (result.length > 0) {
+      return result;
+    }
+
+    return allImports.getConstructor(name);
   }
 
   function findDefinition(
     nodeAtPosition: SyntaxNode,
     sourceFile: ISourceFile,
-  ): DefinitionResult | undefined {
+  ): DefinitionResult {
     const definition = findDefinitionShallow(nodeAtPosition, sourceFile);
 
     if (
-      definition?.node.type === "lower_pattern" &&
-      definition.node.firstNamedChild
+      definition.symbol?.node?.type === "lower_pattern" &&
+      definition.symbol.node.firstNamedChild
     ) {
       const innerDefinition = findDefinitionShallow(
-        definition.node.firstNamedChild,
+        definition.symbol.node.firstNamedChild,
         sourceFile,
       );
 
-      if (innerDefinition) {
+      if (innerDefinition.symbol) {
         return innerDefinition;
       }
     }
@@ -383,13 +398,12 @@ export function createTypeChecker(program: IProgram): TypeChecker {
   function findDefinitionShallow(
     nodeAtPosition: SyntaxNode,
     sourceFile: ISourceFile,
-  ): DefinitionResult | undefined {
-    const uri = sourceFile.uri;
+  ): DefinitionResult {
     const nodeText = nodeAtPosition.text;
     const nodeParent = nodeAtPosition.parent;
 
     if (!nodeParent) {
-      return;
+      return { diagnostics: [] };
     }
 
     const nodeParentType = nodeParent.type;
@@ -404,9 +418,8 @@ export function createTypeChecker(program: IProgram): TypeChecker {
 
       if (moduleNode) {
         return {
-          node: moduleNode,
-          nodeType: "Module",
-          uri,
+          symbol: { name: moduleNode.text, node: moduleNode, type: "Module" },
+          diagnostics: [],
         };
       }
     } else if (
@@ -415,23 +428,23 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     ) {
       const upperCaseQid = nodeParent;
       const upperCaseQidText = upperCaseQid.text;
-      return findImportOfType(sourceFile, upperCaseQidText, "Module");
+
+      return {
+        symbol: findImport(sourceFile, upperCaseQidText, "Module")[0],
+        diagnostics: [],
+      };
     } else if (
       (nodeParentType === "exposed_value" &&
         nodeParent.parent?.parent?.type === "module_declaration") ||
       nodeParentType === "type_annotation" ||
       nodeParentType === "port_annotation"
     ) {
-      const definitionNode = rootSymbols?.get(nodeText);
+      const symbol = rootSymbols?.get(nodeText);
 
-      if (
-        definitionNode &&
-        (definitionNode.type === "Function" || definitionNode.type === "Port")
-      ) {
+      if (symbol && (symbol.type === "Function" || symbol.type === "Port")) {
         return {
-          node: definitionNode.node,
-          nodeType: definitionNode.type,
-          uri,
+          symbol,
+          diagnostics: [],
         };
       }
     } else if (
@@ -440,27 +453,39 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       nodeAtPosition.previousNamedSibling?.type === "type" ||
       nodeAtPosition.previousNamedSibling?.type === "alias"
     ) {
-      const definitionNode = rootSymbols?.get(nodeText);
-
-      if (definitionNode) {
-        return {
-          node: definitionNode.node,
-          nodeType: definitionNode.type,
-          uri,
-        };
-      }
+      return {
+        symbol: rootSymbols?.get(
+          nodeText,
+          (symbol) => symbol.type === "Type" || symbol.type === "TypeAlias",
+        ),
+        diagnostics: [],
+      };
     } else if (
       (nodeParentType === "exposed_value" ||
         nodeParentType === "exposed_type") &&
       nodeParent.parent?.parent?.type === "import_clause"
     ) {
-      return findImport(sourceFile, nodeText);
+      const moduleName =
+        nodeParent.parent?.parent.childForFieldName("moduleName")?.text ?? "";
+      const imports = findImport(
+        sourceFile,
+        nodeText,
+        nodeParentType === "exposed_value" ? "Var" : "Type",
+      ).filter((imp) => imp.fromModule.name === moduleName);
+
+      return {
+        symbol: imports[0],
+        diagnostics: [],
+      };
     } else if (nodeParentType === "union_variant") {
       const definitionNode = nodeParent;
       return {
-        node: definitionNode,
-        nodeType: "UnionConstructor",
-        uri,
+        symbol: {
+          name: definitionNode.text,
+          node: definitionNode,
+          type: "UnionConstructor",
+        },
+        diagnostics: [],
       };
     } else if (nodeParent && nodeParent.type === "upper_case_qid") {
       const upperCaseQid = nodeParent;
@@ -475,54 +500,47 @@ export function createTypeChecker(program: IProgram): TypeChecker {
         upperCaseQid.parent?.type === "exposed_type";
       const isConstructorUsage = upperCaseQid.parent?.type === "value_expr";
 
-      const definitionNode = rootSymbols?.get(upperCaseQidText, (symbol) =>
-        isTypeUsage
-          ? symbol.type === "Type" || symbol.type === "TypeAlias"
-          : isConstructorUsage
-          ? symbol.type === "UnionConstructor" ||
-            (symbol.type === "TypeAlias" &&
-              symbol.node.childForFieldName("typeExpression")?.children[0]
-                ?.type === "record_type")
-          : symbol.type === "UnionConstructor",
-      );
+      const localSymbols =
+        rootSymbols
+          ?.getAll(upperCaseQidText)
+          ?.filter((symbol) =>
+            isTypeUsage
+              ? symbol.type === "Type" || symbol.type === "TypeAlias"
+              : isConstructorUsage
+              ? symbol.type === "UnionConstructor" ||
+                (symbol.type === "TypeAlias" && symbol.constructors?.length)
+              : symbol.type === "UnionConstructor",
+          ) ?? [];
 
-      if (definitionNode) {
+      if (localSymbols.length > 0) {
         return {
-          node: definitionNode.node,
-          nodeType: definitionNode.type,
-          uri,
+          symbol: localSymbols[0],
+          diagnostics: [],
         };
       }
 
-      let definitionFromOtherFile;
-
-      if (isTypeUsage) {
-        definitionFromOtherFile = findImportOfType(
-          sourceFile,
-          upperCaseQidText,
-          "Type",
-        );
-        if (definitionFromOtherFile) {
-          return definitionFromOtherFile;
-        }
-      } else {
-        definitionFromOtherFile = findImportOfType(
-          sourceFile,
-          upperCaseQidText,
-          "UnionConstructor",
-        );
-        if (definitionFromOtherFile) {
-          return definitionFromOtherFile;
-        }
-      }
-
-      definitionFromOtherFile = findImportOfType(
+      const imports = findImport(
         sourceFile,
         upperCaseQidText,
-        "TypeAlias",
+        isTypeUsage ? "Type" : "Constructor",
       );
-      if (definitionFromOtherFile) {
-        return definitionFromOtherFile;
+
+      if (imports.length > 0) {
+        return {
+          symbol: imports.length === 1 ? imports[0] : undefined,
+          diagnostics:
+            imports.length > 1
+              ? [
+                  error(
+                    upperCaseQid,
+                    isTypeUsage
+                      ? Diagnostics.AmbiguousType
+                      : Diagnostics.AmbiguousVariant,
+                    upperCaseQidText,
+                  ),
+                ]
+              : [],
+        };
       }
 
       // Make sure the next node is a dot, or else it isn't a Module
@@ -534,32 +552,38 @@ export function createTypeChecker(program: IProgram): TypeChecker {
           findImportModuleNameNode(moduleNameOrAlias, sourceFile)?.text ??
           moduleNameOrAlias;
 
-        const definitionFromOtherFile = findImportOfType(
-          sourceFile,
-          moduleName,
-          "Module",
-        );
-        if (definitionFromOtherFile) {
-          return definitionFromOtherFile;
+        const moduleImport = findImport(sourceFile, moduleName, "Module")[0];
+
+        if (moduleImport) {
+          return {
+            symbol: moduleImport,
+            diagnostics: [],
+          };
         }
       }
 
-      definitionFromOtherFile = findImportOfType(
+      const moduleImport = findImport(
         sourceFile,
         findImportModuleNameNode(upperCaseQidText, sourceFile)?.text ??
           upperCaseQidText,
         "Module",
-      );
+      )[0];
 
-      if (definitionFromOtherFile) {
-        return definitionFromOtherFile;
+      if (moduleImport) {
+        return {
+          symbol: moduleImport,
+          diagnostics: [],
+        };
       }
     } else if (
       nodeParentType === "lower_pattern" &&
       nodeParent.parent?.type === "record_pattern"
     ) {
       const type = findType(nodeParent.parent);
-      return TreeUtils.findFieldReference(type, nodeText);
+      return {
+        symbol: TreeUtils.findFieldReference(type, nodeText),
+        diagnostics: [],
+      };
     } else if (
       nodeAtPosition.type === "lower_case_identifier" &&
       nodeParentType === "function_declaration_left" &&
@@ -568,9 +592,8 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       // The function name should resolve to itself
       if (nodeParent.firstNamedChild?.text === nodeText) {
         return {
-          node: nodeParent,
-          nodeType: "Function",
-          uri: sourceFile.uri,
+          symbol: { name: nodeParent.text, node: nodeParent, type: "Function" },
+          diagnostics: [],
         };
       }
     } else if (
@@ -603,9 +626,8 @@ export function createTypeChecker(program: IProgram): TypeChecker {
 
       if (localBinding) {
         return {
-          node: localBinding.node,
-          nodeType: localBinding.type,
-          uri: sourceFile.uri,
+          symbol: localBinding,
+          diagnostics: [],
         };
       } else {
         const nodeParentText = nodeParent.text;
@@ -623,36 +645,25 @@ export function createTypeChecker(program: IProgram): TypeChecker {
             findImportModuleNameNode(moduleNameOrAlias, sourceFile)?.text ??
             moduleNameOrAlias;
 
-          const moduleDefinitionFromOtherFile = findImportOfType(
-            sourceFile,
-            moduleName,
-            "Module",
-          );
+          const moduleImport = findImport(sourceFile, moduleName, "Module")[0];
 
-          if (moduleDefinitionFromOtherFile) {
-            return moduleDefinitionFromOtherFile;
+          if (moduleImport) {
+            return {
+              symbol: moduleImport,
+              diagnostics: [],
+            };
           }
         }
 
-        const portDefinitionFromOtherFile = findImportOfType(
-          sourceFile,
-          nodeParentText,
-          "Port",
-        );
+        const imports = findImport(sourceFile, nodeParentText, "Var");
 
-        if (portDefinitionFromOtherFile) {
-          return portDefinitionFromOtherFile;
-        }
-
-        const functionDefinitionFromOtherFile = findImportOfType(
-          sourceFile,
-          nodeParentText,
-          "Function",
-        );
-
-        if (functionDefinitionFromOtherFile) {
-          return functionDefinitionFromOtherFile;
-        }
+        return {
+          symbol: imports.length === 1 ? imports[0] : undefined,
+          diagnostics:
+            imports.length > 1
+              ? [error(nodeParent, Diagnostics.AmbiguousVar, nodeParentText)]
+              : [],
+        };
       }
     } else if (nodeAtPosition.type === "operator_identifier") {
       const operatorsCache = program.getOperatorsCache();
@@ -664,22 +675,25 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       const definitionNode = TreeUtils.findOperator(sourceFile, nodeText);
       if (definitionNode) {
         const result: DefinitionResult = {
-          node: definitionNode,
-          uri,
-          nodeType: "Operator",
+          symbol: {
+            name: definitionNode.text,
+            node: definitionNode,
+            type: "Operator",
+          },
+          diagnostics: [],
         };
         operatorsCache.set(nodeText, Object.freeze(result));
         return result;
       } else {
-        const definitionFromOtherFile = findImportOfType(
-          sourceFile,
-          nodeText,
-          "Operator",
-        );
+        const operatorImport = findImport(sourceFile, nodeText, "Var")[0];
 
-        if (definitionFromOtherFile) {
-          operatorsCache.set(nodeText, Object.freeze(definitionFromOtherFile));
-          return definitionFromOtherFile;
+        if (operatorImport) {
+          const result: DefinitionResult = {
+            symbol: operatorImport,
+            diagnostics: [],
+          };
+          operatorsCache.set(nodeText, Object.freeze(result));
+          return result;
         }
       }
     } else if (nodeParentType === "field_access_expr") {
@@ -692,7 +706,10 @@ export function createTypeChecker(program: IProgram): TypeChecker {
 
       if (target) {
         const type = findType(target);
-        return TreeUtils.findFieldReference(type, nodeText);
+        return {
+          symbol: TreeUtils.findFieldReference(type, nodeText),
+          diagnostics: [],
+        };
       }
     } else if (
       nodeAtPosition.type === "lower_case_identifier" &&
@@ -700,7 +717,10 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       nodeParent.parent?.type === "record_expr"
     ) {
       const type = findType(nodeParent.parent);
-      return TreeUtils.findFieldReference(type, nodeText);
+      return {
+        symbol: TreeUtils.findFieldReference(type, nodeText),
+        diagnostics: [],
+      };
     } else if (
       nodeAtPosition.type === "lower_case_identifier" &&
       nodeParentType === "field_accessor_function_expr"
@@ -710,16 +730,18 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       if (type.nodeType === "Function") {
         const paramType = type.params[0];
 
-        return TreeUtils.findFieldReference(paramType, nodeText);
+        return {
+          symbol: TreeUtils.findFieldReference(paramType, nodeText),
+          diagnostics: [],
+        };
       }
     } else if (
       nodeAtPosition.type === "lower_case_identifier" &&
       nodeParentType === "field_type"
     ) {
       return {
-        node: nodeParent,
-        nodeType: "FieldType",
-        uri,
+        symbol: { name: nodeParent.text, node: nodeParent, type: "FieldType" },
+        diagnostics: [],
       };
     } else if (
       nodeAtPosition.type === "upper_case_identifier" &&
@@ -738,12 +760,19 @@ export function createTypeChecker(program: IProgram): TypeChecker {
         currentNode = currentNode.previousNamedSibling.previousNamedSibling;
       }
 
-      return findImportOfType(
+      const moduleImport = findImport(
         sourceFile,
         findImportModuleNameNode(fullModuleName, sourceFile)?.text ??
           fullModuleName,
         "Module",
-      );
+      )[0];
+
+      if (moduleImport) {
+        return {
+          symbol: moduleImport,
+          diagnostics: [],
+        };
+      }
     }
 
     const parentType =
@@ -779,9 +808,12 @@ export function createTypeChecker(program: IProgram): TypeChecker {
 
       if (firstMatching) {
         return {
-          node: firstMatching,
-          nodeType: "TypeVariable",
-          uri,
+          symbol: {
+            name: firstMatching.text,
+            node: firstMatching,
+            type: "TypeVariable",
+          },
+          diagnostics: [],
         };
       }
     } else if (parentType) {
@@ -794,12 +826,17 @@ export function createTypeChecker(program: IProgram): TypeChecker {
 
       if (firstMatching) {
         return {
-          node: firstMatching,
-          nodeType: "TypeVariable",
-          uri,
+          symbol: {
+            name: firstMatching.text,
+            node: firstMatching,
+            type: "TypeVariable",
+          },
+          diagnostics: [],
         };
       }
     }
+
+    return { diagnostics: [] };
   }
 
   function getQualifierForName(
@@ -807,15 +844,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     module: string,
     name: string,
   ): string | undefined {
-    const found = findImport(
-      sourceFile,
-      name,
-      (imp) =>
-        imp.fromModuleName === module &&
-        (imp.type === "Type" ||
-          imp.type === "TypeAlias" ||
-          imp.type === "UnionConstructor"),
-    );
+    const found = findImport(sourceFile, name)[0];
     if (found) {
       return "";
     }

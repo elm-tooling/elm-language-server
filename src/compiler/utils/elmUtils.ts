@@ -403,3 +403,10 @@ export function isKernelProject(project: ElmProject): boolean {
 
   return false;
 }
+
+export function isCoreProject(project: ElmProject): boolean {
+  return (
+    project.type === "package" &&
+    project.maintainerAndPackageName === "elm/core"
+  );
+}

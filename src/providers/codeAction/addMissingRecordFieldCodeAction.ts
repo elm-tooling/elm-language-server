@@ -129,7 +129,7 @@ function createFields(
         );
       });
 
-      return { [lastFieldRef.uri]: edits };
+      return { [lastFieldRef.node.tree.uri]: edits };
     }
   }
 

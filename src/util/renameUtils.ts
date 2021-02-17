@@ -27,10 +27,11 @@ export class RenameUtils {
         position,
       );
 
-      const definitionNode = checker.findDefinition(nodeAtPosition, sourceFile);
+      const definitionNode = checker.findDefinition(nodeAtPosition, sourceFile)
+        .symbol;
 
       if (definitionNode) {
-        const refTree = program.getSourceFile(definitionNode.uri);
+        const refTree = program.getSourceFile(definitionNode.node.tree.uri);
         if (refTree && refTree.writeable) {
           return {
             originalNode: nodeAtPosition,

@@ -1,35 +1,81 @@
 import Parser, { SyntaxNode } from "web-tree-sitter";
 import { IForest, ISourceFile } from "./forest";
-import { IExposed, IExposing, NodeType, TreeUtils } from "../util/treeUtils";
+import { TreeUtils } from "../util/treeUtils";
 import { container } from "tsyringe";
 import { MultiMap } from "../util/multiMap";
 import { performance } from "perf_hooks";
+import { isCoreProject } from "./utils/elmUtils";
+import { Diagnostic, Diagnostics, error } from "./diagnostics";
+import { ISymbol } from "./binder";
 
 export let importsTime = 0;
 export function resetImportsTime(): void {
   importsTime = 0;
 }
 
-export interface IImport {
-  alias: string;
-  node: SyntaxNode;
-  fromUri: string;
-  fromModuleName: string;
+type FromModule = {
+  name: string;
+  uri: string;
   maintainerAndPackageName?: string;
-  type: NodeType;
-  explicitlyExposed: boolean; // needed to resolve shadowing of (..) definitions
+};
+
+export interface IImport extends ISymbol {
+  fromModule: FromModule;
+}
+
+function importModuleEqual(a: IImport, b: IImport): boolean {
+  return (
+    a.fromModule.name === b.fromModule.name &&
+    a.fromModule.maintainerAndPackageName ===
+      b.fromModule.maintainerAndPackageName
+  );
 }
 
 /**
  * Imports class that extends a map to handle multiple named imports
  */
-export class Imports extends MultiMap<string, IImport> {
-  public get(
-    key: string,
-    filter?: (val: IImport) => boolean,
-  ): IImport | undefined {
-    return super.get(key, filter, (a) => (a.explicitlyExposed ? -1 : 1));
+export class Imports {
+  private vars = new MultiMap<string, IImport>();
+  private types = new MultiMap<string, IImport>();
+  private constructors = new MultiMap<string, IImport>();
+  private modules = new Map<string, IImport>();
+  private diagnostics: Diagnostic[] = [];
+
+  private getFromMap(
+    map: MultiMap<string, IImport>,
+    name: string,
+    module?: string,
+  ): IImport[] {
+    const all = map.getAll(name) ?? [];
+    return module ? all.filter((imp) => imp.fromModule.name === module) : all;
   }
+
+  public getVar(name: string, module?: string): IImport[] {
+    return this.getFromMap(this.vars, name, module);
+  }
+
+  public getType(name: string, module?: string): IImport[] {
+    return this.getFromMap(this.types, name, module);
+  }
+
+  public getConstructor(name: string, module?: string): IImport[] {
+    return this.getFromMap(this.constructors, name, module);
+  }
+
+  public getModule(name: string): IImport | undefined {
+    return this.modules.get(name);
+  }
+
+  public forEach(callbackfn: (value: IImport) => void): void {
+    this.vars.forEach(callbackfn);
+    this.types.forEach(callbackfn);
+    this.constructors.forEach(callbackfn);
+  }
+
+  public getDiagnostics(): Diagnostic[] {
+    return this.diagnostics;
+  }
+
   private static cachedVirtualImports: SyntaxNode[];
 
   public static getImports(sourceFile: ISourceFile, forest: IForest): Imports {
@@ -37,7 +83,7 @@ export class Imports extends MultiMap<string, IImport> {
     const result = new Imports();
 
     const importNodes = [
-      ...Imports.getVirtualImports(),
+      ...(isCoreProject(sourceFile.project) ? [] : Imports.getVirtualImports()),
       ...(TreeUtils.findAllImportClauseNodes(sourceFile.tree) ?? []),
     ];
 
@@ -52,56 +98,143 @@ export class Imports extends MultiMap<string, IImport> {
 
         const foundModule = forest.getByUri(uri);
         if (foundModule) {
+          const fromModule = {
+            name: moduleName,
+            uri,
+            maintainerAndPackageName: foundModule.maintainerAndPackageName,
+          };
+
           const foundModuleNode = TreeUtils.findModuleDeclaration(
             foundModule.tree,
           );
           if (foundModuleNode) {
-            result.set(moduleName, {
-              alias: moduleName,
-              fromModuleName: moduleName,
-              fromUri: uri,
-              maintainerAndPackageName: foundModule.maintainerAndPackageName,
+            result.modules.set(moduleName, {
+              name: moduleName,
               node: foundModuleNode,
               type: "Module",
-              explicitlyExposed: false,
+              fromModule,
             });
 
             const exposedFromRemoteModule = foundModule.exposing;
             if (exposedFromRemoteModule) {
-              this.getPrefixedImports(
-                moduleName,
-                importNode,
-                exposedFromRemoteModule,
-                foundModule.uri,
-                foundModule.maintainerAndPackageName,
-              ).forEach((imp) => result.set(imp.alias, imp));
+              const importedAs = Imports.findImportAsClause(importNode);
+              const importPrefix = importedAs ? importedAs : fromModule.name;
+
+              // Add qualified imports
+              // The compiler keeps these separate from normal ones,
+              // but I'm not sure that is needed
+              exposedFromRemoteModule.forEach((symbol, name) => {
+                const qualifiedName = `${importPrefix}.${name}`;
+                switch (symbol.type) {
+                  case "Function":
+                  case "Port":
+                    result.vars.set(
+                      qualifiedName,
+                      {
+                        ...symbol,
+                        name: qualifiedName,
+                        fromModule,
+                      },
+                      importModuleEqual,
+                    );
+                    break;
+
+                  case "Type":
+                  case "TypeAlias":
+                    result.types.set(
+                      qualifiedName,
+                      {
+                        ...symbol,
+                        name: qualifiedName,
+                        fromModule,
+                      },
+                      importModuleEqual,
+                    );
+                    symbol.constructors?.forEach((ctor) => {
+                      const qualifiedName = `${importPrefix}.${ctor.name}`;
+                      result.constructors.set(
+                        qualifiedName,
+                        {
+                          ...ctor,
+                          name: qualifiedName,
+                          fromModule,
+                        },
+                        importModuleEqual,
+                      );
+                    });
+                }
+              });
 
               const exposingList = importNode.childForFieldName("exposing");
 
               if (exposingList) {
                 const doubleDot = exposingList.childForFieldName("doubleDot");
                 if (doubleDot) {
-                  this.getAllExposedCompletions(
-                    exposedFromRemoteModule,
-                    moduleName,
-                    foundModule.uri,
-                    foundModule.maintainerAndPackageName,
-                  ).forEach((imp) => result.set(imp.alias, imp));
+                  exposedFromRemoteModule.forEach((exposed) => {
+                    switch (exposed.type) {
+                      case "Type":
+                      case "TypeAlias":
+                        result.types.set(
+                          exposed.name,
+                          {
+                            ...exposed,
+                            fromModule,
+                          },
+                          importModuleEqual,
+                        );
+                        exposed.constructors?.forEach((ctor) => {
+                          result.constructors.set(
+                            ctor.name,
+                            {
+                              ...ctor,
+                              fromModule,
+                            },
+                            importModuleEqual,
+                          );
+                        });
+
+                        break;
+
+                      case "Function":
+                      case "Port":
+                      case "Operator":
+                        result.vars.set(
+                          exposed.name,
+                          {
+                            ...exposed,
+                            fromModule,
+                          },
+                          importModuleEqual,
+                        );
+                    }
+                  });
                 } else {
                   const exposedOperators = TreeUtils.descendantsOfType(
                     exposingList,
                     "operator_identifier",
                   );
                   exposedOperators.forEach((exposedOperator) => {
-                    const foundNode = exposedFromRemoteModule.get(
+                    const symbol = exposedFromRemoteModule.get(
                       exposedOperator.text,
                     );
-                    if (foundNode) {
-                      this.exposedNodesToImports(
-                        foundNode,
-                        moduleName,
-                        foundModule,
-                      ).forEach((imp) => result.set(imp.alias, imp));
+                    if (symbol) {
+                      result.vars.set(
+                        symbol.name,
+                        {
+                          ...symbol,
+                          fromModule,
+                        },
+                        importModuleEqual,
+                      );
+                    } else {
+                      result.diagnostics.push(
+                        error(
+                          exposedOperator,
+                          Diagnostics.ImportExposingNotFound,
+                          fromModule.name,
+                          exposedOperator.text,
+                        ),
+                      );
                     }
                   });
 
@@ -110,15 +243,27 @@ export class Imports extends MultiMap<string, IImport> {
                     exposingList,
                   );
                   exposedValues?.forEach((exposedValue) => {
-                    const foundNode = exposedFromRemoteModule.get(
+                    const symbol = exposedFromRemoteModule.get(
                       exposedValue.text,
                     );
-                    if (foundNode) {
-                      this.exposedNodesToImports(
-                        foundNode,
-                        moduleName,
-                        foundModule,
-                      ).forEach((imp) => result.set(imp.alias, imp));
+                    if (symbol) {
+                      result.vars.set(
+                        symbol.name,
+                        {
+                          ...symbol,
+                          fromModule,
+                        },
+                        importModuleEqual,
+                      );
+                    } else {
+                      result.diagnostics.push(
+                        error(
+                          exposedValue,
+                          Diagnostics.ImportExposingNotFound,
+                          fromModule.name,
+                          exposedValue.text,
+                        ),
+                      );
                     }
                   });
 
@@ -139,14 +284,79 @@ export class Imports extends MultiMap<string, IImport> {
                     );
 
                     if (typeName) {
-                      const foundNode = exposedFromRemoteModule.get(typeName);
-                      if (foundNode) {
-                        this.exposedNodesToImports(
-                          foundNode,
-                          moduleName,
-                          foundModule,
-                          exposedUnionConstructors,
-                        ).forEach((imp) => result.set(imp.alias, imp));
+                      const symbol = exposedFromRemoteModule.get(typeName);
+
+                      if (exposedUnionConstructors) {
+                        if (symbol) {
+                          if (symbol.type === "Type") {
+                            result.types.replace(symbol.name, {
+                              ...symbol,
+                              fromModule,
+                            });
+
+                            symbol.constructors?.forEach((ctor) => {
+                              result.constructors.set(
+                                ctor.name,
+                                {
+                                  ...ctor,
+                                  fromModule,
+                                },
+                                importModuleEqual,
+                              );
+                            });
+                          } else if (symbol.type === "TypeAlias") {
+                            result.diagnostics.push(
+                              error(
+                                exposedType,
+                                Diagnostics.ImportOpenAlias,
+                                typeName,
+                              ),
+                            );
+                          }
+                        } else {
+                          result.diagnostics.push(
+                            error(
+                              exposedType,
+                              Diagnostics.ImportExposingNotFound,
+                              fromModule.name,
+                              typeName,
+                            ),
+                          );
+                        }
+                      } else {
+                        if (symbol) {
+                          if (
+                            symbol.type === "Type" ||
+                            symbol.type === "TypeAlias"
+                          ) {
+                            result.types.replace(symbol.name, {
+                              ...symbol,
+                              fromModule,
+                            });
+                          }
+                          if (symbol.type === "TypeAlias") {
+                            symbol.constructors?.forEach((ctor) => {
+                              result.constructors.set(
+                                ctor.name,
+                                {
+                                  ...ctor,
+                                  fromModule,
+                                },
+                                importModuleEqual,
+                              );
+                            });
+                          }
+                        } else {
+                          // The compiler does special checking for an ImportCtorByName error here
+                          result.diagnostics.push(
+                            error(
+                              exposedType,
+                              Diagnostics.ImportExposingNotFound,
+                              fromModule.name,
+                              typeName,
+                            ),
+                          );
+                        }
                       }
                     }
                   });
@@ -159,66 +369,6 @@ export class Imports extends MultiMap<string, IImport> {
     });
 
     importsTime += performance.now() - start;
-
-    return result;
-  }
-
-  private static getPrefixedImports(
-    moduleName: string,
-    importNode: SyntaxNode,
-    exposed: IExposing,
-    uri: string,
-    maintainerAndPackageName?: string,
-  ): IImport[] {
-    const result: IImport[] = [];
-
-    const importedAs = this.findImportAsClause(importNode);
-    const importPrefix = importedAs ? importedAs : moduleName;
-
-    exposed.forEach((element, name) => {
-      switch (element.type) {
-        case "Function":
-        case "Port":
-        case "TypeAlias":
-          result.push({
-            alias: `${importPrefix}.${name}`,
-            fromModuleName: moduleName,
-            fromUri: uri,
-            maintainerAndPackageName,
-            node: element.syntaxNode,
-            type: element.type,
-            explicitlyExposed: false,
-          });
-          break;
-        case "Type":
-          result.push({
-            alias: `${importPrefix}.${name}`,
-            fromModuleName: moduleName,
-            fromUri: uri,
-            maintainerAndPackageName,
-            node: element.syntaxNode,
-            type: element.type,
-            explicitlyExposed: false,
-          });
-          if (element.exposedUnionConstructors) {
-            result.push(
-              ...element.exposedUnionConstructors.map((a) => {
-                return {
-                  alias: `${importPrefix}.${a.name}`,
-                  fromModuleName: moduleName,
-                  fromUri: uri,
-                  maintainerAndPackageName,
-                  node: a.syntaxNode,
-                  type: "UnionConstructor" as NodeType,
-                  explicitlyExposed: false,
-                };
-              }),
-            );
-          }
-          break;
-        // Do not handle operators, they are not valid if prefixed
-      }
-    });
 
     return result;
   }
@@ -266,83 +416,5 @@ export class Imports extends MultiMap<string, IImport> {
         return newName.text;
       }
     }
-  }
-
-  private static getAllExposedCompletions(
-    exposed: IExposing,
-    moduleName: string,
-    uri: string,
-    maintainerAndPackageName?: string,
-  ): IImport[] {
-    const result: IImport[] = [];
-
-    // These need to be added additionally, as they are nested
-    Array.from(exposed.values())
-      .filter((it) => it.type === "Type")
-      .forEach((element) => {
-        if (element.exposedUnionConstructors) {
-          result.push(
-            ...element.exposedUnionConstructors.map((a) => {
-              return {
-                alias: `${a.name}`,
-                fromModuleName: moduleName,
-                fromUri: uri,
-                maintainerAndPackageName,
-                node: a.syntaxNode,
-                type: "UnionConstructor" as NodeType,
-                explicitlyExposed: false,
-              };
-            }),
-          );
-        }
-      });
-
-    return [
-      ...result,
-      ...Array.from(exposed.values()).map((element) => {
-        return {
-          alias: element.name,
-          fromModuleName: moduleName,
-          fromUri: uri,
-          maintainerAndPackageName,
-          node: element.syntaxNode,
-          type: element.type,
-          explicitlyExposed: false,
-        };
-      }),
-    ];
-  }
-
-  private static exposedNodesToImports(
-    exposedNode: IExposed,
-    moduleName: string,
-    foundModule: ISourceFile,
-    includeUnionConstructors = false,
-  ): IImport[] {
-    return [
-      {
-        alias: exposedNode.name,
-        fromModuleName: moduleName,
-        fromUri: foundModule.uri,
-        maintainerAndPackageName: foundModule.maintainerAndPackageName,
-        node: exposedNode.syntaxNode,
-        type: exposedNode.type,
-        explicitlyExposed: true,
-      },
-    ].concat(
-      includeUnionConstructors
-        ? exposedNode.exposedUnionConstructors?.map((b) => {
-            return {
-              alias: b.name,
-              fromModuleName: moduleName,
-              fromUri: foundModule.uri,
-              maintainerAndPackageName: foundModule.maintainerAndPackageName,
-              node: b.syntaxNode,
-              type: "UnionConstructor",
-              explicitlyExposed: false,
-            };
-          }) ?? []
-        : [],
-    );
   }
 }

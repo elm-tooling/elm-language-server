@@ -1,7 +1,7 @@
 import { ISourceFile } from "./forest";
 import { SyntaxNode } from "web-tree-sitter";
 import { MultiMap } from "../util/multiMap";
-import { IExposed, IExposing, NodeType, TreeUtils } from "../util/treeUtils";
+import { NodeType, TreeUtils } from "../util/treeUtils";
 import { Utils } from "../util/utils";
 import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
 import { Diagnostics, error } from "./diagnostics";
@@ -11,10 +11,17 @@ function createSymbolMap(): SymbolMap {
   return new MultiMap<string, ISymbol>();
 }
 
-// TODO: Look at merging ISymbol and IExposed
+export type IExposing = Map<string, ISymbol>;
+
 export interface ISymbol {
+  name: string;
   node: SyntaxNode;
   type: NodeType;
+  constructors?: {
+    name: string;
+    node: SyntaxNode;
+    type: "UnionConstructor" | "TypeAlias";
+  }[];
 }
 
 export function bindTreeContainer(sourceFile: ISourceFile): void {
@@ -115,6 +122,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     if (functionDeclarationLeft && functionDeclarationLeft.firstChild) {
       const functionName = functionDeclarationLeft.firstChild.text;
       container.set(functionName, {
+        name: functionName,
         node: functionDeclarationLeft,
         type: "Function",
       });
@@ -130,6 +138,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
       if (pattern) {
         pattern.descendantsOfType("lower_pattern").forEach((lowerPattern) => {
           container.set(lowerPattern.text, {
+            name: lowerPattern.text,
             node: lowerPattern,
             type: "Function", // This isn't a good type
           });
@@ -144,6 +153,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
   function bindFunctionDeclarationLeft(node: SyntaxNode): void {
     node.descendantsOfType("lower_pattern").forEach((lowerPattern) => {
       container.set(lowerPattern.text, {
+        name: lowerPattern.text,
         node: lowerPattern,
         type: "FunctionParameter",
       });
@@ -151,25 +161,39 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
   }
 
   function bindTypeDeclaration(node: SyntaxNode): void {
+    const unionVariants =
+      TreeUtils.findAllNamedChildrenOfType("union_variant", node)
+        ?.map((unionVariant) => {
+          const name = unionVariant.childForFieldName("name");
+
+          if (name) {
+            return {
+              name: name.text,
+              node: unionVariant,
+              type: "UnionConstructor" as const,
+            };
+          }
+        })
+        .filter(Utils.notUndefined.bind(bindExposing)) ?? [];
+
+    // Union variants get bound to the parent container
+    unionVariants.forEach((variant) => {
+      container.set(variant.name, {
+        ...variant,
+        type: variant.type as NodeType,
+      });
+    });
+
     const name = node.childForFieldName("name");
 
     if (name) {
-      container.set(name.text, { node, type: "Type" });
+      container.set(name.text, {
+        name: name.text,
+        node,
+        type: "Type",
+        constructors: unionVariants,
+      });
     }
-
-    // Union variants get bound to the parent container
-    TreeUtils.findAllNamedChildrenOfType("union_variant", node)?.forEach(
-      (unionVariant) => {
-        const name = unionVariant.childForFieldName("name");
-
-        if (name) {
-          container.set(name.text, {
-            node: unionVariant,
-            type: "UnionConstructor",
-          });
-        }
-      },
-    );
 
     // Bind type variables
     bindContainer(node);
@@ -179,7 +203,18 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     const name = node.childForFieldName("name");
 
     if (name) {
-      container.set(name.text, { node, type: "TypeAlias" });
+      const isRecordConstructor =
+        node.childForFieldName("typeExpression")?.children[0]?.type ===
+        "record_type";
+
+      container.set(name.text, {
+        name: name.text,
+        node,
+        type: "TypeAlias",
+        constructors: isRecordConstructor
+          ? [{ name: name.text, node, type: "TypeAlias" }]
+          : [],
+      });
     }
 
     // Bind type variables
@@ -187,7 +222,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
   }
 
   function bindLowerTypeName(node: SyntaxNode): void {
-    container.set(node.text, { node, type: "TypeVariable" });
+    container.set(node.text, { name: node.text, node, type: "TypeVariable" });
   }
 
   function bindPortAnnotation(node: SyntaxNode): void {
@@ -198,7 +233,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     );
 
     if (name) {
-      container.set(name.text, { node, type: "Port" });
+      container.set(name.text, { name: name.text, node, type: "Port" });
     }
   }
 
@@ -206,8 +241,12 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     const operator = node.childForFieldName("operator");
     const name = node.lastNamedChild;
     if (operator && name) {
-      container.set(operator.text, { node, type: "Operator" });
-      container.set(name.text, { node, type: "Operator" });
+      container.set(operator.text, {
+        name: operator.text,
+        node,
+        type: "Operator",
+      });
+      container.set(name.text, { name: name.text, node, type: "Operator" });
     }
   }
 
@@ -216,12 +255,14 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
       switch (parent.type) {
         case "anonymous_function_expr":
           container.set(lowerPattern.text, {
+            name: lowerPattern.text,
             node: lowerPattern,
             type: "AnonymousFunctionParameter",
           });
           break;
         case "case_of_branch":
           container.set(lowerPattern.text, {
+            name: lowerPattern.text,
             node: lowerPattern,
             type: "CasePattern",
           });
@@ -241,13 +282,13 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     }
 
     if (name) {
-      container.set(name.text, { node, type: "Import" });
+      container.set(name.text, { name: name.text, node, type: "Import" });
     }
   }
 
   function bindExposing(): void {
     const tree = sourceFile.tree;
-    const exposed: IExposing = new Map<string, IExposed>();
+    const exposed: IExposing = new Map<string, ISymbol>();
     const moduleDeclaration = TreeUtils.findModuleDeclaration(tree);
     if (moduleDeclaration) {
       const exposingList = moduleDeclaration.childForFieldName("exposing");
@@ -257,74 +298,10 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
           rootSymbols?.forEach((symbol) => {
             switch (symbol.type) {
               case "Function":
-                {
-                  if (symbol.node.firstNamedChild) {
-                    const functionName = symbol.node.firstNamedChild.text;
-                    exposed.set(functionName, {
-                      name: functionName,
-                      syntaxNode: symbol.node,
-                      type: "Function",
-                    });
-                  }
-                }
-                break;
-
               case "TypeAlias":
-                {
-                  const name = symbol.node.childForFieldName("name");
-                  if (name) {
-                    exposed.set(name.text, {
-                      name: name.text,
-                      syntaxNode: symbol.node,
-                      type: "TypeAlias",
-                    });
-                  }
-                }
-                break;
-
               case "Type":
-                {
-                  const unionConstructors =
-                    TreeUtils.findAllNamedChildrenOfType(
-                      "union_variant",
-                      symbol.node,
-                    )
-                      ?.map((variant) => {
-                        const name = variant.childForFieldName("name");
-                        if (name && name.parent) {
-                          return {
-                            name: name.text,
-                            syntaxNode: variant,
-                          };
-                        }
-                      })
-                      .filter(Utils.notUndefined.bind(bindExposing)) ?? [];
-
-                  const typeDeclarationName = symbol.node.childForFieldName(
-                    "name",
-                  );
-                  if (typeDeclarationName) {
-                    exposed.set(typeDeclarationName.text, {
-                      name: typeDeclarationName.text,
-                      syntaxNode: symbol.node,
-                      type: "Type",
-                      exposedUnionConstructors: unionConstructors,
-                    });
-                  }
-                }
-                break;
-
               case "Port":
-                {
-                  const name = symbol.node.childForFieldName("name")?.text;
-                  if (name) {
-                    exposed.set(name, {
-                      name,
-                      syntaxNode: symbol.node,
-                      type: "Port",
-                    });
-                  }
-                }
+                exposed.set(symbol.name, symbol);
                 break;
             }
           });
@@ -340,24 +317,37 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
             if (functionNode) {
               exposed.set(value.text, {
                 name: value.text,
-                syntaxNode: functionNode,
+                node: functionNode,
                 type: "Operator",
-                exposedUnionConstructors: undefined,
               });
+            } else {
+              sourceFile.bindDiagnostics.push(
+                error(
+                  value,
+                  Diagnostics.ExportNotFound,
+                  "operator",
+                  value.text,
+                ),
+              );
             }
           }
 
           TreeUtils.descendantsOfType(exposingList, "exposed_value")
-            .map((a) => a.text)
+            .map((a) => a)
             .forEach((exposedValue) => {
-              const symbol = rootSymbols?.get(exposedValue);
+              const symbol = rootSymbols?.get(exposedValue.text);
 
               if (symbol) {
-                exposed.set(exposedValue, {
-                  name: exposedValue,
-                  syntaxNode: symbol.node,
-                  type: symbol.type,
-                });
+                exposed.set(exposedValue.text, symbol);
+              } else {
+                sourceFile.bindDiagnostics.push(
+                  error(
+                    exposedValue,
+                    Diagnostics.ExportNotFound,
+                    "value",
+                    exposedValue.text,
+                  ),
+                );
               }
             });
 
@@ -365,61 +355,68 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
             exposingList,
             "exposed_type",
           );
-          for (const value of exposedTypes) {
-            const doubleDot = TreeUtils.descendantsOfType(value, "double_dot");
+          exposedTypes.forEach((exposedType) => {
+            const doubleDot = TreeUtils.descendantsOfType(
+              exposedType,
+              "double_dot",
+            );
             if (doubleDot.length > 0) {
               const name = TreeUtils.findFirstNamedChildOfType(
                 "upper_case_identifier",
-                value,
+                exposedType,
               );
 
               if (name) {
-                const typeDeclaration = rootSymbols?.get(
+                const symbol = rootSymbols?.get(
                   name.text,
-                  (s) => s.type === "Type",
+                  (symbol) =>
+                    symbol.type === "Type" || symbol.type === "TypeAlias",
                 );
-                if (typeDeclaration) {
-                  const unionConstructors = TreeUtils.descendantsOfType(
-                    typeDeclaration.node,
-                    "union_variant",
-                  )
-                    .map((variant) => {
-                      const unionConstructorName = variant.childForFieldName(
-                        "name",
-                      );
-                      if (unionConstructorName && unionConstructorName.parent) {
-                        return {
-                          name: unionConstructorName.text,
-                          syntaxNode: variant,
-                        };
-                      }
-                    })
-                    .filter(Utils.notUndefined.bind(bindExposing));
-
-                  exposed.set(name.text, {
-                    name: name.text,
-                    syntaxNode: typeDeclaration.node,
-                    type: "Type",
-                    exposedUnionConstructors: unionConstructors,
-                  });
+                if (symbol) {
+                  if (symbol.type === "Type") {
+                    exposed.set(name.text, symbol);
+                  } else if (symbol.type === "TypeAlias") {
+                    sourceFile.bindDiagnostics.push(
+                      error(exposedType, Diagnostics.ExportOpenAlias),
+                    );
+                  }
+                } else {
+                  sourceFile.bindDiagnostics.push(
+                    error(
+                      exposedType,
+                      Diagnostics.ExportNotFound,
+                      "type",
+                      exposedType.text,
+                    ),
+                  );
                 }
               }
             } else {
-              const typeNode = rootSymbols?.get(
-                value.text,
+              const symbol = rootSymbols?.get(
+                exposedType.text,
                 (symbol) =>
                   symbol.type === "Type" || symbol.type === "TypeAlias",
               );
 
-              if (typeNode) {
-                exposed.set(value.text, {
-                  name: value.text,
-                  syntaxNode: typeNode.node,
-                  type: typeNode.type,
-                });
+              if (symbol) {
+                exposed.set(
+                  exposedType.text,
+                  symbol.type === "Type"
+                    ? { ...symbol, constructors: [] }
+                    : symbol,
+                );
+              } else {
+                sourceFile.bindDiagnostics.push(
+                  error(
+                    exposedType,
+                    Diagnostics.ExportNotFound,
+                    "type",
+                    exposedType.text,
+                  ),
+                );
               }
             }
-          }
+          });
         }
       }
     }
