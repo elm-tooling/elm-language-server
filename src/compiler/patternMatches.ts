@@ -52,7 +52,11 @@ type CanCtor = {
 function nodeToCanCtor(node: SyntaxNode): CanCtor {
   return {
     name: node.firstNamedChild!.text,
-    arity: node.namedChildren.slice(1).length,
+    arity: node.namedChildren
+      .slice(1)
+      .filter(
+        (n) => n.type !== "left_parenthesis" && n.type !== "right_parenthesis",
+      ).length,
   };
 }
 

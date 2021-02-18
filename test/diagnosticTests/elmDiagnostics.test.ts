@@ -1336,6 +1336,31 @@ func result =
       ],
       true,
     );
+
+    const source4 = `
+--@ Test.elm
+module Test exposing (..)
+
+type Maybe a = Just a | Nothing
+
+type Msg = One | Two | Three (Maybe Int) | Four
+
+func result =
+    case result of
+    --^
+        One ->
+            ""
+  `;
+    await testTypeInference(
+      basicsSources + source4,
+      [
+        {
+          message: Diagnostics.IncompleteCasePattern(3),
+          args: ["Two", "Three _", "Four"],
+        },
+      ],
+      true,
+    );
   });
 
   test("test missing case patterns should have an error - cons and list", async () => {
