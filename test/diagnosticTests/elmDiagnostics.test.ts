@@ -1361,6 +1361,32 @@ func result =
       ],
       true,
     );
+
+    const source5 = `
+--@ Test.elm
+module Test exposing (..)
+
+type Maybe a = Just a | Nothing
+
+func result =
+    case result of
+    --^
+        Nothing ->
+            ""
+        
+        Just (Just a) ->
+            a
+  `;
+    await testTypeInference(
+      basicsSources + source5,
+      [
+        {
+          message: Diagnostics.IncompleteCasePattern(1),
+          args: ["Just Nothing"],
+        },
+      ],
+      true,
+    );
   });
 
   test("test missing case patterns should have an error - cons and list", async () => {

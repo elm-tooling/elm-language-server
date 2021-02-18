@@ -427,7 +427,13 @@ export class PatternMatches {
         return Ctor(
           { alts: unionVariants, numAlts },
           ctor.text,
-          pattern.namedChildren.slice(1).map(this.simplify.bind(this)),
+          pattern.namedChildren
+            .filter(
+              (n) =>
+                n.type !== "left_parenthesis" && n.type !== "right_parenthesis",
+            )
+            .slice(1)
+            .map(this.simplify.bind(this)),
         );
       }
 
@@ -438,11 +444,16 @@ export class PatternMatches {
           pattern.namedChildren.filter((n) => n.type === "pattern"),
         );
 
-      case "cons_pattern":
-        return this.cons(
-          pattern.firstNamedChild!,
-          this.simplify(pattern.lastNamedChild!),
+      case "cons_pattern": {
+        // TODO: Fix how cons is parsed
+        const patterns = pattern.namedChildren.filter(
+          (n) =>
+            n.type.includes("pattern") ||
+            n.type.includes("constant") ||
+            n.type === "unit_expr",
         );
+        return this.cons(patterns[0], this.simplify(patterns[1]));
+      }
 
       case "pattern":
         return this.simplify(pattern.childForFieldName("child")!);
