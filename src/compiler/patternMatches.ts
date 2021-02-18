@@ -409,8 +409,11 @@ export class PatternMatches {
           .getTypeChecker()
           .findDefinition(ctor, this.sourceFile);
 
-        const unionVariants = definition
-          ? TreeUtils.findParentOfType("type_declaration", definition.node)
+        const unionVariants = definition.symbol
+          ? TreeUtils.findParentOfType(
+              "type_declaration",
+              definition.symbol.node,
+            )
               ?.namedChildren.filter((n) => n.type === "union_variant")
               .map(nodeToCanCtor) ?? []
           : [];

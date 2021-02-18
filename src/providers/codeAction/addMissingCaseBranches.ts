@@ -1,12 +1,8 @@
 import { CodeAction, Range, TextEdit } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
 import { CodeActionProvider } from "..";
-import { ISourceFile } from "../../compiler/forest";
 import { getSpaces } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../compiler/diagnostics";
-import { TypeChecker } from "../../compiler/typeChecker";
-import { Type } from "../../compiler/typeInference";
 import { ICodeActionParams } from "../paramsExtensions";
 import { Utils } from "../../util/utils";
 import { PatternMatches } from "../../compiler/patternMatches";
@@ -72,59 +68,4 @@ function getEdits(params: ICodeActionParams, range: Range): TextEdit[] {
   }
 
   return [];
-}
-
-function createFields(
-  fields: [string, Type][],
-  targetRecord: SyntaxNode,
-  checker: TypeChecker,
-  sourceFile: ISourceFile,
-): { [uri: string]: TextEdit[] } {
-  const type = checker.findType(targetRecord);
-
-  if (type.nodeType === "Record") {
-    const fieldNames = Object.keys(type.fields);
-    const lastFieldRef = TreeUtils.findFieldReference(
-      type,
-      fieldNames[fieldNames.length - 1],
-    );
-
-    if (lastFieldRef) {
-      const useNewLine =
-        lastFieldRef.node.parent?.startPosition.row !==
-        lastFieldRef.node.parent?.endPosition.row;
-      const indendation = getSpaces(lastFieldRef.node.startPosition.column - 2);
-
-      const edits = fields.map(([fieldName, fieldType]) => {
-        const typeString: string = checker.typeToString(fieldType, sourceFile);
-
-        return TextEdit.insert(
-          {
-            line: lastFieldRef?.node.endPosition.row,
-            character: lastFieldRef?.node.endPosition.column,
-          },
-          `${
-            useNewLine ? "\n" + indendation : ""
-          }, ${fieldName} : ${typeString}`,
-        );
-      });
-
-      return { [lastFieldRef.uri]: edits };
-    }
-  }
-
-  return {};
-}
-
-function mergeChanges(
-  a: { [uri: string]: TextEdit[] },
-  b: { [uri: string]: TextEdit[] },
-): void {
-  Object.entries(b).forEach(([uri, edits]) => {
-    if (a[uri]) {
-      a[uri].push(...edits);
-    } else {
-      a[uri] = edits;
-    }
-  });
 }
