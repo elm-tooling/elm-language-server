@@ -603,10 +603,7 @@ export class Program implements IProgram {
       );
     });
 
-    return (await Promise.all(elmFilePathPromises)).reduce(
-      (a, b) => a.concat(b),
-      [],
-    );
+    return (await Promise.all(elmFilePathPromises)).flatMap((a) => a);
   }
 
   private async findElmFilesInProjectWorker(

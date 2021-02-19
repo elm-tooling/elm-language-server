@@ -19,7 +19,6 @@ import { ISourceFile } from "../compiler/forest";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { MultiMap } from "../util/multiMap";
 import { Settings } from "../util/settings";
-import { flatMap } from "../util/treeUtils";
 import { Diagnostic } from "../compiler/diagnostics";
 import {
   convertFromAnalyzerDiagnostic,
@@ -232,46 +231,47 @@ export class CodeActionProvider {
       // Set the params range to the diagnostic range so we get the correct nodes
       params.range = diagnostic.range;
 
-      results.push(
-        ...flatMap(registrations, (reg) => {
-          const codeActions =
-            reg
-              .getCodeActions(params)
-              ?.map((codeAction) =>
-                this.addDiagnosticToCodeAction(codeAction, diagnostic),
-              ) ?? [];
+      if (registrations) {
+        results.push(
+          ...registrations.flatMap((reg) => {
+            const codeActions =
+              reg
+                .getCodeActions(params)
+                ?.map((codeAction) =>
+                  this.addDiagnosticToCodeAction(codeAction, diagnostic),
+                ) ?? [];
 
-          if (
-            codeActions.length > 0 &&
-            !results.some(
-              // Check if there is already a "fix all" code action for this fix
-              (codeAction) => /* fixId */ codeAction.data === reg.fixId,
-            ) &&
-            CodeActionProvider.getDiagnostics(params).some(
-              (diag) =>
-                !diagnosticsEquals(
-                  convertFromAnalyzerDiagnostic(diag),
-                  diagnostic,
-                ) && diag.code === diagnostic.data.code,
-            )
-          ) {
-            const fixAllCodeAction = reg.getFixAllCodeAction(params);
+            if (
+              codeActions.length > 0 &&
+              !results.some(
+                // Check if there is already a "fix all" code action for this fix
+                (codeAction) => /* fixId */ codeAction.data === reg.fixId,
+              ) &&
+              CodeActionProvider.getDiagnostics(params).some(
+                (diag) =>
+                  !diagnosticsEquals(
+                    convertFromAnalyzerDiagnostic(diag),
+                    diagnostic,
+                  ) && diag.code === diagnostic.data.code,
+              )
+            ) {
+              const fixAllCodeAction = reg.getFixAllCodeAction(params);
 
-            if (fixAllCodeAction) {
-              codeActions?.push(fixAllCodeAction);
+              if (fixAllCodeAction) {
+                codeActions?.push(fixAllCodeAction);
+              }
             }
-          }
 
-          return codeActions;
-        }),
-      );
+            return codeActions;
+          }),
+        );
+      }
     });
 
     results.push(
-      ...flatMap(
-        Array.from(CodeActionProvider.refactorRegistrations.values()),
-        (registration) => registration.getAvailableActions(params),
-      ),
+      ...Array.from(
+        CodeActionProvider.refactorRegistrations.values(),
+      ).flatMap((registration) => registration.getAvailableActions(params)),
     );
 
     return [...results, ...make, ...elmDiagnostics];

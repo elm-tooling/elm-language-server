@@ -388,7 +388,7 @@ export function flattenExposedModules(
     return exposedModules;
   }
 
-  return Object.values(exposedModules).reduce((a, b) => a.concat(b), []);
+  return Object.values(exposedModules).flatMap((a) => a);
 }
 
 export function nameIsKernel(name: string): boolean {

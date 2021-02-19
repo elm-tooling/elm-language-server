@@ -787,7 +787,7 @@ export class ElmLsDiagnostics {
 
     patternMatches
       .filter(Utils.notUndefined.bind(this))
-      .map((match) => {
+      .flatMap((match) => {
         let scope = match.captures[0].node;
         const patternMatch = match.captures[1].node;
 
@@ -815,7 +815,6 @@ export class ElmLsDiagnostics {
               return { scope, pattern };
             });
       })
-      .reduce((a, b) => a.concat(b), [])
       .forEach(({ scope, pattern }) => {
         const references = scopeCache
           .getOrSet(scope, () =>

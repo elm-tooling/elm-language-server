@@ -28,22 +28,6 @@ export type NodeType =
 
 const functionNameRegex = new RegExp("[a-zA-Z0-9_]+");
 
-export function flatMap<T, U>(
-  array: T[] | undefined,
-  callback: (value: T, index: number, array: T[]) => U[] | undefined,
-): U[] {
-  const flattend: U[] = [];
-  if (array) {
-    for (let i = 0; i < array.length; i++) {
-      const elementArray = callback(array[i], i, array);
-      if (elementArray) {
-        flattend.push(...elementArray);
-      }
-    }
-  }
-  return flattend;
-}
-
 export class TreeUtils {
   public static getModuleNameNode(tree: Tree): SyntaxNode | undefined {
     const moduleDeclaration:

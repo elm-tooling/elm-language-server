@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
-import { flatMap, TreeUtils } from "../util/treeUtils";
+import { TreeUtils } from "../util/treeUtils";
 import { References } from "./references";
 import {
   BinaryExprTree,
@@ -52,7 +52,6 @@ import {
   error,
   errorWithEndNode,
 } from "./diagnostics";
-import fromEntries from "fromentries";
 import { isKernelProject, nameIsKernel } from "./utils/elmUtils";
 
 export let inferTime = 0;
@@ -237,25 +236,16 @@ function allTypeVars(type: Type): TVar[] {
     case "Var":
       return [type];
     case "Union":
-      return Array.prototype.flatMap !== undefined
-        ? type.params.flatMap(allTypeVars)
-        : flatMap(type.params, allTypeVars);
+      return type.params.flatMap(allTypeVars);
+
     case "Function":
-      return allTypeVars(type.return).concat(
-        Array.prototype.flatMap !== undefined
-          ? type.params.flatMap(allTypeVars)
-          : flatMap(type.params, allTypeVars),
-      );
+      return allTypeVars(type.return).concat(type.params.flatMap(allTypeVars));
     case "Tuple":
-      return Array.prototype.flatMap !== undefined
-        ? type.types.flatMap(allTypeVars)
-        : flatMap(type.types, allTypeVars);
+      return type.types.flatMap(allTypeVars);
     case "Record":
     case "MutableRecord": {
       return [
-        ...(Array.prototype.flatMap !== undefined
-          ? Object.values(type.fields).flatMap(allTypeVars)
-          : flatMap(Object.values(type.fields), allTypeVars)),
+        ...Object.values(type.fields).flatMap(allTypeVars),
         ...(type.baseType ? allTypeVars(type.baseType) : []),
       ];
     }
@@ -400,12 +390,12 @@ function typeMismatchError(
 
     if (diff.extra.size > 0) {
       s += `\nExtra fields: \`${checker.typeToString(
-        TRecord(fromEntries(diff.extra.entries())),
+        TRecord(Object.fromEntries(diff.extra.entries())),
       )}\``;
     }
     if (diff.missing.size > 0) {
       s += `\nMissing fields: \`${checker.typeToString(
-        TRecord(fromEntries(diff.missing.entries())),
+        TRecord(Object.fromEntries(diff.missing.entries())),
       )}\``;
     }
     if (diff.mismatched.size > 0) {
@@ -720,10 +710,10 @@ export class InferenceScope {
       });
     }
 
-    const outerVars = flatMap(
-      this.ancestors.toArray().slice(1),
-      (a) => a.annotationVars,
-    );
+    const outerVars = this.ancestors
+      .toArray()
+      .slice(1)
+      .flatMap((a) => a.annotationVars);
 
     const ret = TypeReplacement.replace(
       type,
@@ -1982,7 +1972,7 @@ export class InferenceScope {
       fields.some((field) => !Object.keys(ty.fields).includes(field.text))
     ) {
       if (ty.nodeType !== "Unknown") {
-        const actualTyParams = fromEntries(
+        const actualTyParams = Object.fromEntries(
           fields.map((field, i) => [field.text, vars[i]] as [string, Type]),
         );
         const actualTy = TRecord(actualTyParams);

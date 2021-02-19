@@ -20,7 +20,6 @@
     "escape-string-regexp": "^4.0.0",
     "execa": "^5.0.0",
     "fast-diff": "^1.2.0",
-    "fromentries": "^1.3.2",
     "globby": "^11.0.2",
     "pjson": "1.0.9",
     "reflect-metadata": "^0.1.13",

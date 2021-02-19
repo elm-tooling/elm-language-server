@@ -493,55 +493,53 @@ export class CompletionProvider {
         moduleName,
       )?.exposing;
       if (exposedByModule) {
-        return Array.from(exposedByModule.values())
-          .map((a) => {
-            const markdownDocumentation = HintHelper.createHint(a.node);
-            switch (a.type) {
-              case "TypeAlias":
-                return [
-                  this.createTypeAliasCompletion({
-                    markdownDocumentation,
-                    label: a.name,
-                    range,
-                    sortPrefix,
-                  }),
-                ];
-              case "Type":
-                return a.constructors?.length
-                  ? [
-                      this.createTypeCompletion({
-                        markdownDocumentation,
-                        label: `${a.name}(..)`,
-                        range,
-                        sortPrefix,
-                      }),
-                      this.createTypeCompletion({
-                        markdownDocumentation,
-                        label: a.name,
-                        range,
-                        sortPrefix,
-                      }),
-                    ]
-                  : [
-                      this.createTypeCompletion({
-                        markdownDocumentation,
-                        label: a.name,
-                        range,
-                        sortPrefix,
-                      }),
-                    ];
-              default:
-                return [
-                  this.createFunctionCompletion({
-                    markdownDocumentation,
-                    label: a.name,
-                    range,
-                    sortPrefix,
-                  }),
-                ];
-            }
-          })
-          .reduce((a, b) => a.concat(b), []);
+        return Array.from(exposedByModule.values()).flatMap((a) => {
+          const markdownDocumentation = HintHelper.createHint(a.node);
+          switch (a.type) {
+            case "TypeAlias":
+              return [
+                this.createTypeAliasCompletion({
+                  markdownDocumentation,
+                  label: a.name,
+                  range,
+                  sortPrefix,
+                }),
+              ];
+            case "Type":
+              return a.constructors?.length
+                ? [
+                    this.createTypeCompletion({
+                      markdownDocumentation,
+                      label: `${a.name}(..)`,
+                      range,
+                      sortPrefix,
+                    }),
+                    this.createTypeCompletion({
+                      markdownDocumentation,
+                      label: a.name,
+                      range,
+                      sortPrefix,
+                    }),
+                  ]
+                : [
+                    this.createTypeCompletion({
+                      markdownDocumentation,
+                      label: a.name,
+                      range,
+                      sortPrefix,
+                    }),
+                  ];
+            default:
+              return [
+                this.createFunctionCompletion({
+                  markdownDocumentation,
+                  label: a.name,
+                  range,
+                  sortPrefix,
+                }),
+              ];
+          }
+        });
       }
     }
   }
