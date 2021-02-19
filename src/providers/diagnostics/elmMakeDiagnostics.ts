@@ -112,11 +112,6 @@ export class ElmMakeDiagnostics {
   ): CodeAction[] {
     const result: CodeAction[] = [];
 
-    const program = this.elmWorkspaceMatcher.getProgramFor(URI.parse(uri));
-    const forest = program.getForest();
-
-    const sourceTree = forest.getByUri(uri);
-
     diagnostics.forEach((diagnostic) => {
       if (
         diagnostic.message.startsWith(NAMING_ERROR) ||
