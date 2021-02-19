@@ -170,7 +170,7 @@ export class Program implements IProgram {
     this.possibleImportsCache = new PossibleImportsCache();
     this.operatorsCache = new Map<string, DefinitionResult>();
     this.diagnosticsCache = new Map<string, Diagnostic[]>();
-    this.host = programHost ?? this.createProgramHost();
+    this.host = programHost ?? createNodeProgramHost();
   }
 
   public async init(
@@ -718,21 +718,21 @@ export class Program implements IProgram {
   private async loadElmJson(elmJsonPath: string): Promise<ElmJson> {
     return JSON.parse(await this.host.readFile(elmJsonPath)) as ElmJson;
   }
+}
 
-  private createProgramHost(): IProgramHost {
-    return {
-      readFile: (uri): Promise<string> =>
-        readFile(uri, {
-          encoding: "utf-8",
-        }),
-      readDirectory: (uri: string): Promise<string[]> =>
-        // Cleanup the path on windows, as globby does not like backslashes
-        globby(`${uri.replace(/\\/g, "/")}/**/*.elm`, {
-          suppressErrors: true,
-        }),
-      watchFile: (uri: string, callback: () => void): void => {
-        chokidar.watch(uri).on("change", callback);
-      },
-    };
-  }
+export function createNodeProgramHost(): IProgramHost {
+  return {
+    readFile: (uri): Promise<string> =>
+      readFile(uri, {
+        encoding: "utf-8",
+      }),
+    readDirectory: (uri: string): Promise<string[]> =>
+      // Cleanup the path on windows, as globby does not like backslashes
+      globby(`${uri.replace(/\\/g, "/")}/**/*.elm`, {
+        suppressErrors: true,
+      }),
+    watchFile: (uri: string, callback: () => void): void => {
+      chokidar.watch(uri).on("change", callback);
+    },
+  };
 }

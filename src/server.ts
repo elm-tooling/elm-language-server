@@ -10,7 +10,12 @@ import {
 import { URI, Utils } from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { ElmToolingJsonManager } from "./elmToolingJsonManager";
-import { Program, IProgram } from "./compiler/program";
+import {
+  Program,
+  IProgram,
+  createNodeProgramHost,
+  IProgramHost,
+} from "./compiler/program";
 import {
   CodeActionProvider,
   CodeLensProvider,
@@ -31,6 +36,7 @@ import {
 import { ElmLsDiagnostics } from "./providers/diagnostics/elmLsDiagnostics";
 import { FileEventsHandler } from "./providers/handlers/fileEventsHandler";
 import { Settings } from "./util/settings";
+import { TextDocumentEvents } from "./util/textDocumentEvents";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -72,9 +78,27 @@ export class Server implements ILanguageServer {
           `Found ${topLevelElmJsons.size} unique elmWorkspaces for workspace ${globUri}`,
         );
 
+        const textDocuments = container.resolve(TextDocumentEvents);
+
+        const nodeProgramHost = createNodeProgramHost();
+
+        // First try to read from text documents buffer, then fallback to disk
+        const programHost: IProgramHost = {
+          ...nodeProgramHost,
+          readFile: (uri) => {
+            const textDocument = textDocuments.get(URI.file(uri).toString());
+
+            if (textDocument) {
+              return Promise.resolve(textDocument.getText());
+            }
+
+            return nodeProgramHost.readFile(uri);
+          },
+        };
+
         const elmWorkspaces: Program[] = [];
         topLevelElmJsons.forEach((elmWorkspace) => {
-          elmWorkspaces.push(new Program(elmWorkspace));
+          elmWorkspaces.push(new Program(elmWorkspace, programHost));
         });
         container.register("ElmWorkspaces", {
           useValue: elmWorkspaces,
