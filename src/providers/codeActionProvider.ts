@@ -19,7 +19,6 @@ import { ISourceFile } from "../compiler/forest";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { MultiMap } from "../util/multiMap";
 import { Settings } from "../util/settings";
-import { flatMap } from "../util/treeUtils";
 import { Diagnostic } from "../compiler/diagnostics";
 import {
   convertFromAnalyzerDiagnostic,
@@ -233,7 +232,7 @@ export class CodeActionProvider {
       params.range = diagnostic.range;
 
       results.push(
-        ...flatMap(registrations, (reg) => {
+        ...registrations!.flatMap((reg) => {
           const codeActions =
             reg
               .getCodeActions(params)
@@ -268,10 +267,9 @@ export class CodeActionProvider {
     });
 
     results.push(
-      ...flatMap(
-        Array.from(CodeActionProvider.refactorRegistrations.values()),
-        (registration) => registration.getAvailableActions(params),
-      ),
+      ...Array.from(
+        CodeActionProvider.refactorRegistrations.values(),
+      ).flatMap((registration) => registration.getAvailableActions(params)),
     );
 
     return [...results, ...make, ...elmDiagnostics];

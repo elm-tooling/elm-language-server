@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
-import { flatMap, TreeUtils } from "../util/treeUtils";
+import { TreeUtils } from "../util/treeUtils";
 import {
   Expression,
   EValueDeclaration,
@@ -800,9 +800,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
           ? TreeUtils.descendantsOfType(annotation, "type_variable")
           : [];
 
-      const allTypeVariables: SyntaxNode[] = allAnnotations.flatMap
-        ? allAnnotations.flatMap(callback)
-        : flatMap(allAnnotations, callback);
+      const allTypeVariables: SyntaxNode[] = allAnnotations.flatMap(callback);
 
       const firstMatching = allTypeVariables.find((t) => t.text === nodeText);
 
