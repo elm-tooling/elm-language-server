@@ -231,39 +231,41 @@ export class CodeActionProvider {
       // Set the params range to the diagnostic range so we get the correct nodes
       params.range = diagnostic.range;
 
-      results.push(
-        ...registrations!.flatMap((reg) => {
-          const codeActions =
-            reg
-              .getCodeActions(params)
-              ?.map((codeAction) =>
-                this.addDiagnosticToCodeAction(codeAction, diagnostic),
-              ) ?? [];
+      if (registrations) {
+        results.push(
+          ...registrations.flatMap((reg) => {
+            const codeActions =
+              reg
+                .getCodeActions(params)
+                ?.map((codeAction) =>
+                  this.addDiagnosticToCodeAction(codeAction, diagnostic),
+                ) ?? [];
 
-          if (
-            codeActions.length > 0 &&
-            !results.some(
-              // Check if there is already a "fix all" code action for this fix
-              (codeAction) => /* fixId */ codeAction.data === reg.fixId,
-            ) &&
-            CodeActionProvider.getDiagnostics(params).some(
-              (diag) =>
-                !diagnosticsEquals(
-                  convertFromAnalyzerDiagnostic(diag),
-                  diagnostic,
-                ) && diag.code === diagnostic.data.code,
-            )
-          ) {
-            const fixAllCodeAction = reg.getFixAllCodeAction(params);
+            if (
+              codeActions.length > 0 &&
+              !results.some(
+                // Check if there is already a "fix all" code action for this fix
+                (codeAction) => /* fixId */ codeAction.data === reg.fixId,
+              ) &&
+              CodeActionProvider.getDiagnostics(params).some(
+                (diag) =>
+                  !diagnosticsEquals(
+                    convertFromAnalyzerDiagnostic(diag),
+                    diagnostic,
+                  ) && diag.code === diagnostic.data.code,
+              )
+            ) {
+              const fixAllCodeAction = reg.getFixAllCodeAction(params);
 
-            if (fixAllCodeAction) {
-              codeActions?.push(fixAllCodeAction);
+              if (fixAllCodeAction) {
+                codeActions?.push(fixAllCodeAction);
+              }
             }
-          }
 
-          return codeActions;
-        }),
-      );
+            return codeActions;
+          }),
+        );
+      }
     });
 
     results.push(

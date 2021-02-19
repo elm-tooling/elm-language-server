@@ -761,7 +761,7 @@ export class References {
         "field_access_expr",
         "record_pattern",
       ])
-      .map((field) => {
+      .flatMap((field) => {
         if (field.type === "record_pattern") {
           const lowerPattern = field.namedChildren.find(
             (pattern) =>
@@ -785,7 +785,6 @@ export class References {
 
         return [field];
       })
-      .reduce((a, b) => a.concat(b), [])
       .map((field) =>
         TreeUtils.findFirstNamedChildOfType("lower_case_identifier", field),
       )
