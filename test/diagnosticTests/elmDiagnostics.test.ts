@@ -119,8 +119,11 @@ describe("test elm diagnostics", () => {
       );
     }
 
-    // Adjust for Type(..)
-    if (nodeAtPosition?.nextNamedSibling?.text === "(..)") {
+    // Adjust for Type(..) or case
+    if (
+      nodeAtPosition?.nextNamedSibling?.text === "(..)" ||
+      nodeAtPosition?.type === "case"
+    ) {
       nodeAtPosition = nodeAtPosition.parent ?? nodeAtPosition;
     }
 
@@ -1267,5 +1270,140 @@ module App exposing (..)
 bar = ""
 `;
     await testTypeInference(basicsSources + stringSources + source2, [], true);
+  });
+
+  test("test missing case patterns should have an error - ctor and tuple", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type Result e a = Ok a | Error e
+
+func result =
+    case result of
+    --^
+        Ok _ ->
+            ""
+  `;
+    await testTypeInference(
+      basicsSources + source,
+      [{ message: Diagnostics.IncompleteCasePattern(1), args: ["Error _"] }],
+      true,
+    );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+type Maybe a = Just a | Nothing
+
+func result =
+    case result of
+    --^
+        (Just _, _) ->
+            ""
+  `;
+    await testTypeInference(
+      basicsSources + source2,
+      [
+        {
+          message: Diagnostics.IncompleteCasePattern(1),
+          args: ["( Nothing, _ )"],
+        },
+      ],
+      true,
+    );
+
+    const source3 = `
+--@ Test.elm
+module Test exposing (..)
+
+type Msg = One | Two | Three Int Int | Four
+
+func result =
+    case result of
+    --^
+        One ->
+            ""
+  `;
+    await testTypeInference(
+      basicsSources + source3,
+      [
+        {
+          message: Diagnostics.IncompleteCasePattern(3),
+          args: ["Two", "Three _ _", "Four"],
+        },
+      ],
+      true,
+    );
+
+    const source4 = `
+--@ Test.elm
+module Test exposing (..)
+
+type Maybe a = Just a | Nothing
+
+type Msg = One | Two | Three (Maybe Int) | Four
+
+func result =
+    case result of
+    --^
+        One ->
+            ""
+  `;
+    await testTypeInference(
+      basicsSources + source4,
+      [
+        {
+          message: Diagnostics.IncompleteCasePattern(3),
+          args: ["Two", "Three _", "Four"],
+        },
+      ],
+      true,
+    );
+
+    const source5 = `
+--@ Test.elm
+module Test exposing (..)
+
+type Maybe a = Just a | Nothing
+
+func result =
+    case result of
+    --^
+        Nothing ->
+            ""
+        
+        Just (Just a) ->
+            a
+  `;
+    await testTypeInference(
+      basicsSources + source5,
+      [
+        {
+          message: Diagnostics.IncompleteCasePattern(1),
+          args: ["Just Nothing"],
+        },
+      ],
+      true,
+    );
+  });
+
+  test("test missing case patterns should have an error - cons and list", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func result =
+    case result of
+    --^
+        a :: b ->
+            ""
+  `;
+    await testTypeInference(
+      basicsSources + source,
+      [{ message: Diagnostics.IncompleteCasePattern(1), args: ["[]"] }],
+      true,
+    );
   });
 });

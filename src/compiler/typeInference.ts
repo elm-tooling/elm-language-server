@@ -53,6 +53,7 @@ import {
   errorWithEndNode,
 } from "./diagnostics";
 import { isKernelProject, nameIsKernel } from "./utils/elmUtils";
+import { PatternMatches } from "./patternMatches";
 
 export let inferTime = 0;
 export function resetInferTime(): void {
@@ -1522,6 +1523,14 @@ export class InferenceScope {
         type = result.type;
       }
     });
+
+    this.diagnostics.push(
+      ...PatternMatches.check(
+        caseOfExpr,
+        caseOfExpr.branches.map((branch) => branch.pattern),
+        this.program,
+      ),
+    );
 
     return type ?? TUnknown;
   }

@@ -3,6 +3,7 @@ import { DiagnosticSeverity, Range } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
 import { PositionUtil } from "../positionUtil";
 import { DiagnosticSource } from "../providers/diagnostics/diagnosticSource";
+import { getSpaces } from "../util/refactorEditUtils";
 
 export interface Diagnostic {
   code: string;
@@ -117,6 +118,16 @@ export const Diagnostics = {
     "The `{0}` type alias cannot be followed by (..).",
     DiagnosticSeverity.Error,
   ),
+  IncompleteCasePattern: (n: number): IDiagnosticMessage =>
+    diag(
+      "incomplete_case_pattern",
+      `This \`case\` does not have branches for all possibilities.\nMissing possibilities include:\n${getSpaces(
+        2,
+      )}${Array.from(Array(n))
+        .map((_, i) => `{${i}}`)
+        .join(`\n${getSpaces(2)}`)}\n`,
+      DiagnosticSeverity.Error,
+    ),
   InvalidPattern: diag(
     "invalid_pattern",
     "Invalid pattern error.\nExpected: `{0}`\nFound: `{1}`",
@@ -197,6 +208,11 @@ export const Diagnostics = {
   Redefinition: diag(
     "redefinition",
     "A value named `{0}` is already defined.",
+    DiagnosticSeverity.Error,
+  ),
+  RedundantPattern: diag(
+    "redundant_pattern",
+    "The {0} pattern is redundant",
     DiagnosticSeverity.Error,
   ),
   TypeArgumentCount: diag(

@@ -14,13 +14,11 @@ import { ISourceFile } from "../../compiler/forest";
 import * as utils from "../../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
-import { TreeUtils } from "../../util/treeUtils";
-import { NonEmptyArray, Utils } from "../../util/utils";
+import { NonEmptyArray } from "../../util/utils";
 import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
 import { ElmToolingJsonManager } from "../../elmToolingJsonManager";
-import { IProgram } from "../../compiler/program";
 
 const ELM_MAKE = "Elm";
 export const NAMING_ERROR = "NAMING ERROR";
@@ -114,11 +112,6 @@ export class ElmMakeDiagnostics {
   ): CodeAction[] {
     const result: CodeAction[] = [];
 
-    const program = this.elmWorkspaceMatcher.getProgramFor(URI.parse(uri));
-    const forest = program.getForest();
-
-    const sourceTree = forest.getByUri(uri);
-
     diagnostics.forEach((diagnostic) => {
       if (
         diagnostic.message.startsWith(NAMING_ERROR) ||
@@ -168,143 +161,9 @@ export class ElmMakeDiagnostics {
             ),
           );
         }
-      } else if (diagnostic.message.startsWith("UNFINISHED CASE")) {
-        // Offer the case completion only if we're at the `of`
-        const regex = /^\d+\|\s*.* of\s+\s+#\^#/gm;
-
-        const matches = regex.exec(diagnostic.message);
-        if (matches !== null) {
-          result.push(
-            ...this.addCaseQuickfixes(sourceTree, diagnostic, uri, program),
-          );
-        }
-      } else if (
-        diagnostic.message.startsWith("MISSING PATTERNS - This `case`")
-      ) {
-        result.push(
-          ...this.addCaseQuickfixes(sourceTree, diagnostic, uri, program),
-        );
       }
     });
     return result;
-  }
-
-  private addCaseQuickfixes(
-    sourceFile: ISourceFile | undefined,
-    diagnostic: IDiagnostic,
-    uri: string,
-    program: IProgram,
-  ): CodeAction[] {
-    const result = [];
-    const valueNode = sourceFile?.tree.rootNode.namedDescendantForPosition(
-      {
-        column: diagnostic.range.start.character,
-        row: diagnostic.range.start.line,
-      },
-      {
-        column: diagnostic.range.end.character,
-        row: diagnostic.range.end.line,
-      },
-    );
-
-    if (valueNode) {
-      if (
-        valueNode.firstNamedChild?.type === "case" &&
-        valueNode.namedChildren.length > 1 &&
-        valueNode.namedChildren[1].type === "value_expr"
-      ) {
-        const indent = "    ".repeat(
-          (valueNode.firstNamedChild?.startPosition.column % 4) + 1,
-        );
-
-        const typeDeclarationNode = TreeUtils.getTypeAliasOfCase(
-          valueNode.namedChildren[1].firstNamedChild!.firstNamedChild!,
-          sourceFile!,
-          program,
-        );
-
-        if (typeDeclarationNode) {
-          const fields = TreeUtils.findAllNamedChildrenOfType(
-            "union_variant",
-            typeDeclarationNode,
-          );
-
-          const alreadyAvailableBranches = TreeUtils.findAllNamedChildrenOfType(
-            "case_of_branch",
-            valueNode,
-          )
-            ?.map(
-              (a) => a.firstNamedChild?.firstNamedChild?.firstNamedChild?.text,
-            )
-            .filter(Utils.notUndefined.bind(this));
-
-          let edit = "";
-          fields?.forEach((unionVariant) => {
-            if (
-              !alreadyAvailableBranches?.includes(
-                unionVariant.firstNamedChild!.text,
-              )
-            ) {
-              const parameters = TreeUtils.findAllNamedChildrenOfType(
-                "type_ref",
-                unionVariant,
-              );
-
-              const caseBranch = `${[
-                unionVariant.firstNamedChild!.text,
-                parameters
-                  ?.map((a) =>
-                    a.firstNamedChild?.lastNamedChild?.text.toLowerCase(),
-                  )
-                  .join(" "),
-              ].join(" ")}`;
-
-              edit += `\n${indent}    ${caseBranch} ->\n${indent}        \n`;
-            }
-          });
-
-          result.push(
-            this.createCaseQuickFix(
-              uri,
-              edit,
-              diagnostic,
-              `Add missing case branches`,
-            ),
-          );
-        }
-      }
-
-      result.push(
-        this.createCaseQuickFix(
-          uri,
-          "\n\n        _ ->\n    ",
-          diagnostic,
-          `Add \`_\` branch`,
-        ),
-      );
-    }
-    return result;
-  }
-
-  private createCaseQuickFix(
-    uri: string,
-    replaceWith: string,
-    diagnostic: IDiagnostic,
-    title: string,
-  ): CodeAction {
-    const map: {
-      [uri: string]: TextEdit[];
-    } = {};
-    if (!map[uri]) {
-      map[uri] = [];
-    }
-    map[uri].push(TextEdit.insert(diagnostic.range.end, replaceWith));
-    return {
-      diagnostics: [diagnostic],
-      edit: { changes: map },
-      kind: CodeActionKind.QuickFix,
-      title,
-    };
   }
 
   private createQuickFix(

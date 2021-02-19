@@ -59,6 +59,10 @@ export class ElmDiagnosticsHelper {
       code = Diagnostics.ImportMissing.code;
     }
 
+    if (issue.overview.startsWith("MISSING PATTERNS - This `case`")) {
+      code = Diagnostics.IncompleteCasePattern(0).code;
+    }
+
     return {
       range: lineRange,
       message: `${messagePrefix}${issue.details.replace(/\[\d+m/g, "")}`,
