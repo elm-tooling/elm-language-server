@@ -121,7 +121,7 @@ export const Diagnostics = {
   IncompleteCasePattern: (n: number): IDiagnosticMessage =>
     diag(
       "incomplete_case_pattern",
-      `This \`case\` does not have branches for all possiblilities.\nMissing possibilities include:\n${getSpaces(
+      `This \`case\` does not have branches for all possibilities.\nMissing possibilities include:\n${getSpaces(
         2,
       )}${Array.from(Array(n))
         .map((_, i) => `{${i}}`)
