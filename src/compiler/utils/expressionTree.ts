@@ -514,7 +514,6 @@ export function mapSyntaxNodeToExpression(
         const tupleExpr = node as ETupleExpr;
         tupleExpr.nodeType = "TupleExpr";
         tupleExpr.exprList = node.namedChildren
-          .filter((n) => n.type !== "comma")
           .map(mapSyntaxNodeToExpression)
           .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
         return tupleExpr;

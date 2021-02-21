@@ -794,7 +794,6 @@ export function createTypeChecker(program: IProgram): TypeChecker {
         parentType,
       ];
 
-      // Remove `flatMap` function when Node 10 is dropped
       const callback = (annotation: SyntaxNode | undefined): SyntaxNode[] =>
         annotation
           ? TreeUtils.descendantsOfType(annotation, "type_variable")
