@@ -53,7 +53,9 @@ function getEdits(params: ICodeActionParams, range: Range): TextEdit[] {
     const indent = getSpaces(nodeAtPosition.startPosition.column);
 
     const edit = PatternMatches.missing(patterns, params.program).reduce(
-      (edit, missing) => edit + `\n\n${indent}\t${missing} ->\n\t\t${indent}\t`,
+      (edit, missing) =>
+        edit +
+        `\n\n${indent}${indent}${missing} ->\n${indent}${indent}${indent}${indent}`,
       "",
     );
 
