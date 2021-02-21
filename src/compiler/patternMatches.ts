@@ -52,11 +52,7 @@ type CanCtor = {
 function nodeToCanCtor(node: SyntaxNode): CanCtor {
   return {
     name: node.firstNamedChild!.text,
-    arity: node.namedChildren
-      .slice(1)
-      .filter(
-        (n) => n.type !== "left_parenthesis" && n.type !== "right_parenthesis",
-      ).length,
+    arity: node.namedChildren.slice(1).length,
   };
 }
 
@@ -427,13 +423,7 @@ export class PatternMatches {
         return Ctor(
           { alts: unionVariants, numAlts },
           ctor.text,
-          pattern.namedChildren
-            .filter(
-              (n) =>
-                n.type !== "left_parenthesis" && n.type !== "right_parenthesis",
-            )
-            .slice(1)
-            .map(this.simplify.bind(this)),
+          pattern.namedChildren.slice(1).map(this.simplify.bind(this)),
         );
       }
 

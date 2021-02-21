@@ -264,8 +264,7 @@ export class CompletionProvider {
         nodeAtPosition.parent.parent &&
         nodeAtPosition.parent.parent.type === "module_declaration" &&
         nodeAtPosition &&
-        (nodeAtPosition.type === "comma" ||
-          nodeAtPosition.type === "right_parenthesis")
+        nodeAtPosition.type === "comma"
       ) {
         return this.getSameFileTopLevelCompletions(tree, replaceRange, true);
       } else if (
@@ -283,8 +282,7 @@ export class CompletionProvider {
         (nodeAtPosition.parent?.parent?.type === "exposing_list" &&
           nodeAtPosition.parent?.parent?.parent?.type === "import_clause" &&
           nodeAtPosition.parent?.parent.firstNamedChild?.type === "exposing") ||
-        ((nodeAtPosition.type === "comma" ||
-          nodeAtPosition.type === "right_parenthesis") &&
+        (nodeAtPosition.type === "comma" &&
           nodeAtPosition.parent?.type === "ERROR" &&
           nodeAtPosition.parent?.parent?.type === "exposing_list")
       ) {

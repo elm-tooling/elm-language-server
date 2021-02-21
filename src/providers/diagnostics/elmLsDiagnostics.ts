@@ -280,11 +280,9 @@ export class ElmLsDiagnostics {
       `
         (bin_op_expr
           (list_expr
-            (left_square_bracket)
             .
             (_)
             .
-            (right_square_bracket)
           ) @firstPart
           .
           (operator
@@ -301,11 +299,9 @@ export class ElmLsDiagnostics {
     this.singleFieldRecordTypesQuery = this.language.query(
       `
         (record_type
-          (left_brace)
           .
           (_)
           .
-          (right_brace)
         ) @recordType
       `,
     );
@@ -316,13 +312,11 @@ export class ElmLsDiagnostics {
           (function_call_expr
             target: (_) @target
             arg: (list_expr
-              (left_square_bracket)
               .
               (list_expr)
               .
               ((comma) . (list_expr))*
               .
-              (right_square_bracket)
             )
           ) @functionCall
           (#eq? @target "List.concat")
