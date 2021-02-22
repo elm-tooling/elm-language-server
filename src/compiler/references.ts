@@ -608,22 +608,34 @@ export class References {
                   continue;
                 }
 
+                const otherSourceFile = program.getSourceFile(uri);
+
+                if (!otherSourceFile) {
+                  continue;
+                }
+
                 const moduleName = moduleNameNode.text;
+
+                const importedModuleAlias =
+                  TreeUtils.findImportAliasOfModule(
+                    moduleName,
+                    otherSourceFile.tree,
+                  ) ?? moduleName;
 
                 const allImports = imports[uri];
                 const found =
                   allImports.getConstructor(nameNode.text, moduleName)[0] ??
                   allImports.getConstructor(
-                    `${moduleNameNode.text}.${nameNode.text}`,
+                    `${importedModuleAlias}.${nameNode.text}`,
                     moduleName,
                   )[0];
 
                 if (found && found.type === "UnionConstructor") {
-                  const treeToCheck = forest.getByUri(uri);
-                  if (treeToCheck && treeToCheck.writeable) {
+                  if (otherSourceFile.writeable) {
                     const unionConstructorCallsFromOtherFiles = TreeUtils.findUnionConstructorCalls(
-                      treeToCheck.tree,
+                      otherSourceFile.tree,
                       nameNode.text,
+                      importedModuleAlias,
                     );
                     if (unionConstructorCallsFromOtherFiles) {
                       references.push(
