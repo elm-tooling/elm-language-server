@@ -74,7 +74,7 @@ function getEdits(
 
     // Adjust for parenthesis expr. Will need to change when we handle it better in inference
     if (target?.type === "parenthesized_expr") {
-      target = target.namedChildren[1];
+      target = target.namedChildren[0];
     }
 
     if (target) {
