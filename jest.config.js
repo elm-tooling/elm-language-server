@@ -3,7 +3,7 @@ module.exports = {
   testEnvironment: "node",
   testMatch: ["**/?(*.)+(spec|test).[tj]s?(x)"],
   collectCoverage: true,
-  coverageReporters: ["lcov"],
+  coverageReporters: ["lcov", "text", "json"],
   setupFilesAfterEnv: ["<rootDir>/test/jest.setup.ts"],
   coveragePathIgnorePatterns: ["<rootDir>/test/"],
 };
