@@ -143,16 +143,16 @@ export class CompletionProvider {
         return [];
       } else if (
         nodeAtPosition.parent?.type === "lower_pattern" ||
-        nodeAtPosition.parent?.type === "record_pattern"
+        nodeAtPosition.type === "record_pattern"
       ) {
         if (
-          nodeAtPosition.parent.parent?.type === "record_pattern" ||
-          nodeAtPosition.parent.type === "record_pattern"
+          nodeAtPosition.parent?.parent?.type === "record_pattern" ||
+          nodeAtPosition.type === "record_pattern"
         ) {
           return this.getRecordCompletionsUsingInference(
             checker,
             TreeUtils.findParentOfType("record_pattern", nodeAtPosition) ??
-              nodeAtPosition.parent,
+              nodeAtPosition,
             replaceRange,
           );
         } else {
@@ -252,42 +252,22 @@ export class CompletionProvider {
       } else if (previousWord && previousWord === "module") {
         return undefined;
       } else if (
-        nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "module_declaration" &&
-        nodeAtPosition &&
+        nodeAtPosition.parent?.type === "module_declaration" &&
         nodeAtPosition.type === "exposing_list"
       ) {
         return this.getSameFileTopLevelCompletions(tree, replaceRange, true);
       } else if (
-        nodeAtPosition.parent &&
-        nodeAtPosition.parent.type === "exposing_list" &&
-        nodeAtPosition.parent.parent &&
-        nodeAtPosition.parent.parent.type === "module_declaration" &&
-        nodeAtPosition &&
-        (nodeAtPosition.type === "comma" ||
-          nodeAtPosition.type === "right_parenthesis")
-      ) {
-        return this.getSameFileTopLevelCompletions(tree, replaceRange, true);
-      } else if (
-        nodeAtPosition.parent?.type === "exposing_list" &&
-        nodeAtPosition.parent.parent?.type === "import_clause" &&
-        nodeAtPosition.parent.firstNamedChild?.type === "exposing"
+        nodeAtPosition.type === "exposing_list" &&
+        nodeAtPosition.parent?.type === "import_clause" &&
+        nodeAtPosition.firstNamedChild?.type === "exposing"
       ) {
         return this.getExposedFromModule(
           params.program,
           params.sourceFile,
-          nodeAtPosition.parent,
+          nodeAtPosition,
           replaceRange,
         );
-      } else if (
-        (nodeAtPosition.parent?.parent?.type === "exposing_list" &&
-          nodeAtPosition.parent?.parent?.parent?.type === "import_clause" &&
-          nodeAtPosition.parent?.parent.firstNamedChild?.type === "exposing") ||
-        ((nodeAtPosition.type === "comma" ||
-          nodeAtPosition.type === "right_parenthesis") &&
-          nodeAtPosition.parent?.type === "ERROR" &&
-          nodeAtPosition.parent?.parent?.type === "exposing_list")
-      ) {
+      } else if (nodeAtPosition.parent?.parent?.type === "exposing_list") {
         return this.getExposedFromModule(
           params.program,
           params.sourceFile,
@@ -475,17 +455,13 @@ export class CompletionProvider {
   ): CompletionItem[] | undefined {
     // Skip as clause to always get Module Name
     if (
-      exposingListNode.previousNamedSibling &&
-      exposingListNode.previousNamedSibling.type === "as_clause" &&
-      exposingListNode.previousNamedSibling.previousNamedSibling
+      exposingListNode.previousNamedSibling?.type === "as_clause" &&
+      exposingListNode.previousNamedSibling?.previousNamedSibling
     ) {
       exposingListNode = exposingListNode.previousNamedSibling;
     }
 
-    if (
-      exposingListNode.previousNamedSibling &&
-      exposingListNode.previousNamedSibling.type === "upper_case_qid"
-    ) {
+    if (exposingListNode.previousNamedSibling?.type === "upper_case_qid") {
       const sortPrefix = "c";
       const moduleName = exposingListNode.previousNamedSibling.text;
       const exposedByModule = program.getSourceFileOfImportableModule(
