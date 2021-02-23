@@ -45,17 +45,23 @@ function getEdits(params: ICodeActionParams, range: Range): TextEdit[] {
   );
 
   if (nodeAtPosition.type === "case_of_expr") {
-    const patterns = nodeAtPosition.namedChildren
-      .filter((n) => n.type === "case_of_branch")
+    const branches = nodeAtPosition.namedChildren.filter(
+      (n) => n.type === "case_of_branch",
+    );
+    const patterns = branches
       .map((branch) => branch.childForFieldName("pattern"))
       .filter(Utils.notUndefinedOrNull.bind(getEdits));
 
-    const indent = getSpaces(nodeAtPosition.startPosition.column);
+    const branchIndent = getSpaces(branches[0].startPosition.column);
+    const branchExprIndent = getSpaces(
+      branches[0].childForFieldName("expr")?.startPosition.column ??
+        branches[0].startPosition.column + 4,
+    );
 
     const edit = PatternMatches.missing(patterns, params.program).reduce(
       (edit, missing) =>
         edit +
-        `\n\n${indent}${indent}${missing} ->\n${indent}${indent}${indent}${indent}`,
+        `\n\n${branchIndent}${missing} ->\n${branchExprIndent}Debug.todo "branch '${missing}' not implemented"`,
       "",
     );
 
