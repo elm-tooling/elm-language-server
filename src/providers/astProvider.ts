@@ -143,7 +143,7 @@ export class ASTProvider {
     );
 
     oldNodes.forEach((node) => {
-      if (!newIds.has(node.id)) {
+      if (node && !newIds.has(node.id)) {
         params.program.getTypeCache().invalidateValueDeclaration(node);
         params.program.getTypeCache().invalidateTypeAnnotation(node);
         params.program.getTypeCache().invalidateTypeOrTypeAlias(node);

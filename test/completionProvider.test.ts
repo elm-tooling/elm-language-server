@@ -1503,4 +1503,83 @@ func model =
 
     await testCompletions(source, ["details"]);
   });
+
+  it("Completions for module alias if using an import alias", async () => {
+    const source = `
+--@ Module.elm
+module Module exposing (..)
+
+foo = ""
+
+type Maybe a = Just a | Nothing
+
+--@ Test.elm
+module Test exposing (..)
+
+import Module as M
+
+func =
+    M.f{-caret-}
+`;
+
+    await testCompletions(
+      source,
+      ["foo", "Maybe", "Just", "Nothing"],
+      "exactMatch",
+    );
+  });
+
+  it("No completions for module if using an import alias", async () => {
+    const source = `
+--@ Module.elm
+module Module exposing (..)
+
+foo = ""
+
+type Maybe a = Just a | Nothing
+
+--@ Test.elm
+module Test exposing (..)
+
+import Module as M
+
+func =
+    Module.f{-caret-}
+`;
+
+    await testCompletions(source, [], "exactMatch");
+  });
+
+  it("Multiple modules with the same name/alias should have all completions", async () => {
+    const source = `
+--@ Module.elm
+module Module exposing (..)
+
+foo = ""
+
+type Maybe a = Just a | Nothing
+
+--@ OtherModule.elm
+module OtherModule exposing (..)
+
+bar = ""
+
+type Result e a = Ok a | Err e
+
+--@ Test.elm
+module Test exposing (..)
+
+import Module as M
+import OtherModule as M
+
+func =
+    M.f{-caret-}
+`;
+
+    await testCompletions(
+      source,
+      ["foo", "Maybe", "Just", "Nothing", "bar", "Result", "Ok", "Err"],
+      "exactMatch",
+    );
+  });
 });

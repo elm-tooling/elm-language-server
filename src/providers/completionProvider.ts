@@ -28,6 +28,7 @@ import { TypeChecker } from "../compiler/typeChecker";
 import escapeStringRegexp from "escape-string-regexp";
 import { TRecord } from "../compiler/typeInference";
 import { ICompletionParams } from "./paramsExtensions";
+import { Utils } from "../util/utils";
 
 export type CompletionResult =
   | CompletionItem[]
@@ -1236,31 +1237,49 @@ export class CompletionProvider {
       return result;
     }
 
-    let alreadyImported = true;
+    let alreadyImported = false;
 
-    // Try to find the module definition that is already imported
-    const definitionNode = checker.findDefinition(node, sourceFile).symbol;
+    const matchedSourceFiles: ISourceFile[] = [];
 
-    let moduleTree: ISourceFile | undefined;
+    const imports =
+      sourceFile.symbolLinks
+        ?.get(sourceFile.tree.rootNode)
+        ?.getAll(targetModule)
+        ?.filter((symbol) => symbol.type === "Import") ?? [];
 
-    if (
-      definitionNode?.node &&
-      TreeUtils.findParentOfType("module_declaration", definitionNode.node)
-    ) {
-      moduleTree = program.getSourceFile(definitionNode.node.tree.uri);
-    } else {
-      // Try to find this module in the forest to import
-      moduleTree = program.getSourceFileOfImportableModule(
+    if (imports.length > 0) {
+      matchedSourceFiles.push(
+        ...imports
+          .map((imp) => {
+            const moduleName =
+              imp.node.childForFieldName("moduleName")?.text ?? "";
+
+            return program.getSourceFileOfImportableModule(
+              sourceFile,
+              moduleName,
+            );
+          })
+          .filter(Utils.notUndefined.bind(this)),
+      );
+
+      alreadyImported = true;
+    } else if (!checker.getAllImports(sourceFile).getModule(targetModule)) {
+      // Try to find a module that may not be imported
+      const moduleSourceFile = program.getSourceFileOfImportableModule(
         sourceFile,
         targetModule,
       );
-      alreadyImported = false;
+
+      if (moduleSourceFile) {
+        matchedSourceFiles.push(moduleSourceFile);
+        alreadyImported = false;
+      }
     }
 
-    if (moduleTree) {
-      // Get exposed values
-      const imports = ImportUtils.getPossibleImportsOfTree(moduleTree);
-      imports.forEach((value) => {
+    // Get exposed values
+    matchedSourceFiles
+      .flatMap(ImportUtils.getPossibleImportsOfTree.bind(this))
+      .forEach((value) => {
         const markdownDocumentation = HintHelper.createHint(value.node);
         let additionalTextEdits: TextEdit[] | undefined;
         let detail: string | undefined;
@@ -1301,7 +1320,6 @@ export class CompletionProvider {
             break;
         }
       });
-    }
 
     return result;
   }
