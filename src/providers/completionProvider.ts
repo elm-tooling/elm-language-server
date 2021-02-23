@@ -252,10 +252,20 @@ export class CompletionProvider {
       } else if (previousWord && previousWord === "module") {
         return undefined;
       } else if (
-        nodeAtPosition.parent?.type === "module_declaration" &&
-        nodeAtPosition.type === "exposing_list"
+        TreeUtils.findParentOfType("module_declaration", nodeAtPosition) &&
+        TreeUtils.findParentOfType("exposing_list", nodeAtPosition)
       ) {
-        return this.getSameFileTopLevelCompletions(tree, replaceRange, true);
+        const exposingList =
+          TreeUtils.findParentOfType(
+            "exposing_list",
+            nodeAtPosition,
+          )?.namedChildren.map((n) => n.text) ?? [];
+
+        return this.getSameFileTopLevelCompletions(
+          tree,
+          replaceRange,
+          true,
+        ).filter((completion) => !exposingList.includes(completion.label));
       } else if (
         nodeAtPosition.type === "exposing_list" &&
         nodeAtPosition.parent?.type === "import_clause" &&

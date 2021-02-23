@@ -549,6 +549,48 @@ type alias TestType =
       ["testFunc", "Msg", "Msg(..)", "Msg1", "Msg2", "TestType"],
       "exactMatch",
     );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (t{-caret-})
+
+testFunc : String
+testFunc = 
+  ""
+
+type Msg = Msg1 | Msg2
+
+type alias TestType = 
+  { prop : String }
+`;
+
+    await testCompletions(
+      source2,
+      ["testFunc", "Msg", "Msg(..)", "Msg1", "Msg2", "TestType"],
+      "exactMatch",
+    );
+  });
+
+  it("Module exposing list should not have completions for already exposed", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (testFunc, Msg(..), {-caret-})
+
+testFunc : String
+testFunc = 
+  ""
+
+type Msg = Msg1 | Msg2
+
+type alias TestType = 
+  { prop : String }
+`;
+
+    await testCompletions(
+      source,
+      ["Msg", "Msg1", "Msg2", "TestType"],
+      "exactMatch",
+    );
   });
 
   it("Function name should have completions in annotation and declaration", async () => {

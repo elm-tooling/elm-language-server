@@ -1406,4 +1406,24 @@ func result =
       true,
     );
   });
+
+  xtest("test missing case patterns should not have an error - multiple cons", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func result =
+    case result of
+    --^
+        a :: b :: _ ->
+            ""
+          
+        a :: [] ->
+            ""
+
+        _ ->
+            ""
+  `;
+    await testTypeInference(basicsSources + source, [], true);
+  });
 });
