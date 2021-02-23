@@ -1407,7 +1407,7 @@ func result =
     );
   });
 
-  xtest("test missing case patterns should not have an error - multiple cons", async () => {
+  test("test case patterns should not have an error - multiple cons", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)
