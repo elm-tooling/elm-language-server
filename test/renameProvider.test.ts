@@ -130,7 +130,7 @@ func = Module.App.foo
 --@ Module/App.elm
 module Module.App exposing (foo)
 
-foo = ""		
+foo = ""
 `;
 
     const expectedResult = `
@@ -144,7 +144,7 @@ func = Module.App.bar
 --@ Module/App.elm
 module Module.App exposing (bar)
 
-bar = ""		
+bar = ""
 `;
 
     const renameRange = Range.create(
@@ -210,5 +210,119 @@ foo = ""
 
     await testPrepareRename(source2, renameRange);
     await testRename(source2, "Module.NewApp", expectedResult);
+  });
+
+  it("renaming a type alias", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (Type, t)
+
+type alias Type =
+    { tag : String
+    , data : Int
+    }
+
+t : Type
+  --^
+t =
+    {}
+
+--@ Module/App.elm
+module Module.App exposing (foo)
+
+import Test exposing (Type)
+
+foo : Type
+foo = {}
+`;
+
+    const expectedResult = `
+--@ Test.elm
+module Test exposing (NewType, t)
+
+type alias NewType =
+    { tag : String
+    , data : Int
+    }
+
+t : NewType
+t =
+    {}
+
+--@ Module/App.elm
+module Module.App exposing (foo)
+
+import Test exposing (NewType)
+
+foo : NewType
+foo = {}
+    `;
+
+    const renameRange = Range.create(
+      Position.create(7, 4),
+      Position.create(7, 8),
+    );
+
+    await testPrepareRename(source, renameRange);
+    await testRename(source, "NewType", expectedResult);
+  });
+
+  it("renaming a type union constructor", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (State(..), t)
+
+type State
+    = Ok
+    | Average
+    | Bad
+
+t : State
+t =
+    Ok
+  --^
+
+--@ Module/App.elm
+module Module.App exposing (foo)
+
+import Test exposing (State(..))
+
+
+foo : State
+foo =
+    Ok
+`;
+
+    const expectedResult = `
+--@ Test.elm
+module Test exposing (State(..), t)
+
+type State
+    = NotOkay
+    | Average
+    | Bad
+
+t : State
+t =
+    NotOkay
+
+--@ Module/App.elm
+module Module.App exposing (foo)
+
+import Test exposing (State(..))
+
+
+foo : State
+foo =
+    NotOkay
+    `;
+
+    const renameRange = Range.create(
+      Position.create(9, 4),
+      Position.create(9, 6),
+    );
+
+    await testPrepareRename(source, renameRange);
+    await testRename(source, "NotOkay", expectedResult);
   });
 });
