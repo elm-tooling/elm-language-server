@@ -100,10 +100,7 @@ export class TreeUtils {
         module,
       );
       if (exposingList) {
-        const doubleDot = this.findFirstNamedChildOfType(
-          "double_dot",
-          exposingList,
-        );
+        const doubleDot = exposingList.childForFieldName("doubleDot");
         if (doubleDot) {
           return true;
         }

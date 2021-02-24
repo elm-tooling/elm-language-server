@@ -5,7 +5,6 @@ describe("functionReferences", () => {
 
   it(`function references in other files`, async () => {
     const source = `
-
 --@ Module.elm
 module Module exposing (foo)
                        --X
@@ -35,7 +34,6 @@ func = foo
 
   it(`function references used with module prefix in other files`, async () => {
     const source = `
-
 --@ Module.elm
 module Module exposing (foo)
                        --X
@@ -63,7 +61,6 @@ func = Module.foo
 
   it(`function references used with module alias prefix in other files`, async () => {
     const source = `
-
 --@ Module.elm
 module Module exposing (foo)
                        --X
@@ -91,7 +88,6 @@ func = Mod.foo
 
   it(`local calls to a function`, async () => {
     const source = `
-
 --@ Module.elm
 module Module exposing (foo)
                         --X
@@ -106,12 +102,59 @@ bar = foo
 
   it(`function annotation gets a reference`, async () => {
     const source = `
-
 --@ Module.elm
 foo : Int
 --X
 foo = 42
 --^
+`;
+    await testBase.testReferences(source);
+  });
+
+  it(`let function should not be referenced outside of let`, async () => {
+    const source = `
+--@ Module.elm
+foo =
+    let
+        func = ""
+       --^
+        
+        bar = func
+              --X
+
+        val = ""
+    in
+    ""
+
+test = func
+`;
+    await testBase.testReferences(source);
+  });
+
+  it(`function should be referenced if used as a base record`, async () => {
+    const source = `
+--@ Module.elm
+foo =
+--^
+    { field : String }
+
+test = 
+    { foo | field = "" }
+     --X
+`;
+    await testBase.testReferences(source);
+  });
+
+  it(`function should be referenced if used as a record accessor`, async () => {
+    const source = `
+--@ Module.elm
+foo =
+--^
+    { field : String }
+
+test = 
+    foo.field
+   --X
 `;
     await testBase.testReferences(source);
   });

@@ -42,9 +42,12 @@ export class References {
                 }
               }
 
-              const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(
-                definitionNode.node,
-              );
+              const functionNameNode =
+                TreeUtils.getFunctionNameNodeFromDefinition(
+                  definitionNode.node,
+                ) ?? definitionNode.node.type === "lower_pattern"
+                  ? definitionNode.node
+                  : undefined;
               if (functionNameNode) {
                 const functionName = functionNameNode.text;
                 if (refSourceTree.writeable) {
@@ -54,18 +57,16 @@ export class References {
                   });
                 }
 
-                const localFunctions =
-                  definitionNode.node.parent?.parent &&
-                  definitionNode.node.parent?.parent.type === "let_in_expr" &&
-                  definitionNode.node.parent?.parent.lastNamedChild
-                    ? this.findFunctionCalls(
-                        definitionNode.node.parent.parent.lastNamedChild,
-                        functionName,
-                      )
-                    : this.findFunctionCalls(
-                        refSourceTree.tree.rootNode,
-                        functionName,
-                      );
+                const letParent = TreeUtils.findParentOfType(
+                  "let_in_expr",
+                  definitionNode.node,
+                );
+                const localFunctions = letParent
+                  ? this.findFunctionCalls(letParent, functionName)
+                  : this.findFunctionCalls(
+                      refSourceTree.tree.rootNode,
+                      functionName,
+                    );
 
                 if (localFunctions && refSourceTree.writeable) {
                   references.push(
@@ -79,7 +80,7 @@ export class References {
                   refSourceTree.tree,
                   functionName,
                 );
-                if (isExposedFunction) {
+                if (isExposedFunction && !letParent) {
                   const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
                     refSourceTree.tree,
                   );
@@ -729,7 +730,10 @@ export class References {
     node: SyntaxNode,
     functionName: string,
   ): SyntaxNode[] | undefined {
-    const functions = this.findAllFunctionCallsAndParameters(node);
+    const functions = [
+      ...this.findAllFunctionCallsAndParameters(node).concat(),
+      ...node.descendantsOfType("record_base_identifier"),
+    ];
     const result = functions
       .filter((a) => a.text === functionName)
       .map((a) => a.lastChild!);
