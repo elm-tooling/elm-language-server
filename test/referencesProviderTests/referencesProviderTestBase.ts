@@ -56,6 +56,16 @@ export class ReferencesProviderTestBase {
       referencePosition: referenceTest.invokePosition,
     });
 
+    if (references.length !== referenceTest.references.length) {
+      console.log(
+        `Expected\n${JSON.stringify(
+          references,
+          null,
+          2,
+        )}\nto equal\n${JSON.stringify(referenceTest.references, null, 2)}`,
+      );
+    }
+
     expect(references.length).toEqual(referenceTest.references.length);
 
     referenceTest.references.forEach(({ referencePosition, referenceFile }) => {
@@ -77,6 +87,9 @@ export class ReferencesProviderTestBase {
       if (!foundReference) {
         console.log(referenceUri);
         console.log(referencePosition);
+        console.log(
+          `Missing reference in ${JSON.stringify(references, null, 2)}`,
+        );
       }
 
       expect(foundReference).toBeTruthy();

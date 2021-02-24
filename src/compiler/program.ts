@@ -624,7 +624,8 @@ export class Program implements IProgram {
 
       // We could track this using the separate `testDirectories`
       // But those are just hardcoded to ./tests anyways, so this should be fine
-      const isTestDir = sourceDir.endsWith("tests");
+      const isTestDir =
+        matchingPath.includes("tests") || matchingPath.includes("Tests");
       if (isTestDir) {
         project.testModuleToUriMap.set(
           moduleName,

@@ -100,10 +100,7 @@ export class TreeUtils {
         module,
       );
       if (exposingList) {
-        const doubleDot = this.findFirstNamedChildOfType(
-          "double_dot",
-          exposingList,
-        );
+        const doubleDot = exposingList.childForFieldName("doubleDot");
         if (doubleDot) {
           return true;
         }
@@ -187,6 +184,7 @@ export class TreeUtils {
   public static findUnionConstructorCalls(
     tree: Tree,
     unionConstructorName: string,
+    moduleNamePrefix?: string,
   ): SyntaxNode[] | undefined {
     const upperCaseQid = TreeUtils.descendantsOfType(
       tree.rootNode,
@@ -195,9 +193,9 @@ export class TreeUtils {
     if (upperCaseQid.length > 0) {
       const result = upperCaseQid.filter(
         (a) =>
-          a.firstChild !== null &&
-          a.firstChild.type === "upper_case_identifier" &&
-          a.firstChild.text === unionConstructorName &&
+          (a.text === unionConstructorName ||
+            (moduleNamePrefix &&
+              a.text === `${moduleNamePrefix}.${unionConstructorName}`)) &&
           a.parent &&
           a.parent.type !== "type_ref",
       );

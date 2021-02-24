@@ -285,8 +285,11 @@ export class CodeLensProvider {
       }
     });
 
-    TreeUtils.descendantsOfType(tree.rootNode, "value_declaration").forEach(
-      (node) => {
+    TreeUtils.descendantsOfType(tree.rootNode, "value_declaration")
+      .filter(
+        (valueDeclaration) => !valueDeclaration.childForFieldName("pattern"),
+      )
+      .forEach((node) => {
         codeLens.push(
           this.createReferenceCodeLens(
             node.previousNamedSibling?.type === "type_annotation"
@@ -295,8 +298,7 @@ export class CodeLensProvider {
             uri,
           ),
         );
-      },
-    );
+      });
 
     const moduleNameNode = TreeUtils.getModuleNameNode(tree);
     if (moduleNameNode && moduleNameNode.lastChild) {
