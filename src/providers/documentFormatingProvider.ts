@@ -43,7 +43,7 @@ export class DocumentFormattingProvider {
   ): DocumentFormattingResult => {
     const options = {
       cmdArguments: ["--stdin", "--elm-version", "0.19", "--yes"],
-      notFoundText: "Install elm-format via 'npm install -g elm-format",
+      notFoundText: "Install elm-format via 'npm install -g elm-format'.",
     };
 
     const format = execCmdSync(
