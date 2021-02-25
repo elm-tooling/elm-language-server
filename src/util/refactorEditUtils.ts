@@ -150,7 +150,7 @@ export class RefactorEditUtils {
             Range.create(
               Position.create(
                 exposingList.startPosition.row,
-                exposingList.startPosition.column,
+                exposingList.startPosition.column - 1,
               ),
               Position.create(
                 exposingList.endPosition.row,
