@@ -75,14 +75,15 @@ export class DocumentFormattingProvider {
         text.getText(),
       );
     } catch (error) {
-      (error.message as string).includes("SYNTAX PROBLEM")
-        ? this.connection.console.error(
-            "Running elm-format failed. Check the file for syntax errors.",
-          )
-        : this.connection.window.showErrorMessage(
-            "Running elm-format failed. Install via " +
-              "'npm install -g elm-format' and make sure it's on your path",
-          );
+      this.connection.console.warn(JSON.stringify(error));
+      if (
+        error?.message &&
+        (error.message as string).includes("SYNTAX PROBLEM")
+      ) {
+        this.connection.window.showErrorMessage(
+          "Running elm-format failed. Check the file for syntax errors.",
+        );
+      }
     }
   };
 }

@@ -42,13 +42,12 @@ export function execCmdSync(
     });
   } catch (error) {
     connection.console.warn(JSON.stringify(error));
-    if (error.errno === "ENOENT") {
+    if (error.errno && error.errno === "ENOENT") {
       connection.window.showErrorMessage(
         options.notFoundText
           ? options.notFoundText + ` I'm looking for '${cmd}' at '${cwd}'`
           : `Cannot find executable with name '${cmd}'`,
       );
-      connection.console.warn("Executable not found");
       throw "Executable not found";
     } else {
       throw error;
