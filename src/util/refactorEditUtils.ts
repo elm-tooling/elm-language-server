@@ -316,15 +316,15 @@ export class RefactorEditUtils {
     let startPosition = pattern.startPosition;
     let endPosition = pattern.endPosition;
 
-    if (pattern.previousNamedSibling?.text === ",") {
-      startPosition = pattern.previousNamedSibling.startPosition;
+    if (pattern.previousSibling?.text === ",") {
+      startPosition = pattern.previousSibling.startPosition;
     }
 
     if (
-      pattern.previousNamedSibling?.text !== "," &&
-      pattern.nextNamedSibling?.text === ","
+      pattern.previousSibling?.text !== "," &&
+      pattern.nextSibling?.text === ","
     ) {
-      endPosition = pattern.nextNamedSibling.endPosition;
+      endPosition = pattern.nextSibling.endPosition;
     }
 
     return TextEdit.del(
@@ -347,15 +347,15 @@ export class RefactorEditUtils {
       let startPosition = exposedNode.startPosition;
       let endPosition = exposedNode.endPosition;
 
-      if (exposedNode.previousNamedSibling?.text === ",") {
-        startPosition = exposedNode.previousNamedSibling.startPosition;
+      if (exposedNode.previousSibling?.text === ",") {
+        startPosition = exposedNode.previousSibling.startPosition;
       }
 
       if (
-        exposedNode.previousNamedSibling?.text !== "," &&
-        exposedNode.nextNamedSibling?.text === ","
+        exposedNode.previousSibling?.text !== "," &&
+        exposedNode.nextSibling?.text === ","
       ) {
-        endPosition = exposedNode.nextNamedSibling.endPosition;
+        endPosition = exposedNode.nextSibling.endPosition;
       }
 
       return TextEdit.del(
