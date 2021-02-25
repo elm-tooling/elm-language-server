@@ -6,4 +6,4 @@ import "./exposeUnexposeCodeAction";
 import "./moveFunctionCodeAction";
 import "./installPackageCodeAction";
 import "./addMissingRecordFieldCodeAction";
-import "./addMissingCaseBranches";
+import "./addMissingCaseBranchesCodeAction";
