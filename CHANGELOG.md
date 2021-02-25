@@ -1,5 +1,24 @@
 # Change Log
 
+## 2.1.0
+
+- Drop node 10
+- Update tree-sitter-elm, should improve parsing significantly
+- Added code action to create missing record field
+- Reimplement diagnostics and code actions for missing case patterns
+- Improve references
+- Rework import definitions to be more like the compiler
+- Add ambiguous type/value diagnostics
+- Don't create diagnostic on duplicate imports
+- Update dependencies
+- Improve exposing completions
+- Show completions for multiple modules if they share a name/alias
+- Improve whitespace handling on removal of unused nodes
+- Fix parsing of new files
+- Fix inference for cons patterns with lists
+- Use text documents buffer to parse dirty files on auto server restart
+- Improve logging and error texts on the binary error path
+
 ## 2.0.3
 
 - Add setting to disable diagnostics on change
