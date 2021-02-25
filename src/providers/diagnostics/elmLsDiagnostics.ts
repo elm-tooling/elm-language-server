@@ -622,7 +622,17 @@ export class ElmLsDiagnostics {
           result.push({
             diagnostics: [diagnostic],
             edit: {
-              changes: { [uri]: [TextEdit.del(diagnostic.range)] },
+              changes: {
+                [uri]: [
+                  TextEdit.del({
+                    start: {
+                      line: diagnostic.range.start.line,
+                      character: diagnostic.range.start.character - 1,
+                    },
+                    end: diagnostic.range.end,
+                  }),
+                ],
+              },
             },
             kind: CodeActionKind.QuickFix,
             title: `Remove unused alias \`${node.text}\``,
