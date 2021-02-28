@@ -1,10 +1,12 @@
 import { container } from "tsyringe";
 import { CodeAction } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import { ISourceFile } from "../../src/compiler/forest";
 import { IProgram } from "../../src/compiler/program";
 import {
   CodeActionProvider,
   convertFromAnalyzerDiagnostic,
+  IRefactorCodeAction,
 } from "../../src/providers";
 import { ICodeActionParams } from "../../src/providers/paramsExtensions";
 import { Utils } from "../../src/util/utils";
@@ -56,6 +58,14 @@ type Order = LT | EQ | GT
 class MockCodeActionsProvider extends CodeActionProvider {
   public handleCodeAction(params: ICodeActionParams): CodeAction[] | undefined {
     return this.onCodeAction(params);
+  }
+
+  public resolveCodeAction(
+    codeAction: IRefactorCodeAction,
+    program: IProgram,
+    sourceFile: ISourceFile,
+  ): IRefactorCodeAction | undefined {
+    return this.onCodeActionResolve(codeAction, program, sourceFile);
   }
 }
 
@@ -129,6 +139,13 @@ export async function testCodeAction(
     );
 
     Object.entries(expectedSources).forEach(([uri, source]) => {
+      if (codeActions[0].edit === undefined) {
+        codeActionProvider.onCodeActionResolve(
+          codeActions[0] as IRefactorCodeAction,
+          program,
+          sourceFile,
+        );
+      }
       expect(
         applyEditsToSource(
           stripCommentLines(result.sources[uri]),

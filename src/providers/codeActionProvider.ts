@@ -277,7 +277,7 @@ export class CodeActionProvider {
     return [...results, ...make, ...elmDiagnostics];
   }
 
-  private onCodeActionResolve(
+  public onCodeActionResolve(
     codeAction: IRefactorCodeAction,
     program: IProgram,
     sourceFile: ISourceFile,
