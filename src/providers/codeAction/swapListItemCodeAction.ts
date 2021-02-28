@@ -33,7 +33,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
     if (canMovePrev) {
       codeActions.push({
         title: "Move List item Up",
-        kind: CodeActionKind.RefactorRewrite,
+        kind: CodeActionKind.RefactorRewrite + ".movelistitem.up",
         data: {
           actionName: moveListItemUpActionName,
           refactorName,
@@ -46,7 +46,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
     if (canMoveNext) {
       codeActions.push({
         title: "Move List item Down",
-        kind: CodeActionKind.RefactorRewrite,
+        kind: CodeActionKind.RefactorRewrite + ".movelistitem.down",
         data: {
           actionName: moveListItemDownActionName,
           refactorName,
@@ -141,19 +141,19 @@ function findSiblingSemanticListNode(
 ): SyntaxNode | null {
   const isNext = direction == "next";
 
-  let prev = iterate(node);
+  let target = iterate(node);
   while (
-    (prev?.type == "," ||
-      prev?.type == "line_comment" ||
-      prev?.type == "[" ||
-      prev?.type == "]") &&
-    prev != null
+    (target?.type == "," ||
+      target?.type == "line_comment" ||
+      target?.type == "[" ||
+      target?.type == "]") &&
+    target != null
   ) {
-    if (prev.type == "[" || prev.type == "]") return null;
-    prev = iterate(prev);
+    if (target.type == "[" || target.type == "]") return null;
+    target = iterate(target);
   }
 
-  return prev;
+  return target;
 
   function iterate(inputNode: SyntaxNode): SyntaxNode | null {
     return isNext ? inputNode.nextSibling : inputNode.previousSibling;
