@@ -218,14 +218,7 @@ export class ElmMakeDiagnostics {
       "/dev/null",
     ];
 
-    const argsTest = [
-      "make",
-      ...relativePathsToFiles,
-      "--report",
-      "json",
-      "--output",
-      "/dev/null",
-    ];
+    const argsTest = ["make", ...relativePathsToFiles, "--report", "json"];
 
     const makeCommand: string = settings.elmPath;
     const testCommand: string = settings.elmTestPath;

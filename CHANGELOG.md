@@ -16,6 +16,7 @@
 - Improve whitespace handling on removal of unused nodes
 - Fix parsing of new files
 - Fix inference for cons patterns with lists
+- Fix unknown parameter used when calling elm-test
 - Use text documents buffer to parse dirty files on auto server restart
 - Improve logging and error texts on the binary error path
 
