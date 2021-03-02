@@ -19,7 +19,7 @@ import {
   trimTrailingWhitespace,
   baseUri,
   applyEditsToSource,
-  stripCommentLines,
+  stripCursorCommentLines,
 } from "../utils/sourceTreeParser";
 
 function codeActionEquals(a: CodeAction, b: CodeAction): boolean {
@@ -90,7 +90,9 @@ export async function testCodeAction(
 
   const testUri = URI.file(baseUri + "Test.elm").toString();
 
-  result.sources["Test.elm"] = stripCommentLines(result.sources["Test.elm"]);
+  result.sources["Test.elm"] = stripCursorCommentLines(
+    result.sources["Test.elm"],
+  );
 
   const program = await treeParser.getProgram(result.sources);
   const sourceFile = program.getForest().getByUri(testUri);
@@ -148,7 +150,7 @@ export async function testCodeAction(
       }
       expect(
         applyEditsToSource(
-          stripCommentLines(result.sources[uri]),
+          stripCursorCommentLines(result.sources[uri]),
           codeActions[0].edit!.changes![URI.file(baseUri + uri).toString()],
         ),
       ).toEqual(source);

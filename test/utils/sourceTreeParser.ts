@@ -147,6 +147,16 @@ export function stripCommentLines(source: string): string {
     .join("\n");
 }
 
+/**
+ * Remove lines with a cursor comment "--^"
+ */
+export function stripCursorCommentLines(source: string): string {
+  return source
+    .split("\n")
+    .filter((line) => !RegExp(/--\^/).exec(line))
+    .join("\n");
+}
+
 export function trimTrailingWhitespace(source: string): string {
   return source
     .split("\n")
