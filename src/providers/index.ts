@@ -15,3 +15,4 @@ export * from "./renameProvider";
 export * from "./workspaceSymbolProvider";
 export * from "./linkedEditingRangesProvider";
 import "./codeAction";
+import "./codeActionLs";
