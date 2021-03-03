@@ -97,6 +97,24 @@ function getEditsForDiagnostic(
       };
     }
 
+    case "unused_top_level": {
+      const node = TreeUtils.getNamedDescendantForPosition(
+        sourceFile.tree.rootNode,
+        diagnostic.range.start,
+      );
+
+      const edit = RefactorEditUtils.removeFunction(node);
+
+      if (!edit) {
+        break;
+      }
+
+      return {
+        title: `Remove function \`${node.text}\``,
+        edits: [edit],
+      };
+    }
+
     case "unused_pattern": {
       const node = TreeUtils.getNamedDescendantForPosition(
         sourceFile.tree.rootNode,
