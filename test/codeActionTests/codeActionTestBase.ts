@@ -4,7 +4,7 @@ import { URI } from "vscode-uri";
 import { IProgram } from "../../src/compiler/program";
 import {
   CodeActionProvider,
-  convertFromAnalyzerDiagnostic,
+  convertFromCompilerDiagnostic,
 } from "../../src/providers";
 import { ICodeActionParams } from "../../src/providers/paramsExtensions";
 import { Utils } from "../../src/util/utils";
@@ -105,7 +105,7 @@ export async function testCodeAction(
           ...program.getSuggestionDiagnostics(sourceFile),
         ]
           .filter((diag) => Utils.rangeOverlaps(diag.range, range))
-          .map(convertFromAnalyzerDiagnostic),
+          .map(convertFromCompilerDiagnostic),
       },
     }) ?? [];
 

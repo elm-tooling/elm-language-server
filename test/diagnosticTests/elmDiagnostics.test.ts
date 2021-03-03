@@ -1,6 +1,6 @@
 import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
-import { convertFromAnalyzerDiagnostic } from "../../src/providers";
+import { convertFromCompilerDiagnostic } from "../../src/providers";
 import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics";
 import { TreeUtils } from "../../src/util/treeUtils";
 import {
@@ -51,7 +51,7 @@ composeR f g x =
 gt : comparable -> comparable -> Bool
 gt =
   Elm.Kernel.Utils.gt
-  
+
 type Order = LT | EQ | GT
 
 negate : number -> number
@@ -128,13 +128,13 @@ describe("test elm diagnostics", () => {
     }
 
     const expected = expectedDiagnostics.map((exp) =>
-      convertFromAnalyzerDiagnostic(
+      convertFromCompilerDiagnostic(
         error(nodeAtPosition, exp.message, ...exp.args),
       ),
     );
 
     const diagnosticsEqual = Utils.arrayEquals(
-      diagnostics.map(convertFromAnalyzerDiagnostic),
+      diagnostics.map(convertFromCompilerDiagnostic),
       expected,
       diagnosticsEquals,
     );
@@ -166,7 +166,7 @@ concat comparators a b =
 
         comparator :: rest ->
             case comparator a b of
-                EQ -> 
+                EQ ->
                     concat rest a b
 
                 order ->
@@ -334,7 +334,7 @@ func2 =
                 "text"
 
             else
-                func2 n 
+                func2 n
     in
     go
   `;
@@ -422,7 +422,7 @@ func =
 
             else
                 to n
- 
+
         to =
             another
 
@@ -618,7 +618,7 @@ func =
     const source3 = `
     --@ Test.elm
 func =
-    func2 
+    func2
 
 
 func2 =
@@ -754,7 +754,7 @@ type alias Test =
 
 type alias Test2 =
           --^
-    Test3 
+    Test3
 
 type alias Test3 =
     Test2
@@ -775,7 +775,7 @@ type alias Test =
     }
 
 type alias Test2 =
-    Test3 
+    Test3
 
 type alias Test3 =
     { field : Test
@@ -850,7 +850,7 @@ import App exposing (Program)
 import Platform exposing (..)
 
 foo : Program
-      --^ 
+      --^
 foo =
     ""
 
@@ -1139,7 +1139,7 @@ foo =
 --@ App.elm
 module App exposing (..)
 
-foo = 
+foo =
     ""
 `;
     await testTypeInference(
@@ -1166,7 +1166,7 @@ foo =
 --@ App.elm
 module App exposing (..)
 
-foo = 
+foo =
     ""
 `;
     await testTypeInference(
@@ -1193,7 +1193,7 @@ foo =
 --@ App.elm
 module App exposing (..)
 
-foo = 
+foo =
     ""
 `;
     await testTypeInference(
@@ -1373,7 +1373,7 @@ func result =
     --^
         Nothing ->
             ""
-        
+
         Just (Just a) ->
             a
   `;
@@ -1417,7 +1417,7 @@ func result =
     --^
         a :: b :: _ ->
             ""
-          
+
         a :: [] ->
             ""
 
