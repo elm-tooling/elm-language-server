@@ -322,9 +322,10 @@ export class RefactorEditUtils {
 
     if (
       pattern.previousSibling?.text !== "," &&
-      pattern.nextSibling?.text === ","
+      pattern.nextSibling?.text === "," &&
+      pattern.nextSibling.nextSibling
     ) {
-      endPosition = pattern.nextSibling.endPosition;
+      endPosition = pattern.nextSibling.nextSibling.startPosition;
     }
 
     return TextEdit.del(
@@ -353,9 +354,10 @@ export class RefactorEditUtils {
 
       if (
         exposedNode.previousSibling?.text !== "," &&
-        exposedNode.nextSibling?.text === ","
+        exposedNode.nextSibling?.text === "," &&
+        exposedNode.nextSibling?.nextSibling
       ) {
-        endPosition = exposedNode.nextSibling.endPosition;
+        endPosition = exposedNode.nextSibling.nextSibling.startPosition;
       }
 
       return TextEdit.del(
