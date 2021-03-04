@@ -5,6 +5,8 @@
 - Drop node 10
 - Update tree-sitter-elm, should improve parsing significantly
 - Added code action to create missing record field
+- Added code action to remove unused functions
+- Added code action to remove all unused code in a file
 - Reimplement diagnostics and code actions for missing case patterns
 - Improve references
 - Rework import definitions to be more like the compiler

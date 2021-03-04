@@ -336,6 +336,41 @@ export class RefactorEditUtils {
     );
   }
 
+  public static removeFunction(
+    nodeAtPosition: SyntaxNode,
+  ): TextEdit | undefined {
+    const valueDeclaration = TreeUtils.findParentOfType(
+      "value_declaration",
+      nodeAtPosition,
+    );
+
+    if (valueDeclaration) {
+      let startPosition = valueDeclaration.startPosition;
+      const endPosition = valueDeclaration.endPosition;
+
+      if (valueDeclaration.previousSibling?.type === "type_annotation") {
+        startPosition = valueDeclaration.previousSibling.startPosition;
+
+        if (
+          valueDeclaration.previousSibling?.previousSibling?.type ===
+          "block_comment"
+        ) {
+          startPosition =
+            valueDeclaration.previousSibling.previousSibling.startPosition;
+        }
+      } else if (valueDeclaration.previousSibling?.type === "block_comment") {
+        startPosition = valueDeclaration.previousSibling.startPosition;
+      }
+
+      return TextEdit.del(
+        Range.create(
+          Position.create(startPosition.row, startPosition.column),
+          Position.create(endPosition.row, endPosition.column),
+        ),
+      );
+    }
+  }
+
   private static removeValueFromExposingList(
     exposedNodes: SyntaxNode[],
     valueName: string,
