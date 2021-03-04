@@ -26,17 +26,23 @@ describe("ElmLsDiagnostics", () => {
     await treeParser.init();
     elmDiagnostics = new ElmLsDiagnostics();
 
-    const program = await treeParser.getProgram(getSourceFiles(source));
+    const sources = getSourceFiles(source)
+    const program = await treeParser.getProgram(sources);
 
-    const sourceFile = program.getSourceFile(uri);
+    let diagnostics : Array<IDiagnostic> = []
+    for ( const fileName in sources) {
+      const filePath = URI.file(baseUri + fileName).toString();
+      const sourceFile = program.getSourceFile(filePath);
 
-    if (!sourceFile) {
-      fail();
+      if (!sourceFile) {
+        fail();
+      }
+
+      diagnostics = diagnostics.concat(elmDiagnostics
+        .createDiagnostics(sourceFile, program)
+        .filter((diagnostic) => diagnostic.data.code === code)
+      );
     }
-
-    const diagnostics = elmDiagnostics
-      .createDiagnostics(sourceFile, program)
-      .filter((diagnostic) => diagnostic.data.code === code);
 
     const diagnosticsEqual = Utils.arrayEquals(
       diagnostics,
@@ -1652,6 +1658,31 @@ text en it language =
 
             Italian items ->
                 it
+			`;
+
+      await testDiagnostics(source, "unused_value_constructor", []);
+    });
+
+    it("used in a different file", async () => {
+      const source = `
+      --@ Main.elm
+      module Main exposing (..)
+
+      import B exposing (C(..))
+
+      f : Int -> C
+      f x =
+          if x > 1 then
+              Something
+          else
+              SomethingElse
+
+      --@ B.elm
+      module B exposing (..)
+
+      type C
+          = Something
+          | SomethingElse
 			`;
 
       await testDiagnostics(source, "unused_value_constructor", []);

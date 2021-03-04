@@ -991,6 +991,9 @@ export class ElmLsDiagnostics {
   private getUnusedValueConstructorDiagnostics(tree: Tree): IDiagnostic[] {
     const diagnostics: IDiagnostic[] = [];
 
+    const exposingAll = this.patternReferencesQuery
+      .matches(tree.rootNode).some((result) => result.captures[0].name === "exposingAll");
+
     const unionVariants = this.unionVariantsQuery
       .matches(tree.rootNode)
       .map((match) => [match.captures[1].node, match.captures[0].node])
@@ -1009,7 +1012,11 @@ export class ElmLsDiagnostics {
             : unionVariant.text),
       );
 
-      if (references.length === 0 && unionVariant.parent) {
+      // Currently if the file exports the variant, either through an explicit reference to the type,
+      // or through a '(..)' to expose everything, then we won't mark the value constructor as unused.
+      // Ideally this should take multiple files into account, at which point, these conditions can be
+      // removed.
+      if (references.length === 0 && unionVariant.parent && !exposingAll) {
         diagnostics.push({
           range: this.getNodeRange(unionVariant.parent),
           message: `Value constructor \`${unionVariant.text}\` is not used.`,
