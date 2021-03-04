@@ -992,7 +992,8 @@ export class ElmLsDiagnostics {
     const diagnostics: IDiagnostic[] = [];
 
     const exposingAll = this.patternReferencesQuery
-      .matches(tree.rootNode).some((result) => result.captures[0].name === "exposingAll");
+      .matches(tree.rootNode)
+      .some((result) => result.captures[0].name === "exposingAll");
 
     const unionVariants = this.unionVariantsQuery
       .matches(tree.rootNode)
