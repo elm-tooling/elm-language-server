@@ -372,7 +372,7 @@ export class PatternMatches {
   private simplify(pattern: SyntaxNode): Pattern {
     const patternAs = pattern.childForFieldName("patternAs");
     if (patternAs) {
-      return this.simplify(patternAs);
+      return this.simplify(pattern.childForFieldName("child") ?? patternAs);
     }
 
     switch (pattern.type) {
@@ -435,7 +435,6 @@ export class PatternMatches {
         );
 
       case "cons_pattern": {
-        // TODO: Fix how cons is parsed
         const patterns = pattern.namedChildren.filter(
           (n) =>
             n.type.includes("pattern") ||
