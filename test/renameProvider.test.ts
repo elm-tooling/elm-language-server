@@ -117,6 +117,50 @@ describe("renameProvider", () => {
     });
   }
 
+  it("renaming a function", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (func)
+
+func a =
+--^
+    15
+
+--@ Module/App.elm
+module Module.App exposing (foo)
+
+import Test exposing (func)
+
+foo : a -> Int
+foo =
+    func
+`;
+
+    const expectedResult = `
+--@ Test.elm
+module Test exposing (bar)
+
+bar a =
+    15
+
+--@ Module/App.elm
+module Module.App exposing (foo)
+
+import Test exposing (bar)
+
+foo : a -> Int
+foo =
+    bar
+`;
+
+    const renameRange = Range.create(
+      Position.create(2, 0),
+      Position.create(2, 4),
+    );
+    await testPrepareRename(source, renameRange);
+    await testRename(source, "bar", expectedResult);
+  });
+
   it("renaming a qualified value function part", async () => {
     const source = `
 --@ Test.elm
