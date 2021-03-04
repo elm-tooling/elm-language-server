@@ -45,9 +45,10 @@ export class References {
               const functionNameNode =
                 TreeUtils.getFunctionNameNodeFromDefinition(
                   definitionNode.node,
-                ) ?? definitionNode.node.type === "lower_pattern"
+                ) ??
+                (definitionNode.node.type === "lower_pattern"
                   ? definitionNode.node
-                  : undefined;
+                  : undefined);
               if (functionNameNode) {
                 const functionName = functionNameNode.text;
                 if (refSourceTree.writeable) {
@@ -106,64 +107,63 @@ export class References {
                         continue;
                       }
 
-                      const otherTreeContainer = forest.getByUri(uri);
+                      const otherSourceFile = forest.getByUri(uri);
 
-                      if (!otherTreeContainer) {
+                      if (!otherSourceFile) {
                         continue;
                       }
 
                       const importedModuleAlias =
                         TreeUtils.findImportAliasOfModule(
                           moduleName,
-                          otherTreeContainer.tree,
+                          otherSourceFile.tree,
                         ) ?? moduleName;
 
                       const allImports = imports[uri];
 
                       // Find the function in the other module's imports
-                      const found =
-                        allImports.getVar(functionName, moduleName)[0] ??
-                        allImports.getVar(
+                      const found = [
+                        ...allImports.getVar(functionName, moduleName),
+                        ...allImports.getVar(
                           `${importedModuleAlias}.${functionName}`,
                           moduleName,
-                        )[0];
+                        ),
+                      ];
 
-                      if (found) {
-                        if (
-                          otherTreeContainer &&
-                          otherTreeContainer.writeable
-                        ) {
-                          const importClause = otherTreeContainer.symbolLinks
-                            ?.get(otherTreeContainer.tree.rootNode)
-                            ?.get(importedModuleAlias);
+                      if (found.length > 0 && otherSourceFile.writeable) {
+                        const importClause = otherSourceFile.symbolLinks
+                          ?.get(otherSourceFile.tree.rootNode)
+                          ?.get(importedModuleAlias);
 
-                          // Add node from exposing list
-                          if (importClause?.type === "Import") {
-                            const exposedNode = TreeUtils.findExposedFunctionNode(
-                              importClause.node,
-                              functionName,
-                            );
-
-                            if (exposedNode) {
-                              references.push({
-                                node: exposedNode,
-                                uri,
-                              });
-                            }
-                          }
-
-                          // Find all function calls in the other tree
-                          const functions = this.findFunctionCalls(
-                            otherTreeContainer.tree.rootNode,
-                            found?.name,
+                        // Add node from exposing list
+                        if (importClause?.type === "Import") {
+                          const exposedNode = TreeUtils.findExposedFunctionNode(
+                            importClause.node,
+                            functionName,
                           );
-                          if (functions) {
-                            references.push(
-                              ...functions.map((node) => {
-                                return { node, uri };
-                              }),
-                            );
+
+                          if (exposedNode) {
+                            references.push({
+                              node: exposedNode,
+                              uri,
+                            });
                           }
+                        }
+
+                        // Find all function calls in the other tree
+                        const functions = found.flatMap(
+                          (imp) =>
+                            this.findFunctionCalls(
+                              otherSourceFile.tree.rootNode,
+                              imp.name,
+                            ) ?? [],
+                        );
+                        if (functions.length > 0) {
+                          references.push(
+                            ...functions.map((node) => {
+                              return { node, uri };
+                            }),
+                          );
                         }
                       }
                     }
@@ -230,64 +230,63 @@ export class References {
                         continue;
                       }
 
-                      const otherTreeContainer = forest.getByUri(uri);
+                      const otherSourceFile = forest.getByUri(uri);
 
-                      if (!otherTreeContainer) {
+                      if (!otherSourceFile) {
                         continue;
                       }
 
                       const importedModuleAlias =
                         TreeUtils.findImportAliasOfModule(
                           moduleName,
-                          otherTreeContainer.tree,
+                          otherSourceFile.tree,
                         ) ?? moduleName;
 
                       const allImports = imports[uri];
 
                       // Find the function in the other module's imports
-                      const found =
-                        allImports.getVar(portName, moduleName)[0] ??
-                        allImports.getVar(
+                      const found = [
+                        ...allImports.getVar(portName, moduleName),
+                        ...allImports.getVar(
                           `${importedModuleAlias}.${portName}`,
                           moduleName,
-                        )[0];
+                        ),
+                      ];
 
-                      if (found) {
-                        if (
-                          otherTreeContainer &&
-                          otherTreeContainer.writeable
-                        ) {
-                          const importClause = otherTreeContainer.symbolLinks
-                            ?.get(otherTreeContainer.tree.rootNode)
-                            ?.get(importedModuleAlias);
+                      if (found.length > 0 && otherSourceFile.writeable) {
+                        const importClause = otherSourceFile.symbolLinks
+                          ?.get(otherSourceFile.tree.rootNode)
+                          ?.get(importedModuleAlias);
 
-                          // Add node from exposing list
-                          if (importClause?.type === "Import") {
-                            const exposedNode = TreeUtils.findExposedFunctionNode(
-                              importClause.node,
-                              portName,
-                            );
-
-                            if (exposedNode) {
-                              references.push({
-                                node: exposedNode,
-                                uri,
-                              });
-                            }
-                          }
-
-                          // Find all function calls in the other tree
-                          const functions = this.findFunctionCalls(
-                            otherTreeContainer.tree.rootNode,
-                            found?.name,
+                        // Add node from exposing list
+                        if (importClause?.type === "Import") {
+                          const exposedNode = TreeUtils.findExposedFunctionNode(
+                            importClause.node,
+                            portName,
                           );
-                          if (functions) {
-                            references.push(
-                              ...functions.map((node) => {
-                                return { node, uri };
-                              }),
-                            );
+
+                          if (exposedNode) {
+                            references.push({
+                              node: exposedNode,
+                              uri,
+                            });
                           }
+                        }
+
+                        // Find all function calls in the other tree
+                        const functions = found.flatMap(
+                          (imp) =>
+                            this.findFunctionCalls(
+                              otherSourceFile.tree.rootNode,
+                              imp.name,
+                            ) ?? [],
+                        );
+                        if (functions.length > 0) {
+                          references.push(
+                            ...functions.map((node) => {
+                              return { node, uri };
+                            }),
+                          );
                         }
                       }
                     }
@@ -354,65 +353,61 @@ export class References {
                         continue;
                       }
 
-                      const otherTreeContainer = forest.getByUri(uri);
+                      const otherSourceFile = forest.getByUri(uri);
 
-                      if (!otherTreeContainer) {
+                      if (!otherSourceFile) {
                         continue;
                       }
 
                       const importedModuleAlias =
                         TreeUtils.findImportAliasOfModule(
                           moduleName,
-                          otherTreeContainer.tree,
+                          otherSourceFile.tree,
                         ) ?? moduleName;
 
                       const allImports = imports[uri];
 
                       // Find the type or type alias in the other module's imports
-                      const found =
-                        allImports.getType(
-                          typeOrTypeAliasName,
-                          moduleName,
-                        )[0] ??
-                        allImports.getType(
+                      const found = [
+                        ...allImports.getType(typeOrTypeAliasName, moduleName),
+                        ...allImports.getType(
                           `${importedModuleAlias}.${typeOrTypeAliasName}`,
                           moduleName,
-                        )[0];
+                        ),
+                      ];
 
-                      if (found) {
-                        if (
-                          otherTreeContainer &&
-                          otherTreeContainer.writeable
-                        ) {
-                          const importClause = otherTreeContainer.symbolLinks
-                            ?.get(otherTreeContainer.tree.rootNode)
-                            ?.get(importedModuleAlias);
+                      if (found.length > 0 && otherSourceFile.writeable) {
+                        const importClause = otherSourceFile.symbolLinks
+                          ?.get(otherSourceFile.tree.rootNode)
+                          ?.get(importedModuleAlias);
 
-                          if (importClause?.type === "Import") {
-                            const exposedNode = TreeUtils.findExposedTypeOrTypeAliasNode(
-                              importClause.node,
-                              typeOrTypeAliasNameNode.text,
-                            );
-
-                            if (exposedNode) {
-                              references.push({
-                                node: exposedNode,
-                                uri,
-                              });
-                            }
-                          }
-
-                          const typeOrTypeAliasCalls = TreeUtils.findTypeOrTypeAliasCalls(
-                            otherTreeContainer.tree,
-                            found.name,
+                        if (importClause?.type === "Import") {
+                          const exposedNode = TreeUtils.findExposedTypeOrTypeAliasNode(
+                            importClause.node,
+                            typeOrTypeAliasNameNode.text,
                           );
-                          if (typeOrTypeAliasCalls) {
-                            references.push(
-                              ...typeOrTypeAliasCalls.map((node) => {
-                                return { node, uri };
-                              }),
-                            );
+
+                          if (exposedNode) {
+                            references.push({
+                              node: exposedNode,
+                              uri,
+                            });
                           }
+                        }
+
+                        const typeOrTypeAliasCalls = found.flatMap(
+                          (imp) =>
+                            TreeUtils.findTypeOrTypeAliasCalls(
+                              otherSourceFile.tree,
+                              imp.name,
+                            ) ?? [],
+                        );
+                        if (typeOrTypeAliasCalls.length > 0) {
+                          references.push(
+                            ...typeOrTypeAliasCalls.map((node) => {
+                              return { node, uri };
+                            }),
+                          );
                         }
                       }
                     }
