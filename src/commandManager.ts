@@ -4,12 +4,12 @@ export class CommandManager {
   public static commands: string[] = [];
   private static handlers = new Map<
     string,
-    (...args: any[]) => void | Promise<void>
+    (...args: string[]) => void | Promise<void>
   >();
 
   public static register(
     command: string,
-    handler: (...args: any[]) => void | Promise<void>,
+    handler: (...args: string[]) => void | Promise<void>,
   ): void {
     this.commands.push(command);
     this.handlers.set(command, handler);
