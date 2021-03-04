@@ -1433,55 +1433,28 @@ func result =
 --@ Test.elm
 module Test exposing (..)
 
-import App exposing (Route)
+import Route exposing (App)
 
-type Maybe a = Just a | Nothing
+type Maybe a
+    = Just a
+    | Nothing
 
-func result =
-    case result of
+changeRouteTo maybeRoute =
+    case maybeRoute of
     --^
         Nothing ->
             ""
-
-        Just App.Home ->
+        Just (Route.EditArticle slug) ->
+            ""
+        Just Route.Home ->
             ""
 
-        Just App.Root ->
-            ""
+--@ Route.elm
+module Route exposing (..)
 
-        Just App.Login ->
-            ""
-
-        Just App.Logout ->
-            ""
-
-        Just App.Register ->
-            ""
-
-        Just App.Settings ->
-            ""
-
-        Just App.NewArticle ->
-            ""
-        
-        Just (App.Article var) ->
-            ""
-
---@ App.elm
-module App exposing (..)
-
-type Route
+type App
     = Home
-    | Root
-    | Login
-    | Logout
-    | Register
-    | Settings
-    | Article Int
-    | Profile Int
-    | NewArticle
     | EditArticle Int
-
   `;
       await testTypeInference(basicsSources + source, [], true);
     });
@@ -1498,7 +1471,7 @@ func result =
     --^
         Just ((Just a) as arg) ->
             ""
-        
+
         Just Nothing ->
             ""
 
