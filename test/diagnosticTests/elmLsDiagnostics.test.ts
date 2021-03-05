@@ -1576,7 +1576,7 @@ foo = Thing
 
     it("unused value constructor not exposed", async () => {
       const source = `
-module Bar exposing (foo, Some))
+module Bar exposing (Some)
 
 type Some = Thing | Other
 			`;

@@ -15,6 +15,8 @@ const errorCodes = [
   "unused_alias",
   "unused_top_level",
   "unused_pattern",
+  "unused_value_constructor",
+  "unused_type_alias",
 ];
 const fixId = "remove_unused";
 CodeActionProvider.registerCodeAction({
@@ -127,6 +129,42 @@ function getEditsForDiagnostic(
           : TextEdit.replace(diagnostic.range, "_");
 
       return { title: `Fix unused pattern \`${node.text}\``, edits: [edit] };
+    }
+
+    case "unused_value_constructor": {
+      const node = TreeUtils.getNamedDescendantForPosition(
+        sourceFile.tree.rootNode,
+        diagnostic.range.start,
+      );
+
+      const edit = RefactorEditUtils.removeTypeValue(node);
+
+      if (!edit) {
+        break;
+      }
+
+      return {
+        title: `Remove unused value constructor \`${node.text}\``,
+        edits: [edit],
+      };
+    }
+
+    case "unused_type_alias": {
+      const node = TreeUtils.getNamedDescendantForPosition(
+        sourceFile.tree.rootNode,
+        diagnostic.range.start,
+      );
+
+      const edit = RefactorEditUtils.removeTypeAlias(node);
+
+      if (!edit) {
+        break;
+      }
+
+      return {
+        title: `Remove unused type alias \`${node.text}\``,
+        edits: [edit],
+      };
     }
 
     case "unused_imported_value": {
