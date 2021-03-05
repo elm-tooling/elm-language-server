@@ -371,6 +371,96 @@ export class RefactorEditUtils {
     }
   }
 
+  public static removeTypeAlias(node: SyntaxNode | null): TextEdit | undefined {
+    if (!node) {
+      return undefined;
+    }
+    const typeAliasDeclarationNode = TreeUtils.findParentOfType(
+      "type_alias_declaration",
+      node,
+    );
+    if (!typeAliasDeclarationNode) {
+      return undefined;
+    }
+    return TextEdit.del(
+      Range.create(
+        Position.create(
+          typeAliasDeclarationNode.startPosition.row,
+          typeAliasDeclarationNode.startPosition.column,
+        ),
+        Position.create(
+          typeAliasDeclarationNode.endPosition.row,
+          typeAliasDeclarationNode.endPosition.column,
+        ),
+      ),
+    );
+  }
+
+  public static removeTypeValue(
+    nodeAtPosition: SyntaxNode,
+  ): TextEdit | undefined {
+    const unionVariants = TreeUtils.findParentOfType(
+      "type_declaration",
+      nodeAtPosition,
+    )?.children.filter((child) => child.type == "union_variant");
+
+    if (unionVariants?.length == 1) {
+      return this.removeType(unionVariants[0].parent);
+    }
+
+    let startPosition = nodeAtPosition.startPosition;
+    let endPosition = nodeAtPosition.endPosition;
+
+    const unionVariant = unionVariants?.find(
+      (a) =>
+        a.text.startsWith(`${nodeAtPosition.text} `) ||
+        a.text === nodeAtPosition.text,
+    );
+    if (unionVariant?.previousSibling?.type == "eq") {
+      startPosition = unionVariant.previousSibling?.endPosition;
+      if (unionVariant.nextSibling?.type == "|") {
+        endPosition = unionVariant.nextSibling?.endPosition;
+      }
+    } else if (
+      unionVariant?.previousSibling?.type == "|" &&
+      unionVariant?.previousSibling?.previousSibling
+    ) {
+      startPosition = unionVariant.previousSibling?.previousSibling.endPosition;
+    }
+
+    return TextEdit.del(
+      Range.create(
+        Position.create(startPosition.row, startPosition.column),
+        Position.create(endPosition.row, endPosition.column),
+      ),
+    );
+  }
+
+  public static removeType(node: SyntaxNode | null): TextEdit | undefined {
+    if (!node) {
+      return undefined;
+    }
+    const typeDeclarationNode = TreeUtils.findParentOfType(
+      "type_declaration",
+      node,
+    );
+    if (!typeDeclarationNode) {
+      return undefined;
+    }
+    return TextEdit.del(
+      Range.create(
+        Position.create(
+          typeDeclarationNode.startPosition.row,
+          typeDeclarationNode.startPosition.column,
+        ),
+        Position.create(
+          typeDeclarationNode.endPosition.row,
+          typeDeclarationNode.endPosition.column,
+        ),
+      ),
+    );
+  }
+
   private static removeValueFromExposingList(
     exposedNodes: SyntaxNode[],
     valueName: string,
