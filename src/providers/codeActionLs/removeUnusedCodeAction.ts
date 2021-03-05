@@ -201,6 +201,31 @@ function getEditsForDiagnostic(
       );
 
       if (removeValueEdit) {
+        // Detect if there are 2 or more values at the end of a exposing list that are removed
+        // For example, if we are removing `foo` and `bar` in `(func, foo, bar)`
+        // We need to add another edit to remove the comma before `foo`
+        if (importsMap && allValues.length > 2) {
+          allValues.reverse();
+          const firstUsedIndex = allValues.findIndex(
+            (val) => !importsMap.get(moduleName.text)?.has(val),
+          );
+
+          if (firstUsedIndex >= 2) {
+            const val = allValues[firstUsedIndex - 1];
+
+            const removeValueWithCommaEdit = RefactorEditUtils.removeValueFromImport(
+              sourceFile.tree,
+              moduleName.text,
+              val,
+              /* forceRemovePrecedingComma */ true,
+            );
+
+            if (removeValueWithCommaEdit) {
+              return { edits: [removeValueWithCommaEdit, removeValueEdit] };
+            }
+          }
+        }
+
         return {
           title: `Remove unused ${
             node.type === "exposed_type" ? "type" : "value"

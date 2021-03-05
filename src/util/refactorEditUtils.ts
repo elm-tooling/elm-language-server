@@ -127,6 +127,7 @@ export class RefactorEditUtils {
     tree: Tree,
     moduleName: string,
     valueName: string,
+    forceRemoveLastComma = false,
   ): TextEdit | undefined {
     const importClause = TreeUtils.findImportClauseByName(tree, moduleName);
 
@@ -163,6 +164,7 @@ export class RefactorEditUtils {
         return this.removeValueFromExposingList(
           exposedValuesAndTypes,
           valueName,
+          forceRemoveLastComma,
         );
       }
     }
@@ -397,6 +399,7 @@ export class RefactorEditUtils {
   private static removeValueFromExposingList(
     exposedNodes: SyntaxNode[],
     valueName: string,
+    forceRemoveLastComma = false,
   ): TextEdit | undefined {
     const exposedNode = exposedNodes.find(
       (node) => node.text === valueName || node.text === `${valueName}(..)`,
@@ -408,7 +411,7 @@ export class RefactorEditUtils {
 
       if (
         exposedNode.previousSibling?.text === "," &&
-        exposedNode.nextSibling?.text === ")"
+        (exposedNode.nextSibling?.text === ")" || forceRemoveLastComma)
       ) {
         startPosition = exposedNode.previousSibling.startPosition;
       }
