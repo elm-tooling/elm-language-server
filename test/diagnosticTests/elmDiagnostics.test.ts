@@ -1428,7 +1428,7 @@ func result =
       await testTypeInference(basicsSources + source, [], true);
     });
 
-    it("should not have an error with module prefixed ctor", async () => {
+    it("should not have an error with module prefixed nullary constructor argument", async () => {
       const source = `
 --@ Test.elm
 module Test exposing (..)
@@ -1444,8 +1444,10 @@ changeRouteTo maybeRoute =
     --^
         Nothing ->
             ""
+
         Just (Route.EditArticle slug) ->
             ""
+
         Just Route.Home ->
             ""
 

@@ -404,6 +404,7 @@ export class PatternMatches {
       case "nullary_constructor_argument_pattern": {
         const ctor =
           pattern.childForFieldName("constructor")?.lastNamedChild ??
+          pattern.firstNamedChild?.lastNamedChild ??
           pattern.firstNamedChild!;
         const definition = this.program
           .getTypeChecker()
