@@ -9,7 +9,6 @@ import {
   Command,
   Connection,
   Diagnostic as LspDiagnostic,
-  DiagnosticSeverity,
   Position,
   Range,
   TextEdit,
@@ -23,6 +22,7 @@ import { Settings } from "../util/settings";
 import { Diagnostic } from "../compiler/diagnostics";
 import {
   convertFromCompilerDiagnostic,
+  convertToCompilerDiagnostic,
   DiagnosticsProvider,
   IDiagnostic,
 } from "./diagnostics/diagnosticsProvider";
@@ -146,15 +146,7 @@ export class CodeActionProvider {
       ...params.program.getSuggestionDiagnostics(params.sourceFile),
       ...diagnosticProvider
         .getCurrentDiagnostics(params.sourceFile.uri, DiagnosticKind.ElmLS)
-        .map((diag) => ({
-          message: diag.message,
-          source: diag.source,
-          severity: diag.severity ?? DiagnosticSeverity.Warning,
-          range: diag.range,
-          code: diag.data.code,
-          uri: diag.data.uri,
-          tags: diag.tags,
-        })),
+        .map(convertToCompilerDiagnostic),
     ];
   }
 
@@ -222,13 +214,11 @@ export class CodeActionProvider {
       }
     });
 
-    const sortedEdits = edits.sort((a, b) => {
-      if (a.range.start.line === b.range.start.line) {
-        return a.range.start.character - b.range.start.character;
-      }
-      return a.range.start.line - b.range.start.line;
-    });
+    const sortedEdits = edits.sort((a, b) =>
+      comparePosition(a.range.start, b.range.start),
+    );
 
+    // Using object mutation here to fix the ranges
     sortedEdits.forEach((edit, i) => {
       const lastEditEnd = sortedEdits[i - 1]?.range.end;
       const newEditStart = edit.range.start;

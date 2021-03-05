@@ -59,7 +59,7 @@ function getEditsForDiagnostic(
   sourceFile: ISourceFile,
   importsMap?: Map<string, Set<string>>,
 ): { title?: string; edits: TextEdit[] } {
-  const addImportToSet = (module: string, value: string) => {
+  const addImportToSet = (module: string, value: string): void => {
     if (!importsMap) {
       return;
     }

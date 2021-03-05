@@ -848,7 +848,7 @@ export class ElmLsDiagnostics {
     return diagnostics;
   }
 
-  getSingleFieldRecordDiagnostics(
+  private getSingleFieldRecordDiagnostics(
     tree: Tree,
     uri: string,
     program: IProgram,
