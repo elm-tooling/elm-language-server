@@ -995,14 +995,12 @@ export class ElmLsDiagnostics {
     // reference to the type, or through a '(..)' to expose everything, then
     // we won't mark the value constructor as unused. Ideally this should take
     // multiple files into account, then these conditions can be removed.
-    const exposingAll = !!tree
-      .rootNode
-      .descendantsOfType("module_declaration")
-      ?.[0]
-      ?.childForFieldName('exposing')
-      ?.childForFieldName('doubleDot')
+    const exposingAll = !!tree.rootNode
+      .descendantsOfType("module_declaration")?.[0]
+      ?.childForFieldName("exposing")
+      ?.childForFieldName("doubleDot");
 
-    if(exposingAll) {
+    if (exposingAll) {
       return diagnostics;
     }
 
