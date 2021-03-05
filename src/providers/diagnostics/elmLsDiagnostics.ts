@@ -996,7 +996,7 @@ export class ElmLsDiagnostics {
     // we won't mark the value constructor as unused. Ideally this should take
     // multiple files into account, then these conditions can be removed.
     const exposingAll = !!tree.rootNode
-      .descendantsOfType("module_declaration")?.[0]
+      .childForFieldName("moduleDeclaration")
       ?.childForFieldName("exposing")
       ?.childForFieldName("doubleDot");
 

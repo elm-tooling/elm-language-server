@@ -1664,25 +1664,25 @@ text en it language =
     });
 
     it("used in a different file", async () => {
-      const source = `
-      --@ Main.elm
-      module Main exposing (..)
+      const source =`
+--@ Main.elm
+module Main exposing (..)
 
-      import B exposing (C(..))
+import B exposing (C(..))
 
-      f : Int -> C
-      f x =
-          if x > 1 then
-              Something
-          else
-              SomethingElse
+f : Int -> C
+f x =
+    if x > 1 then
+        Something
+    else
+        SomethingElse
 
-      --@ B.elm
-      module B exposing (..)
+--@ B.elm
+module B exposing (..)
 
-      type C
-          = Something
-          | SomethingElse
+type C
+    = Something
+    | SomethingElse
 			`;
 
       await testDiagnostics(source, "unused_value_constructor", []);
