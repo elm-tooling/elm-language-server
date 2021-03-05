@@ -168,6 +168,29 @@ export class RefactorEditUtils {
     }
   }
 
+  public static removeImportExposingList(
+    tree: Tree,
+    moduleName: string,
+  ): TextEdit | undefined {
+    const importClause = TreeUtils.findImportClauseByName(tree, moduleName);
+    const exposingList = importClause?.childForFieldName("exposing");
+
+    if (exposingList) {
+      return TextEdit.del(
+        Range.create(
+          Position.create(
+            exposingList.startPosition.row,
+            exposingList.startPosition.column - 1,
+          ),
+          Position.create(
+            exposingList.endPosition.row,
+            exposingList.endPosition.column,
+          ),
+        ),
+      );
+    }
+  }
+
   public static addImport(
     tree: Tree,
     moduleName: string,
@@ -383,12 +406,14 @@ export class RefactorEditUtils {
       let startPosition = exposedNode.startPosition;
       let endPosition = exposedNode.endPosition;
 
-      if (exposedNode.previousSibling?.text === ",") {
+      if (
+        exposedNode.previousSibling?.text === "," &&
+        exposedNode.nextSibling?.text === ")"
+      ) {
         startPosition = exposedNode.previousSibling.startPosition;
       }
 
       if (
-        exposedNode.previousSibling?.text !== "," &&
         exposedNode.nextSibling?.text === "," &&
         exposedNode.nextSibling?.nextSibling
       ) {

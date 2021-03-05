@@ -35,6 +35,7 @@ CodeActionProvider.registerCodeAction({
       .filter(Utils.notUndefined.bind(this));
   },
   getFixAllCodeAction: (params) => {
+    const importsMap = new Map<string, Set<string>>();
     return CodeActionProvider.getFixAllCodeAction(
       "Remove all unused code",
       params,
@@ -45,6 +46,7 @@ CodeActionProvider.registerCodeAction({
           ...getEditsForDiagnostic(
             convertFromCompilerDiagnostic(diagnostic),
             params.sourceFile,
+            importsMap,
           ).edits,
         );
       },
@@ -55,7 +57,23 @@ CodeActionProvider.registerCodeAction({
 function getEditsForDiagnostic(
   diagnostic: IDiagnostic,
   sourceFile: ISourceFile,
+  importsMap?: Map<string, Set<string>>,
 ): { title?: string; edits: TextEdit[] } {
+  const addImportToSet = (module: string, value: string) => {
+    if (!importsMap) {
+      return;
+    }
+
+    let existing = importsMap.get(module);
+
+    if (!existing) {
+      existing = new Set<string>();
+      importsMap.set(module, existing);
+    }
+
+    existing.add(value);
+  };
+
   switch (diagnostic.data.code) {
     case "unused_import": {
       const node = TreeUtils.getNamedDescendantForPosition(
@@ -148,6 +166,32 @@ function getEditsForDiagnostic(
 
       if (!moduleName) {
         break;
+      }
+
+      const allValues =
+        importClause
+          .childForFieldName("exposing")
+          ?.namedChildren.filter(
+            (n) => n.type === "exposed_value" || n.type === "exposed_type",
+          )
+          .map((n) => n.text) ?? [];
+
+      // This is only for the fix all code action
+      // If we are removing all import values, we need to remove the entire exposing
+      addImportToSet(moduleName.text, node.text);
+      if (
+        importsMap &&
+        allValues.every((val) => importsMap.get(moduleName.text)?.has(val))
+      ) {
+        const removeExposingExit = RefactorEditUtils.removeImportExposingList(
+          sourceFile.tree,
+          moduleName.text,
+        );
+        if (removeExposingExit) {
+          return {
+            edits: [removeExposingExit],
+          };
+        }
       }
 
       const removeValueEdit = RefactorEditUtils.removeValueFromImport(

@@ -35,6 +35,7 @@ import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 import { ICodeActionParams } from "./paramsExtensions";
 import { ElmPackageCache } from "../compiler/elmPackageCache";
+import { comparePosition } from "../positionUtil";
 
 export interface ICodeActionRegistration {
   errorCodes: string[];
@@ -218,6 +219,31 @@ export class CodeActionProvider {
         callbackChanges(changes, diagnostic);
       } else {
         callback(edits, diagnostic);
+      }
+    });
+
+    const sortedEdits = edits.sort((a, b) => {
+      if (a.range.start.line === b.range.start.line) {
+        return a.range.start.character - b.range.start.character;
+      }
+      return a.range.start.line - b.range.start.line;
+    });
+
+    sortedEdits.forEach((edit, i) => {
+      const lastEditEnd = sortedEdits[i - 1]?.range.end;
+      const newEditStart = edit.range.start;
+
+      // Handle if the ranges overlap
+      if (
+        lastEditEnd &&
+        newEditStart &&
+        comparePosition(lastEditEnd, newEditStart) > 0
+      ) {
+        edit.range.start = lastEditEnd;
+
+        if (comparePosition(edit.range.end, edit.range.start) < 0) {
+          edit.range.end = edit.range.start;
+        }
       }
     });
 
