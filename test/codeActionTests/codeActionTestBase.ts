@@ -100,7 +100,7 @@ export async function testCodeAction(
     useValue: new DiagnosticsProvider(),
   });
 
-  // Needed be codeActionProvider uses these diagnostics
+  // Needed by codeActionProvider which uses these diagnostics
   container
     .resolve(DiagnosticsProvider)
     .forceElmLsDiagnosticsUpdate(sourceFile, program);
