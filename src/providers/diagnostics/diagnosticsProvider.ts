@@ -3,6 +3,7 @@ import {
   CancellationToken,
   Connection,
   Diagnostic as LspDiagnostic,
+  DiagnosticSeverity,
   FileChangeType,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -57,6 +58,18 @@ export function convertFromCompilerDiagnostic(diag: Diagnostic): IDiagnostic {
       uri: diag.uri,
       code: diag.code,
     },
+    tags: diag.tags,
+  };
+}
+
+export function convertToCompilerDiagnostic(diag: IDiagnostic): Diagnostic {
+  return {
+    message: diag.message,
+    source: diag.source,
+    severity: diag.severity ?? DiagnosticSeverity.Warning,
+    range: diag.range,
+    code: diag.data.code,
+    uri: diag.data.uri,
     tags: diag.tags,
   };
 }
@@ -228,6 +241,20 @@ export class DiagnosticsProvider {
     }
 
     return this.currentDiagnostics.get(uri)?.get() ?? [];
+  }
+
+  /**
+   * Used for tests only
+   */
+  public forceElmLsDiagnosticsUpdate(
+    sourceFile: ISourceFile,
+    program: IProgram,
+  ): void {
+    this.updateDiagnostics(
+      sourceFile.uri,
+      DiagnosticKind.ElmLS,
+      this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
+    );
   }
 
   private requestDiagnostics(uri: string): void {

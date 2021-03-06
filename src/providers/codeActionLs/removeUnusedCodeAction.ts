@@ -37,6 +37,7 @@ CodeActionProvider.registerCodeAction({
       .filter(Utils.notUndefined.bind(this));
   },
   getFixAllCodeAction: (params) => {
+    const importsMap = new Map<string, Set<string>>();
     return CodeActionProvider.getFixAllCodeAction(
       "Remove all unused code",
       params,
@@ -47,6 +48,7 @@ CodeActionProvider.registerCodeAction({
           ...getEditsForDiagnostic(
             convertFromCompilerDiagnostic(diagnostic),
             params.sourceFile,
+            importsMap,
           ).edits,
         );
       },
@@ -57,7 +59,23 @@ CodeActionProvider.registerCodeAction({
 function getEditsForDiagnostic(
   diagnostic: IDiagnostic,
   sourceFile: ISourceFile,
+  importsMap?: Map<string, Set<string>>,
 ): { title?: string; edits: TextEdit[] } {
+  const addImportToSet = (module: string, value: string): void => {
+    if (!importsMap) {
+      return;
+    }
+
+    let existing = importsMap.get(module);
+
+    if (!existing) {
+      existing = new Set<string>();
+      importsMap.set(module, existing);
+    }
+
+    existing.add(value);
+  };
+
   switch (diagnostic.data.code) {
     case "unused_import": {
       const node = TreeUtils.getNamedDescendantForPosition(
@@ -188,6 +206,32 @@ function getEditsForDiagnostic(
         break;
       }
 
+      const allValues =
+        importClause
+          .childForFieldName("exposing")
+          ?.namedChildren.filter(
+            (n) => n.type === "exposed_value" || n.type === "exposed_type",
+          )
+          .map((n) => n.text) ?? [];
+
+      // This is only for the fix all code action
+      // If we are removing all import values, we need to remove the entire exposing
+      addImportToSet(moduleName.text, node.text);
+      if (
+        importsMap &&
+        allValues.every((val) => importsMap.get(moduleName.text)?.has(val))
+      ) {
+        const removeExposingExit = RefactorEditUtils.removeImportExposingList(
+          sourceFile.tree,
+          moduleName.text,
+        );
+        if (removeExposingExit) {
+          return {
+            edits: [removeExposingExit],
+          };
+        }
+      }
+
       const removeValueEdit = RefactorEditUtils.removeValueFromImport(
         sourceFile.tree,
         moduleName.text,
@@ -195,6 +239,31 @@ function getEditsForDiagnostic(
       );
 
       if (removeValueEdit) {
+        // Detect if there are 2 or more values at the end of a exposing list that are removed
+        // For example, if we are removing `foo` and `bar` in `(func, foo, bar)`
+        // We need to add another edit to remove the comma before `foo`
+        if (importsMap && allValues.length > 2) {
+          allValues.reverse();
+          const firstUsedIndex = allValues.findIndex(
+            (val) => !importsMap.get(moduleName.text)?.has(val),
+          );
+
+          if (firstUsedIndex >= 2) {
+            const val = allValues[firstUsedIndex - 1];
+
+            const removeValueWithCommaEdit = RefactorEditUtils.removeValueFromImport(
+              sourceFile.tree,
+              moduleName.text,
+              val,
+              /* forceRemovePrecedingComma */ true,
+            );
+
+            if (removeValueWithCommaEdit) {
+              return { edits: [removeValueWithCommaEdit, removeValueEdit] };
+            }
+          }
+        }
+
         return {
           title: `Remove unused ${
             node.type === "exposed_type" ? "type" : "value"

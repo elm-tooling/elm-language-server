@@ -9,7 +9,6 @@ import {
   Command,
   Connection,
   Diagnostic as LspDiagnostic,
-  DiagnosticSeverity,
   Position,
   Range,
   TextEdit,
@@ -23,6 +22,7 @@ import { Settings } from "../util/settings";
 import { Diagnostic } from "../compiler/diagnostics";
 import {
   convertFromCompilerDiagnostic,
+  convertToCompilerDiagnostic,
   DiagnosticsProvider,
   IDiagnostic,
 } from "./diagnostics/diagnosticsProvider";
@@ -35,6 +35,7 @@ import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 import { ICodeActionParams } from "./paramsExtensions";
 import { ElmPackageCache } from "../compiler/elmPackageCache";
+import { comparePosition } from "../positionUtil";
 
 export interface ICodeActionRegistration {
   errorCodes: string[];
@@ -145,15 +146,7 @@ export class CodeActionProvider {
       ...params.program.getSuggestionDiagnostics(params.sourceFile),
       ...diagnosticProvider
         .getCurrentDiagnostics(params.sourceFile.uri, DiagnosticKind.ElmLS)
-        .map((diag) => ({
-          message: diag.message,
-          source: diag.source,
-          severity: diag.severity ?? DiagnosticSeverity.Warning,
-          range: diag.range,
-          code: diag.data.code,
-          uri: diag.data.uri,
-          tags: diag.tags,
-        })),
+        .map(convertToCompilerDiagnostic),
     ];
   }
 
@@ -218,6 +211,29 @@ export class CodeActionProvider {
         callbackChanges(changes, diagnostic);
       } else {
         callback(edits, diagnostic);
+      }
+    });
+
+    const sortedEdits = edits.sort((a, b) =>
+      comparePosition(a.range.start, b.range.start),
+    );
+
+    // Using object mutation here to fix the ranges
+    sortedEdits.forEach((edit, i) => {
+      const lastEditEnd = sortedEdits[i - 1]?.range.end;
+      const newEditStart = edit.range.start;
+
+      // Handle if the ranges overlap
+      if (
+        lastEditEnd &&
+        newEditStart &&
+        comparePosition(lastEditEnd, newEditStart) > 0
+      ) {
+        edit.range.start = lastEditEnd;
+
+        if (comparePosition(edit.range.end, edit.range.start) < 0) {
+          edit.range.end = edit.range.start;
+        }
       }
     });
 
