@@ -25,6 +25,8 @@ func =
       source,
       [{ title: "Move list item down" }],
       expectedSource,
+      undefined,
+      /* UnexpectedCodeActions */ [{ title: "Move list item up" }],
     );
   });
 
@@ -68,8 +70,8 @@ module Test exposing (..)
 
 func =
     [ "Apple",
+      --^
       "Banana",
-        --^
       "Cucumber",
       "Date"
     ]
@@ -80,13 +82,14 @@ func =
 module Test exposing (..)
 
 func =
-    [ "Apple",
+    [ "Banana",
+      "Apple",
       "Cucumber",
-      "Banana",
       "Date"
     ]
 `;
-
+    // Note: At the time of writing this test breaks when moving any other item, but the behavior works in the client.
+    // NoteCont: this is probably a test-framework issue.
     await testCodeAction(
       source,
       [{ title: "Move list item down" }],
@@ -130,12 +133,12 @@ func =
 
     await testCodeAction(
       source,
-      [{ title: "Move list item up" }],
+      [{ title: "Move list item up" }, { title: "Move list item down" }],
       expectedSource,
     );
   });
 
-  it("should move comment along with item in vertical list", async () => {
+  it("should move comment(s) along with item in vertical list", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)
@@ -299,10 +302,12 @@ func =
       source,
       [{ title: "Move list item down" }],
       expectedSource,
+      undefined,
+      [{ title: "Move list item up" }],
     );
   });
 
-  it("should not handle unfinished lists?", async () => {
+  it("should not handle unfinished lists", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)
@@ -326,6 +331,60 @@ func =
 
 `;
 
-    // await testCodeAction(source, [], expectedSource);
+    await testCodeAction(source, [], expectedSource, undefined, [
+      { title: "Move list item up" },
+      { title: "Move list item down" },
+    ]);
+  });
+
+  it("should not show CodeAction on single item in list", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    [ "aa" ]
+      --^
+`;
+
+    await testCodeAction(source, [], undefined, undefined, [
+      { title: "Move list item up" },
+      { title: "Move list item down" },
+    ]);
+  });
+
+  it("should not show CodeAction on single item in list", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    [ "aa" ]
+      --^
+`;
+
+    await testCodeAction(source, [], undefined, undefined, [
+      { title: "Move list item up" },
+      { title: "Move list item down" },
+    ]);
+  });
+
+  it("should not show move list item down on last item in list", async () => {
+    const source = `
+  --@ Test.elm
+  module Test exposing (..)
+  
+  func =
+      [ "aa", "bb" ]
+             --^
+  `;
+
+    await testCodeAction(
+      source,
+      [{ title: "Move list item up" }],
+      undefined,
+      undefined,
+      [{ title: "Move list item down" }],
+    );
   });
 });
