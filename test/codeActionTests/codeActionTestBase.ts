@@ -143,7 +143,7 @@ export async function testCodeAction(
     codeActions.find((c) => codeActionEquals(codeAction, c)),
   );
 
-  const codeActionsExistWhichShouldNotExist = unexpectedCodeActions?.every(
+  const codeActionsExistWhichShouldNotExist = unexpectedCodeActions?.some(
     (codeAction) => codeActions.find((c) => codeActionEquals(codeAction, c)),
   );
 
