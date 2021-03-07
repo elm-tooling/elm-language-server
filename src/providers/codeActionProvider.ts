@@ -21,17 +21,21 @@ import { MultiMap } from "../util/multiMap";
 import { Settings } from "../util/settings";
 import { Diagnostic } from "../compiler/diagnostics";
 import {
-  convertFromAnalyzerDiagnostic,
+  convertFromCompilerDiagnostic,
+  convertToCompilerDiagnostic,
   DiagnosticsProvider,
   IDiagnostic,
 } from "./diagnostics/diagnosticsProvider";
-import { ElmLsDiagnostics } from "./diagnostics/elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
-import { diagnosticsEquals } from "./diagnostics/fileDiagnostics";
+import {
+  DiagnosticKind,
+  diagnosticsEquals,
+} from "./diagnostics/fileDiagnostics";
 import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 import { ICodeActionParams } from "./paramsExtensions";
 import { ElmPackageCache } from "../compiler/elmPackageCache";
+import { comparePosition } from "../positionUtil";
 
 export interface ICodeActionRegistration {
   errorCodes: string[];
@@ -66,7 +70,6 @@ export class CodeActionProvider {
   private connection: Connection;
   private settings: Settings;
   private elmMake: ElmMakeDiagnostics;
-  private elmDiagnostics: ElmLsDiagnostics;
   private diagnosticsProvider: DiagnosticsProvider;
 
   private static errorCodeToRegistrationMap = new MultiMap<
@@ -81,7 +84,6 @@ export class CodeActionProvider {
   constructor() {
     this.settings = container.resolve("Settings");
     this.elmMake = container.resolve(ElmMakeDiagnostics);
-    this.elmDiagnostics = container.resolve(ElmLsDiagnostics);
     this.connection = container.resolve<Connection>("Connection");
     this.diagnosticsProvider = container.resolve(DiagnosticsProvider);
 
@@ -134,11 +136,17 @@ export class CodeActionProvider {
     this.refactorRegistrations.set(name, registration);
   }
 
-  private static getDiagnostics(params: ICodeActionParams): Diagnostic[] {
+  private static getDiagnostics(
+    params: ICodeActionParams,
+    diagnosticProvider: DiagnosticsProvider,
+  ): Diagnostic[] {
     return [
       ...params.program.getSyntacticDiagnostics(params.sourceFile),
       ...params.program.getSemanticDiagnostics(params.sourceFile),
       ...params.program.getSuggestionDiagnostics(params.sourceFile),
+      ...diagnosticProvider
+        .getCurrentDiagnostics(params.sourceFile.uri, DiagnosticKind.ElmLS)
+        .map(convertToCompilerDiagnostic),
     ];
   }
 
@@ -147,14 +155,17 @@ export class CodeActionProvider {
     errorCodes: string[],
     callback: (diagnostic: Diagnostic) => void,
   ): void {
-    CodeActionProvider.getDiagnostics(params).forEach((diagnostic) => {
-      if (
-        typeof diagnostic.code === "string" &&
-        errorCodes.includes(diagnostic.code)
-      ) {
-        callback(diagnostic);
-      }
-    });
+    const diagnosticProvider = container.resolve(DiagnosticsProvider);
+    CodeActionProvider.getDiagnostics(params, diagnosticProvider).forEach(
+      (diagnostic) => {
+        if (
+          typeof diagnostic.code === "string" &&
+          errorCodes.includes(diagnostic.code)
+        ) {
+          callback(diagnostic);
+        }
+      },
+    );
   }
 
   public static getCodeAction(
@@ -180,10 +191,10 @@ export class CodeActionProvider {
     params: ICodeActionParams,
     errorCodes: string[],
     fixId: string,
-    callback: (edits: TextEdit[], diagnostic: LspDiagnostic) => void,
+    callback: (edits: TextEdit[], diagnostic: Diagnostic) => void,
     callbackChanges?: (
       edits: { [uri: string]: TextEdit[] },
-      diagnostic: LspDiagnostic,
+      diagnostic: Diagnostic,
     ) => void,
   ): CodeAction {
     const edits: TextEdit[] = [];
@@ -193,13 +204,36 @@ export class CodeActionProvider {
           [params.sourceFile.uri]: edits,
         };
 
-    const diagnostics: LspDiagnostic[] = [];
+    const diagnostics: Diagnostic[] = [];
     CodeActionProvider.forEachDiagnostic(params, errorCodes, (diagnostic) => {
       diagnostics.push(diagnostic);
       if (callbackChanges) {
         callbackChanges(changes, diagnostic);
       } else {
         callback(edits, diagnostic);
+      }
+    });
+
+    const sortedEdits = edits.sort((a, b) =>
+      comparePosition(a.range.start, b.range.start),
+    );
+
+    // Using object mutation here to fix the ranges
+    sortedEdits.forEach((edit, i) => {
+      const lastEditEnd = sortedEdits[i - 1]?.range.end;
+      const newEditStart = edit.range.start;
+
+      // Handle if the ranges overlap
+      if (
+        lastEditEnd &&
+        newEditStart &&
+        comparePosition(lastEditEnd, newEditStart) > 0
+      ) {
+        edit.range.start = lastEditEnd;
+
+        if (comparePosition(edit.range.end, edit.range.start) < 0) {
+          edit.range.end = edit.range.start;
+        }
       }
     });
 
@@ -215,7 +249,6 @@ export class CodeActionProvider {
   protected onCodeAction(params: ICodeActionParams): CodeAction[] | undefined {
     this.connection.console.info("A code action was requested");
     const make = this.elmMake.onCodeAction(params);
-    const elmDiagnostics = this.elmDiagnostics.onCodeAction(params);
 
     const results: CodeAction[] = [];
 
@@ -247,12 +280,15 @@ export class CodeActionProvider {
                 // Check if there is already a "fix all" code action for this fix
                 (codeAction) => /* fixId */ codeAction.data === reg.fixId,
               ) &&
-              CodeActionProvider.getDiagnostics(params).some(
+              CodeActionProvider.getDiagnostics(
+                params,
+                this.diagnosticsProvider,
+              ).some(
                 (diag) =>
                   !diagnosticsEquals(
-                    convertFromAnalyzerDiagnostic(diag),
+                    convertFromCompilerDiagnostic(diag),
                     diagnostic,
-                  ) && diag.code === diagnostic.data.code,
+                  ) && reg.errorCodes.includes(diag.code),
               )
             ) {
               const fixAllCodeAction = reg.getFixAllCodeAction(params);
@@ -274,7 +310,7 @@ export class CodeActionProvider {
       ).flatMap((registration) => registration.getAvailableActions(params)),
     );
 
-    return [...results, ...make, ...elmDiagnostics];
+    return [...results, ...make];
   }
 
   public onCodeActionResolve(

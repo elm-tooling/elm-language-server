@@ -1409,7 +1409,7 @@ export class CompletionProvider {
       this.createSnippet(
         "type alias",
         [
-          "type alias ${1:recordName} =",
+          "type alias ${1:RecordName} =",
           "    { ${2:key1} : ${3:ValueType1}",
           "    , ${4:key2} : ${5:ValueType2}",
           "    }",

@@ -1,6 +1,6 @@
 import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
-import { convertFromAnalyzerDiagnostic } from "../../src/providers";
+import { convertFromCompilerDiagnostic } from "../../src/providers";
 import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics";
 import { TreeUtils } from "../../src/util/treeUtils";
 import {
@@ -51,7 +51,7 @@ composeR f g x =
 gt : comparable -> comparable -> Bool
 gt =
   Elm.Kernel.Utils.gt
-  
+
 type Order = LT | EQ | GT
 
 negate : number -> number
@@ -128,13 +128,13 @@ describe("test elm diagnostics", () => {
     }
 
     const expected = expectedDiagnostics.map((exp) =>
-      convertFromAnalyzerDiagnostic(
+      convertFromCompilerDiagnostic(
         error(nodeAtPosition, exp.message, ...exp.args),
       ),
     );
 
     const diagnosticsEqual = Utils.arrayEquals(
-      diagnostics.map(convertFromAnalyzerDiagnostic),
+      diagnostics.map(convertFromCompilerDiagnostic),
       expected,
       diagnosticsEquals,
     );
@@ -166,7 +166,7 @@ concat comparators a b =
 
         comparator :: rest ->
             case comparator a b of
-                EQ -> 
+                EQ ->
                     concat rest a b
 
                 order ->
@@ -334,7 +334,7 @@ func2 =
                 "text"
 
             else
-                func2 n 
+                func2 n
     in
     go
   `;
@@ -422,7 +422,7 @@ func =
 
             else
                 to n
- 
+
         to =
             another
 
@@ -618,7 +618,7 @@ func =
     const source3 = `
     --@ Test.elm
 func =
-    func2 
+    func2
 
 
 func2 =
@@ -754,7 +754,7 @@ type alias Test =
 
 type alias Test2 =
           --^
-    Test3 
+    Test3
 
 type alias Test3 =
     Test2
@@ -775,7 +775,7 @@ type alias Test =
     }
 
 type alias Test2 =
-    Test3 
+    Test3
 
 type alias Test3 =
     { field : Test
@@ -850,7 +850,7 @@ import App exposing (Program)
 import Platform exposing (..)
 
 foo : Program
-      --^ 
+      --^
 foo =
     ""
 
@@ -1139,7 +1139,7 @@ foo =
 --@ App.elm
 module App exposing (..)
 
-foo = 
+foo =
     ""
 `;
     await testTypeInference(
@@ -1166,7 +1166,7 @@ foo =
 --@ App.elm
 module App exposing (..)
 
-foo = 
+foo =
     ""
 `;
     await testTypeInference(
@@ -1193,7 +1193,7 @@ foo =
 --@ App.elm
 module App exposing (..)
 
-foo = 
+foo =
     ""
 `;
     await testTypeInference(
@@ -1272,8 +1272,9 @@ bar = ""
     await testTypeInference(basicsSources + stringSources + source2, [], true);
   });
 
-  test("test missing case patterns should have an error - ctor and tuple", async () => {
-    const source = `
+  describe("test case pattern matching", () => {
+    it("missing case patterns should have an error - ctor and tuple", async () => {
+      const source = `
 --@ Test.elm
 module Test exposing (..)
 
@@ -1285,13 +1286,13 @@ func result =
         Ok _ ->
             ""
   `;
-    await testTypeInference(
-      basicsSources + source,
-      [{ message: Diagnostics.IncompleteCasePattern(1), args: ["Error _"] }],
-      true,
-    );
+      await testTypeInference(
+        basicsSources + source,
+        [{ message: Diagnostics.IncompleteCasePattern(1), args: ["Error _"] }],
+        true,
+      );
 
-    const source2 = `
+      const source2 = `
 --@ Test.elm
 module Test exposing (..)
 
@@ -1303,18 +1304,18 @@ func result =
         (Just _, _) ->
             ""
   `;
-    await testTypeInference(
-      basicsSources + source2,
-      [
-        {
-          message: Diagnostics.IncompleteCasePattern(1),
-          args: ["( Nothing, _ )"],
-        },
-      ],
-      true,
-    );
+      await testTypeInference(
+        basicsSources + source2,
+        [
+          {
+            message: Diagnostics.IncompleteCasePattern(1),
+            args: ["( Nothing, _ )"],
+          },
+        ],
+        true,
+      );
 
-    const source3 = `
+      const source3 = `
 --@ Test.elm
 module Test exposing (..)
 
@@ -1326,18 +1327,18 @@ func result =
         One ->
             ""
   `;
-    await testTypeInference(
-      basicsSources + source3,
-      [
-        {
-          message: Diagnostics.IncompleteCasePattern(3),
-          args: ["Two", "Three _ _", "Four"],
-        },
-      ],
-      true,
-    );
+      await testTypeInference(
+        basicsSources + source3,
+        [
+          {
+            message: Diagnostics.IncompleteCasePattern(3),
+            args: ["Two", "Three _ _", "Four"],
+          },
+        ],
+        true,
+      );
 
-    const source4 = `
+      const source4 = `
 --@ Test.elm
 module Test exposing (..)
 
@@ -1351,18 +1352,18 @@ func result =
         One ->
             ""
   `;
-    await testTypeInference(
-      basicsSources + source4,
-      [
-        {
-          message: Diagnostics.IncompleteCasePattern(3),
-          args: ["Two", "Three _", "Four"],
-        },
-      ],
-      true,
-    );
+      await testTypeInference(
+        basicsSources + source4,
+        [
+          {
+            message: Diagnostics.IncompleteCasePattern(3),
+            args: ["Two", "Three _", "Four"],
+          },
+        ],
+        true,
+      );
 
-    const source5 = `
+      const source5 = `
 --@ Test.elm
 module Test exposing (..)
 
@@ -1373,24 +1374,24 @@ func result =
     --^
         Nothing ->
             ""
-        
+
         Just (Just a) ->
             a
   `;
-    await testTypeInference(
-      basicsSources + source5,
-      [
-        {
-          message: Diagnostics.IncompleteCasePattern(1),
-          args: ["Just Nothing"],
-        },
-      ],
-      true,
-    );
-  });
+      await testTypeInference(
+        basicsSources + source5,
+        [
+          {
+            message: Diagnostics.IncompleteCasePattern(1),
+            args: ["Just Nothing"],
+          },
+        ],
+        true,
+      );
+    });
 
-  test("test missing case patterns should have an error - cons and list", async () => {
-    const source = `
+    it("missing case patterns should have an error - cons and list", async () => {
+      const source = `
 --@ Test.elm
 module Test exposing (..)
 
@@ -1400,15 +1401,15 @@ func result =
         a :: b ->
             ""
   `;
-    await testTypeInference(
-      basicsSources + source,
-      [{ message: Diagnostics.IncompleteCasePattern(1), args: ["[]"] }],
-      true,
-    );
-  });
+      await testTypeInference(
+        basicsSources + source,
+        [{ message: Diagnostics.IncompleteCasePattern(1), args: ["[]"] }],
+        true,
+      );
+    });
 
-  test("test case patterns should not have an error - multiple cons", async () => {
-    const source = `
+    it("should not have an error - multiple cons", async () => {
+      const source = `
 --@ Test.elm
 module Test exposing (..)
 
@@ -1417,13 +1418,70 @@ func result =
     --^
         a :: b :: _ ->
             ""
-          
+
         a :: [] ->
             ""
 
         _ ->
             ""
   `;
-    await testTypeInference(basicsSources + source, [], true);
+      await testTypeInference(basicsSources + source, [], true);
+    });
+
+    it("should not have an error with module prefixed nullary constructor argument", async () => {
+      const source = `
+--@ Test.elm
+module Test exposing (..)
+
+import Route exposing (App)
+
+type Maybe a
+    = Just a
+    | Nothing
+
+changeRouteTo maybeRoute =
+    case maybeRoute of
+    --^
+        Nothing ->
+            ""
+
+        Just (Route.EditArticle slug) ->
+            ""
+
+        Just Route.Home ->
+            ""
+
+--@ Route.elm
+module Route exposing (..)
+
+type App
+    = Home
+    | EditArticle Int
+  `;
+      await testTypeInference(basicsSources + source, [], true);
+    });
+
+    it("should not have an error with alias", async () => {
+      const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type Maybe a = Just a | Nothing
+
+func result =
+    case result of
+    --^
+        Just ((Just a) as arg) ->
+            ""
+
+        Just Nothing ->
+            ""
+
+        Nothing ->
+            ""
+
+  `;
+      await testTypeInference(basicsSources + source, [], true);
+    });
   });
 });

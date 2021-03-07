@@ -5,9 +5,13 @@ import { ISourceFile } from "../../src/compiler/forest";
 import { IProgram } from "../../src/compiler/program";
 import {
   CodeActionProvider,
-  convertFromAnalyzerDiagnostic,
   IRefactorCodeAction,
+  convertFromCompilerDiagnostic,
+  convertToCompilerDiagnostic,
+  DiagnosticsProvider,
 } from "../../src/providers";
+import { ElmLsDiagnostics } from "../../src/providers/diagnostics/elmLsDiagnostics";
+import { DiagnosticKind } from "../../src/providers/diagnostics/fileDiagnostics";
 import { ICodeActionParams } from "../../src/providers/paramsExtensions";
 import { Utils } from "../../src/util/utils";
 import {
@@ -73,6 +77,7 @@ export async function testCodeAction(
   source: string,
   expectedCodeActions: CodeAction[],
   expectedResultAfterEdits?: string,
+  testFixAll = false,
 ): Promise<void> {
   const treeParser = new SourceTreeParser();
   await treeParser.init();
@@ -103,6 +108,15 @@ export async function testCodeAction(
   workspaces.splice(0, workspaces.length);
   workspaces.push(program);
 
+  container.register(DiagnosticsProvider, {
+    useValue: new DiagnosticsProvider(),
+  });
+
+  // Needed by codeActionProvider which uses these diagnostics
+  container
+    .resolve(DiagnosticsProvider)
+    .forceElmLsDiagnosticsUpdate(sourceFile, program);
+
   const range = { start: result.position, end: result.position };
   const codeActions =
     codeActionProvider.handleCodeAction({
@@ -115,9 +129,12 @@ export async function testCodeAction(
           ...program.getSyntacticDiagnostics(sourceFile),
           ...program.getSemanticDiagnostics(sourceFile),
           ...program.getSuggestionDiagnostics(sourceFile),
+          ...new ElmLsDiagnostics()
+            .createDiagnostics(sourceFile, program)
+            .map(convertToCompilerDiagnostic),
         ]
           .filter((diag) => Utils.rangeOverlaps(diag.range, range))
-          .map(convertFromAnalyzerDiagnostic),
+          .map(convertFromCompilerDiagnostic),
       },
     }) ?? [];
 
@@ -151,7 +168,9 @@ export async function testCodeAction(
       expect(
         applyEditsToSource(
           stripCursorCommentLines(result.sources[uri]),
-          codeActions[0].edit!.changes![URI.file(baseUri + uri).toString()],
+          codeActions[testFixAll ? codeActions.length - 1 : 0].edit!.changes![
+            URI.file(baseUri + uri).toString()
+          ],
         ),
       ).toEqual(source);
     });

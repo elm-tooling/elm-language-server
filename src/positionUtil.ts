@@ -30,14 +30,27 @@ export class PositionUtil {
   }
 }
 
-export function comparePosition(pos1: VSPosition, pos2: TSPosition): number {
-  if (pos1.line === pos2.row && pos1.character === pos2.column) {
+export function comparePosition(
+  _pos1: VSPosition | TSPosition,
+  _pos2: VSPosition | TSPosition,
+): number {
+  // Convert TSPosition to VSPosition
+  const pos1 =
+    "row" in _pos1
+      ? PositionUtil.FROM_TS_POSITION(_pos1).toVSPosition()
+      : _pos1;
+  const pos2 =
+    "row" in _pos2
+      ? PositionUtil.FROM_TS_POSITION(_pos2).toVSPosition()
+      : _pos2;
+
+  if (pos1.line === pos2.line && pos1.character === pos2.character) {
     return 0;
   }
 
   if (
-    pos1.line < pos2.row ||
-    (pos1.line === pos2.row && pos1.character < pos2.column)
+    pos1.line < pos2.line ||
+    (pos1.line === pos2.line && pos1.character < pos2.character)
   ) {
     return -1;
   }

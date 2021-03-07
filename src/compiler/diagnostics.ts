@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { DiagnosticSeverity, Range } from "vscode-languageserver";
+import {
+  DiagnosticSeverity,
+  DiagnosticTag,
+  Range,
+} from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
 import { PositionUtil } from "../positionUtil";
 import { DiagnosticSource } from "../providers/diagnostics/diagnosticSource";
@@ -12,6 +16,7 @@ export interface Diagnostic {
   severity: DiagnosticSeverity;
   range: Range;
   uri: string;
+  tags?: DiagnosticTag[];
 }
 
 function format(text: string, ...args: (string | number)[]): string {

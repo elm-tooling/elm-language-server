@@ -3,6 +3,7 @@ import {
   CancellationToken,
   Connection,
   Diagnostic as LspDiagnostic,
+  DiagnosticSeverity,
   FileChangeType,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -47,7 +48,7 @@ export interface IDiagnostic extends Omit<LspDiagnostic, "code"> {
   };
 }
 
-export function convertFromAnalyzerDiagnostic(diag: Diagnostic): IDiagnostic {
+export function convertFromCompilerDiagnostic(diag: Diagnostic): IDiagnostic {
   return {
     message: diag.message,
     source: diag.source,
@@ -57,6 +58,19 @@ export function convertFromAnalyzerDiagnostic(diag: Diagnostic): IDiagnostic {
       uri: diag.uri,
       code: diag.code,
     },
+    tags: diag.tags,
+  };
+}
+
+export function convertToCompilerDiagnostic(diag: IDiagnostic): Diagnostic {
+  return {
+    message: diag.message,
+    source: diag.source,
+    severity: diag.severity ?? DiagnosticSeverity.Warning,
+    range: diag.range,
+    code: diag.data.code,
+    uri: diag.data.uri,
+    tags: diag.tags,
   };
 }
 
@@ -218,8 +232,29 @@ export class DiagnosticsProvider {
     return result;
   }
 
-  public getCurrentDiagnostics(uri: string): IDiagnostic[] {
+  public getCurrentDiagnostics(
+    uri: string,
+    kind?: DiagnosticKind,
+  ): IDiagnostic[] {
+    if (kind) {
+      return this.currentDiagnostics.get(uri)?.getForKind(kind) ?? [];
+    }
+
     return this.currentDiagnostics.get(uri)?.get() ?? [];
+  }
+
+  /**
+   * Used for tests only
+   */
+  public forceElmLsDiagnosticsUpdate(
+    sourceFile: ISourceFile,
+    program: IProgram,
+  ): void {
+    this.updateDiagnostics(
+      sourceFile.uri,
+      DiagnosticKind.ElmLS,
+      this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
+    );
   }
 
   private requestDiagnostics(uri: string): void {
@@ -367,7 +402,7 @@ export class DiagnosticsProvider {
                 DiagnosticKind.Syntactic,
                 program
                   .getSyntacticDiagnostics(sourceFile)
-                  .map(convertFromAnalyzerDiagnostic),
+                  .map(convertFromCompilerDiagnostic),
               );
 
               if (this.changeSeq !== seq) {
@@ -387,7 +422,7 @@ export class DiagnosticsProvider {
                 this.updateDiagnostics(
                   uri,
                   DiagnosticKind.Semantic,
-                  diagnostics.map(convertFromAnalyzerDiagnostic),
+                  diagnostics.map(convertFromCompilerDiagnostic),
                 );
 
                 next.immediate(() => {
@@ -399,7 +434,7 @@ export class DiagnosticsProvider {
                         sourceFile,
                         serverCancellationToken,
                       )
-                      .map(convertFromAnalyzerDiagnostic),
+                      .map(convertFromCompilerDiagnostic),
                   );
 
                   if (this.changeSeq !== seq) {

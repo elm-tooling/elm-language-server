@@ -2,15 +2,10 @@
 import { ISourceFile } from "../../compiler/forest";
 import { container } from "tsyringe";
 import {
-  CodeAction,
-  CodeActionKind,
-  CodeActionParams,
   Connection,
   DiagnosticSeverity,
   DiagnosticTag,
-  Position,
   Range,
-  TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import {
@@ -24,7 +19,6 @@ import {
 import { IProgram } from "../../compiler/program";
 import { PositionUtil } from "../../positionUtil";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Utils } from "../../util/utils";
 import { IDiagnostic } from "./diagnosticsProvider";
@@ -517,153 +511,6 @@ export class ElmLsDiagnostics {
     return elmAnalyseJson;
   }
 
-  public onCodeAction(params: CodeActionParams): CodeAction[] {
-    const { uri } = params.textDocument;
-    const elmDiagnostics: IDiagnostic[] = params.context.diagnostics.filter(
-      (diagnostic) => diagnostic.source === "ElmLS",
-    ) as IDiagnostic[];
-
-    return this.convertDiagnosticsToCodeActions(elmDiagnostics, uri);
-  }
-
-  private convertDiagnosticsToCodeActions(
-    diagnostics: IDiagnostic[],
-    uri: string,
-  ): CodeAction[] {
-    const result: CodeAction[] = [];
-
-    const program = this.elmWorkspaceMatcher.getProgramFor(URI.parse(uri));
-
-    const forest = program.getForest();
-
-    const sourceFile = forest.getByUri(uri);
-
-    if (sourceFile) {
-      diagnostics.forEach((diagnostic) => {
-        if (diagnostic.data.code === "unused_imported_value") {
-          const node = TreeUtils.getNamedDescendantForPosition(
-            sourceFile.tree.rootNode,
-            diagnostic.range.start,
-          );
-
-          const importClause = TreeUtils.findParentOfType(
-            "import_clause",
-            node,
-          );
-
-          if (!importClause) {
-            return;
-          }
-
-          const moduleName = TreeUtils.findFirstNamedChildOfType(
-            "upper_case_qid",
-            importClause,
-          );
-
-          if (!moduleName) {
-            return;
-          }
-
-          const removeValueEdit = RefactorEditUtils.removeValueFromImport(
-            sourceFile.tree,
-            moduleName.text,
-            node.text,
-          );
-
-          if (removeValueEdit) {
-            result.push({
-              diagnostics: [diagnostic],
-              edit: {
-                changes: {
-                  [uri]: [removeValueEdit],
-                },
-              },
-              kind: CodeActionKind.QuickFix,
-              title: `Remove unused ${
-                node.type === "exposed_type" ? "type" : "value"
-              } \`${node.text}\``,
-            });
-          }
-        }
-
-        if (diagnostic.data.code === "unused_import") {
-          const node = TreeUtils.getNamedDescendantForPosition(
-            sourceFile.tree.rootNode,
-            diagnostic.range.end,
-          );
-
-          const moduleName = node.childForFieldName("moduleName");
-
-          result.push({
-            diagnostics: [diagnostic],
-            edit: {
-              changes: {
-                [uri]: [
-                  TextEdit.del(
-                    Range.create(
-                      diagnostic.range.start,
-                      Position.create(diagnostic.range.end.line + 1, 0),
-                    ),
-                  ),
-                ],
-              },
-            },
-            kind: CodeActionKind.QuickFix,
-            title: `Remove unused import \`${moduleName?.text ?? node.text}\``,
-          });
-        }
-
-        if (diagnostic.data.code === "unused_alias") {
-          const node = TreeUtils.getNamedDescendantForPosition(
-            sourceFile.tree.rootNode,
-            diagnostic.range.end,
-          );
-
-          result.push({
-            diagnostics: [diagnostic],
-            edit: {
-              changes: {
-                [uri]: [
-                  TextEdit.del({
-                    start: {
-                      line: diagnostic.range.start.line,
-                      character: diagnostic.range.start.character - 1,
-                    },
-                    end: diagnostic.range.end,
-                  }),
-                ],
-              },
-            },
-            kind: CodeActionKind.QuickFix,
-            title: `Remove unused alias \`${node.text}\``,
-          });
-        }
-
-        if (diagnostic.data.code === "unused_pattern") {
-          const node = TreeUtils.getNamedDescendantForPosition(
-            sourceFile.tree.rootNode,
-            diagnostic.range.start,
-          );
-
-          const edit =
-            node.parent?.parent?.type === "record_pattern"
-              ? RefactorEditUtils.removeRecordPatternValue(node.parent)
-              : TextEdit.replace(diagnostic.range, "_");
-
-          result.push({
-            diagnostics: [diagnostic],
-            edit: {
-              changes: { [uri]: [edit] },
-            },
-            kind: CodeActionKind.QuickFix,
-            title: `Fix unused pattern \`${node.text}\``,
-          });
-        }
-      });
-    }
-    return result;
-  }
-
   private getUnusedImportDiagnostics(tree: Tree): IDiagnostic[] {
     const diagnostics: IDiagnostic[] = [];
 
@@ -1001,7 +848,7 @@ export class ElmLsDiagnostics {
     return diagnostics;
   }
 
-  getSingleFieldRecordDiagnostics(
+  private getSingleFieldRecordDiagnostics(
     tree: Tree,
     uri: string,
     program: IProgram,
@@ -1143,6 +990,19 @@ export class ElmLsDiagnostics {
 
   private getUnusedValueConstructorDiagnostics(tree: Tree): IDiagnostic[] {
     const diagnostics: IDiagnostic[] = [];
+
+    // Currently if the file exports the variant, either through an explicit
+    // reference to the type, or through a '(..)' to expose everything, then
+    // we won't mark the value constructor as unused. Ideally this should take
+    // multiple files into account, then these conditions can be removed.
+    const exposingAll = !!tree.rootNode
+      .childForFieldName("moduleDeclaration")
+      ?.childForFieldName("exposing")
+      ?.childForFieldName("doubleDot");
+
+    if (exposingAll) {
+      return diagnostics;
+    }
 
     const unionVariants = this.unionVariantsQuery
       .matches(tree.rootNode)
