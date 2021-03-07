@@ -9,9 +9,9 @@ import {
 } from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
 
-const refactorName = "swap_listitem";
-const moveListItemUpActionName = "swap_listitem_up";
-const moveListItemDownActionName = "swap_listitem_down";
+const refactorName = "move_listitem";
+const moveListItemUpActionName = "move_listitem_up";
+const moveListItemDownActionName = "move_listitem_down";
 CodeActionProvider.registerRefactorAction(refactorName, {
   getAvailableActions: (params: ICodeActionParams): IRefactorCodeAction[] => {
     // Allow moving single ListItems only for now
@@ -21,11 +21,17 @@ CodeActionProvider.registerRefactorAction(refactorName, {
     );
 
     // Get the parent list we want to move within. To support nested lists.
-    const isListValid = isInValidCompletedList(nodeAtPosition);
+    const isListValid = isNodeInValidCompletedList(nodeAtPosition);
     if (!isListValid) return [];
 
-    const canMoveNext = getTargetNodesToSwap(nodeAtPosition, "next");
-    const canMovePrev = getTargetNodesToSwap(nodeAtPosition, "previous");
+    const canMoveNext = getNodesToSwapWithinClosestListParent(
+      nodeAtPosition,
+      "next",
+    );
+    const canMovePrev = getNodesToSwapWithinClosestListParent(
+      nodeAtPosition,
+      "previous",
+    );
 
     const codeActions: IRefactorCodeAction[] = [];
 
@@ -65,34 +71,6 @@ CodeActionProvider.registerRefactorAction(refactorName, {
   },
 });
 
-function getTargetNodesToSwap(
-  node: SyntaxNode,
-  direction: "previous" | "next",
-): { nodeToMove: SyntaxNode; nodeToSwapWith: SyntaxNode } | null {
-  if (!node.parent) return null;
-
-  const closestParentList = TreeUtils.findParentOfType(
-    "list_expr",
-    node.parent,
-  );
-  if (closestParentList) {
-    let nodeToMove = node;
-    // TODO: Make an item in TreeUtils for finding nearest parent node.
-    while (
-      nodeToMove.parent?.id !== closestParentList.id &&
-      nodeToMove.parent != null
-    ) {
-      nodeToMove = nodeToMove.parent;
-    }
-
-    const nodeToSwapWith = findSiblingSemanticListNode(nodeToMove, direction);
-    if (nodeToSwapWith)
-      return { nodeToMove: nodeToMove, nodeToSwapWith: nodeToSwapWith };
-  }
-
-  return null;
-}
-
 function getEdits(
   params: ICodeActionParams,
   range: Range,
@@ -106,19 +84,31 @@ function getEdits(
   const direction =
     actionName == moveListItemUpActionName ? "previous" : "next";
 
-  const targets = getTargetNodesToSwap(nodeAtPosition, direction);
+  const targets = getNodesToSwapWithinClosestListParent(
+    nodeAtPosition,
+    direction,
+  );
   if (!targets) return [];
 
   const nodeToMove = targets.nodeToMove;
   const nodeToSwapWith = targets.nodeToSwapWith;
 
-  const startOfListItemToMove = findListItemBoundNode(nodeToMove, "previous");
-  const endOfListItemToMove = findListItemBoundNode(nodeToMove, "next");
-  const startOfListItemToSwapWith = findListItemBoundNode(
+  const startOfListItemToMove = findSiblingNextToCommaOrBracketInDirection(
+    nodeToMove,
+    "previous",
+  );
+  const endOfListItemToMove = findSiblingNextToCommaOrBracketInDirection(
+    nodeToMove,
+    "next",
+  );
+  const startOfListItemToSwapWith = findSiblingNextToCommaOrBracketInDirection(
     nodeToSwapWith,
     "previous",
   );
-  const endOfListItemToSwapWith = findListItemBoundNode(nodeToSwapWith, "next");
+  const endOfListItemToSwapWith = findSiblingNextToCommaOrBracketInDirection(
+    nodeToSwapWith,
+    "next",
+  );
 
   if (
     !(
@@ -131,14 +121,16 @@ function getEdits(
     return [];
 
   // To simplify moving multiple AST child nodes within a list item (keeping comments, uncommon formatting etc)
-  // we move everything in-between as its currently written.
+  // we move everything as-is.
+
+  // Consider if retrieving the text of the rootNode can be a performance issue in very large files. Assuming not.
   const rootNodeText = params.sourceFile.tree.rootNode.text;
-  const nodeToMoveText = rootNodeText.substring(
+  const listItemToMoveText = rootNodeText.substring(
     startOfListItemToMove.startIndex,
     endOfListItemToMove.endIndex,
   );
 
-  const nodeToSwapText = params.sourceFile.tree.rootNode.text.substring(
+  const listItemToSwapText = params.sourceFile.tree.rootNode.text.substring(
     startOfListItemToSwapWith.startIndex,
     endOfListItemToSwapWith.endIndex,
   );
@@ -160,26 +152,87 @@ function getEdits(
   return [
     TextEdit.replace(
       { start: startPositionListItemToMove, end: endPositionListItemToMove },
-      nodeToSwapText,
+      listItemToSwapText,
     ),
     TextEdit.replace(
       {
         start: startPositionListItemToSwapWith,
         end: endPositionListItemToSwapWith,
       },
-      nodeToMoveText,
+      listItemToMoveText,
     ),
   ];
 }
 
-// Find the next sibling of a list node that is not a comma or a comment
-function findSiblingSemanticListNode(
+function getNodesToSwapWithinClosestListParent(
+  node: SyntaxNode,
+  direction: "previous" | "next",
+): { nodeToMove: SyntaxNode; nodeToSwapWith: SyntaxNode } | null {
+  if (!node.parent) return null;
+
+  const closestParentList = TreeUtils.findParentOfType(
+    "list_expr",
+    node.parent,
+  );
+
+  if (!closestParentList) return null;
+
+  const nodeToMove = findParentThatIsChildOfAncestor(node, closestParentList);
+  if (!nodeToMove) return null;
+
+  const nodeToSwapWith = findSiblingListNodeInDirection(nodeToMove, direction);
+  if (!nodeToSwapWith) return null;
+
+  return { nodeToMove: nodeToMove, nodeToSwapWith: nodeToSwapWith };
+}
+
+/**
+ * Find the parent node where a given ancestor is its parent. If the given ancestor param is not a real ancestor it returns null.
+ * @param nodeToFindParentOf The current node
+ * @param ancestor The ancestor node
+ */
+function findParentThatIsChildOfAncestor(
+  nodeToFindParentOf: SyntaxNode,
+  ancestor: SyntaxNode,
+): SyntaxNode | null {
+  const parentNode = findParentWhere(
+    (node) => node.parent?.id === ancestor.id,
+    nodeToFindParentOf,
+  );
+  return parentNode;
+}
+
+/**
+ * Find a parent matching a predicate, or null
+ * @param predicate Predicate to match on
+ * @param node The node to find parent of
+ * @param topLevel No idea?
+ */
+function findParentWhere(
+  predicate: (n: SyntaxNode) => boolean,
+  node: SyntaxNode,
+  topLevel = false,
+): SyntaxNode | null {
+  if (predicate(node) && (!topLevel || node.parent?.type === "file")) {
+    return node;
+  }
+  if (node.parent) {
+    return findParentWhere(predicate, node.parent, topLevel);
+  } else {
+    return null;
+  }
+}
+
+/**
+ * Find the next sibling of a node that is not a '[', ']', ',' or a comment
+ * @param node The node to start with
+ * @param direction The direction to look in
+ */
+function findSiblingListNodeInDirection(
   node: SyntaxNode,
   direction: "previous" | "next",
 ): SyntaxNode | null {
-  const isNext = direction == "next";
-
-  let target = iterate(node);
+  let target = getSibling(node, direction);
   while (
     target != null &&
     (target.type == "," ||
@@ -189,17 +242,18 @@ function findSiblingSemanticListNode(
       target.type == "]")
   ) {
     if (target.type == "[" || target.type == "]") return null;
-    target = iterate(target);
+    target = getSibling(target, direction);
   }
 
   return target;
-
-  function iterate(inputNode: SyntaxNode): SyntaxNode | null {
-    return isNext ? inputNode.nextSibling : inputNode.previousSibling;
-  }
 }
 
-function isInValidCompletedList(node: SyntaxNode): boolean {
+/**
+ * Check if a node is within a completed list.
+ * A list that starts with a '[' and ends with a ']' is completed.
+ * @param node The node to check if is in a list
+ */
+function isNodeInValidCompletedList(node: SyntaxNode): boolean {
   if (!node.parent) return false;
   const list = TreeUtils.findParentOfType("list_expr", node.parent);
   if (!list) return false;
@@ -208,27 +262,38 @@ function isInValidCompletedList(node: SyntaxNode): boolean {
   return list.firstChild?.type === "[" && list.lastChild?.type === "]";
 }
 
-// Find the next list item bound node ('[' or ',' or ']')
-function findListItemBoundNode(
+/**
+ * Find the "bounds" of a list content. This is the last item, comment or similar before a ('[' or ',' or ']')
+ * @param node The node starting point
+ * @param direction Direction to look in
+ */
+function findSiblingNextToCommaOrBracketInDirection(
   node: SyntaxNode,
   direction: "previous" | "next",
 ): SyntaxNode | null {
-  const isNext = direction == "next";
-
-  let target = iterate(node);
+  let siblingNode = getSibling(node, direction);
   while (
-    target != null &&
-    target.type != "," &&
-    target.type != "[" &&
-    target.type != "]"
+    siblingNode != null &&
+    siblingNode.type != "," &&
+    siblingNode.type != "[" &&
+    siblingNode.type != "]"
   ) {
-    target = iterate(target);
+    siblingNode = getSibling(siblingNode, direction);
   }
 
-  if (isNext) return target?.previousSibling ?? null;
-  else return target?.nextSibling ?? null;
+  const isNext = direction == "next";
+  if (isNext) return siblingNode?.previousSibling ?? null;
+  else return siblingNode?.nextSibling ?? null;
+}
 
-  function iterate(inputNode: SyntaxNode): SyntaxNode | null {
-    return isNext ? inputNode.nextSibling : inputNode.previousSibling;
-  }
+/**
+ * Utility method to get a sibling in the given direction.
+ * @param node Node to get sibling of
+ * @param direction Get the previous or next sibling?
+ */
+function getSibling(
+  node: SyntaxNode,
+  direction: "next" | "previous",
+): SyntaxNode | null {
+  return direction === "next" ? node.nextSibling : node.previousSibling;
 }
