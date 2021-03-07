@@ -1,9 +1,4 @@
-import {
-  CodeAction,
-  CodeActionKind,
-  Range,
-  TextEdit,
-} from "vscode-languageserver";
+import { CodeActionKind, Range, TextEdit } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
 import { PositionUtil } from "../../positionUtil";
 import { TreeUtils } from "../../util/treeUtils";
@@ -19,16 +14,18 @@ const moveListItemUpActionName = "swap_listitem_up";
 const moveListItemDownActionName = "swap_listitem_down";
 CodeActionProvider.registerRefactorAction(refactorName, {
   getAvailableActions: (params: ICodeActionParams): IRefactorCodeAction[] => {
-    const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
-      params.sourceFile.tree.rootNode,
-      params.range.start,
+    // Allow moving single ListItems only for now
+    const nodeAtPosition = TreeUtils.getNamedDescendantForRange(
+      params.sourceFile,
+      params.range,
     );
 
-    const isListValid = isInValidList(nodeAtPosition);
+    // Get the parent list we want to move within. To support nested lists.
+    const isListValid = isInValidCompletedList(nodeAtPosition);
     if (!isListValid) return [];
 
-    const canMoveNext = getTargetNodes(nodeAtPosition, "next");
-    const canMovePrev = getTargetNodes(nodeAtPosition, "previous");
+    const canMoveNext = getTargetNodesToSwap(nodeAtPosition, "next");
+    const canMovePrev = getTargetNodesToSwap(nodeAtPosition, "previous");
 
     const codeActions: IRefactorCodeAction[] = [];
 
@@ -68,16 +65,23 @@ CodeActionProvider.registerRefactorAction(refactorName, {
   },
 });
 
-function getTargetNodes(
+function getTargetNodesToSwap(
   node: SyntaxNode,
   direction: "previous" | "next",
 ): { nodeToMove: SyntaxNode; nodeToSwapWith: SyntaxNode } | null {
-  const list = TreeUtils.findParentOfType("list_expr", node);
-  if (list == node) return null;
-  if (list) {
+  if (!node.parent) return null;
+
+  const closestParentList = TreeUtils.findParentOfType(
+    "list_expr",
+    node.parent,
+  );
+  if (closestParentList) {
     let nodeToMove = node;
     // TODO: Make an item in TreeUtils for finding nearest parent node.
-    while (nodeToMove.parent?.id !== list.id && nodeToMove.parent != null) {
+    while (
+      nodeToMove.parent?.id !== closestParentList.id &&
+      nodeToMove.parent != null
+    ) {
       nodeToMove = nodeToMove.parent;
     }
 
@@ -102,55 +106,67 @@ function getEdits(
   const direction =
     actionName == moveListItemUpActionName ? "previous" : "next";
 
-  const targets = getTargetNodes(nodeAtPosition, direction);
+  const targets = getTargetNodesToSwap(nodeAtPosition, direction);
   if (!targets) return [];
 
   const nodeToMove = targets.nodeToMove;
   const nodeToSwapWith = targets.nodeToSwapWith;
 
-  const start = findListItemBoundNode(nodeToMove, "previous");
-  const end = findListItemBoundNode(nodeToMove, "next");
-  const start2 = findListItemBoundNode(nodeToSwapWith, "previous");
-  const end2 = findListItemBoundNode(nodeToSwapWith, "next");
+  const startOfListItemToMove = findListItemBoundNode(nodeToMove, "previous");
+  const endOfListItemToMove = findListItemBoundNode(nodeToMove, "next");
+  const startOfListItemToSwapWith = findListItemBoundNode(
+    nodeToSwapWith,
+    "previous",
+  );
+  const endOfListItemToSwapWith = findListItemBoundNode(nodeToSwapWith, "next");
 
-  if (!(start && end && start2 && end2)) return [];
+  if (
+    !(
+      startOfListItemToMove &&
+      endOfListItemToMove &&
+      startOfListItemToSwapWith &&
+      endOfListItemToSwapWith
+    )
+  )
+    return [];
 
-  // let nodeToMoveText = "";
-  // nodes1.forEach((x) => (nodeToMoveText += x.text));
-
-  // let nodeToSwapText = "";
-  // nodes2.forEach((x) => (nodeToSwapText += x.text));
-
-  const nodeToMoveText = params.sourceFile.tree.rootNode.text.substring(
-    start.endIndex,
-    end.startIndex,
+  // To simplify moving multiple AST child nodes within a list item (keeping comments, uncommon formatting etc)
+  // we move everything in-between as its currently written.
+  const rootNodeText = params.sourceFile.tree.rootNode.text;
+  const nodeToMoveText = rootNodeText.substring(
+    startOfListItemToMove.startIndex,
+    endOfListItemToMove.endIndex,
   );
 
   const nodeToSwapText = params.sourceFile.tree.rootNode.text.substring(
-    start2.endIndex,
-    end2.startIndex,
+    startOfListItemToSwapWith.startIndex,
+    endOfListItemToSwapWith.endIndex,
   );
-  const startPosition = PositionUtil.FROM_TS_POSITION(
-    start?.endPosition,
+
+  const startPositionListItemToMove = PositionUtil.FROM_TS_POSITION(
+    startOfListItemToMove?.startPosition,
   ).toVSPosition();
-  const endPosition = PositionUtil.FROM_TS_POSITION(
-    end.startPosition,
+  const endPositionListItemToMove = PositionUtil.FROM_TS_POSITION(
+    endOfListItemToMove.endPosition,
   ).toVSPosition();
 
-  const startPosition2 = PositionUtil.FROM_TS_POSITION(
-    start2.endPosition,
+  const startPositionListItemToSwapWith = PositionUtil.FROM_TS_POSITION(
+    startOfListItemToSwapWith.startPosition,
   ).toVSPosition();
-  const endPosition2 = PositionUtil.FROM_TS_POSITION(
-    end2.startPosition,
+  const endPositionListItemToSwapWith = PositionUtil.FROM_TS_POSITION(
+    endOfListItemToSwapWith.endPosition,
   ).toVSPosition();
 
   return [
     TextEdit.replace(
-      { start: startPosition, end: endPosition },
+      { start: startPositionListItemToMove, end: endPositionListItemToMove },
       nodeToSwapText,
     ),
     TextEdit.replace(
-      { start: startPosition2, end: endPosition2 },
+      {
+        start: startPositionListItemToSwapWith,
+        end: endPositionListItemToSwapWith,
+      },
       nodeToMoveText,
     ),
   ];
@@ -183,12 +199,13 @@ function findSiblingSemanticListNode(
   }
 }
 
-function isInValidList(node: SyntaxNode): boolean {
-  const list = TreeUtils.findParentOfType("list_expr", node);
+function isInValidCompletedList(node: SyntaxNode): boolean {
+  if (!node.parent) return false;
+  const list = TreeUtils.findParentOfType("list_expr", node.parent);
   if (!list) return false;
 
-  const listText = list.text.trim();
-  return listText.startsWith("[") && listText.endsWith("]");
+  // Ensure list is closed in both ends.
+  return list.firstChild?.type === "[" && list.lastChild?.type === "]";
 }
 
 // Find the next list item bound node ('[' or ',' or ']')
@@ -208,7 +225,8 @@ function findListItemBoundNode(
     target = iterate(target);
   }
 
-  return target;
+  if (isNext) return target?.previousSibling ?? null;
+  else return target?.nextSibling ?? null;
 
   function iterate(inputNode: SyntaxNode): SyntaxNode | null {
     return isNext ? inputNode.nextSibling : inputNode.previousSibling;

@@ -1,13 +1,13 @@
 import { testCodeAction } from "./codeActionTestBase";
 
 describe("swap list item code action", () => {
-  it("should swap item aa with bb in horizontal list", async () => {
+  it("should swap item a with b in horizontal list, and keep whitespace as-is", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)
 
 func =
-    [ "aa", "bb", "cc" ]
+    [ "Apple", "Banana" ]
     --^
 
 `;
@@ -17,7 +17,7 @@ func =
 module Test exposing (..)
 
 func =
-    [ "bb", "aa", "cc" ]
+    [ "Banana", "Apple" ]
 
 `;
 
@@ -28,16 +28,16 @@ func =
     );
   });
 
-  it("should swap item aa with bb in vertical list", async () => {
+  it("should swap item Apple with Banana in vertical list", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)
 
 func =
-    [ "aa"
+    [ "Apple"
     --^
-    , "bb"
-    , "cc" 
+    , "Banana"
+    , "Cucumber" 
     ]
 
 `;
@@ -47,9 +47,9 @@ func =
 module Test exposing (..)
 
 func =
-    [ "bb"
-    , "aa" 
-    , "cc" 
+    [ "Banana" 
+    , "Apple"
+    , "Cucumber" 
     ]
 
 `;
@@ -60,17 +60,19 @@ func =
       expectedSource,
     );
   });
-  it("should swap item aa with bb in non-standard formatted list", async () => {
+
+  it("should swap item Banana with Cucumber and keep formatting in non elm-format formatted list", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)
 
 func =
-    [ "a", "bbb",
-    --^
-      "cc"
+    [ "Apple",
+      "Banana",
+        --^
+      "Cucumber",
+      "Date"
     ]
-
 `;
 
     const expectedSource = `
@@ -78,10 +80,11 @@ func =
 module Test exposing (..)
 
 func =
-    [ "bbb", "a",
-      "cc" 
+    [ "Apple",
+      "Cucumber",
+      "Banana",
+      "Date"
     ]
-
 `;
 
     await testCodeAction(
@@ -99,9 +102,9 @@ module Test exposing (..)
 func =
     [ -- Comment
       let 
-        a = 1 
+        a = "1" 
       in 
-      "aa"
+      a
     , "bb"
     --^
     , "cc" 
@@ -117,9 +120,9 @@ func =
     [ "bb"
     , -- Comment
       let 
-        a = 1 
+        a = "1" 
       in 
-      "aa" 
+      a
     , "cc" 
     ]
 
@@ -139,6 +142,7 @@ module Test exposing (..)
 
 func =
     [ -- CommentAA
+      -- Comment line 2
       "aa"
      --^
     , "bb"
@@ -153,6 +157,7 @@ module Test exposing (..)
 func =
     [ "bb"
     , -- CommentAA
+      -- Comment line 2
       "aa" 
     ]
 
@@ -224,6 +229,68 @@ func =
     , "aa"
 
       -- "bb"
+    ]
+
+`;
+
+    await testCodeAction(
+      source,
+      [{ title: "Move list item down" }],
+      expectedSource,
+    );
+  });
+
+  it("should handle nested lists, and move only within the closest parent list", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    [ [ "Red Apple", "Green Apple" ]
+        --^
+    , [ "Banana" ]
+    ]
+
+`;
+
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    [ [ "Green Apple", "Red Apple" ]
+    , [ "Banana" ]
+    ]
+
+`;
+
+    await testCodeAction(
+      source,
+      [{ title: "Move list item down" }],
+      expectedSource,
+    );
+  });
+
+  it("should handle nested lists, and moving lists within lists", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    [ [ "Red Apple", "Green Apple" ]
+    --^ 
+    , [ "Banana" ]
+    ]
+
+`;
+
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    [ [ "Banana" ]
+    , [ "Red Apple", "Green Apple" ]
     ]
 
 `;
