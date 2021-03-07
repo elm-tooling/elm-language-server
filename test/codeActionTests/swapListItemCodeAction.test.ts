@@ -333,7 +333,6 @@ func =
 
     await testCodeAction(source, [], expectedSource, undefined, [
       { title: "Move list item up" },
-      { title: "Move list item down" },
     ]);
   });
 
