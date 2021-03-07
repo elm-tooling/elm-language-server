@@ -78,6 +78,7 @@ export async function testCodeAction(
   expectedCodeActions: CodeAction[],
   expectedResultAfterEdits?: string,
   testFixAll = false,
+  unexpectedCodeActions?: CodeAction[],
 ): Promise<void> {
   const treeParser = new SourceTreeParser();
   await treeParser.init();
@@ -142,6 +143,10 @@ export async function testCodeAction(
     codeActions.find((c) => codeActionEquals(codeAction, c)),
   );
 
+  const codeActionsExistWhichShouldNotExist = unexpectedCodeActions?.every(
+    (codeAction) => codeActions.find((c) => codeActionEquals(codeAction, c)),
+  );
+
   if (debug && !codeActionsExist) {
     console.log(
       `Expecting ${JSON.stringify(expectedCodeActions)}, got ${JSON.stringify(
@@ -151,6 +156,16 @@ export async function testCodeAction(
   }
 
   expect(codeActionsExist).toBeTruthy();
+
+  if (debug && codeActionsExistWhichShouldNotExist) {
+    console.log(
+      `Expecting none of ${JSON.stringify(
+        unexpectedCodeActions,
+      )}, got ${JSON.stringify(codeActionsExistWhichShouldNotExist)}`,
+    );
+  }
+
+  expect(codeActionsExistWhichShouldNotExist).toBeFalsy();
 
   if (expectedResultAfterEdits) {
     const expectedSources = getSourceFiles(
