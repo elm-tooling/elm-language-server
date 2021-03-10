@@ -15,6 +15,7 @@ import {
   getTargetPositionFromSource,
 } from "../utils/sourceParser";
 import { baseUri, SourceTreeParser } from "../utils/sourceTreeParser";
+import diffDefault from "jest-diff";
 
 const basicsSources = `
 --@ Basics.elm
@@ -140,11 +141,7 @@ describe("test elm diagnostics", () => {
     );
 
     if (debug && !diagnosticsEqual) {
-      console.log(
-        `Expecting ${JSON.stringify(expected)}, got ${JSON.stringify(
-          diagnostics,
-        )}`,
-      );
+      console.log(diffDefault(expected, diagnostics));
     }
 
     expect(diagnosticsEqual).toBeTruthy();
