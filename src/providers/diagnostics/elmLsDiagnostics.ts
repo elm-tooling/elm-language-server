@@ -532,7 +532,8 @@ export class ElmLsDiagnostics {
       .filter(
         (match) =>
           match.captures.length > 0 &&
-          match.captures[0].node.parent?.type !== "import_clause",
+          match.captures[0].node.parent?.type !== "import_clause" &&
+          match.captures[0].node.parent?.parent?.type !== "import_clause",
       )
       .map((match) => match.captures.map((n) => n.node.text).join("."));
 

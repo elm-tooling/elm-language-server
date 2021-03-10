@@ -26,11 +26,11 @@ describe("ElmLsDiagnostics", () => {
     await treeParser.init();
     elmDiagnostics = new ElmLsDiagnostics();
 
-    const sources = getSourceFiles(source)
+    const sources = getSourceFiles(source);
     const program = await treeParser.getProgram(sources);
 
-    let diagnostics : Array<IDiagnostic> = []
-    for ( const fileName in sources) {
+    let diagnostics: Array<IDiagnostic> = [];
+    for (const fileName in sources) {
       const filePath = URI.file(baseUri + fileName).toString();
       const sourceFile = program.getSourceFile(filePath);
 
@@ -38,9 +38,10 @@ describe("ElmLsDiagnostics", () => {
         fail();
       }
 
-      diagnostics = diagnostics.concat(elmDiagnostics
-        .createDiagnostics(sourceFile, program)
-        .filter((diagnostic) => diagnostic.data.code === code)
+      diagnostics = diagnostics.concat(
+        elmDiagnostics
+          .createDiagnostics(sourceFile, program)
+          .filter((diagnostic) => diagnostic.data.code === code),
       );
     }
 
@@ -422,6 +423,32 @@ foo = (+) 1 2
             end: { line: 3, character: 15 },
           },
           "B",
+        ),
+      ]);
+    });
+
+    it("no usage on both imports even if name is similar", async () => {
+      const source = `
+module Session exposing (..)
+
+import Json.Decode
+import Json.Decode.Pipeline
+			`;
+
+      await testDiagnostics(source, "unused_import", [
+        diagnosticWithRangeAndName(
+          {
+            start: { line: 3, character: 0 },
+            end: { line: 3, character: 18 },
+          },
+          "Json.Decode",
+        ),
+        diagnosticWithRangeAndName(
+          {
+            start: { line: 4, character: 0 },
+            end: { line: 4, character: 27 },
+          },
+          "Json.Decode.Pipeline",
         ),
       ]);
     });
@@ -1664,7 +1691,7 @@ text en it language =
     });
 
     it("used in a different file", async () => {
-      const source =`
+      const source = `
 --@ Main.elm
 module Main exposing (..)
 
