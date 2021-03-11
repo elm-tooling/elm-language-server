@@ -9,7 +9,6 @@ import {
   DiagnosticsProvider,
 } from "../../src/providers";
 import { ElmLsDiagnostics } from "../../src/providers/diagnostics/elmLsDiagnostics";
-import { DiagnosticKind } from "../../src/providers/diagnostics/fileDiagnostics";
 import { ICodeActionParams } from "../../src/providers/paramsExtensions";
 import { Utils } from "../../src/util/utils";
 import {
@@ -23,6 +22,7 @@ import {
   applyEditsToSource,
   stripCommentLines,
 } from "../utils/sourceTreeParser";
+import diffDefault from "jest-diff";
 
 function codeActionEquals(a: CodeAction, b: CodeAction): boolean {
   return a.title === b.title;
@@ -131,11 +131,7 @@ export async function testCodeAction(
   );
 
   if (debug && !codeActionsExist) {
-    console.log(
-      `Expecting ${JSON.stringify(expectedCodeActions)}, got ${JSON.stringify(
-        codeActions,
-      )}`,
-    );
+    console.log(diffDefault(expectedCodeActions, codeActions));
   }
 
   expect(codeActionsExist).toBeTruthy();
