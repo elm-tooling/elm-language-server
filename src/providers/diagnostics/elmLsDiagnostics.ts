@@ -425,11 +425,20 @@ export class ElmLsDiagnostics {
     const elmAnalyseJson = this.getElmAnalyseJson(program.getRootPath().fsPath);
     const tree = sourceFile.tree;
     const uri = sourceFile.uri;
+    const rootPath = program.getRootPath().fsPath;
 
     if (
-      elmAnalyseJson.excludedPaths?.some((path) =>
-        uri.startsWith(URI.file(path).toString()),
-      )
+      elmAnalyseJson.excludedPaths?.some((excludedPath) => {
+        if (excludedPath.startsWith(rootPath)) {
+          // absolute path
+          return uri.startsWith(URI.file(excludedPath).toString());
+        } else {
+          // relative path
+          return uri.startsWith(
+            URI.file(path.join(rootPath, excludedPath)).toString(),
+          );
+        }
+      })
     ) {
       return [];
     }
