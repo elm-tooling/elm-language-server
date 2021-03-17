@@ -28,6 +28,16 @@ apR x f =
 eq : a -> a -> Bool
 eq =
   Elm.Kernel.Utils.equal
+
+--@ String.elm
+module String exposing (String)
+
+type String = String
+
+--@ Char.elm
+module Char exposing (Char)
+
+type Char = Char
 `;
 describe("test type inference", () => {
   const treeParser = new SourceTreeParser();

@@ -846,6 +846,10 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       return "";
     }
 
+    if (module === "List" && name === "List") {
+      return "";
+    }
+
     const moduleImport = findImportModuleNameNode(module, sourceFile)?.parent;
 
     if (!moduleImport) {
