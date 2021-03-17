@@ -1582,4 +1582,44 @@ func =
       "exactMatch",
     );
   });
+
+  it("Completions from default imports", async () => {
+    const source = `
+--@ List.elm
+module List exposing (..)
+
+singleton : a -> List a
+singleton value =
+  [value]
+
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    List.{-caret-}
+`;
+
+    await testCompletions(source, ["singleton"], "exactMatch");
+  });
+
+  it("Completions from default imports with alias", async () => {
+    const source = `
+--@ Platform/Cmd.elm
+module Platform.Cmd exposing (Cmd, batch)
+
+type Cmd msg = Cmd
+
+batch : List (Cmd msg) -> Cmd msg
+batch =
+  Elm.Kernel.Platform.batch
+
+--@ Test.elm
+module Test exposing (..)
+
+func =
+    Cmd.{-caret-}
+`;
+
+    await testCompletions(source, ["Cmd", "batch"], "exactMatch");
+  });
 });
