@@ -70,7 +70,12 @@ func model =
 
   it("should work with record update expr", async () => {
     const source = `
-		--@ Test.elm
+--@ String.elm
+module String exposing (String)
+
+type String = String
+
+--@ Test.elm
 module Test exposing (..)
 
 func : { field : Int } -> a
@@ -80,7 +85,7 @@ func model =
 		`;
 
     const expectedSource = `
-		--@ Test.elm
+--@ Test.elm
 module Test exposing (..)
 
 func : { field : Int, newProp : String } -> a

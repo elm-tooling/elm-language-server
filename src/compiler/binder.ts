@@ -5,6 +5,7 @@ import { NodeType, TreeUtils } from "../util/treeUtils";
 import { Utils } from "../util/utils";
 import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
 import { Diagnostics, error } from "./diagnostics";
+import { Imports } from "./imports";
 
 export type SymbolMap = MultiMap<string, ISymbol>;
 function createSymbolMap(): SymbolMap {
@@ -106,6 +107,10 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     parent = node;
 
     symbolLinks.set(node, container);
+
+    if (node.type === "file") {
+      bindDefaultImports();
+    }
 
     forEachChild(bind);
 
@@ -269,6 +274,10 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
           break;
       }
     });
+  }
+
+  function bindDefaultImports(): void {
+    Imports.getVirtualImports().forEach(bindImportClause);
   }
 
   function bindImportClause(node: SyntaxNode): void {
