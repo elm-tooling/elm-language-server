@@ -4,23 +4,27 @@
 
 - Drop node 10
 - Update tree-sitter-elm, should improve parsing significantly
-- Added code action to create missing record field
-- Added code action to remove unused functions
-- Added code action to remove all unused code in a file
+- Add code action to create missing record field
+- Add code action to remove all unused in a file
+- Add code action to remove unused functions
+- Add code action to remove all unused code in a file
+- Improve whitespace handling on removal of unused nodes
+- Improved snippets for `Browser.`
 - Reimplement diagnostics and code actions for missing case patterns
 - Improve references
 - Rework import definitions to be more like the compiler
 - Add ambiguous type/value diagnostics
 - Don't create diagnostic on duplicate imports
-- Update dependencies
 - Improve exposing completions
 - Show completions for multiple modules if they share a name/alias
-- Improve whitespace handling on removal of unused nodes
+- Fix elm-format matcher for files that fail to parse
+- Fix elmAnalyse excludedPath not working with relative paths
 - Fix parsing of new files
 - Fix inference for cons patterns with lists
 - Fix unknown parameter used when calling elm-test
 - Use text documents buffer to parse dirty files on auto server restart
 - Improve logging and error texts on the binary error path
+- Update dependencies
 
 ## 2.0.3
 
