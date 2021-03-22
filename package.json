@@ -1,7 +1,7 @@
 {
   "name": "@elm-tooling/elm-language-server",
   "description": "Implementation of an elm language server in node.",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "author": "Kolja Lampe",
   "license": "MIT",
   "main": "./out/module.js",
@@ -20,7 +20,7 @@
     "escape-string-regexp": "^4.0.0",
     "execa": "^5.0.0",
     "fast-diff": "^1.2.0",
-    "globby": "^11.0.2",
+    "globby": "^11.0.3",
     "pjson": "1.0.9",
     "reflect-metadata": "^0.1.13",
     "ts-debounce": "^3.0.0",
@@ -34,8 +34,8 @@
     "@elm-tooling/tree-sitter-elm": "^5.3.3",
     "@types/jest": "^26.0.21",
     "@types/node": "14.14.35",
-    "@typescript-eslint/eslint-plugin": "^4.18.0",
-    "@typescript-eslint/parser": "^4.18.0",
+    "@typescript-eslint/eslint-plugin": "^4.19.0",
+    "@typescript-eslint/parser": "^4.19.0",
     "copyfiles": "^2.4.1",
     "doctoc": "^2.0.0",
     "eslint": "^7.22.0",
@@ -64,7 +64,7 @@
     "generate-toc": "doctoc README.md"
   },
   "bin": {
-    "elm-language-server": "./out/index.js"
+    "elm-language-server": "out/index.js"
   },
   "publishConfig": {
     "access": "public"
