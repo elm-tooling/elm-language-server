@@ -104,7 +104,7 @@ func = ""
 
     await testCodeAction(
       source,
-      [{ title: "Remove all unused code" }],
+      [{ title: "Remove all reported unused code" }],
       expectedSource,
       true,
     );
@@ -132,7 +132,7 @@ func = foo
 
     await testCodeAction(
       source,
-      [{ title: "Remove all unused code" }],
+      [{ title: "Remove all reported unused code" }],
       expectedSource,
       true,
     );
@@ -160,7 +160,7 @@ func = foo
 
     await testCodeAction(
       source,
-      [{ title: "Remove all unused code" }],
+      [{ title: "Remove all reported unused code" }],
       expectedSource,
       true,
     );
@@ -188,7 +188,7 @@ func = foo
 
     await testCodeAction(
       source,
-      [{ title: "Remove all unused code" }],
+      [{ title: "Remove all reported unused code" }],
       expectedSource,
       true,
     );
@@ -216,7 +216,7 @@ func = foo + bar
 
     await testCodeAction(
       source,
-      [{ title: "Remove all unused code" }],
+      [{ title: "Remove all reported unused code" }],
       expectedSource,
       true,
     );
@@ -244,7 +244,7 @@ func = foo + bar
 
     await testCodeAction(
       source,
-      [{ title: "Remove all unused code" }],
+      [{ title: "Remove all reported unused code" }],
       expectedSource,
       true,
     );
@@ -272,7 +272,7 @@ func = foo + bar
 
     await testCodeAction(
       source,
-      [{ title: "Remove all unused code" }],
+      [{ title: "Remove all reported unused code" }],
       expectedSource,
       true,
     );
@@ -300,7 +300,7 @@ func = foo + bar
 
     await testCodeAction(
       source,
-      [{ title: "Remove all unused code" }],
+      [{ title: "Remove all reported unused code" }],
       expectedSource,
       true,
     );
