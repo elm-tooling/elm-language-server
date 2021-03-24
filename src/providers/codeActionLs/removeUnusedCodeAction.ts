@@ -39,7 +39,7 @@ CodeActionProvider.registerCodeAction({
   getFixAllCodeAction: (params) => {
     const importsMap = new Map<string, Set<string>>();
     return CodeActionProvider.getFixAllCodeAction(
-      "Remove all unused code",
+      "Remove all reported unused code",
       params,
       errorCodes,
       fixId,
