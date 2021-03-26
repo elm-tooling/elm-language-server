@@ -39,6 +39,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
       } else {
         result.push({
           title: "Expose Function",
+          isPreferred: true,
           kind: CodeActionKind.Refactor,
           data: {
             actionName: "expose_function",

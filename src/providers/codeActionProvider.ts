@@ -173,6 +173,7 @@ export class CodeActionProvider {
     title: string,
     edits: TextEdit[] | { [uri: string]: TextEdit[] },
     command?: Command,
+    isPreferred = false,
   ): CodeAction {
     const changes = Array.isArray(edits)
       ? { [params.sourceFile.uri]: edits }
@@ -181,7 +182,7 @@ export class CodeActionProvider {
       title,
       kind: CodeActionKind.QuickFix,
       edit: { changes },
-      isPreferred: true,
+      isPreferred,
       command,
     };
   }
