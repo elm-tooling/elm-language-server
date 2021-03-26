@@ -970,6 +970,19 @@ export class ElmLsDiagnostics {
   private getUnusedTypeAliasDiagnostics(tree: Tree): IDiagnostic[] {
     const diagnostics: IDiagnostic[] = [];
 
+    // Currently if the file exports the variant, either through an explicit
+    // reference to the type, or through a '(..)' to expose everything, then
+    // we won't mark the value constructor as unused. Ideally this should take
+    // multiple files into account, then these conditions can be removed.
+    const exposingAll = !!tree.rootNode
+      .childForFieldName("moduleDeclaration")
+      ?.childForFieldName("exposing")
+      ?.childForFieldName("doubleDot");
+
+    if (exposingAll) {
+      return diagnostics;
+    }
+
     const typeAliases = this.typeAliasesQuery
       .matches(tree.rootNode)
       .map((match) => match.captures[0].node)

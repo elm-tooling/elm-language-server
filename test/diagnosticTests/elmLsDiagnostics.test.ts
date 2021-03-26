@@ -1511,6 +1511,49 @@ type Patch
       await testDiagnostics(source, "unused_type_alias", []);
     });
 
+    it("used type alias in different file", async () => {
+      const source = `
+--@ Model.elm
+module Model exposing (..)
+
+
+type alias IAmUsed =
+    { used : Bool
+    , optional : Bool
+    }
+
+--@ Main.elm
+module Main exposing (main)
+
+import Html
+import Model
+
+
+main : Html.Html msg
+main =
+    view example
+
+
+example : Model.IAmUsed
+example =
+    { used = True
+    , optional = False
+    }
+
+
+view : Model.IAmUsed -> Html.Html msg
+view blah =
+    Html.text <|
+        if blah.used then
+            "used"
+
+        else
+            "not used"
+			`;
+
+      await testDiagnostics(source, "unused_type_alias", []);
+    });
+
     it("unused type alias", async () => {
       const source = `
 module Foo exposing (foo)
