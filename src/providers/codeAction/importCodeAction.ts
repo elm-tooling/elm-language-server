@@ -40,6 +40,8 @@ CodeActionProvider.registerCodeAction({
     });
   },
   getFixAllCodeAction: (params: ICodeActionParams) => {
+    const possibleImportsCache = new Map<string, IPossibleImport[]>();
+
     return CodeActionProvider.getFixAllCodeAction(
       "Add all missing imports",
       params,
@@ -49,6 +51,7 @@ CodeActionProvider.registerCodeAction({
         const firstPossibleImport = getPossibleImports(
           params,
           diagnostic.range,
+          possibleImportsCache,
         )[0];
 
         if (firstPossibleImport) {
@@ -70,16 +73,19 @@ CodeActionProvider.registerCodeAction({
 function getPossibleImports(
   params: ICodeActionParams,
   range: Range,
+  possibleImportsCache?: Map<string, IPossibleImport[]>,
 ): IPossibleImport[] {
   const valueNode = TreeUtils.getNamedDescendantForRange(
     params.sourceFile,
     range,
   );
 
-  const possibleImports = ImportUtils.getPossibleImports(
-    params.program,
-    params.sourceFile,
-  );
+  const cached = possibleImportsCache?.get(params.sourceFile.uri);
+
+  const possibleImports =
+    cached ?? ImportUtils.getPossibleImports(params.program, params.sourceFile);
+
+  possibleImportsCache?.set(params.sourceFile.uri, possibleImports);
 
   // Add import quick fixes
   if (valueNode) {
