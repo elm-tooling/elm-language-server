@@ -14,7 +14,7 @@ container.register("ElmWorkspaces", { useValue: [] });
 container.register("ElmToolingJsonManager", {
   useValue: {},
 });
-container.register("Settings", {
+container.register(Settings, {
   useValue: new Settings({} as any, {}),
 });
 container.register("ClientSettings", {

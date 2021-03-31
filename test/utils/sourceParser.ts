@@ -1,8 +1,6 @@
 import { Position } from "vscode-languageserver";
 
-export function getCaretPositionFromSource(
-  source: string,
-): {
+export function getCaretPositionFromSource(source: string): {
   position: Position;
   newSources: { [K: string]: string };
   fileWithCaret: string;

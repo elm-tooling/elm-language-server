@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import * as Path from "path";
 import "reflect-metadata";
 import { container } from "tsyringe"; //must be after reflect-metadata
 import {
@@ -10,9 +9,10 @@ import {
   ProposedFeatures,
 } from "vscode-languageserver";
 import { createConnection } from "vscode-languageserver/node";
-import Parser from "web-tree-sitter";
 import { getCancellationStrategyFromArgv } from "./cancellation";
 import { CapabilityCalculator } from "./capabilityCalculator";
+import { createNodeProgramHost } from "./compiler/program";
+import { loadParser } from "./parser";
 import { ASTProvider } from "./providers";
 import {
   ElmAnalyseJsonService,
@@ -41,7 +41,6 @@ container.register<Connection>("Connection", {
     cancellationStrategy: getCancellationStrategyFromArgv(process.argv),
   }),
 });
-container.registerSingleton<Parser>("Parser", Parser);
 
 container.registerSingleton("DocumentEvents", DocumentEvents);
 container.registerSingleton<IElmAnalyseJsonService>(
@@ -62,25 +61,7 @@ connection.onInitialize(
     cancel,
     progress,
   ): Promise<InitializeResult> => {
-    await Parser.init();
-    const absolute = Path.join(__dirname, "tree-sitter-elm.wasm");
-    const pathToWasm = Path.relative(process.cwd(), absolute);
-    connection.console.info(
-      `Loading Elm tree-sitter syntax from ${pathToWasm}`,
-    );
-    const language = await Parser.Language.load(pathToWasm);
-    const parser = container.resolve<Parser>("Parser");
-    // const logger: Parser.Logger = (
-    //   message: string,
-    //   params: { [param: string]: string },
-    //   isLexMessage: "lex" | "parse",
-    // ) => {
-    //   let type = isLexMessage ? "lex" : "parse";
-    //   if (type === "lex") type += "  ";
-    //   connection.console.info(`${type} ${message}`);
-    // };
-    // parser.setLogger(logger);
-    parser.setLanguage(language);
+    await loadParser(createNodeProgramHost(connection));
 
     container.register(CapabilityCalculator, {
       useValue: new CapabilityCalculator(params.capabilities),
@@ -88,7 +69,7 @@ connection.onInitialize(
 
     const initializationOptions = params.initializationOptions ?? {};
 
-    container.register("Settings", {
+    container.register(Settings, {
       useValue: new Settings(initializationOptions, params.capabilities),
     });
 

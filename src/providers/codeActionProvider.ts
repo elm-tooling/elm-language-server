@@ -98,7 +98,7 @@ export class CodeActionProvider {
   private static preferredActions = new Map<string, IPreferredAction>();
 
   constructor() {
-    this.settings = container.resolve("Settings");
+    this.settings = container.resolve(Settings);
     this.elmMake = container.resolve(ElmMakeDiagnostics);
     this.connection = container.resolve<Connection>("Connection");
     this.diagnosticsProvider = container.resolve(DiagnosticsProvider);

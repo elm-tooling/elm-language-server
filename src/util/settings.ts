@@ -20,9 +20,8 @@ export interface IExtendedCapabilites {
   clientInitiatedDiagnostics: boolean;
 }
 
-@injectable()
-export class Settings {
-  private clientSettings: IClientSettings = {
+export function getDefaultSettings(): IClientSettings {
+  return {
     elmFormatPath: "",
     elmPath: "",
     elmTestPath: "",
@@ -33,6 +32,10 @@ export class Settings {
     onlyUpdateDiagnosticsOnSave: false,
     elmReviewDiagnostics: "off",
   };
+}
+@injectable()
+export class Settings {
+  private clientSettings: IClientSettings = getDefaultSettings();
   private connection: Connection;
 
   private initDone = false;

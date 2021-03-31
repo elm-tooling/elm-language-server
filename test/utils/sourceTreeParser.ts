@@ -5,7 +5,11 @@ import { promisify } from "util";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import Parser from "web-tree-sitter";
-import { Program, IProgram, IProgramHost } from "../../src/compiler/program";
+import {
+  IProgram,
+  IProgramHost,
+  createProgram,
+} from "../../src/compiler/program";
 import * as path from "../../src/util/path";
 import { Utils } from "../../src/util/utils";
 
@@ -67,7 +71,7 @@ export class SourceTreeParser {
       }
     }
 
-    const program = new Program(URI.file(baseUri), {
+    return await createProgram(URI.file(baseUri), {
       readFile: (uri: string): Promise<string> =>
         Promise.resolve(readFile(uri)),
       readDirectory: (uri: string): Promise<string[]> => {
@@ -82,13 +86,24 @@ export class SourceTreeParser {
       watchFile: (): void => {
         return;
       },
+      logger: {
+        info: (): void => {
+          //
+        },
+        warn: (): void => {
+          //
+        },
+        error: (): void => {
+          //
+        },
+      },
+      handleError: (): void => {
+        //
+      },
+      onServerDidRestart: (): void => {
+        //
+      },
     });
-
-    await program.init(() => {
-      //
-    });
-
-    return program;
   }
 }
 
@@ -105,6 +120,23 @@ export function createProgramHost(): IProgramHost {
       }),
     watchFile: (): void => {
       return;
+    },
+    logger: {
+      info: (): void => {
+        //
+      },
+      warn: (): void => {
+        //
+      },
+      error: (): void => {
+        //
+      },
+    },
+    handleError: (): void => {
+      //
+    },
+    onServerDidRestart: (): void => {
+      //
     },
   };
 }

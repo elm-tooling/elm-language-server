@@ -13,7 +13,7 @@ const refactorName = "move_function";
 CodeActionProvider.registerRefactorAction(refactorName, {
   getAvailableActions: (params: ICodeActionParams): IRefactorCodeAction[] => {
     if (
-      !container.resolve<Settings>("Settings").extendedCapabilities
+      !container.resolve(Settings).extendedCapabilities
         ?.moveFunctionRefactoringSupport
     ) {
       return [];
