@@ -77,11 +77,8 @@ export class ImportUtils {
         });
 
         exposed.constructors?.forEach((exp) => {
-          if (exp.node.parent) {
-            const value = TreeUtils.findFirstNamedChildOfType(
-              "upper_case_identifier",
-              exp.node.parent,
-            )?.text;
+          if (exp.node.parent && exp.type === "UnionConstructor") {
+            const value = exp.node.parent.childForFieldName("name")?.text;
 
             if (value) {
               exposedValues.push({
