@@ -10,6 +10,7 @@ import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../compiler/diagnostics";
 import {
   CodeActionProvider,
+  ICodeAction,
   IRefactorCodeAction,
   IRefactorEdit,
 } from "../codeActionProvider";
@@ -36,7 +37,7 @@ CodeActionProvider.registerCodeAction({
 
     return [];
   },
-  getFixAllCodeAction: (params: ICodeActionParams): CodeAction | undefined => {
+  getFixAllCodeAction: (params: ICodeActionParams): ICodeAction | undefined => {
     return CodeActionProvider.getFixAllCodeAction(
       "Add all missing type annotations",
       params,

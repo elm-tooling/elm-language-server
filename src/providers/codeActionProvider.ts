@@ -37,11 +37,24 @@ import { ICodeActionParams } from "./paramsExtensions";
 import { ElmPackageCache } from "../compiler/elmPackageCache";
 import { comparePosition } from "../positionUtil";
 
+interface IPreferredAction {
+  priority: number;
+  thereCanOnlyBeOne?: boolean; // Only marked as preferred if there is only a single fix
+}
+
 export interface ICodeActionRegistration {
   errorCodes: string[];
   fixId: string;
+  preferredAction?: IPreferredAction;
   getCodeActions(params: ICodeActionParams): CodeAction[] | undefined;
-  getFixAllCodeAction(params: ICodeActionParams): CodeAction | undefined;
+  getFixAllCodeAction(params: ICodeActionParams): ICodeAction | undefined;
+}
+
+export interface ICodeAction extends CodeAction {
+  data: {
+    fixId: string;
+    isFixAll?: boolean;
+  };
 }
 
 export interface IRefactorCodeAction extends CodeAction {
@@ -59,6 +72,7 @@ export interface IRefactorEdit {
   renamePosition?: Position;
 }
 export interface IRefactorRegistration {
+  preferredAction?: IPreferredAction;
   getAvailableActions(params: ICodeActionParams): IRefactorCodeAction[];
   getEditsForAction(
     params: ICodeActionParams,
@@ -80,6 +94,8 @@ export class CodeActionProvider {
     string,
     IRefactorRegistration
   >();
+
+  private static preferredActions = new Map<string, IPreferredAction>();
 
   constructor() {
     this.settings = container.resolve("Settings");
@@ -127,6 +143,13 @@ export class CodeActionProvider {
     registration.errorCodes.forEach((code) => {
       CodeActionProvider.errorCodeToRegistrationMap.set(code, registration);
     });
+
+    if (registration.preferredAction) {
+      CodeActionProvider.preferredActions.set(
+        registration.fixId,
+        registration.preferredAction,
+      );
+    }
   }
 
   public static registerRefactorAction(
@@ -134,6 +157,13 @@ export class CodeActionProvider {
     registration: IRefactorRegistration,
   ): void {
     this.refactorRegistrations.set(name, registration);
+
+    if (registration.preferredAction) {
+      CodeActionProvider.preferredActions.set(
+        name,
+        registration.preferredAction,
+      );
+    }
   }
 
   private static getDiagnostics(
@@ -173,7 +203,6 @@ export class CodeActionProvider {
     title: string,
     edits: TextEdit[] | { [uri: string]: TextEdit[] },
     command?: Command,
-    isPreferred = false,
   ): CodeAction {
     const changes = Array.isArray(edits)
       ? { [params.sourceFile.uri]: edits }
@@ -182,7 +211,6 @@ export class CodeActionProvider {
       title,
       kind: CodeActionKind.QuickFix,
       edit: { changes },
-      isPreferred,
       command,
     };
   }
@@ -197,7 +225,7 @@ export class CodeActionProvider {
       edits: { [uri: string]: TextEdit[] },
       diagnostic: Diagnostic,
     ) => void,
-  ): CodeAction {
+  ): ICodeAction {
     const edits: TextEdit[] = [];
     const changes = callbackChanges
       ? {}
@@ -243,7 +271,7 @@ export class CodeActionProvider {
       kind: CodeActionKind.QuickFix,
       diagnostics,
       edit: { changes },
-      data: fixId,
+      data: { fixId, isFixAll: true },
     };
   }
 
@@ -251,7 +279,7 @@ export class CodeActionProvider {
     this.connection.console.info("A code action was requested");
     const make = this.elmMake.onCodeAction(params);
 
-    const results: CodeAction[] = [];
+    const results: (ICodeAction | IRefactorCodeAction)[] = [];
 
     // For each diagnostic in the context, get the code action registration that
     // handles the diagnostic error code and ask for the code actions for that error
@@ -273,14 +301,14 @@ export class CodeActionProvider {
                 .getCodeActions(params)
                 ?.map((codeAction) =>
                   this.addDiagnosticToCodeAction(codeAction, diagnostic),
-                ) ?? [];
+                )
+                .map((codeAction) => ({
+                  ...codeAction,
+                  data: { fixId: reg.fixId },
+                })) ?? [];
 
             if (
               codeActions.length > 0 &&
-              !results.some(
-                // Check if there is already a "fix all" code action for this fix
-                (codeAction) => /* fixId */ codeAction.data === reg.fixId,
-              ) &&
               CodeActionProvider.getDiagnostics(
                 params,
                 this.diagnosticsProvider,
@@ -311,7 +339,13 @@ export class CodeActionProvider {
       ).flatMap((registration) => registration.getAvailableActions(params)),
     );
 
-    return [...results, ...make];
+    return [
+      ...results.map((codeAction, _, allActions) => ({
+        ...codeAction,
+        isPreferred: this.isPreferredFix(codeAction, allActions),
+      })),
+      ...make,
+    ];
   }
 
   private onCodeActionResolve(
@@ -351,5 +385,66 @@ export class CodeActionProvider {
   ): CodeAction {
     codeAction.diagnostics = [diagnostic];
     return codeAction;
+  }
+
+  protected isPreferredFix(
+    action: ICodeAction | IRefactorCodeAction,
+    allActions: readonly (ICodeAction | IRefactorCodeAction)[],
+  ): boolean {
+    if ("isFixAll" in action.data && action.data.isFixAll) {
+      return false;
+    }
+
+    const fixIdOrRefactorName =
+      "fixId" in action.data ? action.data.fixId : action.data.refactorName;
+    const actionPriority = CodeActionProvider.preferredActions.get(
+      fixIdOrRefactorName,
+    );
+    if (!actionPriority) {
+      return false;
+    }
+
+    return allActions.every((otherAction) => {
+      if (otherAction === action) {
+        return true;
+      }
+
+      if ("isFixAll" in otherAction.data && otherAction.data.isFixAll) {
+        return true;
+      }
+
+      const otherFixIdOrRefactorName =
+        "fixId" in otherAction.data
+          ? otherAction.data.fixId
+          : otherAction.data.refactorName;
+
+      const otherActionPriority = CodeActionProvider.preferredActions.get(
+        otherFixIdOrRefactorName,
+      );
+      if (
+        !otherActionPriority ||
+        otherActionPriority.priority < actionPriority.priority
+      ) {
+        return true;
+      } else if (otherActionPriority.priority > actionPriority.priority) {
+        return false;
+      }
+
+      if (
+        actionPriority.thereCanOnlyBeOne &&
+        fixIdOrRefactorName === otherFixIdOrRefactorName
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+  /**
+   * Only used for testing
+   */
+  protected static clearPreferredActions(): void {
+    CodeActionProvider.preferredActions.clear();
   }
 }

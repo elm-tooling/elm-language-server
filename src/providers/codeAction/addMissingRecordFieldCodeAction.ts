@@ -1,6 +1,6 @@
-import { CodeAction, Range, TextEdit } from "vscode-languageserver";
+import { Range, TextEdit } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { CodeActionProvider } from "..";
+import { CodeActionProvider, ICodeAction } from "..";
 import { ISourceFile } from "../../compiler/forest";
 import { getSpaces } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
@@ -32,7 +32,7 @@ CodeActionProvider.registerCodeAction({
 
     return [];
   },
-  getFixAllCodeAction: (params: ICodeActionParams): CodeAction | undefined => {
+  getFixAllCodeAction: (params: ICodeActionParams): ICodeAction | undefined => {
     return CodeActionProvider.getFixAllCodeAction(
       "Create all missing record fields",
       params,

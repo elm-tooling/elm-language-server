@@ -15,6 +15,10 @@ const fixId = "import";
 CodeActionProvider.registerCodeAction({
   errorCodes,
   fixId,
+  preferredAction: {
+    priority: 1,
+    thereCanOnlyBeOne: true,
+  },
   getCodeActions: (params: ICodeActionParams): CodeAction[] | undefined => {
     const valueNode = TreeUtils.getNamedDescendantForRange(
       params.sourceFile,
