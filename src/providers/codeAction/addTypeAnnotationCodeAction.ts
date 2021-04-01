@@ -22,6 +22,9 @@ const fixId = "add_type_annotation";
 CodeActionProvider.registerCodeAction({
   errorCodes,
   fixId,
+  preferredAction: {
+    priority: 3,
+  },
   getCodeActions: (params: ICodeActionParams): CodeAction[] => {
     const edits = getEdits(params, params.range);
 
