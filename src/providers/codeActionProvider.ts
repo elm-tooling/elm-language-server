@@ -57,7 +57,7 @@ export interface ICodeAction extends CodeAction {
   };
 }
 
-export interface IRefactorCodeAction extends CodeAction {
+export interface IRefactorCodeAction extends Omit<CodeAction, "isPreferred"> {
   data: {
     uri: string;
     refactorName: string;
