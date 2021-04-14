@@ -1,5 +1,5 @@
-import { CodeAction, Range, TextEdit } from "vscode-languageserver";
-import { CodeActionProvider } from "..";
+import { Range, TextEdit } from "vscode-languageserver";
+import { CodeActionProvider, ICodeAction } from "..";
 import { getSpaces } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../compiler/diagnostics";
@@ -25,7 +25,7 @@ CodeActionProvider.registerCodeAction({
       ),
     ];
   },
-  getFixAllCodeAction: (params: ICodeActionParams): CodeAction | undefined => {
+  getFixAllCodeAction: (params: ICodeActionParams): ICodeAction | undefined => {
     return CodeActionProvider.getFixAllCodeAction(
       "Add all missing case branches",
       params,

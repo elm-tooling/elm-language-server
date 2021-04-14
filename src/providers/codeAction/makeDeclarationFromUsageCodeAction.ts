@@ -1,9 +1,9 @@
-import { CodeAction, Range } from "vscode-languageserver";
+import { Range } from "vscode-languageserver";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../compiler/diagnostics";
-import { CodeActionProvider } from "../codeActionProvider";
+import { CodeActionProvider, ICodeAction } from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
 
 const errorCodes = [Diagnostics.MissingValue.code];
@@ -27,7 +27,7 @@ CodeActionProvider.registerCodeAction({
 
     return [];
   },
-  getFixAllCodeAction: (params: ICodeActionParams): CodeAction | undefined => {
+  getFixAllCodeAction: (params: ICodeActionParams): ICodeAction | undefined => {
     return CodeActionProvider.getFixAllCodeAction(
       "Create all missing local functions",
       params,

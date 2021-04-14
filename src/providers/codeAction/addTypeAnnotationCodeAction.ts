@@ -10,6 +10,7 @@ import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../compiler/diagnostics";
 import {
   CodeActionProvider,
+  ICodeAction,
   IRefactorCodeAction,
   IRefactorEdit,
 } from "../codeActionProvider";
@@ -21,6 +22,9 @@ const fixId = "add_type_annotation";
 CodeActionProvider.registerCodeAction({
   errorCodes,
   fixId,
+  preferredAction: {
+    priority: 3,
+  },
   getCodeActions: (params: ICodeActionParams): CodeAction[] => {
     const edits = getEdits(params, params.range);
 
@@ -36,7 +40,7 @@ CodeActionProvider.registerCodeAction({
 
     return [];
   },
-  getFixAllCodeAction: (params: ICodeActionParams): CodeAction | undefined => {
+  getFixAllCodeAction: (params: ICodeActionParams): ICodeAction | undefined => {
     return CodeActionProvider.getFixAllCodeAction(
       "Add all missing type annotations",
       params,

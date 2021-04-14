@@ -10,6 +10,9 @@ import { ICodeActionParams } from "../paramsExtensions";
 
 const refactorName = "expose_unexpose";
 CodeActionProvider.registerRefactorAction(refactorName, {
+  preferredAction: {
+    priority: 2,
+  },
   getAvailableActions: (params: ICodeActionParams): IRefactorCodeAction[] => {
     const result: IRefactorCodeAction[] = [];
     const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
