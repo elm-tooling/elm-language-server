@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    // If we want to use baseUrl, we need to use a path rewrite module because 
+    // If we want to use baseUrl, we need to use a path rewrite module because
     // Typescript does not rewrite import paths. This thread has some suggestions:
     // https://github.com/microsoft/TypeScript/issues/10866
     // "baseUrl": ".",
@@ -11,7 +11,7 @@
     "outDir": "out",
     "rootDir": "src",
     "strict": true,
-    "lib": ["es2019"],
+    "lib": ["es2020"],
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "composite": true,
