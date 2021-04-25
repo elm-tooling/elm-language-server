@@ -472,9 +472,9 @@ export class ElmLsDiagnostics {
         ...(elmAnalyseJson.checks?.UseConsOverConcat === false
           ? []
           : this.getUseConsOverConcatDiagnostics(tree)),
-        ...(elmAnalyseJson.checks?.SingleFieldRecord === false
-          ? []
-          : this.getSingleFieldRecordDiagnostics(tree, uri, program)),
+        ...(elmAnalyseJson.checks?.SingleFieldRecord
+          ? this.getSingleFieldRecordDiagnostics(tree, uri, program)
+          : []),
         ...(elmAnalyseJson.checks?.UnnecessaryListConcat === false
           ? []
           : this.getUnnecessaryListConcatDiagnostics(tree)),
