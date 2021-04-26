@@ -14,6 +14,10 @@ import Parser from "web-tree-sitter";
 import { getCancellationStrategyFromArgv } from "./cancellation";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { ASTProvider } from "./providers";
+import {
+  ElmAnalyseJsonService,
+  IElmAnalyseJsonService,
+} from "./providers/diagnostics/elmAnalyseJsonService";
 import { ILanguageServer } from "./server";
 import { DocumentEvents } from "./util/documentEvents";
 import { Settings } from "./util/settings";
@@ -40,6 +44,10 @@ container.register<Connection>("Connection", {
 container.registerSingleton<Parser>("Parser", Parser);
 
 container.registerSingleton("DocumentEvents", DocumentEvents);
+container.registerSingleton<IElmAnalyseJsonService>(
+  "ElmAnalyseJsonService",
+  ElmAnalyseJsonService,
+);
 container.register(TextDocumentEvents, {
   useValue: new TextDocumentEvents(),
 });
