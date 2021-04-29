@@ -51,3 +51,17 @@ export const GetDiagnosticsRequest = new RequestType<
   void,
   void
 >("elm/getDiagnostics");
+
+export const FindTestsRequest = new RequestType<
+  IFindTestsParams,
+  IFindTestsResponse,
+  void
+>("elm/findTests");
+
+export interface IFindTestsParams {
+  text: string;
+}
+
+export interface IFindTestsResponse {
+  text: string;
+}

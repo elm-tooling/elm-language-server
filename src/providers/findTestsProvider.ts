@@ -1,82 +1,52 @@
-import { getSourceFiles } from "./utils/sourceParser";
-import { baseUri, SourceTreeParser } from "./utils/sourceTreeParser";
-import { URI } from "vscode-uri";
-import { TreeUtils } from "../src/util/treeUtils";
+import { container } from "tsyringe";
+import { Connection } from "vscode-languageserver";
+import { SyntaxNode } from "web-tree-sitter";
 import {
   EFunctionCallExpr,
-  EListExpr,
   EValueExpr,
   EStringConstant,
-  Expression,
+  EListExpr,
   mapSyntaxNodeToExpression,
-} from "../src/compiler/utils/expressionTree";
-import { SyntaxNode } from "web-tree-sitter";
+  Expression,
+} from "../compiler/utils/expressionTree";
+import {
+  FindTestsRequest,
+  IFindTestsParams,
+  IFindTestsResponse,
+} from "../protocol";
+import { TreeUtils } from "../util/treeUtils";
 
-const source = `
---@ TestModule.elm
-module TestModule exposing (..)
-
-import Expect
-import Test exposing (..)
-
-topSuite : Test
-topSuite =
-    describe "top suite"
-        [ test "first" <| \_ -> Expect.equal 13 13
-        , describe "nested"
-            [ test "second" <| \_ -> Expect.equal 14 14
-            ]
-        ]
-`;
-
-describe("find tests", () => {
-  const treeParser = new SourceTreeParser();
-
-  async function testFindTests(source: string, expected: TestSuite[]) {
-    await treeParser.init();
-
-    const sources = getSourceFiles(source);
-    const testModuleUri = URI.file(baseUri + "TestModule.elm").toString();
-
-    const program = await treeParser.getProgram(sources);
-    const sourceFile = program.getSourceFile(testModuleUri);
-    expect(sourceFile).not.toBeUndefined;
-    if (!sourceFile) {
-      throw new Error("parsing failed");
-    }
-    expect(sourceFile.isTestFile).toBeTruthy;
-
-    const tops = TreeUtils.findAllTopLevelFunctionDeclarations(sourceFile.tree);
-
-    const suites = tops
-      ? tops.map((top) => findTestSuite(findExpr("FunctionCallExpr", top)))
-      : [];
-    expect(suites).toEqual(expected);
+export class FindTestsProvider {
+  constructor() {
+    this.register();
   }
 
-  test("first", async () => {
-    await testFindTests(source, [
-      {
-        tag: "suite",
-        label: '"top suite"',
-        tests: [
-          { tag: "test", label: '"first"' },
-          {
-            tag: "suite",
-            label: '"nested"',
-            tests: [{ tag: "test", label: '"second"' }],
-          },
-        ],
-      },
-    ]);
-  });
-});
+  private register(): void {
+    const connection = container.resolve<Connection>("Connection");
+    connection.onRequest(FindTestsRequest, (params: IFindTestsParams) => {
+      connection.console.info(`Finding tests is requested`);
+      connection.window.showInformationMessage("hello there " + params.text);
+      connection.console.log("hello there " + params.text);
+      // connection.sendNotification(NotificationType, {});
+      return <IFindTestsResponse>{ text: "echo " + params.text };
+    });
+  }
+}
 
-type TestSuite =
+// export for testing
+export type TestSuite =
   | { tag: "test"; label: string }
   | { tag: "suite"; label: string; tests: TestSuite[] };
 
-function findTestSuite(
+// export for testing
+export function findTestFunctionCall(
+  node: SyntaxNode,
+): EFunctionCallExpr | undefined {
+  return findExpr("FunctionCallExpr", node);
+}
+
+// export for testing
+export function findTestSuite(
   call: EFunctionCallExpr | undefined,
 ): TestSuite | undefined {
   if (!call) {
@@ -87,7 +57,7 @@ function findTestSuite(
   if (label && funName === "describe") {
     const testExprs = findExpr("ListExpr", call.args[1])?.exprList;
     const tests = testExprs
-      ?.map((e) => findExpr("FunctionCallExpr", e))
+      ?.map((e) => findTestFunctionCall(e))
       .map((call) => findTestSuite(call));
     return tests && <TestSuite>{ tag: "suite", label, tests };
   }
