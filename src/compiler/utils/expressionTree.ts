@@ -129,7 +129,7 @@ export interface ENumberConstant extends SyntaxNode {
   nodeType: "NumberConstant";
   isFloat: boolean;
 }
-interface EStringConstant extends SyntaxNode {
+export interface EStringConstant extends SyntaxNode {
   nodeType: "StringConstant";
 }
 export interface ETypeExpression extends SyntaxNode {
