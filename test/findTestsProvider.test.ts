@@ -8,21 +8,48 @@ import {
   TestSuite,
 } from "../src/providers/findTestsProvider";
 
-const source = `
---@ TestModule.elm
-module TestModule exposing (..)
+const basicsSources = `
+--@ Basics.elm
+module Basics exposing ((<|), Int, Float, Bool(..), Order(..), negate)
 
-import Expect
-import Test exposing (..)
+infix left  0 (<|) = apL
 
-topSuite : Test
-topSuite =
-    describe "top suite"
-        [ test "first" <| \_ -> Expect.equal 13 13
-        , describe "nested"
-            [ test "second" <| \_ -> Expect.equal 14 14
-            ]
-        ]
+type Int = Int
+
+type Float = Float
+
+type Bool = True | False
+
+add : number -> number -> number
+add =
+  Elm.Kernel.Basics.add
+
+apL : (a -> b) -> a -> b
+apL f x =
+  f x
+`;
+
+const sourceTestModule = `
+--@ Test.elm
+module Test exposing (Test(..), describe, test)
+
+import Expect exposing (..)
+
+type Test = T
+
+describe : String -> List Test -> Test
+describe untrimmedDesc tests = T
+
+test : String -> (() -> Expectation) -> Test
+test untrimmedDesc thunk = T
+
+--@ Expect.elm
+module Expect exposing (Expectation(..), equal)
+
+type Expectation = E
+
+equal : a -> a -> Expectation
+equal aa bb = E
 `;
 
 describe("FindTestsProvider", () => {
@@ -31,8 +58,8 @@ describe("FindTestsProvider", () => {
   async function testFindTests(source: string, expected: TestSuite[]) {
     await treeParser.init();
 
-    const sources = getSourceFiles(source);
-    const testModuleUri = URI.file(baseUri + "TestModule.elm").toString();
+    const sources = getSourceFiles(basicsSources + sourceTestModule + source);
+    const testModuleUri = URI.file(baseUri + "MyModule.elm").toString();
 
     const program = await treeParser.getProgram(sources);
     const sourceFile = program.getSourceFile(testModuleUri);
@@ -44,13 +71,56 @@ describe("FindTestsProvider", () => {
 
     const tops = TreeUtils.findAllTopLevelFunctionDeclarations(sourceFile.tree);
 
+    const typeChecker = program.getTypeChecker();
+
     const suites = tops
-      ? tops.map((top) => findTestSuite(findTestFunctionCall(top)))
+      ? tops.map((top) =>
+          findTestSuite(findTestFunctionCall(top, typeChecker), typeChecker),
+        )
       : [];
     expect(suites).toEqual(expected);
   }
 
+  test("empty", async () => {
+    const source = `
+--@ MyModule.elm
+module MyModule exposing (..)
+
+import Expect
+import Test exposing (..)
+
+topSuite : Test
+topSuite =
+    describe "top suite" []
+`;
+
+    await testFindTests(source, [
+      {
+        tag: "suite",
+        label: '"top suite"',
+        tests: [],
+      },
+    ]);
+  });
+
   test("first", async () => {
+    const source = `
+--@ MyModule.elm
+module MyModule exposing (..)
+
+import Expect
+import Test exposing (..)
+
+topSuite : Test
+topSuite =
+    describe "top suite" 
+    [ test "first" <| \_ -> Expect.equal True True
+    , describe "nested"
+        [ test "second" <| \_ -> Expect.equal False False
+        ]
+    ]
+`;
+
     await testFindTests(source, [
       {
         tag: "suite",
