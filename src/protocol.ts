@@ -64,7 +64,12 @@ export interface IFindTestsParams {
 }
 
 export interface IFindTestsResponse {
-  suite?: TestSuite;
+  suites?: TestSuite[];
 }
 
-export type TestSuite = { label: string | string[]; tests?: TestSuite[] };
+export type TestSuite = {
+  label: string | string[];
+  tests?: TestSuite[];
+  file: string;
+  position: { line: number; character: number };
+};

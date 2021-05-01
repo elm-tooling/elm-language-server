@@ -1,5 +1,6 @@
 import { container } from "tsyringe";
 import { Connection, ResponseError } from "vscode-languageserver";
+import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
 import { ISourceFile } from "../compiler/forest";
 import { Program } from "../compiler/program";
@@ -44,7 +45,7 @@ export class FindTestsProvider {
           throw new NoWorkspaceContainsError(params.workspaceRoot);
         }
         const typeChecker = program.getTypeChecker();
-        const tests = Array.from(program.getForest().treeMap.values())
+        const suites = Array.from(program.getForest().treeMap.values())
           .filter((sourceFile) => sourceFile.isTestFile)
           .flatMap((sourceFile) => {
             connection.console.info(`Finding tests is in ${sourceFile.uri}`);
@@ -63,14 +64,10 @@ export class FindTestsProvider {
             });
           })
           .flatMap((s) => (s ? [s] : []));
-        const suite: TestSuite = {
-          label: program.getRootPath().path,
-          tests,
-        };
         connection.console.info(
-          `Found ${tests.length} tests in ${params.workspaceRoot}`,
+          `Found ${suites.length} test suites in ${params.workspaceRoot}`,
         );
-        return <IFindTestsResponse>{ suite };
+        return <IFindTestsResponse>{ suites };
       } catch (err) {
         connection.console.error(`Error finding tests`);
         return new ResponseError(13, "boom");
@@ -146,15 +143,21 @@ export function findTestSuite(
   const labelParts = findAllExprs("StringConstant", call.args[0])?.map(
     (e) => e.text,
   );
+  const position: TestSuite["position"] = {
+    line: call.startPosition.row,
+    character: call.startPosition.column,
+  };
+  // TODO relative to workspace
+  const file = sourceFile.uri.toString();
   const label = labelParts?.length === 1 ? labelParts[0] : labelParts;
   if (label && isTestSuite(call, sourceFile, typeChecker)) {
     const testExprs = findExpr("ListExpr", call.args[1])?.exprList;
     const tests = testExprs
       ?.map((e) => findTestFunctionCall(e, typeChecker))
       .map((call) => findTestSuite(call, sourceFile, typeChecker));
-    return tests && <TestSuite>{ label, tests };
+    return tests && <TestSuite>{ label, tests, file, position };
   }
-  return label ? <TestSuite>{ label } : undefined;
+  return label ? <TestSuite>{ label, file, position } : undefined;
 }
 
 type ExpressionNodeTypes = {

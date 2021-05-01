@@ -74,12 +74,12 @@ equal aa bb = E
 
 describe("FindTestsProvider", () => {
   const treeParser = new SourceTreeParser();
+  const testModuleUri = URI.file(baseUri + "MyModule.elm").toString();
 
   async function testFindTests(source: string, expected: TestSuite[]) {
     await treeParser.init();
 
     const sources = getSourceFiles(basicsSources + sourceTestModule + source);
-    const testModuleUri = URI.file(baseUri + "MyModule.elm").toString();
 
     const program = await treeParser.getProgram(sources);
     const sourceFile = program.getSourceFile(testModuleUri);
@@ -123,6 +123,8 @@ topSuite =
     await testFindTests(source, [
       {
         label: '"top suite"',
+        file: testModuleUri,
+        position: { line: 7, character: 4 },
         tests: [],
       },
     ]);
@@ -149,11 +151,25 @@ topSuite =
     await testFindTests(source, [
       {
         label: '"top suite"',
+        file: testModuleUri,
+        position: { line: 7, character: 4 },
         tests: [
-          { label: '"first"' },
+          {
+            label: '"first"',
+            file: testModuleUri,
+            position: { line: 8, character: 6 },
+          },
           {
             label: '"nested"',
-            tests: [{ label: '"second"' }],
+            file: testModuleUri,
+            position: { line: 9, character: 6 },
+            tests: [
+              {
+                label: '"second"',
+                file: testModuleUri,
+                position: { line: 10, character: 10 },
+              },
+            ],
           },
         ],
       },
@@ -175,6 +191,8 @@ topSuite = describe "top suite" []
     await testFindTests(source, [
       {
         label: '"top suite"',
+        file: testModuleUri,
+        position: { line: 6, character: 11 },
         tests: [],
       },
     ]);
@@ -193,6 +211,8 @@ topSuite = Test.describe "top suite" []
     await testFindTests(source, [
       {
         label: '"top suite"',
+        file: testModuleUri,
+        position: { line: 4, character: 11 },
         tests: [],
       },
     ]);
@@ -211,6 +231,8 @@ topSuite = T.describe "top suite" []
     await testFindTests(source, [
       {
         label: '"top suite"',
+        file: testModuleUri,
+        position: { line: 4, character: 11 },
         tests: [],
       },
     ]);
@@ -229,6 +251,8 @@ topSuite = describe ("top suite" ++ "13") []
     await testFindTests(source, [
       {
         label: ['"top suite"', '"13"'],
+        file: testModuleUri,
+        position: { line: 4, character: 11 },
         tests: [],
       },
     ]);
