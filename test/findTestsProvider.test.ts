@@ -82,7 +82,11 @@ describe("FindTestsProvider", () => {
     const suites = tops
       ? tops
           .map((top) =>
-            findTestSuite(findTestFunctionCall(top, typeChecker), typeChecker),
+            findTestSuite(
+              findTestFunctionCall(top, typeChecker),
+              sourceFile,
+              typeChecker,
+            ),
           )
           .reduce((acc, s) => (s ? [...acc, s] : acc), [])
       : [];
@@ -174,6 +178,25 @@ module MyModule exposing (..)
 import Test
 
 topSuite = Test.describe "top suite" []
+`;
+
+    await testFindTests(source, [
+      {
+        tag: "suite",
+        label: '"top suite"',
+        tests: [],
+      },
+    ]);
+  });
+
+  test("import with alias", async () => {
+    const source = `
+--@ MyModule.elm
+module MyModule exposing (..)
+
+import Test as T 
+
+topSuite = T.describe "top suite" []
 `;
 
     await testFindTests(source, [

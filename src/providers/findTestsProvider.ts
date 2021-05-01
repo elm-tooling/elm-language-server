@@ -1,6 +1,7 @@
 import { container } from "tsyringe";
 import { Connection, ResponseError } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
+import { ISourceFile } from "../compiler/forest";
 import { Program } from "../compiler/program";
 import { TypeChecker } from "../compiler/typeChecker";
 import { Type } from "../compiler/typeInference";
@@ -49,14 +50,17 @@ export class FindTestsProvider {
             connection.console.info(`Finding tests is in ${sourceFile.uri}`);
             return TreeUtils.findAllTopLevelFunctionDeclarations(
               sourceFile.tree,
-            );
-          })
-          .map((top) => {
-            connection.console.info(`Finding tests is in top ${top?.id}`);
-            return (
-              top &&
-              findTestSuite(findTestFunctionCall(top, typeChecker), typeChecker)
-            );
+            )?.map((top) => {
+              connection.console.info(`Finding tests is in top ${top?.id}`);
+              return (
+                top &&
+                findTestSuite(
+                  findTestFunctionCall(top, typeChecker),
+                  sourceFile,
+                  typeChecker,
+                )
+              );
+            });
           })
           .flatMap((s) => (s ? [s] : []));
         const suite: TestSuite = {
@@ -69,7 +73,6 @@ export class FindTestsProvider {
         );
         return <IFindTestsResponse>{ suite };
       } catch (err) {
-        console.log("FW", err);
         connection.console.error(`Error finding tests`);
         return new ResponseError(13, "boom");
       }
@@ -110,29 +113,42 @@ export function findTestFunctionCall(
 
 function isTestSuite(
   call: EFunctionCallExpr,
+  sourceFile: ISourceFile,
   typeChecker: TypeChecker,
 ): boolean {
   const funName = findExpr("ValueExpr", call.target)?.name;
-  const t: Type = typeChecker.findType(call.target);
-  // const t: Type = typeChecker.findType(call);
-  // console.log("FW1", funName, t);
-  return funName === "describe" || funName === "Test.describe";
+  const dot = funName?.lastIndexOf(".") ?? -1;
+  const prefix = dot > -1 ? funName?.substring(0, dot) : undefined;
+  const qualifier: string =
+    prefix !== undefined
+      ? typeChecker.getQualifierForName(sourceFile, prefix, "describe") ?? ""
+      : "";
+  const moduleName =
+    prefix !== undefined
+      ? typeChecker.findImportModuleNameNode(prefix, sourceFile)?.text
+      : "Test";
+  return (
+    qualifier !== undefined &&
+    funName === `${qualifier}describe` &&
+    moduleName === "Test"
+  );
 }
 
 // export for testing
 export function findTestSuite(
   call: EFunctionCallExpr | undefined,
+  sourceFile: ISourceFile,
   typeChecker: TypeChecker,
 ): TestSuite | undefined {
   if (!call) {
     return undefined;
   }
   const label = findExpr("StringConstant", call.args[0])?.text;
-  if (label && isTestSuite(call, typeChecker)) {
+  if (label && isTestSuite(call, sourceFile, typeChecker)) {
     const testExprs = findExpr("ListExpr", call.args[1])?.exprList;
     const tests = testExprs
       ?.map((e) => findTestFunctionCall(e, typeChecker))
-      .map((call) => findTestSuite(call, typeChecker));
+      .map((call) => findTestSuite(call, sourceFile, typeChecker));
     return tests && <TestSuite>{ tag: "suite", label, tests };
   }
   return label ? <TestSuite>{ tag: "test", label } : undefined;
