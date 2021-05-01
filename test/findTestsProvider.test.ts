@@ -165,4 +165,23 @@ topSuite = describe "top suite" []
       },
     ]);
   });
+
+  test("import without expose", async () => {
+    const source = `
+--@ MyModule.elm
+module MyModule exposing (..)
+
+import Test
+
+topSuite = Test.describe "top suite" []
+`;
+
+    await testFindTests(source, [
+      {
+        tag: "suite",
+        label: '"top suite"',
+        tests: [],
+      },
+    ]);
+  });
 });

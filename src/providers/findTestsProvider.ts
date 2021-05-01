@@ -2,8 +2,8 @@ import { container } from "tsyringe";
 import { Connection, ResponseError } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
 import { Program } from "../compiler/program";
-import { createTypeChecker, TypeChecker } from "../compiler/typeChecker";
-import { TFunction, TUnion, Type } from "../compiler/typeInference";
+import { TypeChecker } from "../compiler/typeChecker";
+import { Type } from "../compiler/typeInference";
 import {
   EFunctionCallExpr,
   EValueExpr,
@@ -113,9 +113,10 @@ function isTestSuite(
   typeChecker: TypeChecker,
 ): boolean {
   const funName = findExpr("ValueExpr", call.target)?.name;
+  const t: Type = typeChecker.findType(call.target);
   // const t: Type = typeChecker.findType(call);
-  // console.log("FW", t);
-  return funName === "describe";
+  // console.log("FW1", funName, t);
+  return funName === "describe" || funName === "Test.describe";
 }
 
 // export for testing
