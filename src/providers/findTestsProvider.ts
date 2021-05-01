@@ -91,8 +91,7 @@ export function findTestFunctionCall(
   if (t.nodeType === "Function") {
     if (
       t.return.nodeType === "Union" &&
-      // TODO adjust test fixture!
-      (t.return.module === "Test" || t.return.module === "Test.Internal") &&
+      t.return.module === "Test.Internal" &&
       t.return.name === "Test"
     ) {
       return call;
@@ -100,8 +99,7 @@ export function findTestFunctionCall(
   }
   if (
     t.nodeType === "Union" &&
-    // TODO adjust test fixture!
-    (t.module === "Test" || t.module === "Test.Internal") &&
+    t.module === "Test.Internal" &&
     t.name === "Test"
   ) {
     return call;

@@ -5,8 +5,8 @@ import { TreeUtils } from "../src/util/treeUtils";
 import {
   findTestFunctionCall,
   findTestSuite,
-  TestSuite,
 } from "../src/providers/findTestsProvider";
+import { TestSuite } from "../src/protocol";
 
 const basicsSources = `
 --@ Basics.elm
@@ -30,12 +30,18 @@ apL f x =
 `;
 
 const sourceTestModule = `
+--@ TestInternal.elm
+module Test.Internal exposing (Test(..))
+
+type Test = T
+
 --@ Test.elm
 module Test exposing (Test(..), describe, test)
 
 import Expect exposing (..)
+import Test.Internal as Internal
 
-type Test = T
+type alias Test = Internal.Test
 
 describe : String -> List Test -> Test
 describe untrimmedDesc tests = T
