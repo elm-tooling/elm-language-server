@@ -67,6 +67,4 @@ export interface IFindTestsResponse {
   suite?: TestSuite;
 }
 
-export type TestSuite =
-  | { tag: "test"; label: string | string[] }
-  | { tag: "suite"; label: string | string[]; tests: TestSuite[] };
+export type TestSuite = { label: string | string[]; tests?: TestSuite[] };

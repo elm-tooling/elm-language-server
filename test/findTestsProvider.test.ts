@@ -122,7 +122,6 @@ topSuite =
 
     await testFindTests(source, [
       {
-        tag: "suite",
         label: '"top suite"',
         tests: [],
       },
@@ -149,14 +148,12 @@ topSuite =
 
     await testFindTests(source, [
       {
-        tag: "suite",
         label: '"top suite"',
         tests: [
-          { tag: "test", label: '"first"' },
+          { label: '"first"' },
           {
-            tag: "suite",
             label: '"nested"',
-            tests: [{ tag: "test", label: '"second"' }],
+            tests: [{ label: '"second"' }],
           },
         ],
       },
@@ -177,7 +174,6 @@ topSuite = describe "top suite" []
 
     await testFindTests(source, [
       {
-        tag: "suite",
         label: '"top suite"',
         tests: [],
       },
@@ -196,7 +192,6 @@ topSuite = Test.describe "top suite" []
 
     await testFindTests(source, [
       {
-        tag: "suite",
         label: '"top suite"',
         tests: [],
       },
@@ -215,7 +210,6 @@ topSuite = T.describe "top suite" []
 
     await testFindTests(source, [
       {
-        tag: "suite",
         label: '"top suite"',
         tests: [],
       },
@@ -234,7 +228,6 @@ topSuite = describe ("top suite" ++ "13") []
 
     await testFindTests(source, [
       {
-        tag: "suite",
         label: ['"top suite"', '"13"'],
         tests: [],
       },

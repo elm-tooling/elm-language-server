@@ -64,7 +64,6 @@ export class FindTestsProvider {
           })
           .flatMap((s) => (s ? [s] : []));
         const suite: TestSuite = {
-          tag: "suite",
           label: program.getRootPath().path,
           tests,
         };
@@ -153,9 +152,9 @@ export function findTestSuite(
     const tests = testExprs
       ?.map((e) => findTestFunctionCall(e, typeChecker))
       .map((call) => findTestSuite(call, sourceFile, typeChecker));
-    return tests && <TestSuite>{ tag: "suite", label, tests };
+    return tests && <TestSuite>{ label, tests };
   }
-  return label ? <TestSuite>{ tag: "test", label } : undefined;
+  return label ? <TestSuite>{ label } : undefined;
 }
 
 type ExpressionNodeTypes = {
