@@ -80,9 +80,11 @@ describe("FindTestsProvider", () => {
     const typeChecker = program.getTypeChecker();
 
     const suites = tops
-      ? tops.map((top) =>
-          findTestSuite(findTestFunctionCall(top, typeChecker), typeChecker),
-        )
+      ? tops
+          .map((top) =>
+            findTestSuite(findTestFunctionCall(top, typeChecker), typeChecker),
+          )
+          .reduce((acc, s) => (s ? [...acc, s] : acc), [])
       : [];
     expect(suites).toEqual(expected);
   }
@@ -109,7 +111,7 @@ topSuite =
     ]);
   });
 
-  test("first", async () => {
+  test("some", async () => {
     const source = `
 --@ MyModule.elm
 module MyModule exposing (..)
@@ -139,6 +141,27 @@ topSuite =
             tests: [{ tag: "test", label: '"second"' }],
           },
         ],
+      },
+    ]);
+  });
+
+  test("ignore non Test top levels", async () => {
+    const source = `
+--@ MyModule.elm
+module MyModule exposing (..)
+
+import Test exposing (..)
+
+someThingElse = True
+
+topSuite = describe "top suite" []
+`;
+
+    await testFindTests(source, [
+      {
+        tag: "suite",
+        label: '"top suite"',
+        tests: [],
       },
     ]);
   });
