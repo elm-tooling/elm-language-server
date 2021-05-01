@@ -10,9 +10,10 @@ import { TestSuite } from "../src/protocol";
 
 const basicsSources = `
 --@ Basics.elm
-module Basics exposing ((<|), Int, Float, Bool(..), Order(..), negate)
+module Basics exposing ((<|),(++), Int, Float, Bool(..), Order(..), negate)
 
 infix left  0 (<|) = apL
+infix right 5 (++) = append
 
 type Int = Int
 
@@ -24,9 +25,22 @@ add : number -> number -> number
 add =
   Elm.Kernel.Basics.add
 
+append : appendable -> appendable -> appendable
+append =
+  Elm.Kernel.Utils.append
+
 apL : (a -> b) -> a -> b
 apL f x =
   f x
+
+--@ String.elm
+module String exposing (String,append)
+
+type String = String
+
+append : String -> String -> String
+append =
+  Elm.Kernel.String.append 
 `;
 
 const sourceTestModule = `
@@ -203,6 +217,25 @@ topSuite = T.describe "top suite" []
       {
         tag: "suite",
         label: '"top suite"',
+        tests: [],
+      },
+    ]);
+  });
+
+  test("dynamic label", async () => {
+    const source = `
+--@ MyModule.elm
+module MyModule exposing (..)
+
+import Test exposing (..)
+
+topSuite = describe ("top suite" ++ "13") []
+`;
+
+    await testFindTests(source, [
+      {
+        tag: "suite",
+        label: ['"top suite"', '"13"'],
         tests: [],
       },
     ]);
