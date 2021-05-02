@@ -94,6 +94,7 @@ export function findTestFunctionCall(
       t.return.module === "Test.Internal" &&
       t.return.name === "Test"
     ) {
+      // console.log("FW??", t);
       return call;
     }
   }
@@ -131,6 +132,17 @@ function isTestSuite(
   );
 }
 
+function findFirstStringArg(
+  call: EFunctionCallExpr,
+  typeChecker: TypeChecker,
+): Expression | undefined {
+  const stringArg = call.args.find((arg) => {
+    const t: Type = typeChecker.findType(arg);
+    return typeChecker.typeToString(t) === "String";
+  });
+  return stringArg;
+}
+
 // export for testing
 export function findTestSuite(
   call: EFunctionCallExpr | undefined,
@@ -140,7 +152,9 @@ export function findTestSuite(
   if (!call) {
     return undefined;
   }
-  const labelParts = findAllExprs("StringConstant", call.args[0])?.map(
+
+  const stringArg = findFirstStringArg(call, typeChecker);
+  const labelParts = findAllExprs("StringConstant", stringArg)?.map(
     (e) => e.text,
   );
   const position: TestSuite["position"] = {
@@ -196,7 +210,7 @@ function findExpr<K extends keyof ExpressionNodeTypes>(
     return undefined;
   }
   const n =
-    node.type === type ? node : TreeUtils.findFirstNamedChildOfType(type, node);
+    node.type === type ? node : TreeUtils.descendantsOfType(node, type)[0];
   const e = mapSyntaxNodeToExpression(n);
   return e && mapExpr(key, e);
 }
@@ -212,9 +226,8 @@ function findAllExprs<K extends keyof ExpressionNodeTypes>(
   if (!type) {
     return undefined;
   }
-  const children = TreeUtils.findAllNamedChildrenOfType(type, node);
-  const ns = node.type === type ? [node, ...(children ?? [])] : children;
-  const es = ns?.map((n) => mapSyntaxNodeToExpression(n));
+  const children = TreeUtils.descendantsOfType(node, type);
+  const es = children?.map((n) => mapSyntaxNodeToExpression(n));
   return es?.map((e) => e && mapExpr(key, e)).flatMap((v) => (v ? [v] : []));
 }
 

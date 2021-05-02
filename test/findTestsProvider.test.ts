@@ -50,7 +50,7 @@ module Test.Internal exposing (Test(..))
 type Test = T
 
 --@ Test.elm
-module Test exposing (Test(..), describe, test)
+module Test exposing (Test(..), describe, test, fuzz)
 
 import Expect exposing (..)
 import Test.Internal as Internal
@@ -63,6 +63,9 @@ describe untrimmedDesc tests = T
 test : String -> (() -> Expectation) -> Test
 test untrimmedDesc thunk = T
 
+fuzz : Fuzzer a -> String -> (a -> Expectation) -> Test
+fuzz fuzzer desc thunk = T
+
 --@ Expect.elm
 module Expect exposing (Expectation(..), equal)
 
@@ -70,6 +73,14 @@ type Expectation = E
 
 equal : a -> a -> Expectation
 equal aa bb = E
+
+--@ Fuzz.elm
+module Fuzz exposing (int)
+
+type Fuzzer a = F a
+
+int Fuzzer Int
+int = F 13
 `;
 
 describe("FindTestsProvider", () => {
@@ -254,6 +265,26 @@ topSuite = describe ("top suite" ++ "13") []
         file: testModuleUri,
         position: { line: 4, character: 11 },
         tests: [],
+      },
+    ]);
+  });
+
+  test("fuzz label", async () => {
+    const source = `
+--@ MyModule.elm 
+module MyModule exposing (..)
+
+import Test exposing (..)
+import Fuzz exposing (..)
+
+top = fuzz int "top fuzz" <| \_ -> Expect.equal True True
+`;
+
+    await testFindTests(source, [
+      {
+        label: '"top fuzz"',
+        file: testModuleUri,
+        position: { line: 5, character: 6 },
       },
     ]);
   });
