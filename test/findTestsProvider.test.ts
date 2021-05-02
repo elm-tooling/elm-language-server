@@ -123,7 +123,6 @@ describe("FindTestsProvider", () => {
 --@ MyModule.elm
 module MyModule exposing (..)
 
-import Expect
 import Test exposing (..)
 
 topSuite : Test
@@ -135,7 +134,7 @@ topSuite =
       {
         label: '"top suite"',
         file: testModuleUri,
-        position: { line: 7, character: 4 },
+        position: { line: 6, character: 4 },
         tests: [],
       },
     ]);
@@ -269,15 +268,42 @@ topSuite = describe ("top suite" ++ "13") []
     ]);
   });
 
-  test("fuzz label", async () => {
+  test("fuzz", async () => {
     const source = `
 --@ MyModule.elm 
 module MyModule exposing (..)
 
+import Expect
 import Test exposing (..)
 import Fuzz exposing (..)
 
 top = fuzz int "top fuzz" <| \_ -> Expect.equal True True
+`;
+
+    await testFindTests(source, [
+      {
+        label: '"top fuzz"',
+        file: testModuleUri,
+        position: { line: 6, character: 6 },
+      },
+    ]);
+  });
+
+  // TODO improve inferred types?!
+  test.skip("any test function", async () => {
+    const source = `
+--@ MyModule.elm 
+module MyModule exposing (..)
+
+import Expect 
+import Test exposing (..)
+
+myTest : Int -> String -> Bool -> Test
+myTest i desc b =
+    describe desc []
+
+top : Test
+top = myTest 13 "my top" True  
 `;
 
     await testFindTests(source, [

@@ -1,6 +1,5 @@
 import { container } from "tsyringe";
 import { Connection, ResponseError } from "vscode-languageserver";
-import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
 import { ISourceFile } from "../compiler/forest";
 import { Program } from "../compiler/program";
@@ -81,11 +80,15 @@ export function findTestFunctionCall(
   node: SyntaxNode,
   typeChecker: TypeChecker,
 ): EFunctionCallExpr | undefined {
-  // console.log("FW0", typeChecker.typeToString(typeChecker.findType(node)));
   const call = findExpr("FunctionCallExpr", node);
   if (!call) {
     return undefined;
   }
+  // console.log(
+  //   "FW0",
+  //   findExpr("ValueExpr", call?.target)?.name,
+  //   typeChecker.typeToString(typeChecker.findType(node)),
+  // );
   const t: Type = typeChecker.findType(call);
   // TODO why are there two cases here?
   if (t.nodeType === "Function") {
@@ -105,7 +108,7 @@ export function findTestFunctionCall(
   ) {
     return call;
   }
-  console.log("FW", t);
+  // console.log("FW", findExpr("ValueExpr", call.target)?.name, t);
   return undefined;
 }
 
@@ -161,7 +164,7 @@ export function findTestSuite(
     line: call.startPosition.row,
     character: call.startPosition.column,
   };
-  // TODO relative to workspace
+  // TODO relative to workspace?
   const file = sourceFile.uri.toString();
   const label = labelParts?.length === 1 ? labelParts[0] : labelParts;
   if (label && isTestSuite(call, sourceFile, typeChecker)) {
