@@ -7,6 +7,7 @@ import {
   findTestSuite,
 } from "../src/providers/findTestsProvider";
 import { TestSuite } from "../src/protocol";
+import { Utils } from "../src/util/utils";
 
 const basicsSources = `
 --@ Basics.elm
@@ -104,7 +105,7 @@ describe("FindTestsProvider", () => {
 
     const typeChecker = program.getTypeChecker();
 
-    const suites = tops
+    const suites: TestSuite[] = tops
       ? tops
           .map((top) =>
             findTestSuite(
@@ -113,7 +114,7 @@ describe("FindTestsProvider", () => {
               typeChecker,
             ),
           )
-          .reduce((acc, s) => (s ? [...acc, s] : acc), [])
+          .filter(Utils.notUndefinedOrNull)
       : [];
     expect(suites).toEqual(expected);
   }

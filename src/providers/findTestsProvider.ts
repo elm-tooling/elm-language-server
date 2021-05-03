@@ -22,6 +22,7 @@ import {
 } from "../protocol";
 import { NoWorkspaceContainsError } from "../util/noWorkspaceContainsError";
 import { TreeUtils } from "../util/treeUtils";
+import { Utils } from "../util/utils";
 
 export class FindTestsProvider {
   constructor() {
@@ -45,7 +46,9 @@ export class FindTestsProvider {
           throw new NoWorkspaceContainsError(params.workspaceRoot);
         }
         const typeChecker = program.getTypeChecker();
-        const suites = Array.from(program.getForest().treeMap.values())
+        const suites: TestSuite[] = Array.from(
+          program.getForest().treeMap.values(),
+        )
           .filter((sourceFile) => sourceFile.isTestFile)
           .flatMap((sourceFile) => {
             connection.console.info(`Finding tests is in ${sourceFile.uri}`);
@@ -63,7 +66,7 @@ export class FindTestsProvider {
               );
             });
           })
-          .flatMap((s) => (s ? [s] : []));
+          .filter(Utils.notUndefinedOrNull.bind(this));
         connection.console.info(
           `Found ${suites.length} test suites in ${params.workspaceRoot}`,
         );
@@ -173,7 +176,8 @@ export function findTestSuite(
     const testExprs = findExpr("ListExpr", call.args[1])?.exprList;
     const tests = testExprs
       ?.map((e) => findTestFunctionCall(e, typeChecker))
-      .map((call) => findTestSuite(call, sourceFile, typeChecker));
+      .map((call) => findTestSuite(call, sourceFile, typeChecker))
+      .filter(Utils.notUndefinedOrNull);
     return tests && <TestSuite>{ label, tests, file, position };
   }
   return label ? <TestSuite>{ label, file, position } : undefined;
