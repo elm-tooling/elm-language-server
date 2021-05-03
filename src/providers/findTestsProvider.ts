@@ -33,7 +33,7 @@ export class FindTestsProvider {
     const connection = container.resolve<Connection>("Connection");
     connection.onRequest(FindTestsRequest, (params: IFindTestsParams) => {
       connection.console.info(
-        `Finding tests is requested ${params.workspaceRoot}`,
+        `Finding tests is requested ${params.workspaceRoot.toString()}`,
       );
       try {
         const elmWorkspaces: Program[] = container.resolve("ElmWorkspaces");
@@ -68,7 +68,9 @@ export class FindTestsProvider {
           })
           .filter(Utils.notUndefinedOrNull.bind(this));
         connection.console.info(
-          `Found ${suites.length} test suites in ${params.workspaceRoot}`,
+          `Found ${
+            suites.length
+          } test suites in ${params.workspaceRoot.toString()}`,
         );
         return <IFindTestsResponse>{ suites };
       } catch (err) {
@@ -180,7 +182,7 @@ export function findTestSuite(
     const tests = testExprs
       ?.map((e) => findTestFunctionCall(e, typeChecker))
       .map((call) => findTestSuite(call, sourceFile, typeChecker))
-      .filter(Utils.notUndefinedOrNull);
+      .filter((s) => Utils.notUndefinedOrNull(s));
     return tests && <TestSuite>{ label, tests, file, position };
   }
   return label ? <TestSuite>{ label, file, position } : undefined;
