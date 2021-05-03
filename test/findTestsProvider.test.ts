@@ -222,6 +222,10 @@ topSuite =
         foo =
             doit bar
     in
+    let
+        foo =
+            doit bar
+    in
     describe "top suite" [] 
 `;
 
@@ -229,7 +233,7 @@ topSuite =
       {
         label: '"top suite"',
         file: testModuleUri,
-        position: { line: 10, character: 4 },
+        position: { line: 14, character: 4 },
         tests: [],
       },
     ]);

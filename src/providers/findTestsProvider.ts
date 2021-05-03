@@ -85,7 +85,10 @@ export function findTestFunctionCall(
   typeChecker: TypeChecker,
 ): EFunctionCallExpr | undefined {
   const letIn = findExpr("LetInExpr", node);
-  const call = findExpr("FunctionCallExpr", letIn?.body ?? node);
+  if (letIn) {
+    return findTestFunctionCall(letIn.body, typeChecker);
+  }
+  const call = findExpr("FunctionCallExpr", node);
   if (!call) {
     return undefined;
   }
