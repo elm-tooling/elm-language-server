@@ -1074,6 +1074,27 @@ export class CompletionProvider {
           }
         });
       }
+      if (node.parent.type === "anonymous_function_expr") {
+        node.parent?.children.forEach((child) => {
+          if (child.type === "pattern") {
+            const lowerPatterns = child.descendantsOfType("lower_pattern");
+
+            lowerPatterns.forEach((pattern) => {
+              const markdownDocumentation = HintHelper.createHintFromFunctionParameter(
+                pattern,
+              );
+              result.push(
+                this.createVariableCompletion({
+                  markdownDocumentation,
+                  label: pattern.text,
+                  range,
+                  sortPrefix,
+                }),
+              );
+            });
+          }
+        });
+      }
       result.push(...this.findDefinitionsForScope(node.parent, tree, range));
     }
 

@@ -1622,4 +1622,30 @@ func =
 
     await testCompletions(source, ["Cmd", "batch"], "exactMatch");
   });
+
+  it("Completions from lambda function", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func : { field : Int } -> Int
+func =
+    (\\param -> p{-caret-})
+`;
+
+    await testCompletions(source, ["param"]);
+  });
+
+  it("Completions from lambda function pattern", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func : { field : Int } -> Int
+func =
+    (\\{ field } -> f{-caret-})
+`;
+
+    await testCompletions(source, ["field"]);
+  });
 });
