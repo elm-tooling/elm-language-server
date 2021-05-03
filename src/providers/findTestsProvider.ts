@@ -12,6 +12,7 @@ import {
   EListExpr,
   mapSyntaxNodeToExpression,
   Expression,
+  ELetInExpr,
 } from "../compiler/utils/expressionTree";
 import {
   FindTestsRequest,
@@ -80,7 +81,8 @@ export function findTestFunctionCall(
   node: SyntaxNode,
   typeChecker: TypeChecker,
 ): EFunctionCallExpr | undefined {
-  const call = findExpr("FunctionCallExpr", node);
+  const letIn = findExpr("LetInExpr", node);
+  const call = findExpr("FunctionCallExpr", letIn?.body ?? node);
   if (!call) {
     return undefined;
   }
@@ -182,6 +184,7 @@ type ExpressionNodeTypes = {
   StringConstant: EStringConstant;
   ListExpr: EListExpr;
   FunctionCallExpr: EFunctionCallExpr;
+  LetInExpr: ELetInExpr;
 };
 
 type TypeExpressionNodeTypes = {
@@ -189,6 +192,7 @@ type TypeExpressionNodeTypes = {
   string_constant_expr: EStringConstant;
   list_expr: EListExpr;
   function_call_expr: EFunctionCallExpr;
+  let_in_expr: ELetInExpr;
 };
 
 const typeByNodeType: Map<
@@ -199,6 +203,7 @@ const typeByNodeType: Map<
   ["StringConstant", "string_constant_expr"],
   ["ListExpr", "list_expr"],
   ["FunctionCallExpr", "function_call_expr"],
+  ["LetInExpr", "let_in_expr"],
 ]);
 
 function findExpr<K extends keyof ExpressionNodeTypes>(

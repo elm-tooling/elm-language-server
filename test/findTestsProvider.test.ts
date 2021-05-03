@@ -208,6 +208,32 @@ topSuite = describe "top suite" []
     ]);
   });
 
+  test("with let/in", async () => {
+    const source = `
+--@ MyModule.elm
+module MyModule exposing (..)
+
+import Test exposing (..)
+
+topSuite : Test
+topSuite =
+    let
+        foo =
+            doit bar
+    in
+    describe "top suite" [] 
+`;
+
+    await testFindTests(source, [
+      {
+        label: '"top suite"',
+        file: testModuleUri,
+        position: { line: 10, character: 4 },
+        tests: [],
+      },
+    ]);
+  });
+
   test("import without expose", async () => {
     const source = `
 --@ MyModule.elm
