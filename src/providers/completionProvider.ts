@@ -1130,6 +1130,7 @@ export class CompletionProvider {
             ![
               ...allImportedValues.getVar(possibleImport.value),
               ...allImportedValues.getType(possibleImport.value),
+              ...allImportedValues.getConstructor(possibleImport.value),
             ].filter((imp) => imp.fromModule.name === possibleImport.module)[0],
         )
         .sort((a, b) => {

@@ -69,7 +69,12 @@ export class Imports {
   public forEach(callbackfn: (value: IImport) => void): void {
     this.vars.forEach(callbackfn);
     this.types.forEach(callbackfn);
-    this.constructors.forEach(callbackfn);
+    this.constructors.forEach((ctor) => {
+      // These are already in 'types'
+      if (ctor.type !== "TypeAlias") {
+        callbackfn(ctor);
+      }
+    });
   }
 
   public getDiagnostics(): Diagnostic[] {
