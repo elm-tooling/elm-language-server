@@ -1,4 +1,4 @@
-import { Range } from "vscode-languageserver";
+import { Range, TextEdit } from "vscode-languageserver";
 
 export type NonEmptyArray<T> = [T, ...T[]];
 
@@ -83,5 +83,18 @@ export class Utils {
       newStartIndex = (newStartIndex + 1) % array.length;
     }
     return newArray;
+  }
+
+  public static mergeChanges(
+    a: { [uri: string]: TextEdit[] },
+    b: { [uri: string]: TextEdit[] },
+  ): void {
+    Object.entries(b).forEach(([uri, edits]) => {
+      if (a[uri]) {
+        a[uri].push(...edits);
+      } else {
+        a[uri] = edits;
+      }
+    });
   }
 }

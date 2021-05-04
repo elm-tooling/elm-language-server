@@ -558,10 +558,10 @@ export class CompletionProvider {
       const dotIndex = label.lastIndexOf(".");
       const valuePart = label.slice(dotIndex + 1);
 
-      const importNode = checker.findImportModuleNameNode(
+      const importNode = checker.findImportModuleNameNodes(
         element.fromModule.name,
         sourceFile,
-      )?.parent;
+      )[0]?.parent;
 
       // Check if a value is already imported for this module using the exposing list
       // In this case, we want to prefex the unqualified value since they are using the import exposing list
@@ -1156,14 +1156,14 @@ export class CompletionProvider {
             } else if (!aMatches && bMatches) {
               return 1;
             } else {
-              const aModuleImported = !!checker.findImportModuleNameNode(
+              const aModuleImported = !!checker.findImportModuleNameNodes(
                 a.module,
                 sourceFile,
-              );
-              const bModuleImported = !!checker.findImportModuleNameNode(
+              )[0];
+              const bModuleImported = !!checker.findImportModuleNameNodes(
                 b.module,
                 sourceFile,
-              );
+              )[0];
 
               if (aModuleImported && !bModuleImported) {
                 return -1;

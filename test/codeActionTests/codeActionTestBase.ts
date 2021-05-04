@@ -141,15 +141,16 @@ export async function testCodeAction(
       trimTrailingWhitespace(expectedResultAfterEdits),
     );
 
+    const changesToApply = codeActions[testFixAll ? codeActions.length - 1 : 0]
+      .edit!.changes!;
+
     Object.entries(expectedSources).forEach(([uri, source]) => {
-      expect(
-        applyEditsToSource(
-          stripCommentLines(result.sources[uri]),
-          codeActions[testFixAll ? codeActions.length - 1 : 0].edit!.changes![
-            URI.file(baseUri + uri).toString()
-          ],
-        ),
-      ).toEqual(source);
+      const edits = changesToApply[URI.file(baseUri + uri).toString()];
+      if (edits) {
+        expect(
+          applyEditsToSource(stripCommentLines(result.sources[uri]), edits),
+        ).toEqual(source);
+      }
     });
   }
 }

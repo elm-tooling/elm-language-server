@@ -1,5 +1,6 @@
 import "./importCodeAction";
 import "./makeDeclarationFromUsageCodeAction";
+import "./makeExternalDeclarationFromUsageCodeAction";
 import "./addTypeAnnotationCodeAction";
 import "./extractFunctionCodeAction";
 import "./exposeUnexposeCodeAction";

@@ -8,6 +8,7 @@ import { Diagnostics } from "../../compiler/diagnostics";
 import { TypeChecker } from "../../compiler/typeChecker";
 import { Type } from "../../compiler/typeInference";
 import { ICodeActionParams } from "../paramsExtensions";
+import { Utils } from "../../util/utils";
 
 const errorCodes = [Diagnostics.RecordField.code];
 const fixId = "add_missing_record_field";
@@ -42,7 +43,7 @@ CodeActionProvider.registerCodeAction({
         // Not used
       },
       (changes, diagnostic) => {
-        mergeChanges(changes, getEdits(params, diagnostic.range));
+        Utils.mergeChanges(changes, getEdits(params, diagnostic.range));
       },
     );
   },
@@ -134,17 +135,4 @@ function createFields(
   }
 
   return {};
-}
-
-function mergeChanges(
-  a: { [uri: string]: TextEdit[] },
-  b: { [uri: string]: TextEdit[] },
-): void {
-  Object.entries(b).forEach(([uri, edits]) => {
-    if (a[uri]) {
-      a[uri].push(...edits);
-    } else {
-      a[uri] = edits;
-    }
-  });
 }

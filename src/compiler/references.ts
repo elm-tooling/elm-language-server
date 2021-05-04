@@ -453,10 +453,10 @@ export class References {
                   );
 
                 if (imported) {
-                  const importNameNode = checker.findImportModuleNameNode(
+                  const importNameNode = checker.findImportModuleNameNodes(
                     moduleNameToLookFor,
                     sourceFileToCheck,
-                  );
+                  )[0];
 
                   if (importNameNode) {
                     references.push({ node: importNameNode, uri });
