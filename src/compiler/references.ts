@@ -799,7 +799,7 @@ export class References {
       .map((field) =>
         TreeUtils.findFirstNamedChildOfType("lower_case_identifier", field),
       )
-      .filter(Utils.notUndefinedOrNull.bind(this))
+      .filter(Utils.notUndefinedOrNull)
       .filter((field) => field.text === fieldName);
   }
 

@@ -7,7 +7,10 @@ export class Utils {
     return x !== undefined;
   }
 
-  public static notUndefinedOrNull<T>(x: T | undefined | null): x is T {
+  public static notUndefinedOrNull<T>(
+    this: void,
+    x: T | undefined | null,
+  ): x is T {
     return x !== undefined && x !== null;
   }
 
