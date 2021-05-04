@@ -133,7 +133,7 @@ topSuite =
 
     await testFindTests(source, [
       {
-        label: '"top suite"',
+        label: "top suite",
         file: testModuleUri,
         position: { line: 6, character: 4 },
         tests: [],
@@ -161,22 +161,22 @@ topSuite =
 
     await testFindTests(source, [
       {
-        label: '"top suite"',
+        label: "top suite",
         file: testModuleUri,
         position: { line: 7, character: 4 },
         tests: [
           {
-            label: '"first"',
+            label: "first",
             file: testModuleUri,
             position: { line: 8, character: 6 },
           },
           {
-            label: '"nested"',
+            label: "nested",
             file: testModuleUri,
             position: { line: 9, character: 6 },
             tests: [
               {
-                label: '"second"',
+                label: "second",
                 file: testModuleUri,
                 position: { line: 10, character: 10 },
               },
@@ -201,7 +201,7 @@ topSuite = describe "top suite" []
 
     await testFindTests(source, [
       {
-        label: '"top suite"',
+        label: "top suite",
         file: testModuleUri,
         position: { line: 6, character: 11 },
         tests: [],
@@ -231,10 +231,45 @@ topSuite =
 
     await testFindTests(source, [
       {
-        label: '"top suite"',
+        label: "top suite",
         file: testModuleUri,
         position: { line: 14, character: 4 },
         tests: [],
+      },
+    ]);
+  });
+
+  test("with deep let/in", async () => {
+    const source = `
+--@ MyModule.elm
+module MyModule exposing (..)
+
+import Test exposing (..)
+
+topSuite : Test
+topSuite =
+    describe "top suite"
+        [ let
+            a =
+                doit 13
+          in
+          describe "deeper suite" []
+        ]
+`;
+
+    await testFindTests(source, [
+      {
+        label: "top suite",
+        file: testModuleUri,
+        position: { line: 6, character: 4 },
+        tests: [
+          {
+            label: "deeper suite",
+            file: testModuleUri,
+            position: { line: 11, character: 10 },
+            tests: [],
+          },
+        ],
       },
     ]);
   });
@@ -251,7 +286,7 @@ topSuite = Test.describe "top suite" []
 
     await testFindTests(source, [
       {
-        label: '"top suite"',
+        label: "top suite",
         file: testModuleUri,
         position: { line: 4, character: 11 },
         tests: [],
@@ -271,7 +306,7 @@ topSuite = T.describe "top suite" []
 
     await testFindTests(source, [
       {
-        label: '"top suite"',
+        label: "top suite",
         file: testModuleUri,
         position: { line: 4, character: 11 },
         tests: [],
@@ -291,7 +326,7 @@ topSuite = describe ("top suite" ++ "13") []
 
     await testFindTests(source, [
       {
-        label: ['"top suite"', '"13"'],
+        label: ["top suite", "13"],
         file: testModuleUri,
         position: { line: 4, character: 11 },
         tests: [],
@@ -313,7 +348,7 @@ top = fuzz int "top fuzz" <| \_ -> Expect.equal True True
 
     await testFindTests(source, [
       {
-        label: '"top fuzz"',
+        label: "top fuzz",
         file: testModuleUri,
         position: { line: 6, character: 6 },
       },
@@ -339,7 +374,7 @@ top = myTest 13 "my top" True
 
     await testFindTests(source, [
       {
-        label: '"top fuzz"',
+        label: "top fuzz",
         file: testModuleUri,
         position: { line: 5, character: 6 },
       },

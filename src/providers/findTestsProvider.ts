@@ -50,32 +50,47 @@ export class FindTestsProvider {
           program.getForest().treeMap.values(),
         )
           .filter((sourceFile) => sourceFile.isTestFile)
-          .flatMap((sourceFile) => {
-            connection.console.info(`Finding tests is in ${sourceFile.uri}`);
-            return TreeUtils.findAllTopLevelFunctionDeclarations(
+          .map((sourceFile) => {
+            // connection.console.info(`Finding tests is in ${sourceFile.uri}`);
+            const tests:
+              | TestSuite[]
+              | undefined = TreeUtils.findAllTopLevelFunctionDeclarations(
               sourceFile.tree,
-            )?.map((top) => {
-              connection.console.info(`Finding tests is in top ${top?.id}`);
-              return (
-                top &&
+            )
+              ?.filter(Utils.notUndefinedOrNull)
+              .map((top) =>
                 findTestSuite(
                   findTestFunctionCall(top, typeChecker),
                   sourceFile,
                   typeChecker,
-                )
-              );
-            });
+                ),
+              )
+              .filter(Utils.notUndefinedOrNull);
+            const file = sourceFile.uri.toString();
+            const label = sourceFile.moduleName;
+            // connection.console.log(
+            //   `Found ${tests?.length ?? 0} tests in module ${label ?? "?"}`,
+            // );
+            return label && tests && tests.length > 0
+              ? <TestSuite>{
+                  label,
+                  file,
+                  tests,
+                  position: { line: 0, character: 0 },
+                }
+              : undefined;
           })
-          .filter(Utils.notUndefinedOrNull.bind(this));
+          .filter(Utils.notUndefinedOrNull);
         connection.console.info(
           `Found ${
             suites.length
-          } test suites in ${params.workspaceRoot.toString()}`,
+          } top test suites in ${params.workspaceRoot.toString()}`,
         );
         return <IFindTestsResponse>{ suites };
       } catch (err) {
         connection.console.error(`Error finding tests`);
-        return new ResponseError(13, "boom");
+        // TODO improve error reporting
+        return new ResponseError(13, "Error finding tests");
       }
     });
   }
@@ -86,7 +101,7 @@ export function findTestFunctionCall(
   node: SyntaxNode,
   typeChecker: TypeChecker,
 ): EFunctionCallExpr | undefined {
-  const letIn = findExpr("LetInExpr", node);
+  const letIn = findChildExpr("LetInExpr", node);
   if (letIn) {
     return findTestFunctionCall(letIn.body, typeChecker);
   }
@@ -94,11 +109,6 @@ export function findTestFunctionCall(
   if (!call) {
     return undefined;
   }
-  // console.log(
-  //   "FW0",
-  //   findExpr("ValueExpr", call?.target)?.name,
-  //   typeChecker.typeToString(typeChecker.findType(node)),
-  // );
   const t: Type = typeChecker.findType(call);
   // TODO why are there two cases here?
   if (t.nodeType === "Function") {
@@ -107,7 +117,6 @@ export function findTestFunctionCall(
       t.return.module === "Test.Internal" &&
       t.return.name === "Test"
     ) {
-      // console.log("FW??", t);
       return call;
     }
   }
@@ -118,7 +127,11 @@ export function findTestFunctionCall(
   ) {
     return call;
   }
-  // console.log("FW", findExpr("ValueExpr", call.target)?.name, t);
+  // console.debug(
+  //   "ignore non-test type",
+  //   findExpr("ValueExpr", call.target)?.name,
+  //   t,
+  // );
   return undefined;
 }
 
@@ -167,9 +180,9 @@ export function findTestSuite(
   }
 
   const stringArg = findFirstStringArg(call, typeChecker);
-  const labelParts = findAllExprs("StringConstant", stringArg)?.map(
-    (e) => e.text,
-  );
+  const labelParts = findAllExprs("StringConstant", stringArg)
+    ?.map((e) => e.text)
+    .map((l) => stringLiteralToLabel(l));
   const position: TestSuite["position"] = {
     line: call.startPosition.row,
     character: call.startPosition.column,
@@ -179,10 +192,10 @@ export function findTestSuite(
   const label = labelParts?.length === 1 ? labelParts[0] : labelParts;
   if (label && isTestSuite(call, sourceFile, typeChecker)) {
     const testExprs = findExpr("ListExpr", call.args[1])?.exprList;
-    const tests = testExprs
+    const tests: TestSuite[] | undefined = testExprs
       ?.map((e) => findTestFunctionCall(e, typeChecker))
       .map((call) => findTestSuite(call, sourceFile, typeChecker))
-      .filter((s) => Utils.notUndefinedOrNull(s));
+      .filter(Utils.notUndefinedOrNull);
     return tests && <TestSuite>{ label, tests, file, position };
   }
   return label ? <TestSuite>{ label, file, position } : undefined;
@@ -232,6 +245,23 @@ function findExpr<K extends keyof ExpressionNodeTypes>(
   return e && mapExpr(key, e);
 }
 
+function findChildExpr<K extends keyof ExpressionNodeTypes>(
+  key: K,
+  node: SyntaxNode | undefined,
+): ExpressionNodeTypes[K] | undefined {
+  if (!node) {
+    return undefined;
+  }
+  const type = typeByNodeType.get(key);
+  if (!type) {
+    return undefined;
+  }
+  const n =
+    node.type === type ? node : TreeUtils.findFirstNamedChildOfType(type, node);
+  const e = mapSyntaxNodeToExpression(n);
+  return e && mapExpr(key, e);
+}
+
 function findAllExprs<K extends keyof ExpressionNodeTypes>(
   key: K,
   node: SyntaxNode | undefined,
@@ -253,4 +283,8 @@ function mapExpr<K extends keyof ExpressionNodeTypes>(
   e: Expression,
 ): ExpressionNodeTypes[K] | undefined {
   return e?.nodeType === k ? (e as ExpressionNodeTypes[K]) : undefined;
+}
+
+function stringLiteralToLabel(literal: string): string {
+  return String(JSON.parse(literal));
 }
