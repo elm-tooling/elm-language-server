@@ -197,7 +197,8 @@ export class TreeUtils {
             (moduleNamePrefix &&
               a.text === `${moduleNamePrefix}.${unionConstructorName}`)) &&
           a.parent &&
-          a.parent.type !== "type_ref",
+          a.parent.type !== "type_ref" &&
+          a.parent.type !== "import_clause",
       );
       return result.length === 0 ? undefined : result;
     }

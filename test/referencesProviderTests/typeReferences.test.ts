@@ -130,4 +130,24 @@ func a =
 `;
     await testBase.testReferences(source);
   });
+
+  it(`import with same name is not a union constructor reference - issue #580`, async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+import Html
+
+type Model = Html
+            --^
+
+value : Model
+value = Html
+       --X
+
+view : Html.Html msg
+view = Html.p [] []
+`;
+    await testBase.testReferences(source);
+  });
 });
