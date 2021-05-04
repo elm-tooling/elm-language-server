@@ -456,7 +456,7 @@ export class References {
                   const importNameNode = checker.findImportModuleNameNode(
                     moduleNameToLookFor,
                     sourceFileToCheck,
-                  );
+                  )[0];
 
                   if (importNameNode) {
                     references.push({ node: importNameNode, uri });

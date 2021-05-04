@@ -561,7 +561,7 @@ export class CompletionProvider {
       const importNode = checker.findImportModuleNameNode(
         element.fromModule.name,
         sourceFile,
-      )?.parent;
+      )[0]?.parent;
 
       // Check if a value is already imported for this module using the exposing list
       // In this case, we want to prefex the unqualified value since they are using the import exposing list
@@ -1159,11 +1159,11 @@ export class CompletionProvider {
               const aModuleImported = !!checker.findImportModuleNameNode(
                 a.module,
                 sourceFile,
-              );
+              )[0];
               const bModuleImported = !!checker.findImportModuleNameNode(
                 b.module,
                 sourceFile,
-              );
+              )[0];
 
               if (aModuleImported && !bModuleImported) {
                 return -1;

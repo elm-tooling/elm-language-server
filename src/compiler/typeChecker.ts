@@ -94,7 +94,7 @@ export interface TypeChecker {
   findImportModuleNameNode: (
     moduleNameOrAlias: string,
     sourceFile: ISourceFile,
-  ) => SyntaxNode | undefined;
+  ) => SyntaxNode[];
 }
 
 export function createTypeChecker(program: IProgram): TypeChecker {
@@ -549,7 +549,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
 
         const moduleNameOrAlias = nodeParent.text.substring(0, endPos);
         const moduleName =
-          findImportModuleNameNode(moduleNameOrAlias, sourceFile)?.text ??
+          findImportModuleNameNode(moduleNameOrAlias, sourceFile)[0]?.text ??
           moduleNameOrAlias;
 
         const moduleImport = findImport(sourceFile, moduleName, "Module")[0];
@@ -564,7 +564,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
 
       const moduleImport = findImport(
         sourceFile,
-        findImportModuleNameNode(upperCaseQidText, sourceFile)?.text ??
+        findImportModuleNameNode(upperCaseQidText, sourceFile)[0]?.text ??
           upperCaseQidText,
         "Module",
       )[0];
@@ -642,7 +642,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
               ?.map((node) => node.text)
               .join(".") ?? "";
           const moduleName =
-            findImportModuleNameNode(moduleNameOrAlias, sourceFile)?.text ??
+            findImportModuleNameNode(moduleNameOrAlias, sourceFile)[0]?.text ??
             moduleNameOrAlias;
 
           const moduleImport = findImport(sourceFile, moduleName, "Module")[0];
@@ -762,7 +762,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
 
       const moduleImport = findImport(
         sourceFile,
-        findImportModuleNameNode(fullModuleName, sourceFile)?.text ??
+        findImportModuleNameNode(fullModuleName, sourceFile)[0]?.text ??
           fullModuleName,
         "Module",
       )[0];
@@ -850,7 +850,8 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       return "";
     }
 
-    const moduleImport = findImportModuleNameNode(module, sourceFile)?.parent;
+    const moduleImport = findImportModuleNameNode(module, sourceFile)[0]
+      ?.parent;
 
     if (!moduleImport) {
       return;
@@ -878,12 +879,14 @@ export function createTypeChecker(program: IProgram): TypeChecker {
   function findImportModuleNameNode(
     moduleNameOrAlias: string,
     sourceFile: ISourceFile,
-  ): SyntaxNode | undefined {
+  ): SyntaxNode[] {
     return (
       sourceFile.symbolLinks
         ?.get(sourceFile.tree.rootNode)
-        ?.get(moduleNameOrAlias, (s) => s.type === "Import")
-        ?.node.childForFieldName("moduleName") ?? undefined
+        ?.getAll(moduleNameOrAlias)
+        ?.filter((s) => s.type === "Import")
+        .map((s) => s.node.childForFieldName("moduleName"))
+        .filter(Utils.notUndefinedOrNull.bind(createTypeChecker)) ?? []
     );
   }
 
