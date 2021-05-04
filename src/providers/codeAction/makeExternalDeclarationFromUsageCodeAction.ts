@@ -69,7 +69,7 @@ function getEdits(
     const checker = params.program.getTypeChecker();
 
     const moduleNames = checker
-      .findImportModuleNameNode(modulePrefix, params.sourceFile)
+      .findImportModuleNameNodes(modulePrefix, params.sourceFile)
       .map((n) => n.text);
 
     return moduleNames

@@ -558,7 +558,7 @@ export class CompletionProvider {
       const dotIndex = label.lastIndexOf(".");
       const valuePart = label.slice(dotIndex + 1);
 
-      const importNode = checker.findImportModuleNameNode(
+      const importNode = checker.findImportModuleNameNodes(
         element.fromModule.name,
         sourceFile,
       )[0]?.parent;
@@ -1156,11 +1156,11 @@ export class CompletionProvider {
             } else if (!aMatches && bMatches) {
               return 1;
             } else {
-              const aModuleImported = !!checker.findImportModuleNameNode(
+              const aModuleImported = !!checker.findImportModuleNameNodes(
                 a.module,
                 sourceFile,
               )[0];
-              const bModuleImported = !!checker.findImportModuleNameNode(
+              const bModuleImported = !!checker.findImportModuleNameNodes(
                 b.module,
                 sourceFile,
               )[0];
