@@ -155,4 +155,18 @@ foo = ""
       { title: `Create function in module 'App'` },
     ]);
   });
+
+  it("make external function in non existent module", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+import Modules.App as App
+
+func = App.bar
+          --^
+`;
+
+    await testCodeAction(source, []);
+  });
 });
