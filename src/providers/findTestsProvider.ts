@@ -33,17 +33,17 @@ export class FindTestsProvider {
     const connection = container.resolve<Connection>("Connection");
     connection.onRequest(FindTestsRequest, (params: IFindTestsParams) => {
       connection.console.info(
-        `Finding tests is requested ${params.workspaceRoot.toString()}`,
+        `Finding tests is requested ${params.projectFolder.toString()}`,
       );
       try {
         const elmWorkspaces: Program[] = container.resolve("ElmWorkspaces");
         const program = elmWorkspaces.find(
           (program) =>
-            program.getRootPath().toString() == params.workspaceRoot.toString(),
+            program.getRootPath().toString() == params.projectFolder.toString(),
         );
         if (!program) {
           // TODO dedicated error?
-          throw new NoWorkspaceContainsError(params.workspaceRoot);
+          throw new NoWorkspaceContainsError(params.projectFolder);
         }
         const typeChecker = program.getTypeChecker();
         const suites: TestSuite[] = Array.from(
@@ -84,7 +84,7 @@ export class FindTestsProvider {
         connection.console.info(
           `Found ${
             suites.length
-          } top test suites in ${params.workspaceRoot.toString()}`,
+          } top test suites in ${params.projectFolder.toString()}`,
         );
         return <IFindTestsResponse>{ suites };
       } catch (err) {
