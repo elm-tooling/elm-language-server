@@ -326,7 +326,7 @@ topSuite = describe ("top suite" ++ "13") []
 
     await testFindTests(source, [
       {
-        label: ["top suite", "13"],
+        label: undefined,
         file: testModuleUri,
         position: { line: 4, character: 11 },
         tests: [],

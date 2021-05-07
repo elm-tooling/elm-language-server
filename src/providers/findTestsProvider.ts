@@ -189,7 +189,7 @@ export function findTestSuite(
   };
   // TODO relative to workspace?
   const file = sourceFile.uri.toString();
-  const label = labelParts?.length === 1 ? labelParts[0] : labelParts;
+  const label = labelParts?.length === 1 ? labelParts[0] : undefined;
   if (label && isTestSuite(call, sourceFile, typeChecker)) {
     const testExprs = findExpr("ListExpr", call.args[1])?.exprList;
     const tests: TestSuite[] | undefined = testExprs
