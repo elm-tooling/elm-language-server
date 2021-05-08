@@ -80,7 +80,7 @@ export function findAllTestSuites(program: IProgram): TestSuite[] {
         );
       });
     })
-    .filter(Utils.notUndefinedOrNull);
+    .filter(Utils.notUndefined);
 }
 
 // export for testing
@@ -182,7 +182,7 @@ export function findTestSuite(
     const tests: TestSuite[] | undefined = testExprs
       ?.map((e) => findTestFunctionCall(e, typeChecker))
       .map((call) => findTestSuite(call, sourceFile, typeChecker))
-      .filter(Utils.notUndefinedOrNull);
+      .filter(Utils.notUndefined);
     return tests && <TestSuite>{ label, tests, file, position };
   }
   return label ? <TestSuite>{ label, file, position } : undefined;
