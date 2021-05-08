@@ -622,7 +622,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
               (s) => s.node.type !== "infix_declaration",
             ),
         )
-        .find(Utils.notUndefined.bind(findDefinition));
+        .find(Utils.notUndefined);
 
       if (localBinding) {
         return {

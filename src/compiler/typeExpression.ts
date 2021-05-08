@@ -404,7 +404,7 @@ export class TypeExpression {
         typeRef,
       )
         ?.map(mapSyntaxNodeToExpression)
-        .filter(Utils.notUndefined.bind(this))
+        .filter(Utils.notUndefined)
         .map((arg) => this.typeSignatureSegmentType(arg)) ?? [];
 
     const definition = findDefinition(

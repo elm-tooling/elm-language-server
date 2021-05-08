@@ -539,7 +539,7 @@ export class InferenceScope {
   private getBinding(e: Expression): Type | undefined {
     return this.ancestors
       .map((a) => a.bindings.get(e))
-      .find(Utils.notUndefined.bind(this));
+      .find(Utils.notUndefined);
   }
 
   public static valueDeclarationInference(
@@ -910,7 +910,7 @@ export class InferenceScope {
         const patterns = pattern
           .descendantsOfType("lower_pattern")
           ?.map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(this));
+          .filter(Utils.notUndefined);
 
         patterns?.forEach((pat) => {
           const patType = result.expressionTypes.get(pat);
@@ -2242,7 +2242,7 @@ export class InferenceScope {
 
             return undefined;
           })
-          .filter(Utils.notUndefined.bind(this)),
+          .filter(Utils.notUndefined),
       ),
     );
   }

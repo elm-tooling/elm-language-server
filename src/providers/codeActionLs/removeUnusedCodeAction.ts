@@ -34,7 +34,7 @@ CodeActionProvider.registerCodeAction({
           return CodeActionProvider.getCodeAction(params, title, edits);
         }
       })
-      .filter(Utils.notUndefined.bind(this));
+      .filter(Utils.notUndefined);
   },
   getFixAllCodeAction: (params) => {
     const importsMap = new Map<string, Set<string>>();

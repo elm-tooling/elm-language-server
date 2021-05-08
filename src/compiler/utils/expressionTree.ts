@@ -299,7 +299,7 @@ export function mapSyntaxNodeToExpression(
           binOpExpr.nodeType = "BinOpExpr";
           binOpExpr.parts = node.children
             .map(mapSyntaxNodeToExpression)
-            .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+            .filter(Utils.notUndefined);
           return binOpExpr;
         }
       }
@@ -357,7 +357,7 @@ export function mapSyntaxNodeToExpression(
         typeExpression.nodeType = "TypeExpression";
         typeExpression.segments = node.children
           .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+          .filter(Utils.notUndefined);
         return typeExpression;
       }
 
@@ -398,9 +398,7 @@ export function mapSyntaxNodeToExpression(
         functionDeclarationLeft.params = node.namedChildren
           .filter((n) => n.type.includes("pattern") || n.type === "unit_expr")
           ?.map(mapSyntaxNodeToExpression)
-          .filter(
-            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
-          ) as Pattern[];
+          .filter(Utils.notUndefined) as Pattern[];
         return functionDeclarationLeft;
       }
 
@@ -436,7 +434,7 @@ export function mapSyntaxNodeToExpression(
         unionVariant.params = node.children
           .slice(1)
           .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+          .filter(Utils.notUndefined);
         return unionVariant;
       }
 
@@ -445,7 +443,7 @@ export function mapSyntaxNodeToExpression(
         ifElseExpr.nodeType = "IfElseExpr";
         ifElseExpr.exprList = node.namedChildren
           .map((n) => mapSyntaxNodeToExpression(n))
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+          .filter(Utils.notUndefined);
         return ifElseExpr;
       }
 
@@ -471,9 +469,7 @@ export function mapSyntaxNodeToExpression(
         caseOfExpr.branches = node.namedChildren
           .slice(3)
           .map(mapSyntaxNodeToExpression)
-          .filter(
-            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
-          ) as ECaseOfBranch[];
+          .filter(Utils.notUndefined) as ECaseOfBranch[];
         return caseOfExpr;
       }
 
@@ -515,7 +511,7 @@ export function mapSyntaxNodeToExpression(
         tupleExpr.nodeType = "TupleExpr";
         tupleExpr.exprList = node.namedChildren
           .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+          .filter(Utils.notUndefined);
         return tupleExpr;
       }
 
@@ -533,9 +529,7 @@ export function mapSyntaxNodeToExpression(
           node,
         )
           ?.map(mapSyntaxNodeToExpression)
-          .filter(
-            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
-          ) as EPattern[];
+          .filter(Utils.notUndefined) as EPattern[];
         return tuplePattern;
       }
 
@@ -547,9 +541,7 @@ export function mapSyntaxNodeToExpression(
           node,
         )
           ?.map(mapSyntaxNodeToExpression)
-          .filter(
-            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
-          ) as ETypeExpression[];
+          .filter(Utils.notUndefined) as ETypeExpression[];
         tupleType.unitExpr = mapSyntaxNodeToExpression(
           node.childForFieldName("unitExpr"),
         ) as EUnitExpr;
@@ -571,7 +563,7 @@ export function mapSyntaxNodeToExpression(
         listPattern.parts = node.namedChildren
           .filter((n) => n.type.includes("pattern"))
           .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+          .filter(Utils.notUndefined);
         return listPattern;
       }
 
@@ -582,7 +574,7 @@ export function mapSyntaxNodeToExpression(
         unionPattern.namedParams = node
           .descendantsOfType("lower_pattern")
           .map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression));
+          .filter(Utils.notUndefined);
         unionPattern.argPatterns = node.namedChildren
           .slice(1)
           .filter(
@@ -603,7 +595,7 @@ export function mapSyntaxNodeToExpression(
           parts: node.namedChildren
             .filter((n) => n.type.includes("pattern"))
             .map(mapSyntaxNodeToExpression)
-            .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)),
+            .filter(Utils.notUndefined),
         } as EConsPattern);
 
       case "record_type": {
@@ -617,9 +609,7 @@ export function mapSyntaxNodeToExpression(
           node,
         )
           ?.map(mapSyntaxNodeToExpression)
-          .filter(
-            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
-          ) as EFieldType[];
+          .filter(Utils.notUndefined) as EFieldType[];
         return recordType;
       }
 
@@ -674,9 +664,7 @@ export function mapSyntaxNodeToExpression(
           node,
         )
           ?.map(mapSyntaxNodeToExpression)
-          .filter(
-            Utils.notUndefined.bind(mapSyntaxNodeToExpression),
-          ) as ELowerPattern[];
+          .filter(Utils.notUndefined) as ELowerPattern[];
         return recordPattern;
       }
 
@@ -689,9 +677,7 @@ export function mapSyntaxNodeToExpression(
         recordExpr.fields =
           (TreeUtils.findAllNamedChildrenOfType("field", node)
             ?.map(mapSyntaxNodeToExpression)
-            .filter(
-              Utils.notUndefined.bind(mapSyntaxNodeToExpression),
-            ) as EField[]) ?? [];
+            .filter(Utils.notUndefined) as EField[]) ?? [];
         return recordExpr;
       }
 
@@ -758,7 +744,7 @@ export function mapTypeAliasDeclaration(
       typeAliasDeclaration,
     )
       ?.map(mapSyntaxNodeToExpression)
-      .filter(Utils.notUndefined.bind(mapSyntaxNodeToExpression)) ?? [];
+      .filter(Utils.notUndefined) ?? [];
   typeAliasDeclaration.typeExpression = mapSyntaxNodeToExpression(
     typeAliasDeclaration.childForFieldName("typeExpression"),
   ) as ETypeExpression;
