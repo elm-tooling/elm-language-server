@@ -1,13 +1,10 @@
 import { getSourceFiles } from "./utils/sourceParser";
-import { baseUri, SourceTreeParser } from "./utils/sourceTreeParser";
+import { SourceTreeParser, testUri } from "./utils/sourceTreeParser";
 import { URI } from "vscode-uri";
-import { TreeUtils } from "../src/util/treeUtils";
 import {
-  findTestFunctionCall,
-  findTestSuite,
+  findAllTestSuites,
 } from "../src/providers/findTestsProvider";
 import { TestSuite } from "../src/protocol";
-import { Utils } from "../src/util/utils";
 
 const basicsSources = `
 --@ Basics.elm
@@ -86,42 +83,22 @@ int = F 13
 
 describe("FindTestsProvider", () => {
   const treeParser = new SourceTreeParser();
-  const testModuleUri = URI.file(baseUri + "MyModule.elm").toString();
+
+  const testModuleUri = URI.file(testUri + "/MyModule.elm").toString();
 
   async function testFindTests(source: string, expected: TestSuite[]) {
     await treeParser.init();
 
     const sources = getSourceFiles(basicsSources + sourceTestModule + source);
-
     const program = await treeParser.getProgram(sources);
-    const sourceFile = program.getSourceFile(testModuleUri);
-    expect(sourceFile).not.toBeUndefined;
-    if (!sourceFile) {
-      throw new Error("parsing failed");
-    }
-    expect(sourceFile.isTestFile).toBeTruthy;
 
-    const tops = TreeUtils.findAllTopLevelFunctionDeclarations(sourceFile.tree);
-
-    const typeChecker = program.getTypeChecker();
-
-    const suites: TestSuite[] = tops
-      ? tops
-          .map((top) =>
-            findTestSuite(
-              findTestFunctionCall(top, typeChecker),
-              sourceFile,
-              typeChecker,
-            ),
-          )
-          .filter(Utils.notUndefinedOrNull)
-      : [];
+    const suites = findAllTestSuites(program)
     expect(suites).toEqual(expected);
   }
 
   test("empty", async () => {
     const source = `
---@ MyModule.elm
+--@ tests/MyModule.elm
 module MyModule exposing (..)
 
 import Test exposing (..)
@@ -143,7 +120,7 @@ topSuite =
 
   test("some", async () => {
     const source = `
---@ MyModule.elm
+--@ tests/MyModule.elm
 module MyModule exposing (..)
 
 import Expect
@@ -189,7 +166,7 @@ topSuite =
 
   test("ignore non Test top levels", async () => {
     const source = `
---@ MyModule.elm
+--@ tests/MyModule.elm
 module MyModule exposing (..)
 
 import Test exposing (..)
@@ -211,7 +188,7 @@ topSuite = describe "top suite" []
 
   test("with let/in", async () => {
     const source = `
---@ MyModule.elm
+--@ tests/MyModule.elm
 module MyModule exposing (..)
 
 import Test exposing (..)
@@ -241,7 +218,7 @@ topSuite =
 
   test("with deep let/in", async () => {
     const source = `
---@ MyModule.elm
+--@ tests/MyModule.elm
 module MyModule exposing (..)
 
 import Test exposing (..)
@@ -276,7 +253,7 @@ topSuite =
 
   test("import without expose", async () => {
     const source = `
---@ MyModule.elm
+--@ tests/MyModule.elm
 module MyModule exposing (..)
 
 import Test
@@ -296,7 +273,7 @@ topSuite = Test.describe "top suite" []
 
   test("import with alias", async () => {
     const source = `
---@ MyModule.elm
+--@ tests/MyModule.elm
 module MyModule exposing (..)
 
 import Test as T 
@@ -316,7 +293,7 @@ topSuite = T.describe "top suite" []
 
   test("dynamic label is ignored", async () => {
     const source = `
---@ MyModule.elm
+--@ tests/MyModule.elm
 module MyModule exposing (..)
 
 import Test exposing (..)
@@ -329,7 +306,7 @@ topSuite = describe ("top suite" ++ "13") []
 
   test("fuzz", async () => {
     const source = `
---@ MyModule.elm 
+--@ tests/MyModule.elm 
 module MyModule exposing (..)
 
 import Expect
@@ -351,7 +328,7 @@ top = fuzz int "top fuzz" <| \_ -> Expect.equal True True
   // TODO improve inferred types?!
   test.skip("any test function", async () => {
     const source = `
---@ MyModule.elm 
+--@ tests/MyModule.elm 
 module MyModule exposing (..)
 
 import Expect 

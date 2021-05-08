@@ -2,7 +2,7 @@ import { container } from "tsyringe";
 import { Connection, ResponseError } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
 import { ISourceFile } from "../compiler/forest";
-import { Program } from "../compiler/program";
+import { IProgram, Program } from "../compiler/program";
 import { TypeChecker } from "../compiler/typeChecker";
 import { Type } from "../compiler/typeInference";
 import {
@@ -45,42 +45,7 @@ export class FindTestsProvider {
           // TODO dedicated error?
           throw new NoWorkspaceContainsError(params.projectFolder);
         }
-        const typeChecker = program.getTypeChecker();
-        const suites: TestSuite[] = Array.from(
-          program.getForest().treeMap.values(),
-        )
-          .filter((sourceFile) => sourceFile.isTestFile)
-          .map((sourceFile) => {
-            // connection.console.info(`Finding tests is in ${sourceFile.uri}`);
-            const tests:
-              | TestSuite[]
-              | undefined = TreeUtils.findAllTopLevelFunctionDeclarations(
-              sourceFile.tree,
-            )
-              ?.filter(Utils.notUndefinedOrNull)
-              .map((top) =>
-                findTestSuite(
-                  findTestFunctionCall(top, typeChecker),
-                  sourceFile,
-                  typeChecker,
-                ),
-              )
-              .filter(Utils.notUndefinedOrNull);
-            const file = sourceFile.uri.toString();
-            const label = sourceFile.moduleName;
-            // connection.console.log(
-            //   `Found ${tests?.length ?? 0} tests in module ${label ?? "?"}`,
-            // );
-            return label && tests && tests.length > 0
-              ? <TestSuite>{
-                  label,
-                  file,
-                  tests,
-                  position: { line: 0, character: 0 },
-                }
-              : undefined;
-          })
-          .filter(Utils.notUndefinedOrNull);
+        const suites = findAllTestSuites(program);
         connection.console.info(
           `Found ${
             suites.length
@@ -94,6 +59,28 @@ export class FindTestsProvider {
       }
     });
   }
+}
+
+// export for testing
+export function findAllTestSuites(program: IProgram): TestSuite[] {
+  const typeChecker = program.getTypeChecker();
+  return Array.from(program.getForest(true).treeMap.values())
+    .filter((sourceFile) => sourceFile.isTestFile)
+    .flatMap((sourceFile) => {
+      return TreeUtils.findAllTopLevelFunctionDeclarations(
+        sourceFile.tree,
+      )?.map((top) => {
+        return (
+          top &&
+          findTestSuite(
+            findTestFunctionCall(top, typeChecker),
+            sourceFile,
+            typeChecker,
+          )
+        );
+      });
+    })
+    .filter(Utils.notUndefinedOrNull);
 }
 
 // export for testing
