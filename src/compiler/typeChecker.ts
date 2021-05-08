@@ -886,7 +886,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
         ?.getAll(moduleNameOrAlias)
         ?.filter((s) => s.type === "Import")
         .map((s) => s.node.childForFieldName("moduleName"))
-        .filter(Utils.notUndefinedOrNull.bind(createTypeChecker)) ?? []
+        .filter(Utils.notUndefinedOrNull) ?? []
     );
   }
 

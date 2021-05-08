@@ -149,7 +149,7 @@ function isTestSuite(
       : "";
   const moduleName =
     prefix !== undefined
-      ? typeChecker.findImportModuleNameNode(prefix, sourceFile)?.text
+      ? typeChecker.findImportModuleNameNodes(prefix, sourceFile)[0]?.text
       : "Test";
   return (
     qualifier !== undefined &&
