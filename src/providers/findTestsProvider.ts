@@ -42,7 +42,6 @@ export class FindTestsProvider {
             program.getRootPath().toString() == params.projectFolder.toString(),
         );
         if (!program) {
-          // TODO dedicated error?
           throw new NoWorkspaceContainsError(params.projectFolder);
         }
         const suites = findAllTestSuites(program);
@@ -52,10 +51,9 @@ export class FindTestsProvider {
           } top test suites in ${params.projectFolder.toString()}`,
         );
         return <IFindTestsResponse>{ suites };
-      } catch (err) {
-        connection.console.error(`Error finding tests`);
-        // TODO improve error reporting
-        return new ResponseError(13, "Error finding tests");
+      } catch (error) {
+        connection.console.error(`Error finding tests ${error}`);
+        return new ResponseError(1, `Error finding tests ${error}`);
       }
     });
   }
