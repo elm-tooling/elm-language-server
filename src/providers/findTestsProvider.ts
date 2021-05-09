@@ -26,10 +26,6 @@ import { Utils } from "../util/utils";
 
 export class FindTestsProvider {
   constructor() {
-    this.register();
-  }
-
-  private register(): void {
     const connection = container.resolve<Connection>("Connection");
     connection.onRequest(FindTestsRequest, (params: IFindTestsParams) => {
       connection.console.info(
@@ -42,7 +38,6 @@ export class FindTestsProvider {
             program.getRootPath().toString() == params.projectFolder.toString(),
         );
         if (!program) {
-          // TODO dedicated error?
           throw new NoWorkspaceContainsError(params.projectFolder);
         }
         const suites = findAllTestSuites(program);
@@ -52,10 +47,9 @@ export class FindTestsProvider {
           } top test suites in ${params.projectFolder.toString()}`,
         );
         return <IFindTestsResponse>{ suites };
-      } catch (err) {
-        connection.console.error(`Error finding tests`);
-        // TODO improve error reporting
-        return new ResponseError(13, "Error finding tests");
+      } catch (error) {
+        connection.console.error(`Error finding tests ${error}`);
+        return new ResponseError(1, `Error finding tests ${error}`);
       }
     });
   }
@@ -97,29 +91,17 @@ export function findTestFunctionCall(
     return undefined;
   }
   const t: Type = typeChecker.findType(call);
-  // TODO why are there two cases here?
-  if (t.nodeType === "Function") {
-    if (
-      t.return.nodeType === "Union" &&
-      t.return.module === "Test.Internal" &&
-      t.return.name === "Test"
-    ) {
-      return call;
-    }
-  }
-  if (
-    t.nodeType === "Union" &&
-    t.module === "Test.Internal" &&
-    t.name === "Test"
-  ) {
+
+  const isTest = (t: Type): boolean =>
+    t.nodeType === "Union" && t.module === "Test.Internal" && t.name === "Test";
+
+  if (isTest(t)) {
     return call;
   }
-  // console.debug(
-  //   "ignore non-test type",
-  //   findExpr("ValueExpr", call.target)?.name,
-  //   t,
-  // );
-  return undefined;
+  if (t.nodeType === "Function" && isTest(t.return)) {
+    // TODO do we need this case?
+    return call;
+  }
 }
 
 function isTestSuite(
@@ -174,7 +156,6 @@ export function findTestSuite(
     line: call.startPosition.row,
     character: call.startPosition.column,
   };
-  // TODO relative to workspace?
   const file = sourceFile.uri.toString();
   const label = labelParts?.length === 1 ? labelParts[0] : undefined;
   if (label && isTestSuite(call, sourceFile, typeChecker)) {
@@ -196,18 +177,7 @@ type ExpressionNodeTypes = {
   LetInExpr: ELetInExpr;
 };
 
-type TypeExpressionNodeTypes = {
-  value_expr: EValueExpr;
-  string_constant_expr: EStringConstant;
-  list_expr: EListExpr;
-  function_call_expr: EFunctionCallExpr;
-  let_in_expr: ELetInExpr;
-};
-
-const typeByNodeType: Map<
-  keyof ExpressionNodeTypes,
-  keyof TypeExpressionNodeTypes
-> = new Map([
+const typeByNodeType: Map<keyof ExpressionNodeTypes, string> = new Map([
   ["ValueExpr", "value_expr"],
   ["StringConstant", "string_constant_expr"],
   ["ListExpr", "list_expr"],
@@ -272,6 +242,12 @@ function mapExpr<K extends keyof ExpressionNodeTypes>(
   return e?.nodeType === k ? (e as ExpressionNodeTypes[K]) : undefined;
 }
 
-function stringLiteralToLabel(literal: string): string {
+// export for testing
+export function stringLiteralToLabel(literal: string): string {
+  if (literal.startsWith('"""')) {
+    // without unescaping
+    return literal.substring(3, literal.length - 3);
+  }
+  // with unescaping
   return String(JSON.parse(literal));
 }
