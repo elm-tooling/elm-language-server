@@ -2,7 +2,7 @@ import { getSourceFiles } from "./utils/sourceParser";
 import { SourceTreeParser, testUri } from "./utils/sourceTreeParser";
 import { URI } from "vscode-uri";
 import {
-  findAllTestSuites,
+  findAllTestSuites, stringLiteralToLabel,
 } from "../src/providers/findTestsProvider";
 import { TestSuite } from "../src/protocol";
 
@@ -324,4 +324,43 @@ top = fuzz int "top fuzz" <| \_ -> Expect.equal True True
       },
     ]);
   });
+
+
+  test("multiline label", async () => {
+    const source = `
+--@ tests/MyModule.elm 
+module MyModule exposing (..)
+
+import Test exposing (..)
+
+topSuite = describe """top suite
+over
+"multiple"
+lines
+""" []
+`;
+
+    await testFindTests(source, [
+      {
+        label: 'top suite\nover\n"multiple"\nlines\n',
+        file: testModuleUri,
+        position: { line: 4, character: 11 },
+        tests: []
+      },
+    ]);
+  });
 });
+
+describe("string literal to label", () => {
+  test("simple", () => {
+    expect(stringLiteralToLabel('"a simple string"')).toEqual("a simple string")
+  })
+  test("escaped", () => {
+    expect(stringLiteralToLabel('"a simple \\\\ \\n string"')).toEqual("a simple \\ \n string")
+  })
+
+  test("multiline", () => {
+    expect(stringLiteralToLabel('"""a multi\nline\nstring"""')).toEqual("a multi\nline\nstring")
+  })
+
+})

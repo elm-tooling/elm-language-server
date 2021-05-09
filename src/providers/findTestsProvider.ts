@@ -253,6 +253,12 @@ function mapExpr<K extends keyof ExpressionNodeTypes>(
   return e?.nodeType === k ? (e as ExpressionNodeTypes[K]) : undefined;
 }
 
-function stringLiteralToLabel(literal: string): string {
+// export for testing
+export function stringLiteralToLabel(literal: string): string {
+  if (literal.startsWith('"""')) {
+    // without unescaping
+    return literal.substring(3, literal.length - 3);
+  }
+  // with unescaping
   return String(JSON.parse(literal));
 }
