@@ -324,30 +324,4 @@ top = fuzz int "top fuzz" <| \_ -> Expect.equal True True
       },
     ]);
   });
-
-  // TODO improve inferred types?!
-  test.skip("any test function", async () => {
-    const source = `
---@ tests/MyModule.elm 
-module MyModule exposing (..)
-
-import Expect 
-import Test exposing (..)
-
-myTest : Int -> String -> Bool -> Test
-myTest i desc b =
-    describe desc []
-
-top : Test
-top = myTest 13 "my top" True  
-`;
-
-    await testFindTests(source, [
-      {
-        label: "top fuzz",
-        file: testModuleUri,
-        position: { line: 5, character: 6 },
-      },
-    ]);
-  });
 });
