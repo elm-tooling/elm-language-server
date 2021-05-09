@@ -3,11 +3,14 @@ import { Range, TextEdit } from "vscode-languageserver";
 export type NonEmptyArray<T> = [T, ...T[]];
 
 export class Utils {
-  public static notUndefined<T>(x: T | undefined): x is T {
+  public static notUndefined<T>(this: void, x: T | undefined): x is T {
     return x !== undefined;
   }
 
-  public static notUndefinedOrNull<T>(x: T | undefined | null): x is T {
+  public static notUndefinedOrNull<T>(
+    this: void,
+    x: T | undefined | null,
+  ): x is T {
     return x !== undefined && x !== null;
   }
 

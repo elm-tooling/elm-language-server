@@ -10,7 +10,7 @@ import * as path from "../../src/util/path";
 import { Utils } from "../../src/util/utils";
 
 export const baseUri = path.join(__dirname, "../sources/src/");
-const testUri = path.join(baseUri, "tests");
+export const testUri = path.join(baseUri, "tests");
 
 export class SourceTreeParser {
   private parser?: Parser;

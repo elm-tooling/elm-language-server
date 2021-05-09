@@ -50,7 +50,7 @@ function getEdits(params: ICodeActionParams, range: Range): TextEdit[] {
     );
     const patterns = branches
       .map((branch) => branch.childForFieldName("pattern"))
-      .filter(Utils.notUndefinedOrNull.bind(getEdits));
+      .filter(Utils.notUndefinedOrNull);
 
     const branchIndent = getSpaces(branches[0].startPosition.column);
     const branchExprIndent = getSpaces(

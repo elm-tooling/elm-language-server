@@ -1,4 +1,5 @@
 import { CodeActionParams, RequestType } from "vscode-languageserver";
+import { URI } from "vscode-uri";
 import { IParams } from "./util/elmWorkspaceMatcher";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -51,3 +52,24 @@ export const GetDiagnosticsRequest = new RequestType<
   void,
   void
 >("elm/getDiagnostics");
+
+export const FindTestsRequest = new RequestType<
+  IFindTestsParams,
+  IFindTestsResponse,
+  void
+>("elm/findTests");
+
+export interface IFindTestsParams {
+  projectFolder: URI;
+}
+
+export interface IFindTestsResponse {
+  suites?: TestSuite[];
+}
+
+export type TestSuite = {
+  label: string;
+  tests?: TestSuite[];
+  file: string;
+  position: { line: number; character: number };
+};

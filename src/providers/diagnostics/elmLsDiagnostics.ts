@@ -486,7 +486,7 @@ export class ElmLsDiagnostics {
 
     const moduleReferences = this.moduleReferencesQuery
       .matches(tree.rootNode)
-      .filter(Utils.notUndefined.bind(this))
+      .filter(Utils.notUndefined)
       .filter(
         (match) =>
           match.captures.length > 0 &&
@@ -529,7 +529,7 @@ export class ElmLsDiagnostics {
 
     const allUsages = this.exposedValueAndTypeUsagesQuery
       .matches(tree.rootNode)
-      .filter(Utils.notUndefined.bind(this));
+      .filter(Utils.notUndefined);
     exposedValuesAndTypes.forEach((exposedValueOrType) => {
       if (exposedValueOrType.text.endsWith("(..)")) {
         return;
@@ -565,7 +565,7 @@ export class ElmLsDiagnostics {
 
     const allAliasReferences = this.moduleAliasReferencesQuery
       .matches(tree.rootNode)
-      .filter(Utils.notUndefined.bind(this))
+      .filter(Utils.notUndefined)
       .filter((match) => match.captures.length > 0)
       .map((match) => match.captures[0].node.text);
 
@@ -602,7 +602,7 @@ export class ElmLsDiagnostics {
     const scopeCache = new SyntaxNodeMap<SyntaxNode, QueryResult[]>();
 
     patternMatches
-      .filter(Utils.notUndefined.bind(this))
+      .filter(Utils.notUndefined)
       .flatMap((match) => {
         let scope = match.captures[0].node;
         const patternMatch = match.captures[1].node;
@@ -636,7 +636,7 @@ export class ElmLsDiagnostics {
           .getOrSet(scope, () =>
             this.patternReferencesQuery
               .matches(scope)
-              .filter(Utils.notUndefined.bind(this)),
+              .filter(Utils.notUndefined),
           )
           .filter(
             (result) =>
@@ -720,7 +720,7 @@ export class ElmLsDiagnostics {
     const caseExpressions = this.booleanCaseExpressionsQuery
       .matches(tree.rootNode)
       .map((match) => match.captures[0].node.parent)
-      .filter(Utils.notUndefinedOrNull.bind(this));
+      .filter(Utils.notUndefinedOrNull);
 
     caseExpressions.forEach((caseExpr) => {
       diagnostics.push({
@@ -741,7 +741,7 @@ export class ElmLsDiagnostics {
     const listExpressions = this.concatOfListsQuery
       .matches(tree.rootNode)
       .map((match) => [match.captures[0].node, match.captures[1].node])
-      .filter(Utils.notUndefinedOrNull.bind(this));
+      .filter(Utils.notUndefinedOrNull);
 
     listExpressions.forEach(([startList, endList]) => {
       diagnostics.push({
@@ -765,7 +765,7 @@ export class ElmLsDiagnostics {
     const consExpressions = this.consOfItemAndListQuery
       .matches(tree.rootNode)
       .map((match) => [match.captures[0].node, match.captures[1].node])
-      .filter(Utils.notUndefinedOrNull.bind(this));
+      .filter(Utils.notUndefinedOrNull);
 
     consExpressions.forEach(([itemExpr, listExpr]) => {
       diagnostics.push({
@@ -789,7 +789,7 @@ export class ElmLsDiagnostics {
     const concatExpressions = this.useConsOverConcatQuery
       .matches(tree.rootNode)
       .map((match) => [match.captures[0].node, match.captures[1].node])
-      .filter(Utils.notUndefinedOrNull.bind(this));
+      .filter(Utils.notUndefinedOrNull);
 
     concatExpressions.forEach(([firstPart, lastPart]) => {
       diagnostics.push({
@@ -817,7 +817,7 @@ export class ElmLsDiagnostics {
     const recordTypes = this.singleFieldRecordTypesQuery
       .matches(tree.rootNode)
       .map((match) => match.captures[0].node)
-      .filter(Utils.notUndefinedOrNull.bind(this));
+      .filter(Utils.notUndefinedOrNull);
 
     recordTypes.forEach((recordType) => {
       let isSingleField = true;
@@ -857,7 +857,7 @@ export class ElmLsDiagnostics {
     const listConcats = this.unnecessaryListConcatQuery
       .matches(tree.rootNode)
       .map((match) => match.captures[0].node)
-      .filter(Utils.notUndefinedOrNull.bind(this));
+      .filter(Utils.notUndefinedOrNull);
 
     listConcats.forEach((listConcat) => {
       diagnostics.push({
@@ -901,7 +901,7 @@ export class ElmLsDiagnostics {
     const operatorFunctions = this.operatorFunctionsQuery
       .matches(tree.rootNode)
       .map((match) => match.captures[0].node)
-      .filter(Utils.notUndefinedOrNull.bind(this));
+      .filter(Utils.notUndefinedOrNull);
 
     operatorFunctions.forEach((operatorFunction) => {
       diagnostics.push({
@@ -935,11 +935,11 @@ export class ElmLsDiagnostics {
     const typeAliases = this.typeAliasesQuery
       .matches(tree.rootNode)
       .map((match) => match.captures[0].node)
-      .filter(Utils.notUndefinedOrNull.bind(this));
+      .filter(Utils.notUndefinedOrNull);
 
     const typeAliasUsages = this.typeAliasUsagesQuery
       .matches(tree.rootNode)
-      .filter(Utils.notUndefined.bind(this));
+      .filter(Utils.notUndefined);
 
     typeAliases.forEach((typeAlias) => {
       const references = typeAliasUsages.filter(
@@ -979,11 +979,11 @@ export class ElmLsDiagnostics {
     const unionVariants = this.unionVariantsQuery
       .matches(tree.rootNode)
       .map((match) => [match.captures[1].node, match.captures[0].node])
-      .filter(Utils.notUndefinedOrNull.bind(this));
+      .filter(Utils.notUndefinedOrNull);
 
     const unionVariantUsages = this.unionVariantUsagesQuery
       .matches(tree.rootNode)
-      .filter(Utils.notUndefined.bind(this));
+      .filter(Utils.notUndefined);
 
     unionVariants.forEach(([unionVariant, typeName]) => {
       const references = unionVariantUsages.filter(

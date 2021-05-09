@@ -179,7 +179,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
             };
           }
         })
-        .filter(Utils.notUndefined.bind(bindExposing)) ?? [];
+        .filter(Utils.notUndefined) ?? [];
 
     // Union variants get bound to the parent container
     unionVariants.forEach((variant) => {

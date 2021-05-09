@@ -622,7 +622,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
               (s) => s.node.type !== "infix_declaration",
             ),
         )
-        .find(Utils.notUndefined.bind(findDefinition));
+        .find(Utils.notUndefined);
 
       if (localBinding) {
         return {
@@ -886,7 +886,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
         ?.getAll(moduleNameOrAlias)
         ?.filter((s) => s.type === "Import")
         .map((s) => s.node.childForFieldName("moduleName"))
-        .filter(Utils.notUndefinedOrNull.bind(createTypeChecker)) ?? []
+        .filter(Utils.notUndefinedOrNull) ?? []
     );
   }
 

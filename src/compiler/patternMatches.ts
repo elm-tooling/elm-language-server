@@ -150,7 +150,7 @@ export class PatternMatches {
           return this.isExhaustive(
             matrix
               .map(this.specializeRowByAnything.bind(this))
-              .filter(Utils.notUndefined.bind(this)),
+              .filter(Utils.notUndefined),
             n - 1,
           ).map((result) => [Anything, ...result]);
         } else {
@@ -159,11 +159,11 @@ export class PatternMatches {
           if (numSeen < alts.numAlts) {
             const missing: Pattern[] = alts.alts
               .map((alt) => isMissing(alts, ctors, alt))
-              .filter(Utils.notUndefined.bind(this));
+              .filter(Utils.notUndefined);
             return this.isExhaustive(
               matrix
                 .map(this.specializeRowByAnything.bind(this))
-                .filter(Utils.notUndefined.bind(this)),
+                .filter(Utils.notUndefined),
               n - 1,
             ).flatMap((ex) => missing.map((m) => [m, ...ex]));
           } else {
@@ -173,7 +173,7 @@ export class PatternMatches {
                   .map((row) =>
                     this.specializeRowByCtor(ctor.name, ctor.arity, row),
                   )
-                  .filter(Utils.notUndefined.bind(this)),
+                  .filter(Utils.notUndefined),
                 ctor.arity + n - 1,
               ).map((patterns) =>
                 recoverCtor(alts, ctor.name, ctor.arity, patterns),
@@ -234,7 +234,7 @@ export class PatternMatches {
             return this.isUseful(
               matrix
                 .map((row) => this.specializeRowByCtor(name, args.length, row))
-                .filter(Utils.notUndefined.bind(this)),
+                .filter(Utils.notUndefined),
               [...args, ...patterns],
             );
           }
@@ -246,7 +246,7 @@ export class PatternMatches {
               return this.isUseful(
                 matrix
                   .map(this.specializeRowByAnything.bind(this))
-                  .filter(Utils.notUndefined.bind(this)),
+                  .filter(Utils.notUndefined),
                 patterns,
               );
             } else {
@@ -256,7 +256,7 @@ export class PatternMatches {
                     .map((row) =>
                       this.specializeRowByCtor(alt.name, alt.arity, row),
                     )
-                    .filter(Utils.notUndefined.bind(this)),
+                    .filter(Utils.notUndefined),
                   [...replicate(Anything, alt.arity), ...patterns],
                 );
               });
@@ -268,7 +268,7 @@ export class PatternMatches {
             return this.isUseful(
               matrix
                 .map((row) => this.specializeRowByLiteral(literal, row))
-                .filter(Utils.notUndefined.bind(this)),
+                .filter(Utils.notUndefined),
               patterns,
             );
           }

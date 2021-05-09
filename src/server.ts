@@ -37,6 +37,7 @@ import { ElmLsDiagnostics } from "./providers/diagnostics/elmLsDiagnostics";
 import { FileEventsHandler } from "./providers/handlers/fileEventsHandler";
 import { Settings } from "./util/settings";
 import { TextDocumentEvents } from "./util/textDocumentEvents";
+import { FindTestsProvider } from "./providers/findTestsProvider";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -190,6 +191,8 @@ export class Server implements ILanguageServer {
     new RenameProvider();
     new FileEventsHandler();
     new LinkedEditingRangesProvider();
+
+    new FindTestsProvider();
   }
 
   private getElmJsonFolder(uri: string): URI {

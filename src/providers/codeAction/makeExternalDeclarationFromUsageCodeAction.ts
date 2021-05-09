@@ -26,7 +26,7 @@ CodeActionProvider.registerCodeAction({
           );
         }
       })
-      .filter(Utils.notUndefinedOrNull.bind(CodeActionProvider));
+      .filter(Utils.notUndefinedOrNull);
   },
   getFixAllCodeAction: (params: ICodeActionParams): ICodeAction | undefined => {
     return CodeActionProvider.getFixAllCodeAction(
@@ -107,7 +107,7 @@ function getEdits(
           }
         }
       })
-      .filter(Utils.notUndefinedOrNull.bind(getEdits));
+      .filter(Utils.notUndefinedOrNull);
   }
 
   return [];

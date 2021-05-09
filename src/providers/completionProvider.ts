@@ -1281,7 +1281,7 @@ export class CompletionProvider {
               moduleName,
             );
           })
-          .filter(Utils.notUndefined.bind(this)),
+          .filter(Utils.notUndefined),
       );
 
       alreadyImported = true;
