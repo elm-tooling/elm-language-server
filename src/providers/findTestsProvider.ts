@@ -114,12 +114,6 @@ export function findTestFunctionCall(
   ) {
     return call;
   }
-  // console.debug(
-  //   "ignore non-test type",
-  //   findExpr("ValueExpr", call.target)?.name,
-  //   t,
-  // );
-  return undefined;
 }
 
 function isTestSuite(
@@ -174,7 +168,6 @@ export function findTestSuite(
     line: call.startPosition.row,
     character: call.startPosition.column,
   };
-  // TODO relative to workspace?
   const file = sourceFile.uri.toString();
   const label = labelParts?.length === 1 ? labelParts[0] : undefined;
   if (label && isTestSuite(call, sourceFile, typeChecker)) {
