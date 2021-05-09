@@ -177,18 +177,7 @@ type ExpressionNodeTypes = {
   LetInExpr: ELetInExpr;
 };
 
-type TypeExpressionNodeTypes = {
-  value_expr: EValueExpr;
-  string_constant_expr: EStringConstant;
-  list_expr: EListExpr;
-  function_call_expr: EFunctionCallExpr;
-  let_in_expr: ELetInExpr;
-};
-
-const typeByNodeType: Map<
-  keyof ExpressionNodeTypes,
-  keyof TypeExpressionNodeTypes
-> = new Map([
+const typeByNodeType: Map<keyof ExpressionNodeTypes, string> = new Map([
   ["ValueExpr", "value_expr"],
   ["StringConstant", "string_constant_expr"],
   ["ListExpr", "list_expr"],
