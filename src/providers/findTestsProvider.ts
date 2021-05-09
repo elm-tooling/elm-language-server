@@ -95,21 +95,15 @@ export function findTestFunctionCall(
     return undefined;
   }
   const t: Type = typeChecker.findType(call);
-  // TODO why are there two cases here?
-  if (t.nodeType === "Function") {
-    if (
-      t.return.nodeType === "Union" &&
-      t.return.module === "Test.Internal" &&
-      t.return.name === "Test"
-    ) {
-      return call;
-    }
+
+  const isTest = (t: Type): boolean =>
+    t.nodeType === "Union" && t.module === "Test.Internal" && t.name === "Test";
+
+  if (isTest(t)) {
+    return call;
   }
-  if (
-    t.nodeType === "Union" &&
-    t.module === "Test.Internal" &&
-    t.name === "Test"
-  ) {
+  if (t.nodeType === "Function" && isTest(t.return)) {
+    // TODO do we need this case?
     return call;
   }
 }
