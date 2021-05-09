@@ -26,10 +26,6 @@ import { Utils } from "../util/utils";
 
 export class FindTestsProvider {
   constructor() {
-    this.register();
-  }
-
-  private register(): void {
     const connection = container.resolve<Connection>("Connection");
     connection.onRequest(FindTestsRequest, (params: IFindTestsParams) => {
       connection.console.info(
