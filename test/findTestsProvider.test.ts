@@ -2,7 +2,8 @@ import { getSourceFiles } from "./utils/sourceParser";
 import { SourceTreeParser, testUri } from "./utils/sourceTreeParser";
 import { URI } from "vscode-uri";
 import {
-  findAllTestSuites, stringLiteralToLabel,
+  findAllTestSuites,
+  stringLiteralToLabel,
 } from "../src/providers/findTestsProvider";
 import { TestSuite } from "../src/protocol";
 
@@ -92,9 +93,18 @@ describe("FindTestsProvider", () => {
     const sources = getSourceFiles(basicsSources + sourceTestModule + source);
     const program = await treeParser.getProgram(sources);
 
-    const suites = findAllTestSuites(program)
+    const suites = findAllTestSuites(program);
     expect(suites).toEqual(expected);
   }
+
+  const moduleSuite = (tests: TestSuite[]): TestSuite => {
+    return {
+      label: "MyModule",
+      file: testModuleUri,
+      position: { line: 0, character: 0 },
+      tests,
+    };
+  };
 
   test("empty", async () => {
     const source = `
@@ -109,12 +119,12 @@ topSuite =
 `;
 
     await testFindTests(source, [
-      {
+      moduleSuite([{
         label: "top suite",
         file: testModuleUri,
         position: { line: 6, character: 4 },
         tests: [],
-      },
+      }]),
     ]);
   });
 
@@ -137,7 +147,7 @@ topSuite =
 `;
 
     await testFindTests(source, [
-      {
+      moduleSuite([{
         label: "top suite",
         file: testModuleUri,
         position: { line: 7, character: 4 },
@@ -160,7 +170,7 @@ topSuite =
             ],
           },
         ],
-      },
+      }]),
     ]);
   });
 
@@ -177,12 +187,12 @@ topSuite = describe "top suite" []
 `;
 
     await testFindTests(source, [
-      {
+      moduleSuite([{
         label: "top suite",
         file: testModuleUri,
         position: { line: 6, character: 11 },
         tests: [],
-      },
+      }]),
     ]);
   });
 
@@ -207,12 +217,12 @@ topSuite =
 `;
 
     await testFindTests(source, [
-      {
+      moduleSuite([{
         label: "top suite",
         file: testModuleUri,
         position: { line: 14, character: 4 },
         tests: [],
-      },
+      }]),
     ]);
   });
 
@@ -235,7 +245,7 @@ topSuite =
 `;
 
     await testFindTests(source, [
-      {
+      moduleSuite([{
         label: "top suite",
         file: testModuleUri,
         position: { line: 6, character: 4 },
@@ -247,7 +257,7 @@ topSuite =
             tests: [],
           },
         ],
-      },
+      }]),
     ]);
   });
 
@@ -262,12 +272,12 @@ topSuite = Test.describe "top suite" []
 `;
 
     await testFindTests(source, [
-      {
+      moduleSuite([{
         label: "top suite",
         file: testModuleUri,
         position: { line: 4, character: 11 },
         tests: [],
-      },
+      }]),
     ]);
   });
 
@@ -282,12 +292,12 @@ topSuite = T.describe "top suite" []
 `;
 
     await testFindTests(source, [
-      {
+      moduleSuite([{
         label: "top suite",
         file: testModuleUri,
         position: { line: 4, character: 11 },
         tests: [],
-      },
+      }]),
     ]);
   });
 
@@ -301,7 +311,7 @@ import Test exposing (..)
 topSuite = describe ("top suite" ++ "13") []
 `;
 
-    await testFindTests(source, []);
+    await testFindTests(source, [moduleSuite([])]);
   });
 
   test("fuzz", async () => {
@@ -317,14 +327,13 @@ top = fuzz int "top fuzz" <| \_ -> Expect.equal True True
 `;
 
     await testFindTests(source, [
-      {
+      moduleSuite([{
         label: "top fuzz",
         file: testModuleUri,
         position: { line: 6, character: 6 },
-      },
+      }]),
     ]);
   });
-
 
   test("multiline label", async () => {
     const source = `
@@ -341,26 +350,31 @@ lines
 `;
 
     await testFindTests(source, [
-      {
+      moduleSuite([{
         label: 'top suite\nover\n"multiple"\nlines\n',
         file: testModuleUri,
         position: { line: 4, character: 11 },
-        tests: []
-      },
+        tests: [],
+      }]),
     ]);
   });
 });
 
 describe("string literal to label", () => {
   test("simple", () => {
-    expect(stringLiteralToLabel('"a simple string"')).toEqual("a simple string")
-  })
+    expect(stringLiteralToLabel('"a simple string"')).toEqual(
+      "a simple string",
+    );
+  });
   test("escaped", () => {
-    expect(stringLiteralToLabel('"a simple \\\\ \\n string"')).toEqual("a simple \\ \n string")
-  })
+    expect(stringLiteralToLabel('"a simple \\\\ \\n string"')).toEqual(
+      "a simple \\ \n string",
+    );
+  });
 
   test("multiline", () => {
-    expect(stringLiteralToLabel('"""a multi\nline\nstring"""')).toEqual("a multi\nline\nstring")
-  })
-
-})
+    expect(stringLiteralToLabel('"""a multi\nline\nstring"""')).toEqual(
+      "a multi\nline\nstring",
+    );
+  });
+});
