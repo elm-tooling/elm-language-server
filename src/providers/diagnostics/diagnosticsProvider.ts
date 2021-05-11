@@ -490,8 +490,6 @@ export class DiagnosticsProvider {
     elmMakeDiagnostics.forEach((diagnostics, diagnosticsUri) => {
       this.updateDiagnostics(diagnosticsUri, DiagnosticKind.Syntactic, []);
       this.updateDiagnostics(diagnosticsUri, DiagnosticKind.Semantic, []);
-      this.connection.console.info('elm make url:' + diagnosticsUri);
-      this.connection.console.info('elm make diagnostics:' + JSON.stringify(diagnostics));
       this.updateDiagnostics(
         diagnosticsUri,
         DiagnosticKind.ElmMake,
@@ -516,8 +514,6 @@ export class DiagnosticsProvider {
     this.resetDiagnostics(elmReviewDiagnostics, DiagnosticKind.ElmReview);
 
     elmReviewDiagnostics.forEach((diagnostics, diagnosticsUri) => {
-      this.connection.console.info('elm review uri:' + diagnosticsUri);
-      this.connection.console.info('elm review value:' + JSON.stringify(diagnostics));
       this.updateDiagnostics(
         diagnosticsUri,
         DiagnosticKind.ElmReview,
