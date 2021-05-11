@@ -8,6 +8,8 @@ import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
 import { IDiagnostic } from "./diagnosticsProvider";
 import execa = require("execa");
+import { existsSync } from "fs";
+import * as path from "path";
 
 interface IElmReviewError {
   type: "review-errors";
@@ -71,18 +73,22 @@ export class ElmReviewDiagnostics {
     workspaceRootPath: string,
   ): Promise<Map<string, IDiagnostic[]>> {
     const settings = await this.settings.getClientSettings();
+    const fileErrors = new Map<string, IDiagnostic[]>();
 
-    const args = ["--report", "json"];
+    if (
+      settings.disableElmReviewDiagnostics ||
+      !existsSync(path.join(workspaceRootPath, "review", "src", "ReviewConfig.elm"))
+    ) {
+      return fileErrors;
+    }
 
-    const makeCommand: string = settings.elmPath;
     const elmReviewCommand: string = settings.elmReviewPath;
     const options = {
-      cmdArguments: args,
+      cmdArguments: ["--report", "json"],
       notFoundText:
         "'elm-review' is not available. Install elm-review via 'npm install -g elm-review'.",
     };
 
-    const fileErrors = new Map<string, IDiagnostic[]>();
     try {
       // Do nothing on success, but return that there were no errors
       utils.execCmdSync(
@@ -100,9 +106,7 @@ export class ElmReviewDiagnostics {
         const execaError = error as execa.ExecaReturnValue<string>;
         let errorObject: unknown;
         try {
-          this.connection.console.info(execaError.stdout);
           errorObject = JSON.parse(execaError.stdout);
-          this.connection.console.info(JSON.stringify(errorObject));
         } catch (error) {
           this.connection.console.warn(
             "Received an invalid json, skipping error.",

@@ -11,6 +11,7 @@ export interface IClientSettings {
   disableElmLSDiagnostics: boolean;
   skipInstallPackageConfirmation: boolean;
   onlyUpdateDiagnosticsOnSave: boolean;
+  disableElmReviewDiagnostics: boolean;
 }
 
 export interface IExtendedCapabilites {
@@ -30,6 +31,7 @@ export class Settings {
     disableElmLSDiagnostics: false,
     skipInstallPackageConfirmation: false,
     onlyUpdateDiagnosticsOnSave: false,
+    disableElmReviewDiagnostics: false,
   };
   private connection: Connection;
 
