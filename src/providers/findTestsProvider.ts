@@ -60,21 +60,40 @@ export function findAllTestSuites(program: IProgram): TestSuite[] {
   const typeChecker = program.getTypeChecker();
   return Array.from(program.getForest(true).treeMap.values())
     .filter((sourceFile) => sourceFile.isTestFile)
-    .flatMap((sourceFile) => {
-      return TreeUtils.findAllTopLevelFunctionDeclarations(
+    .map((sourceFile) => {
+      const topSuites = TreeUtils.findAllTopLevelFunctionDeclarations(
         sourceFile.tree,
-      )?.map((top) => {
-        return (
-          top &&
-          findTestSuite(
-            findTestFunctionCall(top, typeChecker),
-            sourceFile,
-            typeChecker,
-          )
-        );
-      });
+      )
+        ?.map((top) => {
+          return (
+            top &&
+            findTestSuite(
+              findTestFunctionCall(top, typeChecker),
+              sourceFile,
+              typeChecker,
+            )
+          );
+        })
+        .filter(Utils.notUndefined);
+      return topSuites ? rootSuite(sourceFile, topSuites) : undefined;
     })
     .filter(Utils.notUndefined);
+}
+
+function rootSuite(
+  sourceFile: ISourceFile,
+  topSuites: TestSuite[],
+): TestSuite | undefined {
+  const file = sourceFile.uri.toString();
+  const label = sourceFile.moduleName;
+  return label
+    ? <TestSuite>{
+        label,
+        tests: topSuites,
+        file,
+        position: { line: 0, character: 0 },
+      }
+    : undefined;
 }
 
 // export for testing
