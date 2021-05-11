@@ -106,7 +106,13 @@ describe("FindTestsProvider", () => {
     };
   };
 
-  test("empty", async () => {
+  const aTest = (line: number, character: number): TestSuite => ({
+    label: "a test",
+    file: testModuleUri,
+    position: { line, character },
+  });
+
+  test("simple", async () => {
     const source = `
 --@ tests/MyModule.elm
 module MyModule exposing (..)
@@ -115,7 +121,7 @@ import Test exposing (..)
 
 topSuite : Test
 topSuite =
-    describe "top suite" []
+    describe "top suite" [ test "a test" <| \_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, [
@@ -124,7 +130,7 @@ topSuite =
           label: "top suite",
           file: testModuleUri,
           position: { line: 6, character: 4 },
-          tests: [],
+          tests: [aTest(6, 27)],
         },
       ]),
     ]);
@@ -187,7 +193,7 @@ import Test exposing (..)
 
 someThingElse = True
 
-topSuite = describe "top suite" []
+topSuite = describe "top suite" [ test "a test" <| \_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, [
@@ -196,7 +202,7 @@ topSuite = describe "top suite" []
           label: "top suite",
           file: testModuleUri,
           position: { line: 6, character: 11 },
-          tests: [],
+          tests: [aTest(6, 34)],
         },
       ]),
     ]);
@@ -219,7 +225,7 @@ topSuite =
         foo =
             doit bar
     in
-    describe "top suite" []
+    describe "top suite" [ test "a test" <| \_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, [
@@ -228,7 +234,7 @@ topSuite =
           label: "top suite",
           file: testModuleUri,
           position: { line: 14, character: 4 },
-          tests: [],
+          tests: [aTest(14, 27)],
         },
       ]),
     ]);
@@ -248,7 +254,7 @@ topSuite =
             a =
                 doit 13
           in
-          describe "deeper suite" []
+          describe "deeper suite" [ test "a test" <| \_ -> Expect.equal False False ]
         ]
 `;
 
@@ -263,7 +269,7 @@ topSuite =
               label: "deeper suite",
               file: testModuleUri,
               position: { line: 11, character: 10 },
-              tests: [],
+              tests: [aTest(11, 36)],
             },
           ],
         },
@@ -278,7 +284,7 @@ module MyModule exposing (..)
 
 import Test
 
-topSuite = Test.describe "top suite" []
+topSuite = Test.describe "top suite" [ Test.test "a test" <| \_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, [
@@ -287,7 +293,7 @@ topSuite = Test.describe "top suite" []
           label: "top suite",
           file: testModuleUri,
           position: { line: 4, character: 11 },
-          tests: [],
+          tests: [aTest(4, 39)],
         },
       ]),
     ]);
@@ -300,7 +306,7 @@ module MyModule exposing (..)
 
 import Test as T
 
-topSuite = T.describe "top suite" []
+topSuite = T.describe "top suite" [ T.test "a test" <| \_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, [
@@ -309,7 +315,7 @@ topSuite = T.describe "top suite" []
           label: "top suite",
           file: testModuleUri,
           position: { line: 4, character: 11 },
-          tests: [],
+          tests: [aTest(4, 36)],
         },
       ]),
     ]);
@@ -322,7 +328,7 @@ module MyModule exposing (..)
 
 import Test exposing (..)
 
-topSuite = describe ("top suite" ++ "13") []
+topSuite = describe ("top suite" ++ "13") [ test "a test" <| \_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, []);
@@ -362,7 +368,7 @@ topSuite = describe """top suite
 over
 "multiple"
 lines
-""" []
+""" [ test "a test" <| \_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, [
@@ -371,10 +377,28 @@ lines
           label: 'top suite\nover\n"multiple"\nlines\n',
           file: testModuleUri,
           position: { line: 4, character: 11 },
-          tests: [],
+          tests: [aTest(8, 6)],
         },
       ]),
     ]);
+  });
+
+  test("nested empty suites", async () => {
+    const source = `
+--@ tests/MyModule.elm
+module MyModule exposing (..)
+
+import Expect
+import Test exposing (..)
+
+topSuite : Test
+topSuite =
+    describe "top suite"
+    [ describe "nested" []
+    ]
+`;
+
+    await testFindTests(source, []);
   });
 });
 
