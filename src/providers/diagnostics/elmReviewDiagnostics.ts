@@ -7,6 +7,7 @@ import * as utils from "../../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
 import { IDiagnostic } from "./diagnosticsProvider";
+import { Range } from "vscode-languageserver-textdocument";
 import execa = require("execa");
 import { existsSync } from "fs";
 import * as path from "path";
@@ -26,22 +27,34 @@ interface IError {
   ruleLink: string;
   message: string;
   details: string[];
-  region: {
-    start: IPosition;
-    end: IPosition;
-  };
+  region: IRegion;
   fix: {
-    range: {
-      start: IPosition;
-      end: IPosition;
-    };
+    range: IRegion;
     string: string;
   }[];
+}
+
+interface IRegion {
+  start: IPosition;
+  end: IPosition;
 }
 
 interface IPosition {
   line: number;
   column: number;
+}
+
+function toLsRange({ start, end }: IRegion): Range {
+  return {
+    start: {
+      character: start.column - 1,
+      line: start.line - 1,
+    },
+    end: {
+      character: end.column - 1,
+      line: end.line - 1,
+    },
+  };
 }
 
 export class ElmReviewDiagnostics {
@@ -120,38 +133,31 @@ export class ElmReviewDiagnostics {
         ) {
           const reviewError = errorObject;
           reviewError.errors.forEach((fileError: IFileError) => {
+            const uri = Utils.joinPath(
+              URI.parse(workspaceRootPath),
+              fileError.path,
+            ).toString();
+
             const errors: IDiagnostic[] = fileError.errors.map(
               (error: IError) => ({
                 message: error.message,
                 source: "elm-review",
-                range: {
-                  start: {
-                    character: error.region.start.column - 1,
-                    line: error.region.start.line - 1,
-                  },
-                  end: {
-                    character: error.region.end.column - 1,
-                    line: error.region.end.line - 1,
-                  },
-                },
+                range: toLsRange(error.region),
                 severity: DiagnosticSeverity.Warning,
-                data: {
-                  uri: Utils.joinPath(
-                    URI.parse(workspaceRootPath),
-                    fileError.path,
-                  ).toString(),
-                  code: "",
-                },
+                data: error.fix
+                  ? {
+                      uri,
+                      code: "elm_review",
+                      fixes: error.fix.map((fix) => ({
+                        string: fix.string,
+                        range: toLsRange(fix.range),
+                      })),
+                    }
+                  : { uri, code: "" },
               }),
             );
 
-            fileErrors.set(
-              Utils.joinPath(
-                URI.parse(workspaceRootPath),
-                fileError.path,
-              ).toString(),
-              errors,
-            );
+            fileErrors.set(uri, errors);
           });
         }
         return fileErrors;

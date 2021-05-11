@@ -3,6 +3,7 @@ import {
   CancellationToken,
   Connection,
   Diagnostic as LspDiagnostic,
+  Range,
   DiagnosticSeverity,
   FileChangeType,
 } from "vscode-languageserver";
@@ -46,6 +47,10 @@ export interface IDiagnostic extends Omit<LspDiagnostic, "code"> {
   data: {
     uri: string;
     code: string;
+    fixes?: {
+      range: Range;
+      string: string;
+    }[]
   };
 }
 
