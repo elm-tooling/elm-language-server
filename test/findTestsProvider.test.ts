@@ -39,7 +39,7 @@ type String = String
 
 append : String -> String -> String
 append =
-  Elm.Kernel.String.append 
+  Elm.Kernel.String.append
 `;
 
 const sourceTestModule = `
@@ -119,12 +119,14 @@ topSuite =
 `;
 
     await testFindTests(source, [
-      moduleSuite([{
-        label: "top suite",
-        file: testModuleUri,
-        position: { line: 6, character: 4 },
-        tests: [],
-      }]),
+      moduleSuite([
+        {
+          label: "top suite",
+          file: testModuleUri,
+          position: { line: 6, character: 4 },
+          tests: [],
+        },
+      ]),
     ]);
   });
 
@@ -138,7 +140,7 @@ import Test exposing (..)
 
 topSuite : Test
 topSuite =
-    describe "top suite" 
+    describe "top suite"
     [ test "first" <| \_ -> Expect.equal True True
     , describe "nested"
         [ test "second" <| \_ -> Expect.equal False False
@@ -147,30 +149,32 @@ topSuite =
 `;
 
     await testFindTests(source, [
-      moduleSuite([{
-        label: "top suite",
-        file: testModuleUri,
-        position: { line: 7, character: 4 },
-        tests: [
-          {
-            label: "first",
-            file: testModuleUri,
-            position: { line: 8, character: 6 },
-          },
-          {
-            label: "nested",
-            file: testModuleUri,
-            position: { line: 9, character: 6 },
-            tests: [
-              {
-                label: "second",
-                file: testModuleUri,
-                position: { line: 10, character: 10 },
-              },
-            ],
-          },
-        ],
-      }]),
+      moduleSuite([
+        {
+          label: "top suite",
+          file: testModuleUri,
+          position: { line: 7, character: 4 },
+          tests: [
+            {
+              label: "first",
+              file: testModuleUri,
+              position: { line: 8, character: 6 },
+            },
+            {
+              label: "nested",
+              file: testModuleUri,
+              position: { line: 9, character: 6 },
+              tests: [
+                {
+                  label: "second",
+                  file: testModuleUri,
+                  position: { line: 10, character: 10 },
+                },
+              ],
+            },
+          ],
+        },
+      ]),
     ]);
   });
 
@@ -187,12 +191,14 @@ topSuite = describe "top suite" []
 `;
 
     await testFindTests(source, [
-      moduleSuite([{
-        label: "top suite",
-        file: testModuleUri,
-        position: { line: 6, character: 11 },
-        tests: [],
-      }]),
+      moduleSuite([
+        {
+          label: "top suite",
+          file: testModuleUri,
+          position: { line: 6, character: 11 },
+          tests: [],
+        },
+      ]),
     ]);
   });
 
@@ -213,16 +219,18 @@ topSuite =
         foo =
             doit bar
     in
-    describe "top suite" [] 
+    describe "top suite" []
 `;
 
     await testFindTests(source, [
-      moduleSuite([{
-        label: "top suite",
-        file: testModuleUri,
-        position: { line: 14, character: 4 },
-        tests: [],
-      }]),
+      moduleSuite([
+        {
+          label: "top suite",
+          file: testModuleUri,
+          position: { line: 14, character: 4 },
+          tests: [],
+        },
+      ]),
     ]);
   });
 
@@ -245,19 +253,21 @@ topSuite =
 `;
 
     await testFindTests(source, [
-      moduleSuite([{
-        label: "top suite",
-        file: testModuleUri,
-        position: { line: 6, character: 4 },
-        tests: [
-          {
-            label: "deeper suite",
-            file: testModuleUri,
-            position: { line: 11, character: 10 },
-            tests: [],
-          },
-        ],
-      }]),
+      moduleSuite([
+        {
+          label: "top suite",
+          file: testModuleUri,
+          position: { line: 6, character: 4 },
+          tests: [
+            {
+              label: "deeper suite",
+              file: testModuleUri,
+              position: { line: 11, character: 10 },
+              tests: [],
+            },
+          ],
+        },
+      ]),
     ]);
   });
 
@@ -272,12 +282,14 @@ topSuite = Test.describe "top suite" []
 `;
 
     await testFindTests(source, [
-      moduleSuite([{
-        label: "top suite",
-        file: testModuleUri,
-        position: { line: 4, character: 11 },
-        tests: [],
-      }]),
+      moduleSuite([
+        {
+          label: "top suite",
+          file: testModuleUri,
+          position: { line: 4, character: 11 },
+          tests: [],
+        },
+      ]),
     ]);
   });
 
@@ -286,18 +298,20 @@ topSuite = Test.describe "top suite" []
 --@ tests/MyModule.elm
 module MyModule exposing (..)
 
-import Test as T 
+import Test as T
 
 topSuite = T.describe "top suite" []
 `;
 
     await testFindTests(source, [
-      moduleSuite([{
-        label: "top suite",
-        file: testModuleUri,
-        position: { line: 4, character: 11 },
-        tests: [],
-      }]),
+      moduleSuite([
+        {
+          label: "top suite",
+          file: testModuleUri,
+          position: { line: 4, character: 11 },
+          tests: [],
+        },
+      ]),
     ]);
   });
 
@@ -311,12 +325,12 @@ import Test exposing (..)
 topSuite = describe ("top suite" ++ "13") []
 `;
 
-    await testFindTests(source, [moduleSuite([])]);
+    await testFindTests(source, []);
   });
 
   test("fuzz", async () => {
     const source = `
---@ tests/MyModule.elm 
+--@ tests/MyModule.elm
 module MyModule exposing (..)
 
 import Expect
@@ -327,17 +341,19 @@ top = fuzz int "top fuzz" <| \_ -> Expect.equal True True
 `;
 
     await testFindTests(source, [
-      moduleSuite([{
-        label: "top fuzz",
-        file: testModuleUri,
-        position: { line: 6, character: 6 },
-      }]),
+      moduleSuite([
+        {
+          label: "top fuzz",
+          file: testModuleUri,
+          position: { line: 6, character: 6 },
+        },
+      ]),
     ]);
   });
 
   test("multiline label", async () => {
     const source = `
---@ tests/MyModule.elm 
+--@ tests/MyModule.elm
 module MyModule exposing (..)
 
 import Test exposing (..)
@@ -350,12 +366,14 @@ lines
 `;
 
     await testFindTests(source, [
-      moduleSuite([{
-        label: 'top suite\nover\n"multiple"\nlines\n',
-        file: testModuleUri,
-        position: { line: 4, character: 11 },
-        tests: [],
-      }]),
+      moduleSuite([
+        {
+          label: 'top suite\nover\n"multiple"\nlines\n',
+          file: testModuleUri,
+          position: { line: 4, character: 11 },
+          tests: [],
+        },
+      ]),
     ]);
   });
 });

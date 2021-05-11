@@ -77,7 +77,8 @@ export function findAllTestSuites(program: IProgram): TestSuite[] {
         .filter(Utils.notUndefined);
       return topSuites ? rootSuite(sourceFile, topSuites) : undefined;
     })
-    .filter(Utils.notUndefined);
+    .filter(Utils.notUndefined)
+    .filter((a) => a.tests && a.tests?.length > 0);
 }
 
 function rootSuite(
