@@ -86,7 +86,7 @@ function rootSuite(
 ): TestSuite | undefined {
   const file = sourceFile.uri.toString();
   const label = sourceFile.moduleName;
-  return label
+  return label && topSuites.length > 0
     ? <TestSuite>{
         label,
         tests: topSuites,
@@ -183,7 +183,9 @@ export function findTestSuite(
       ?.map((e) => findTestFunctionCall(e, typeChecker))
       .map((call) => findTestSuite(call, sourceFile, typeChecker))
       .filter(Utils.notUndefined);
-    return tests && <TestSuite>{ label, tests, file, position };
+    return tests && tests.length > 0
+      ? <TestSuite>{ label, tests, file, position }
+      : undefined;
   }
   return label ? <TestSuite>{ label, file, position } : undefined;
 }
