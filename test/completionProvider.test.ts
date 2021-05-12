@@ -152,7 +152,7 @@ describe("CompletionProvider", () => {
   it("Should complete module keyword", async () => {
     const sourceModule = `
 --@ Test.elm
-{-caret-} 
+{-caret-}
   ""
     `;
     await testCompletions(sourceModule, ["module"], "partialMatch");
@@ -171,7 +171,7 @@ m{-caret-}
 module Test exposing (..)
 
 {-caret-}
-    
+
     `;
     await testCompletions(sourceImport, ["import"], "partialMatch");
 
@@ -190,7 +190,7 @@ i{-caret-}
 --@ Test.elm
 module Test exposing (..)
 
-type alias Model = 
+type alias Model =
   { prop1: String
   , prop2: Int
   }
@@ -208,12 +208,12 @@ view model =
 --@ Test.elm
 module Test exposing (..)
 
-type alias Model = 
+type alias Model =
   { prop1: Data
   , prop2: Int
   }
 
-type alias Data = 
+type alias Data =
   { item1: String
   , item2: Int
   }
@@ -231,7 +231,7 @@ view model =
 --@ Test.elm
 module Test exposing (..)
 
-type alias Model = 
+type alias Model =
   { prop1: String
   , prop2: Int
   }
@@ -247,7 +247,7 @@ view =
 --@ Test.elm
 module Test exposing (..)
 
-type alias Model = 
+type alias Model =
   { prop1: String
   , prop2: Int
   }
@@ -256,7 +256,7 @@ view : Model
 view =
   let
     testFunc : Model
-    testFunc = 
+    testFunc =
       { p{-caret-} }
 
   in
@@ -270,7 +270,7 @@ view =
 --@ Test.elm
 module Test exposing (..)
 
-type alias Model = 
+type alias Model =
   { prop1: String
   , prop2: Int
   }
@@ -279,7 +279,7 @@ view : Model -> Model
 view model =
   let
     var : String
-    var = 
+    var =
       model.{-caret-}
         |> String.toFloat
         |> String.fromFloat
@@ -299,7 +299,7 @@ view model =
 --@ Test.elm
 module Test exposing (..)
 
-type alias Model = 
+type alias Model =
   { prop1: String
   , prop2: Int
   }
@@ -307,7 +307,7 @@ type alias Model =
 view : Model -> Model
 view model =
   let
-    var = 
+    var =
       model.p{-caret-}
 
   in
@@ -337,7 +337,7 @@ test param =
 
   it("Function parameter should have completions in a nested expression", async () => {
     const source = `
---@ Test.elm    
+--@ Test.elm
 module Test exposing (..)
 
 test : Model -> String
@@ -353,7 +353,7 @@ test param =
 
   it("Let values should have completions", async () => {
     const source = `
---@ Test.elm    
+--@ Test.elm
 module Test exposing (..)
 
 test : Model -> String
@@ -370,7 +370,7 @@ test param =
     await testCompletions(source, ["val"]);
 
     const source2 = `
---@ Test.elm    
+--@ Test.elm
 module Test exposing (..)
 
 test : Model -> String
@@ -444,7 +444,7 @@ test param =
 --@ OtherModule.elm
 module OtherModule exposing (..)
 
-main = 
+main =
   ""
 `;
     const source = `
@@ -535,12 +535,12 @@ import OtherModule exposing (testFunction, T{-caret-})
 module Test exposing ({-caret-})
 
 testFunc : String
-testFunc = 
+testFunc =
   ""
 
 type Msg = Msg1 | Msg2
 
-type alias TestType = 
+type alias TestType =
   { prop : String }
 `;
 
@@ -555,12 +555,12 @@ type alias TestType =
 module Test exposing (t{-caret-})
 
 testFunc : String
-testFunc = 
+testFunc =
   ""
 
 type Msg = Msg1 | Msg2
 
-type alias TestType = 
+type alias TestType =
   { prop : String }
 `;
 
@@ -577,12 +577,12 @@ type alias TestType =
 module Test exposing (testFunc, Msg(..), {-caret-})
 
 testFunc : String
-testFunc = 
+testFunc =
   ""
 
 type Msg = Msg1 | Msg2
 
-type alias TestType = 
+type alias TestType =
   { prop : String }
 `;
 
@@ -598,7 +598,7 @@ type alias TestType =
 --@ Test.elm
 module Test exposing (..)
 
-{-caret-} 
+{-caret-}
 testFunc =
   ""
     `;
@@ -620,7 +620,7 @@ module Test exposing (..)
 
 count : Int
 {-caret-}
-    
+
     `;
     await testCompletions(sourceFunc, ["count"], "exactMatch");
 
@@ -629,7 +629,7 @@ count : Int
 module Test exposing (..)
 
 testFunc : String
-t{-caret-} =  
+t{-caret-} =
   ""
 `;
     await testCompletions(sourceFunc1, ["testFunc"], "exactMatch");
@@ -643,7 +643,7 @@ module Test exposing (..)
 type Msg = Msg1 String
 
 testFunc : Msg -> String
-testFunc msg = 
+testFunc msg =
   case msg of
     Msg1 str ->
       s{-caret-}
@@ -667,7 +667,7 @@ type alias TestType = {prop : String}
 module Test exposing (..)
 
 testFunc : String
-testFunc = 
+testFunc =
   {-caret-}
 `;
 
@@ -704,7 +704,7 @@ type Msg = Msg1 | Msg2
 module Test exposing (..)
 
 testFunc : String
-testFunc = 
+testFunc =
   {-caret-}
 `;
 
@@ -748,15 +748,15 @@ testFunc =
 module Data.User exposing (..)
 
 func : String
-func = 
+func =
   ""
-  
+
 --@ Test.elm
 module Test exposing (..)
 
 import Data.User
 
-test = 
+test =
   {-caret-}
 `;
 
@@ -772,17 +772,17 @@ test =
 module Data.User exposing (..)
 
 func : String
-func = 
+func =
   ""
 
 type alias TestType = { prop : String }
-  
+
 --@ Test.elm
 module Test exposing (..)
 
 import Data.User
 
-test = 
+test =
   Da{-caret-}
 `;
 
@@ -806,7 +806,7 @@ module Test exposing (..)
 
 import Page
 
-defaultPage = 
+defaultPage =
   Page.{-caret-}
 
 func = ""
@@ -830,7 +830,7 @@ module Test exposing (..)
 
 import Page
 
-defaultPage = 
+defaultPage =
   Page.{-caret-}
     `;
 
@@ -1211,7 +1211,7 @@ module Test exposing (..)
 
 import Other
 
-type alias Model = 
+type alias Model =
 { prop1: String
 , prop2: Int
 }
@@ -1309,7 +1309,7 @@ encodeScope scope =
 --@ Test.elm
 module Test exposing (..)
 
-type alias Model = 
+type alias Model =
   { prop1: String
   , prop2: Int
   }
@@ -1349,7 +1349,7 @@ func (State state) =
 --@ Test.elm
 module Test exposing (..)
 
-type alias Model = 
+type alias Model =
   { prop1: String
   , prop2: Int
   }
@@ -1371,13 +1371,13 @@ func model =
 --@ Test.elm
 module Test exposing (..)
 
-type alias Model = 
+type alias Model =
   { prop1: Model2
   , prop2: Int
   }
 
-type alias Model2 = 
-  { field1: String 
+type alias Model2 =
+  { field1: String
   , field2: Int }
 
 type Maybe a = Just a | Nothing
@@ -1409,19 +1409,19 @@ func model =
     await testCompletions(source, ["prop1", "prop2"], "exactMatch");
   });
 
-  it("Test dependencies should be seperate from normal ones", async () => {
+  it("Test dependencies should not be found from normal ones", async () => {
     const source = `
---@ Test.elm
+    --@ Test.elm
 module Test exposing (..)
 
 test =
-    {-caret-}
+{-caret-}
 
 --@ tests/TestFile.elm
 module TestFile exposing (..)
 
 func =
-    ""
+""
 `;
 
     await testCompletions(
@@ -1429,7 +1429,9 @@ func =
       [{ name: "func", shouldNotExist: true }],
       "partialMatch",
     );
+  });
 
+  it("Test dependencies should find each other", async () => {
     const source2 = `
 --@ Test.elm
 module Test exposing (..)
@@ -1496,7 +1498,7 @@ func =
 module Test exposing (..)
 
 func model =
-    case model of 
+    case model of
       Just { details } ->
         d{-caret-}
 `;
