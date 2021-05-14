@@ -1,9 +1,10 @@
+import path from "path";
 import { URI } from "vscode-uri";
 import { ReferenceResult, ReferencesProvider } from "../../src/providers";
 import { IReferenceParams } from "../../src/providers/paramsExtensions";
 import { TreeUtils } from "../../src/util/treeUtils";
 import { getReferencesTestFromSource } from "../utils/sourceParser";
-import { baseUri, SourceTreeParser } from "../utils/sourceTreeParser";
+import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";
 
 class MockReferencesProvider extends ReferencesProvider {
   public handleReference(params: IReferenceParams): ReferenceResult {
@@ -28,14 +29,18 @@ export class ReferencesProviderTestBase {
       throw new Error("Getting references from source failed");
     }
 
-    const testUri = URI.file(baseUri + referenceTest.invokeFile).toString();
+    const testUri = URI.file(
+      path.join(srcUri, referenceTest.invokeFile),
+    ).toString();
 
     const program = await this.treeParser.getProgram(referenceTest.sources);
     const sourceFile = program.getForest().getByUri(testUri);
 
     if (!sourceFile) throw new Error("Getting tree failed");
 
-    const invokeUri = URI.file(baseUri + referenceTest.invokeFile).toString();
+    const invokeUri = URI.file(
+      path.join(srcUri, referenceTest.invokeFile),
+    ).toString();
 
     const references =
       this.referencesProvider.handleReference({
@@ -69,7 +74,9 @@ export class ReferencesProviderTestBase {
     expect(references.length).toEqual(referenceTest.references.length);
 
     referenceTest.references.forEach(({ referencePosition, referenceFile }) => {
-      const referenceUri = URI.file(baseUri + referenceFile).toString();
+      const referenceUri = URI.file(
+        path.join(srcUri, referenceFile),
+      ).toString();
 
       const rootNode = program.getSourceFile(referenceUri)!.tree.rootNode;
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(

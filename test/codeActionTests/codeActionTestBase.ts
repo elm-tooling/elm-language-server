@@ -18,11 +18,12 @@ import {
 import {
   SourceTreeParser,
   trimTrailingWhitespace,
-  baseUri,
   applyEditsToSource,
   stripCommentLines,
+  srcUri,
 } from "../utils/sourceTreeParser";
 import diffDefault from "jest-diff";
+import path from "path";
 
 function codeActionEquals(a: CodeAction, b: CodeAction): boolean {
   return a.title === b.title;
@@ -83,7 +84,7 @@ export async function testCodeAction(
     throw new Error("Getting sources failed");
   }
 
-  const testUri = URI.file(baseUri + "Test.elm").toString();
+  const testUri = URI.file(path.join(srcUri, "Test.elm")).toString();
 
   result.sources["Test.elm"] = stripCommentLines(result.sources["Test.elm"]);
 
@@ -145,7 +146,7 @@ export async function testCodeAction(
       .edit!.changes!;
 
     Object.entries(expectedSources).forEach(([uri, source]) => {
-      const edits = changesToApply[URI.file(baseUri + uri).toString()];
+      const edits = changesToApply[URI.file(srcUri + uri).toString()];
       if (edits) {
         expect(
           applyEditsToSource(stripCommentLines(result.sources[uri]), edits),

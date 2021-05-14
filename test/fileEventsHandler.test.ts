@@ -19,7 +19,7 @@ import { URI } from "vscode-uri";
 import { IProgram } from "../src/compiler/program";
 import { FileEventsHandler } from "../src/providers/handlers/fileEventsHandler";
 import { getSourceFiles } from "./utils/sourceParser";
-import { baseUri, SourceTreeParser } from "./utils/sourceTreeParser";
+import { SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
 
 describe("fileEventsHandler", () => {
   const treeParser = new SourceTreeParser();
@@ -93,8 +93,8 @@ describe("fileEventsHandler", () => {
     });
   }
 
-  function uri(uri: string, base = baseUri): string {
-    return URI.file(path.join(base, uri)).toString();
+  function uri(uri: string, src = srcUri): string {
+    return URI.file(path.join(src, uri)).toString();
   }
 
   it("handles file create event", async () => {

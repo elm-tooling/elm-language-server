@@ -1,9 +1,5 @@
-import {
-  TextEdit,
-  WorkspaceEdit,
-  Range,
-  Position,
-} from "vscode-languageserver";
+import path from "path";
+import { WorkspaceEdit, Range, Position } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { RenameProvider } from "../src/providers";
 import {
@@ -16,8 +12,8 @@ import {
 } from "./utils/sourceParser";
 import {
   applyEditsToSource,
-  baseUri,
   SourceTreeParser,
+  srcUri,
   stripCommentLines,
   trimTrailingWhitespace,
 } from "./utils/sourceTreeParser";
@@ -44,7 +40,7 @@ describe("renameProvider", () => {
   ): Promise<void> {
     await treeParser.init();
 
-    const testUri = URI.file(baseUri + "Test.elm").toString();
+    const testUri = URI.file(path.join(srcUri, "Test.elm")).toString();
     const result = getTargetPositionFromSource(source);
 
     if (!result) {
@@ -76,7 +72,7 @@ describe("renameProvider", () => {
   ): Promise<void> {
     await treeParser.init();
 
-    const testUri = URI.file(baseUri + "Test.elm").toString();
+    const testUri = URI.file(path.join(srcUri, "Test.elm")).toString();
     const result = getTargetPositionFromSource(trimTrailingWhitespace(source));
 
     if (!result) {
@@ -111,7 +107,8 @@ describe("renameProvider", () => {
       expect(
         applyEditsToSource(
           stripCommentLines(source),
-          renameEdit.changes![URI.file(baseUri + uri).toString()] ?? [],
+          renameEdit.changes![URI.file(path.join(srcUri, uri)).toString()] ??
+            [],
         ),
       ).toEqual(expectedSources[uri]);
     });
