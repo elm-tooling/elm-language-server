@@ -943,6 +943,27 @@ x =
 
       await testDiagnostics(source, "unused_pattern", []);
     });
+
+    it("unused {}", async () => {
+      const source = `
+module Foo exposing (foo)
+
+foo value =
+    case value of
+        {} ->
+            "test"
+			`;
+
+      await testDiagnostics(source, "unused_pattern", [
+        diagnosticWithRangeAndName(
+          {
+            start: { line: 5, character: 8 },
+            end: { line: 5, character: 10 },
+          },
+          "",
+        ),
+      ]);
+    });
   });
 
   describe("drop cons of item and list", () => {

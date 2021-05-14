@@ -32,7 +32,7 @@ func a = B
     await testBase.testReferences(source);
   });
 
-  xit(`type references in other files used with module prefix`, async () => {
+  it(`type references in other files used with module prefix`, async () => {
     const source = `
 --@ Module.elm
 module Module exposing (MyType(..))
@@ -43,7 +43,7 @@ type MyType = A | B
 --@ Bar.elm
 module Bar exposing (..)
 
-import Module 
+import Module
 
 bar : Module.MyType
              --X
@@ -84,7 +84,7 @@ module FooExtra exposing (..)
 import Module exposing (MyType(..))
 
 func : MyType -> String
-func a = 
+func a =
     case a of
         B ->
           ""
@@ -119,7 +119,7 @@ module FooExtra exposing (..)
 import Module as M
 
 func : MyType -> String
-func a = 
+func a =
     case a of
         M.B ->
           ""

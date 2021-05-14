@@ -17,7 +17,7 @@ type alias Model = {
 module Main exposing (..)
 
 import Model exposing (Model)
-     
+
 func : Model
         --^Model.elm
 `;
@@ -36,7 +36,7 @@ type alias Model = {
 module Main exposing (..)
 
 import Model exposing (Model)
-      
+
 func = Model.
         --^Model.elm
 `;
@@ -57,7 +57,7 @@ type alias Model = {
 module Main exposing (..)
 
 import Module.Model as Model exposing (Model)
-     
+
 func : Model
         --^Module/Model.elm
 `;
@@ -76,7 +76,7 @@ type alias Model = {
 module Main exposing (..)
 
 import Module.Model as Model exposing (Model)
-      
+
 func = Model.
         --^Module/Model.elm
 `;
@@ -104,7 +104,7 @@ type alias Model = {
 module Main exposing (..)
 
 import Module.Model
-     
+
 func = Module.Model.func
              --^Module/Model.elm
 `;
@@ -131,7 +131,7 @@ module Main exposing (..)
 
 import Module
 import Module.Model
-      
+
 func = Module.Model.func
       --^Module/Model.elm
 `;
@@ -152,12 +152,12 @@ type alias Model = {
 module Main exposing (..)
 
 import Module as Model
-     
-func = 
+
+func =
   let
     Model.
     --^Module.elm
-  
+
   in
   []
 `;

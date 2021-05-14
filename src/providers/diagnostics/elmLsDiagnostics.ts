@@ -675,16 +675,21 @@ export class ElmLsDiagnostics {
             });
           }
         } else if (references.length === 0) {
-          {
-            diagnostics.push({
-              range: this.getNodeRange(pattern),
-              message: `Unused pattern variable \`${pattern.text}\``,
-              severity: DiagnosticSeverity.Warning,
-              source: "ElmLS",
-              tags: [DiagnosticTag.Unnecessary],
-              data: { uri: tree.uri, code: "unused_pattern" },
-            });
-          }
+          diagnostics.push({
+            // Extend the range for cases of {}
+            range: this.getNodeRange(
+              pattern.type === "lower_pattern" &&
+                pattern.text === "" &&
+                pattern.parent?.parent
+                ? pattern.parent.parent
+                : pattern,
+            ),
+            message: `Unused pattern variable \`${pattern.text}\``,
+            severity: DiagnosticSeverity.Warning,
+            source: "ElmLS",
+            tags: [DiagnosticTag.Unnecessary],
+            data: { uri: tree.uri, code: "unused_pattern" },
+          });
         }
       });
 

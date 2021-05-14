@@ -182,11 +182,11 @@ User { data = "" }
     const source = `
 --@ main.elm
 
-type Page = 
+type Page =
     Home
    --X
 
-func = 
+func =
     Just Home
         --^
 `;
@@ -197,11 +197,11 @@ func =
     const source = `
 --@ main.elm
 
-type Page = 
+type Page =
     Home
    --X
 
-func var = 
+func var =
     var == Home
           --^
 `;

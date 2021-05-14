@@ -217,7 +217,7 @@ main = (\\_ -> { field = () }) 1
 type alias R = { field : () }
                  --X
 main : R -> ()
-main r = 
+main r =
   let
     nest = r.field
              --^
@@ -228,26 +228,26 @@ main r =
   });
 
   it(`test nested decl mapper`, async () => {
-    const source = `                                        
-type alias R = 
-  { field : () }                          
-    --X      
+    const source = `
+type alias R =
+  { field : () }
+    --X
 
-type Box a 
-  = Box a                                     
-                                                       
-map : (a -> b) -> Box a -> Box b                       
-map f (Box a) = 
-    Box (f a)                              
-                                                       
-main : Box R -> Box R                                  
-main box =                                             
-    let                                                
-        f r = 
-          { r | field = () }                       
-                --^                               
-    in                                                 
-    map f box                                          
+type Box a
+  = Box a
+
+map : (a -> b) -> Box a -> Box b
+map f (Box a) =
+    Box (f a)
+
+main : Box R -> Box R
+main box =
+    let
+        f r =
+          { r | field = () }
+                --^
+    in
+    map f box
 `;
     await testBase.testDefinition(source);
   });
@@ -262,9 +262,9 @@ main : R -> S -> ()
 main r s =
   let
     nest t = t.field
-               --^                               
+               --^
   in
-  first (nest r) (nest s)        
+  first (nest r) (nest s)
     `;
     await testBase.testDefinition(source);
   });
@@ -296,7 +296,7 @@ main { field } = field
 type alias R = { field : () }
                  --X
 main : R -> ()
-main r = 
+main r =
   case r of
       { field } -> field
                     --^
@@ -309,7 +309,7 @@ main r =
 type alias R = { field : () }
                  --X
 main : R -> ()
-main r = 
+main r =
   case r of
       { field } -> field
         --^
@@ -322,10 +322,10 @@ main r =
 type alias R = { field : () }
                  --X
 main : List R
-main = 
+main =
     [ { field = () }
-        --^                               
-    ]                           
+        --^
+    ]
 `;
     await testBase.testDefinition(source);
   });
@@ -335,10 +335,10 @@ main =
 type alias R = { field : () }
                  --X
 main : List R
-main = 
+main =
     [ { field = () }
     , { field = () }
-        --^                               
+        --^
     ]
 `;
     await testBase.testDefinition(source);
@@ -349,11 +349,11 @@ main =
 type alias R = { field : () }
                  --X
 main : List R
-main = 
+main =
     [ { field = () }
     , { field = () }
     , { field = () }
-        --^                               
+        --^
     ]
 `;
     await testBase.testDefinition(source);
@@ -372,8 +372,8 @@ foo : Outer r -> Outer r
 foo r = r
 main : Outer R
 main =
-    { r = Type (\\r -> { r | field = () }) } |> foo 
-                             --^                               
+    { r = Type (\\r -> { r | field = () }) } |> foo
+                             --^
 `;
     await testBase.testDefinition(source);
   });

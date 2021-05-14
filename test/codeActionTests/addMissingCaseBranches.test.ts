@@ -12,7 +12,7 @@ func a =
         1 ->
             ""
 
-        2 -> 
+        2 ->
             ""
 
 `;
@@ -26,7 +26,7 @@ func a =
         1 ->
             ""
 
-        2 -> 
+        2 ->
             ""
 
         _ ->
@@ -58,7 +58,7 @@ func a b =
             --^
                 Nothing ->
                     ""
-        
+
         _ ->
             ""
     `;
@@ -78,10 +78,10 @@ func a b =
             case b of
                 Nothing ->
                     ""
-                
+
                 Just _ ->
                     Debug.todo "branch 'Just _' not implemented"
-        
+
         _ ->
             ""
     `;

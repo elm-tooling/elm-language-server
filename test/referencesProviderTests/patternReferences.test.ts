@@ -7,7 +7,7 @@ describe("functionReferences", () => {
     const source = `
 --@ Module.elm
 module Module exposing (foo)
-                       
+
 foo =
     let
         ( first, second ) = func

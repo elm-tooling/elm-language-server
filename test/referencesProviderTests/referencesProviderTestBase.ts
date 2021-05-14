@@ -79,10 +79,15 @@ export class ReferencesProviderTestBase {
       ).toString();
 
       const rootNode = program.getSourceFile(referenceUri)!.tree.rootNode;
-      const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
+      let nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
         rootNode,
         referencePosition,
       );
+
+      nodeAtPosition =
+        nodeAtPosition?.parent?.type == "upper_case_qid"
+          ? nodeAtPosition.parent
+          : nodeAtPosition;
 
       const foundReference = references.find(
         (ref) =>

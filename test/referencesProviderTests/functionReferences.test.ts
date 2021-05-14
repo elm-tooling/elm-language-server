@@ -188,7 +188,7 @@ foo =
     let
         func = ""
        --^
-        
+
         bar = func
               --X
 
@@ -208,7 +208,7 @@ foo =
 --^
     { field : String }
 
-test = 
+test =
     { foo | field = "" }
      --X
 `;
@@ -222,7 +222,7 @@ foo =
 --^
     { field : String }
 
-test = 
+test =
     foo.field
    --X
 `;
