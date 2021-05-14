@@ -178,7 +178,7 @@ func a b c =
 --@ App.elm
 module App exposing (..)
 
-type Maybe a = Just a | Nothing 
+type Maybe a = Just a | Nothing
 
 plus : number -> number -> number
 plus a b = a + b
@@ -372,7 +372,7 @@ module Test exposing (..)
 
 func a b =
 --^
-  if a == b then 
+  if a == b then
     ([ a ], ())
   else
     ([ b, 3 ], ())
@@ -418,7 +418,7 @@ func a =
 --@ Test.elm
 module Test exposing (..)
 
-type alias Model = { 
+type alias Model = {
   field1 : number,
   field2 : number,
   field3 : number
@@ -469,7 +469,7 @@ func a =
         { d, e } ->
           case d of
             () ->
-              1 
+              1
             _ ->
               case e of
                 'a' -> 1
@@ -568,7 +568,7 @@ func =
   case foo of
     Just Nothing ->
       ""
-    
+
     _ ->
       ""
 

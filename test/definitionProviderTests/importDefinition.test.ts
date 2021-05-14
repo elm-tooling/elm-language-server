@@ -502,7 +502,7 @@ type Page2 = Home
 --@ main.elm
 import App exposing (Model(..))
 
-type alias Model = 
+type alias Model =
     App.Model
 
 func = Model {}
@@ -543,7 +543,7 @@ import App exposing (..)
 
 type alias Expression =
     App.Expression
-    
+
 func : Expression
 func = "" >> Expression
                --^App.elm
@@ -572,7 +572,7 @@ module App exposing (..)
 type alias FieldLens a b c d =
 --X
     { get : a -> b, set : c -> a -> d }
-                    
+
 `;
     await testBase.testDefinition(source);
   });
@@ -583,7 +583,7 @@ type alias FieldLens a b c d =
 import Platform exposing (Program)
 import App exposing (Program)
 
-foo : Program 
+foo : Program
       --^App.elm
 foo =
     ""
