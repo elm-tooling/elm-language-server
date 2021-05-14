@@ -37,7 +37,7 @@ func model =
 		--@ Test.elm
 module Test exposing (..)
 
-type alias Model = 
+type alias Model =
   { field : Int
 	}
 
@@ -51,7 +51,7 @@ func model =
 		--@ Test.elm
 module Test exposing (..)
 
-type alias Model = 
+type alias Model =
   { field : Int
   , newProp : { prop : Int }
 	}
@@ -80,7 +80,7 @@ module Test exposing (..)
 
 func : { field : Int } -> a
 func model =
-		{ model | newProp = "" } 
+		{ model | newProp = "" }
 			         --^
 		`;
 
@@ -90,7 +90,7 @@ module Test exposing (..)
 
 func : { field : Int, newProp : String } -> a
 func model =
-		{ model | newProp = "" } 
+		{ model | newProp = "" }
 		`;
 
     await testCodeAction(

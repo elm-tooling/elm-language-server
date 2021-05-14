@@ -1,4 +1,4 @@
-import { IElmPackageCache, IPackage } from "../src/compiler/elmPackageCache";
+import { IPackage } from "../src/compiler/elmPackageCache";
 import {
   IConstraint,
   IVersion,
