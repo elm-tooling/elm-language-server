@@ -483,7 +483,9 @@ export class DiagnosticsProvider {
     );
   }
 
-  private async getElmMakeDiagnostics(sourceFile: ISourceFile): Promise<boolean> {
+  private async getElmMakeDiagnostics(
+    sourceFile: ISourceFile,
+  ): Promise<boolean> {
     const elmMakeDiagnostics = await this.elmMakeDiagnostics.createDiagnostics(
       sourceFile,
     );
@@ -507,7 +509,10 @@ export class DiagnosticsProvider {
     });
 
     // return true if elm make returned non empty results
-    return !(elmMakeDiagnostics.size === 1 && elmMakeDiagnostics.get(sourceFile.uri)?.length === 0);
+    return !(
+      elmMakeDiagnostics.size === 1 &&
+      elmMakeDiagnostics.get(sourceFile.uri)?.length === 0
+    );
   }
 
   private async getElmReviewDiagnostics(
