@@ -1,7 +1,7 @@
 import { TextEdit } from "vscode-languageserver";
 import { Utils } from "../../util/utils";
 import { CodeActionProvider } from "../codeActionProvider";
-import { IDiagnostic } from "../diagnostics/diagnosticsProvider";
+import { IElmReviewDiagnostic } from "../diagnostics/elmReviewDiagnostics";
 
 const errorCodes = ["elm_review"];
 const fixId = "elm_review_fix";
@@ -9,7 +9,7 @@ CodeActionProvider.registerCodeAction({
   errorCodes,
   fixId,
   getCodeActions: (params) => {
-    return (<IDiagnostic[]>params.context.diagnostics)
+    return (<IElmReviewDiagnostic[]>params.context.diagnostics)
       .map((diagnostic) => {
         const { title, edits } = getEditsForDiagnostic(diagnostic);
 
@@ -25,9 +25,8 @@ CodeActionProvider.registerCodeAction({
 });
 
 function getEditsForDiagnostic(
-  diagnostic: IDiagnostic,
+  diagnostic: IElmReviewDiagnostic,
 ): { title?: string; edits: TextEdit[] } {
-
   if (
     diagnostic.data.code !== "elm_review" ||
     diagnostic.data.fixes === undefined

@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 import { container } from "tsyringe";
-import { Connection, DiagnosticSeverity } from "vscode-languageserver";
+import {
+  Connection,
+  DiagnosticSeverity,
+  DiagnosticTag,
+} from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
 import { ISourceFile } from "../../compiler/forest";
 import * as utils from "../../compiler/utils/elmUtils";
@@ -11,6 +15,15 @@ import { Range } from "vscode-languageserver-textdocument";
 import execa = require("execa");
 import { existsSync } from "fs";
 import * as path from "path";
+
+export type IElmReviewDiagnostic = IDiagnostic & {
+  data: {
+    fixes?: {
+      range: Range;
+      string: string;
+    }[];
+  };
+};
 
 interface IElmReviewError {
   type: "review-errors";
@@ -84,20 +97,22 @@ export class ElmReviewDiagnostics {
 
   private async checkForErrors(
     workspaceRootPath: string,
-  ): Promise<Map<string, IDiagnostic[]>> {
+  ): Promise<Map<string, IElmReviewDiagnostic[]>> {
     const settings = await this.settings.getClientSettings();
-    const fileErrors = new Map<string, IDiagnostic[]>();
+    const fileErrors = new Map<string, IElmReviewDiagnostic[]>();
 
     if (
-      settings.disableElmReviewDiagnostics ||
-      !existsSync(path.join(workspaceRootPath, "review", "src", "ReviewConfig.elm"))
+      settings.elmReviewDiagnostics === "off" ||
+      !existsSync(
+        path.join(workspaceRootPath, "review", "src", "ReviewConfig.elm"),
+      )
     ) {
       return fileErrors;
     }
 
     const elmReviewCommand: string = settings.elmReviewPath;
     const options = {
-      cmdArguments: ["--report", "json"],
+      cmdArguments: ["--report", "json", "--namespace", "vscode"],
       notFoundText:
         "'elm-review' is not available. Install elm-review via 'npm install -g elm-review'.",
     };
@@ -138,12 +153,18 @@ export class ElmReviewDiagnostics {
               fileError.path,
             ).toString();
 
-            const errors: IDiagnostic[] = fileError.errors.map(
+            const errors: IElmReviewDiagnostic[] = fileError.errors.map(
               (error: IError) => ({
                 message: error.message,
                 source: "elm-review",
                 range: toLsRange(error.region),
-                severity: DiagnosticSeverity.Warning,
+                severity:
+                  settings.elmReviewDiagnostics === "error"
+                    ? DiagnosticSeverity.Error
+                    : DiagnosticSeverity.Warning,
+                tags: error.rule.startsWith("NoUnused")
+                  ? [DiagnosticTag.Unnecessary]
+                  : undefined,
                 data: error.fix
                   ? {
                       uri,

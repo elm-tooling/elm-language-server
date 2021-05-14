@@ -47,10 +47,6 @@ export interface IDiagnostic extends Omit<LspDiagnostic, "code"> {
   data: {
     uri: string;
     code: string;
-    fixes?: {
-      range: Range;
-      string: string;
-    }[]
   };
 }
 
