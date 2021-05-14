@@ -141,8 +141,15 @@ export class DiagnosticsProvider {
         return;
       }
 
-      void this.getElmMakeDiagnostics(sourceFile);
-      void this.getElmReviewDiagnostics(sourceFile);
+      void this.getElmMakeDiagnostics(sourceFile).then((hasElmMakeErrors) => {
+        if (hasElmMakeErrors) {
+          this.currentDiagnostics.forEach((_, uri) => {
+            this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
+          });
+        } else {
+          void this.getElmReviewDiagnostics(sourceFile);
+        }
+      });
 
       // If we aren't doing them on change, we need to trigger them here
       if (disableDiagnosticsOnChange) {
@@ -476,7 +483,7 @@ export class DiagnosticsProvider {
     );
   }
 
-  private async getElmMakeDiagnostics(sourceFile: ISourceFile): Promise<void> {
+  private async getElmMakeDiagnostics(sourceFile: ISourceFile): Promise<boolean> {
     const elmMakeDiagnostics = await this.elmMakeDiagnostics.createDiagnostics(
       sourceFile,
     );
@@ -498,6 +505,9 @@ export class DiagnosticsProvider {
         this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
       }
     });
+
+    // return true if elm make returned non empty results
+    return !(elmMakeDiagnostics.size === 1 && elmMakeDiagnostics.get(sourceFile.uri)?.length === 0);
   }
 
   private async getElmReviewDiagnostics(
