@@ -111,8 +111,15 @@ export class ElmReviewDiagnostics {
     }
 
     const elmReviewCommand: string = settings.elmReviewPath;
+    const cmdArguments = ["--report", "json", "--namespace", "vscode"];
+    if (settings.elmPath.trim.length > 0) {
+      cmdArguments.push("--compiler", settings.elmPath);
+    }
+    if (settings.elmFormatPath.trim.length > 0) {
+      cmdArguments.push("--elm-format-path", settings.elmFormatPath);
+    }
     const options = {
-      cmdArguments: ["--report", "json", "--namespace", "vscode"],
+      cmdArguments: cmdArguments,
       notFoundText:
         "'elm-review' is not available. Install elm-review via 'npm install -g elm-review'.",
     };
