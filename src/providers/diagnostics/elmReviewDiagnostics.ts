@@ -2,6 +2,7 @@
 import { container } from "tsyringe";
 import {
   Connection,
+  Diagnostic,
   DiagnosticSeverity,
   DiagnosticTag,
 } from "vscode-languageserver";
@@ -18,12 +19,22 @@ import * as path from "path";
 
 export type IElmReviewDiagnostic = IDiagnostic & {
   data: {
-    fixes?: {
+    code: "elm_review";
+    fixes: {
       range: Range;
       string: string;
     }[];
   };
 };
+
+export function hasElmReviewFixes(
+  diagnostic: Diagnostic,
+): diagnostic is IElmReviewDiagnostic {
+  return (
+    (<IDiagnostic>diagnostic)?.data?.code === "elm_review" &&
+    (<IElmReviewDiagnostic>diagnostic)?.data?.fixes.length > 0
+  );
+}
 
 interface IElmReviewError {
   type: "review-errors";
@@ -41,7 +52,7 @@ interface IError {
   message: string;
   details: string[];
   region: IRegion;
-  fix: {
+  fix?: {
     range: IRegion;
     string: string;
   }[];
@@ -112,10 +123,10 @@ export class ElmReviewDiagnostics {
 
     const elmReviewCommand: string = settings.elmReviewPath;
     const cmdArguments = ["--report", "json", "--namespace", "vscode"];
-    if (settings.elmPath.trim.length > 0) {
+    if (settings.elmPath.trim().length > 0) {
       cmdArguments.push("--compiler", settings.elmPath);
     }
-    if (settings.elmFormatPath.trim.length > 0) {
+    if (settings.elmFormatPath.trim().length > 0) {
       cmdArguments.push("--elm-format-path", settings.elmFormatPath);
     }
     const options = {
@@ -153,15 +164,15 @@ export class ElmReviewDiagnostics {
           this.hasType(errorObject) &&
           errorObject.type === "review-errors"
         ) {
-          const reviewError = errorObject;
-          reviewError.errors.forEach((fileError: IFileError) => {
+          errorObject.errors.forEach(({ path, errors }: IFileError) => {
             const uri = Utils.joinPath(
               URI.parse(workspaceRootPath),
-              fileError.path,
+              path,
             ).toString();
 
-            const errors: IElmReviewDiagnostic[] = fileError.errors.map(
-              (error: IError) => ({
+            fileErrors.set(
+              uri,
+              errors.map((error: IError) => ({
                 message: error.message,
                 source: "elm-review",
                 range: toLsRange(error.region),
@@ -172,20 +183,16 @@ export class ElmReviewDiagnostics {
                 tags: error.rule.startsWith("NoUnused")
                   ? [DiagnosticTag.Unnecessary]
                   : undefined,
-                data: error.fix
-                  ? {
-                      uri,
-                      code: "elm_review",
-                      fixes: error.fix.map((fix) => ({
-                        string: fix.string,
-                        range: toLsRange(fix.range),
-                      })),
-                    }
-                  : { uri, code: "" },
-              }),
+                data: {
+                  uri,
+                  code: "elm_review",
+                  fixes: (error.fix || []).map((fix) => ({
+                    string: fix.string,
+                    range: toLsRange(fix.range),
+                  })),
+                },
+              })),
             );
-
-            fileErrors.set(uri, errors);
           });
         }
         return fileErrors;

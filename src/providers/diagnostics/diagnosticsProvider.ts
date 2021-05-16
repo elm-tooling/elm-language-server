@@ -508,7 +508,8 @@ export class DiagnosticsProvider {
       }
     });
 
-    // return true if elm make returned non empty results
+    // return true if elm make returned non empty results,
+    // it returns `new Map([[sourceFile.uri, []]])` in case of no errors
     return !(
       elmMakeDiagnostics.size === 1 &&
       elmMakeDiagnostics.get(sourceFile.uri)?.length === 0
@@ -522,20 +523,14 @@ export class DiagnosticsProvider {
       sourceFile,
     );
 
-    this.resetDiagnostics(elmReviewDiagnostics, DiagnosticKind.ElmReview);
-
-    elmReviewDiagnostics.forEach((diagnostics, diagnosticsUri) => {
-      this.updateDiagnostics(
-        diagnosticsUri,
-        DiagnosticKind.ElmReview,
-        diagnostics,
-      );
+    // remove old elm-review diagnostics
+    this.currentDiagnostics.forEach((_, uri) => {
+      this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
     });
 
-    this.currentDiagnostics.forEach((_, uri) => {
-      if (!elmReviewDiagnostics.has(uri)) {
-        this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
-      }
+    // add new elm-review diagnostics
+    elmReviewDiagnostics.forEach((diagnostics, uri) => {
+      this.updateDiagnostics(uri, DiagnosticKind.ElmReview, diagnostics);
     });
   }
 
