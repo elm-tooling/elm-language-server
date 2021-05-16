@@ -400,6 +400,68 @@ topSuite =
 
     await testFindTests(source, []);
   });
+  test("nested with multiple functions", async () => {
+    const source = `
+--@ tests/MyModule.elm
+module MyModule exposing (..)
+
+import Expect
+import Test exposing (..)
+
+
+all : Test
+all =
+    describe "Nesting"
+         describe "test type" typeTests
+        ]
+
+
+typeTests : Test
+typeTests =
+    test "first test" <| \_ -> Expect.equal False False
+`;
+
+    await testFindTests(source, [
+      {
+        file: testModuleUri,
+        label: "MyModule",
+        position: {
+          character: 0,
+          line: 0,
+        },
+        tests: [
+          {
+            file: testModuleUri,
+            label: "Nesting",
+            position: {
+              character: 15,
+              line: 8,
+            },
+            tests: [
+              {
+                file: testModuleUri,
+                label: "test type",
+                position: {
+                  character: 20,
+                  line: 9,
+                },
+                tests: [
+                  {
+                    file: testModuleUri,
+                    label: "first test",
+                    position: {
+                      character: 4,
+                      line: 15,
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+  });
 });
 
 describe("string literal to label", () => {
