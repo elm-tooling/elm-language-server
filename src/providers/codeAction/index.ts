@@ -8,3 +8,4 @@ import "./moveFunctionCodeAction";
 import "./installPackageCodeAction";
 import "./addMissingRecordFieldCodeAction";
 import "./addMissingCaseBranchesCodeAction";
+import "./elmReviewFixAction";

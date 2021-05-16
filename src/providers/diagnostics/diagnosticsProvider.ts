@@ -3,6 +3,7 @@ import {
   CancellationToken,
   Connection,
   Diagnostic as LspDiagnostic,
+  Range,
   DiagnosticSeverity,
   FileChangeType,
 } from "vscode-languageserver";
@@ -24,6 +25,7 @@ import { ElmLsDiagnostics } from "./elmLsDiagnostics";
 import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics";
 import { ISourceFile } from "../../compiler/forest";
+import { ElmReviewDiagnostics } from "./elmReviewDiagnostics";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -85,6 +87,7 @@ class PendingDiagnostics extends Map<string, number> {
 @injectable()
 export class DiagnosticsProvider {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
+  private elmReviewDiagnostics: ElmReviewDiagnostics;
   private elmLsDiagnostics: ElmLsDiagnostics;
   private currentDiagnostics: Map<string, FileDiagnostics>;
   private events: TextDocumentEvents;
@@ -104,6 +107,7 @@ export class DiagnosticsProvider {
     this.clientSettings = container.resolve("ClientSettings");
 
     this.elmMakeDiagnostics = container.resolve(ElmMakeDiagnostics);
+    this.elmReviewDiagnostics = container.resolve(ElmReviewDiagnostics);
     this.elmLsDiagnostics = container.resolve(ElmLsDiagnostics);
     this.documentEvents = container.resolve(TextDocumentEvents);
 
@@ -137,7 +141,15 @@ export class DiagnosticsProvider {
         return;
       }
 
-      void this.getElmMakeDiagnostics(sourceFile);
+      void this.getElmMakeDiagnostics(sourceFile).then((hasElmMakeErrors) => {
+        if (hasElmMakeErrors) {
+          this.currentDiagnostics.forEach((_, uri) => {
+            this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
+          });
+        } else {
+          void this.getElmReviewDiagnostics(sourceFile);
+        }
+      });
 
       // If we aren't doing them on change, we need to trigger them here
       if (disableDiagnosticsOnChange) {
@@ -397,6 +409,7 @@ export class DiagnosticsProvider {
 
             next.immediate(() => {
               this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
+              this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
               this.updateDiagnostics(
                 uri,
                 DiagnosticKind.Syntactic,
@@ -471,7 +484,9 @@ export class DiagnosticsProvider {
     );
   }
 
-  private async getElmMakeDiagnostics(sourceFile: ISourceFile): Promise<void> {
+  private async getElmMakeDiagnostics(
+    sourceFile: ISourceFile,
+  ): Promise<boolean> {
     const elmMakeDiagnostics = await this.elmMakeDiagnostics.createDiagnostics(
       sourceFile,
     );
@@ -492,6 +507,31 @@ export class DiagnosticsProvider {
       if (!elmMakeDiagnostics.has(uri)) {
         this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
       }
+    });
+
+    // return true if elm make returned non empty results,
+    // it returns `new Map([[sourceFile.uri, []]])` in case of no errors
+    return !(
+      elmMakeDiagnostics.size === 1 &&
+      elmMakeDiagnostics.get(sourceFile.uri)?.length === 0
+    );
+  }
+
+  private async getElmReviewDiagnostics(
+    sourceFile: ISourceFile,
+  ): Promise<void> {
+    const elmReviewDiagnostics = await this.elmReviewDiagnostics.createDiagnostics(
+      sourceFile,
+    );
+
+    // remove old elm-review diagnostics
+    this.currentDiagnostics.forEach((_, uri) => {
+      this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
+    });
+
+    // add new elm-review diagnostics
+    elmReviewDiagnostics.forEach((diagnostics, uri) => {
+      this.updateDiagnostics(uri, DiagnosticKind.ElmReview, diagnostics);
     });
   }
 

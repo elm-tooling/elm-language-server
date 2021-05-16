@@ -5,11 +5,13 @@ export interface IClientSettings {
   elmFormatPath: string;
   elmPath: string;
   elmTestPath: string;
+  elmReviewPath: string;
   trace: { server: string };
   extendedCapabilities?: IExtendedCapabilites;
   disableElmLSDiagnostics: boolean;
   skipInstallPackageConfirmation: boolean;
   onlyUpdateDiagnosticsOnSave: boolean;
+  elmReviewDiagnostics: "off" | "warning" | "error";
 }
 
 export interface IExtendedCapabilites {
@@ -24,10 +26,12 @@ export class Settings {
     elmFormatPath: "",
     elmPath: "",
     elmTestPath: "",
+    elmReviewPath: "",
     trace: { server: "off" },
     disableElmLSDiagnostics: false,
     skipInstallPackageConfirmation: false,
     onlyUpdateDiagnosticsOnSave: false,
+    elmReviewDiagnostics: "off",
   };
   private connection: Connection;
 
