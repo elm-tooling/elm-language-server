@@ -409,6 +409,7 @@ export class DiagnosticsProvider {
 
             next.immediate(() => {
               this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
+              this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
               this.updateDiagnostics(
                 uri,
                 DiagnosticKind.Syntactic,
