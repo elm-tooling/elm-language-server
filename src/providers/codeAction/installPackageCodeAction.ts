@@ -15,6 +15,8 @@ import { comparePackageRanking } from "../ranking";
 
 const errorCodes = [Diagnostics.ImportMissing.code];
 const fixId = "install_package";
+const random = Math.random();
+const commandName = `elm.installPackage-${random}`;
 
 CodeActionProvider.registerCodeAction({
   errorCodes,
@@ -33,7 +35,7 @@ CodeActionProvider.registerCodeAction({
         `Install package "${packageName}"`,
         [],
         {
-          command: "elm.installPackage",
+          command: commandName,
           title: "Install Package",
           arguments: [params.sourceFile.uri, packageName],
         },
@@ -47,7 +49,7 @@ CodeActionProvider.registerCodeAction({
 });
 
 CommandManager.register(
-  "elm.installPackage",
+  commandName,
   async (uri: string, packageName: string) => {
     const settings = container.resolve<Settings>("Settings");
     const connection = container.resolve<Connection>("Connection");
