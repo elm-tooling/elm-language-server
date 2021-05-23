@@ -9,8 +9,9 @@ import { Program, IProgram, IProgramHost } from "../../src/compiler/program";
 import * as path from "../../src/util/path";
 import { Utils } from "../../src/util/utils";
 
-export const baseUri = path.join(__dirname, "../sources/src/");
-export const testUri = path.join(baseUri, "tests");
+export const baseUri = path.join(__dirname, "../sources/");
+export const srcUri = path.join(baseUri, "src");
+export const testsUri = path.join(baseUri, "tests");
 
 export class SourceTreeParser {
   private parser?: Parser;
@@ -36,7 +37,7 @@ export class SourceTreeParser {
         {
           "type": "application",
           "source-directories": [
-              "."
+              "src"
           ],
           "elm-version": "0.19.1",
           "dependencies": {
@@ -52,12 +53,12 @@ export class SourceTreeParser {
       }
 
       return (
-        sources[path.relative(baseUri, uri)] ??
-        testSources[path.relative(testUri, uri)]
+        sources[path.relative(srcUri, uri)] ??
+        testSources[path.relative(testsUri, uri)]
       );
     };
 
-    // Seperate test sources
+    // Separate test sources
     const testSources: { [K: string]: string } = {};
     for (const key in sources) {
       if (key.startsWith("tests/")) {
@@ -71,10 +72,9 @@ export class SourceTreeParser {
         Promise.resolve(readFile(uri)),
       readDirectory: (uri: string): Promise<string[]> => {
         return Promise.resolve(
-          path.normalizeUri(uri) ===
-            path.normalizeUri(baseUri.substr(0, baseUri.length - 1)) // Remove trailing / from baseUri
+          path.normalizeUri(uri) === path.normalizeUri(srcUri)
             ? Object.keys(sources).map((sourceUri) => path.join(uri, sourceUri))
-            : path.normalizeUri(uri) === path.normalizeUri(testUri)
+            : path.normalizeUri(uri) === path.normalizeUri(testsUri)
             ? Object.keys(testSources).map((testUri) => path.join(uri, testUri))
             : [],
         );

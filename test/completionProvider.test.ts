@@ -1,3 +1,4 @@
+import path from "path";
 import { isDeepStrictEqual } from "util";
 import {
   CompletionContext,
@@ -9,7 +10,7 @@ import { URI } from "vscode-uri";
 import { CompletionProvider, CompletionResult } from "../src/providers";
 import { ICompletionParams } from "../src/providers/paramsExtensions";
 import { getCaretPositionFromSource } from "./utils/sourceParser";
-import { baseUri, SourceTreeParser } from "./utils/sourceTreeParser";
+import { baseUri, SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
 
 class MockCompletionProvider extends CompletionProvider {
   public handleCompletion(params: ICompletionParams): CompletionResult {
@@ -54,7 +55,13 @@ describe("CompletionProvider", () => {
       throw new Error("Getting position failed");
     }
 
-    const testUri = URI.file(baseUri + fileWithCaret).toString();
+    const testUri = URI.file(
+      path.join(
+        fileWithCaret.startsWith("tests") ? baseUri : srcUri,
+        fileWithCaret,
+      ),
+    ).toString();
+
     const program = await treeParser.getProgram(newSources);
     const sourceFile = program.getSourceFile(testUri);
 
@@ -127,7 +134,8 @@ describe("CompletionProvider", () => {
           "shouldNotExist" in completion &&
           completion.shouldNotExist
         ) {
-          result = !result;
+          expect(result).toBe(false);
+          return;
         }
 
         if (!result && debug) {
@@ -747,8 +755,8 @@ testFunc =
 --@ Data/User.elm
 module Data.User exposing (..)
 
-func : String
-func =
+testFunction : String
+testFunction =
   ""
 
 --@ Test.elm
@@ -762,7 +770,7 @@ test =
 
     await testCompletions(
       source,
-      ["Data.User.func"],
+      ["Data.User.testFunction"],
       "partialMatch",
       "triggeredByDot",
     );
@@ -771,8 +779,8 @@ test =
 --@ Data/User.elm
 module Data.User exposing (..)
 
-func : String
-func =
+testFunction : String
+testFunction =
   ""
 
 type alias TestType = { prop : String }
@@ -788,7 +796,7 @@ test =
 
     await testCompletions(
       source2,
-      ["Data.User.func", "Data.User.TestType"],
+      ["Data.User.testFunction", "Data.User.TestType"],
       "partialMatch",
       "triggeredByDot",
     );
@@ -809,7 +817,7 @@ import Page
 defaultPage =
   Page.{-caret-}
 
-func = ""
+testFunction = ""
 `;
 
     await testCompletions(
@@ -901,12 +909,12 @@ viewUser : U{-caret-}
 --@ Module/Submodule.elm
 module Module.Submodule exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Module/Submodule/AnotherSubmodule.elm
 module Module.Submodule.AnotherSubmodule exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Test.elm
 module Test exposing (..)
@@ -925,12 +933,12 @@ test : Module.{-caret-}
 --@ Module/Submodule.elm
 module Module.Submodule exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Module/Submodule/AnotherSubmodule.elm
 module Module.Submodule.AnotherSubmodule exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Test.elm
 module Test exposing (..)
@@ -940,7 +948,7 @@ test = Module.Submodule.{-caret-}
 
     await testCompletions(
       source2,
-      ["AnotherSubmodule", "func"],
+      ["AnotherSubmodule", "testFunction"],
       "exactMatch",
       "triggeredByDot",
     );
@@ -949,12 +957,12 @@ test = Module.Submodule.{-caret-}
 --@ Module/Submodule.elm
 module Module.Submodule exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Module/Submodule/AnotherSubmodule.elm
 module Module.Submodule.AnotherSubmodule exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Test.elm
 module Test exposing (..)
@@ -974,17 +982,17 @@ test = Module.sub{-caret-}
 --@ Module.elm
 module Module exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Module/Submodule.elm
 module Module.Submodule exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Module/Submodule/AnotherSubmodule.elm
 module Module.Submodule.AnotherSubmodule exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Test.elm
 module Test exposing (..)
@@ -1004,17 +1012,17 @@ import Module.{-caret-}
 --@ Module.elm
 module Module exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Module/Submodule.elm
 module Module.Submodule exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Module/Submodule/AnotherSubmodule.elm
 module Module.Submodule.AnotherSubmodule exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Test.elm
 module Test exposing (..)
@@ -1033,17 +1041,17 @@ import Module.Sub{-caret-}
 --@ Module.elm
 module Module exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Module/Submodule.elm
 module Module.Submodule exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Module/Submodule/AnotherSubmodule.elm
 module Module.Submodule.AnotherSubmodule exposing (..)
 
-func = ""
+testFunction = ""
 
 --@ Test.elm
 module Test exposing (..)
@@ -1318,8 +1326,8 @@ map: (a -> b) -> List a -> List b
 map func list =
   list
 
-func : List Model -> List a
-func model =
+testFunction : List Model -> List a
+testFunction model =
     map (\\m -> m.{-caret-}) model
 `;
 
@@ -1336,8 +1344,8 @@ type State
     = State { field1 : String, field2 : String }
 
 
-func : State -> a
-func (State state) =
+testFunction : State -> a
+testFunction (State state) =
     [ state.{-caret-} ]
 `;
 
@@ -1356,8 +1364,8 @@ type alias Model =
 
 type Maybe a = Just a | Nothing
 
-func : Maybe Model -> a
-func model =
+testFunction : Maybe Model -> a
+testFunction model =
     case model of
         Just m ->
             m.{-caret-}
@@ -1382,8 +1390,8 @@ type alias Model2 =
 
 type Maybe a = Just a | Nothing
 
-func : Maybe Model -> a
-func model =
+testFunction : Maybe Model -> a
+testFunction model =
     case model of
         Just { prop1, prop2 } ->
             prop1.f{-caret-}
@@ -1402,34 +1410,54 @@ module Test exposing (..)
 
 type Maybe a = Just { prop1: String, prop2: Int } | Nothing
 
-func model =
+testFunction model =
     Just { p{-caret-} }
 `;
 
     await testCompletions(source, ["prop1", "prop2"], "exactMatch");
   });
 
-  it("Test dependencies should be seperate from normal ones", async () => {
+  it("Functions from other modules should be importable", async () => {
     const source = `
---@ Test.elm
+    --@ Test.elm
 module Test exposing (..)
 
 test =
     {-caret-}
 
+--@ TestFile.elm
+module TestFile exposing (..)
+
+testFunction =
+    ""
+`;
+
+    await testCompletions(source, ["testFunction"], "partialMatch");
+  });
+
+  it("Test dependencies should not be found from normal ones", async () => {
+    const source = `
+    --@ Test.elm
+module Test exposing (..)
+
+test =
+{-caret-}
+
 --@ tests/TestFile.elm
 module TestFile exposing (..)
 
-func =
+testFunction =
     ""
 `;
 
     await testCompletions(
       source,
-      [{ name: "func", shouldNotExist: true }],
+      [{ name: "testFunction", shouldNotExist: true }],
       "partialMatch",
     );
+  });
 
+  it("Test dependencies should find each other and normal", async () => {
     const source2 = `
 --@ Test.elm
 module Test exposing (..)
@@ -1440,17 +1468,17 @@ test =
 --@ tests/TestFile.elm
 module TestFile exposing (..)
 
-func =
+testFunction =
     ""
 
 --@ tests/TestFile2.elm
 module TestFile2 exposing (..)
 
-func2 =
+testFunction2 =
     {-caret-}
 `;
 
-    await testCompletions(source2, ["func", "test"], "partialMatch");
+    await testCompletions(source2, ["testFunction", "test"], "partialMatch");
   });
 
   it("Record completions in record patterns", async () => {
@@ -1458,8 +1486,8 @@ func2 =
 --@ Test.elm
 module Test exposing (..)
 
-func : { prop1: String, prop2: Int } -> String
-func {{-caret-}} =
+testFunction : { prop1: String, prop2: Int } -> String
+testFunction {{-caret-}} =
     ""
 `;
 
@@ -1469,8 +1497,8 @@ func {{-caret-}} =
 --@ Test.elm
 module Test exposing (..)
 
-func : { prop1: String, prop2: Int } -> String
-func {p{-caret-}} =
+testFunction : { prop1: String, prop2: Int } -> String
+testFunction {p{-caret-}} =
     ""
 `;
 
@@ -1480,7 +1508,7 @@ func {p{-caret-}} =
 --@ Test.elm
 module Test exposing (..)
 
-func =
+testFunction =
     let
       {{-caret-}} = { prop1 = "", prop2 = 2 }
     in
@@ -1495,7 +1523,7 @@ func =
 --@ Test.elm
 module Test exposing (..)
 
-func model =
+testFunction model =
     case model of
       Just { details } ->
         d{-caret-}
@@ -1518,7 +1546,7 @@ module Test exposing (..)
 
 import Module as M
 
-func =
+testFunction =
     M.f{-caret-}
 `;
 
@@ -1543,7 +1571,7 @@ module Test exposing (..)
 
 import Module as M
 
-func =
+testFunction =
     Module.f{-caret-}
 `;
 
@@ -1572,7 +1600,7 @@ module Test exposing (..)
 import Module as M
 import OtherModule as M
 
-func =
+testFunction =
     M.f{-caret-}
 `;
 
@@ -1595,7 +1623,7 @@ singleton value =
 --@ Test.elm
 module Test exposing (..)
 
-func =
+testFunction =
     List.{-caret-}
 `;
 
@@ -1616,7 +1644,7 @@ batch =
 --@ Test.elm
 module Test exposing (..)
 
-func =
+testFunction =
     Cmd.{-caret-}
 `;
 
@@ -1628,8 +1656,8 @@ func =
 --@ Test.elm
 module Test exposing (..)
 
-func : { field : Int } -> Int
-func =
+testFunction : { field : Int } -> Int
+testFunction =
     (\\param -> p{-caret-})
 `;
 
@@ -1641,8 +1669,8 @@ func =
 --@ Test.elm
 module Test exposing (..)
 
-func : { field : Int } -> Int
-func =
+testFunction : { field : Int } -> Int
+testFunction =
     (\\{ field } -> f{-caret-})
 `;
 

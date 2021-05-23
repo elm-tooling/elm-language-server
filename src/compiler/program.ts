@@ -622,11 +622,10 @@ export class Program implements IProgram {
 
       const moduleName = utils.getModuleName(matchingPath, sourceDir);
 
-      // We could track this using the separate `testDirectories`
-      // But those are just hardcoded to ./tests anyways, so this should be fine
-      const isTestDir =
-        matchingPath.includes("tests") || matchingPath.includes("Tests");
-      if (isTestDir) {
+      const isTestFile =
+        this.getSourceDirectoryOfFile(matchingPath)?.endsWith("tests") ?? false;
+
+      if (isTestFile) {
         project.testModuleToUriMap.set(
           moduleName,
           URI.file(matchingPath).toString(),
@@ -642,7 +641,7 @@ export class Program implements IProgram {
         maintainerAndPackageName,
         path: matchingPath,
         project,
-        isTestFile: isTestDir,
+        isTestFile,
       });
     });
 

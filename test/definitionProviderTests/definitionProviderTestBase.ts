@@ -1,10 +1,11 @@
+import path from "path";
 import { Location } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { DefinitionProvider, DefinitionResult } from "../../src/providers";
 import { ITextDocumentPositionParams } from "../../src/providers/paramsExtensions";
 import { TreeUtils } from "../../src/util/treeUtils";
 import { getInvokeAndTargetPositionFromSource } from "../utils/sourceParser";
-import { baseUri, SourceTreeParser } from "../utils/sourceTreeParser";
+import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";
 
 class MockDefinitionProvider extends DefinitionProvider {
   public handleDefinition(
@@ -27,7 +28,7 @@ export class DefinitionProviderTestBase {
 
     const determinedTestType = getInvokeAndTargetPositionFromSource(source);
     const invokeUri = URI.file(
-      baseUri + determinedTestType.invokeFile,
+      path.join(srcUri, determinedTestType.invokeFile),
     ).toString();
 
     const program = await this.treeParser.getProgram(
@@ -71,7 +72,7 @@ export class DefinitionProviderTestBase {
 
           if (determinedTestType.targetPosition) {
             const targetUri = URI.file(
-              baseUri + determinedTestType.targetFile,
+              path.join(srcUri, determinedTestType.targetFile),
             ).toString();
 
             const rootNode = program.getSourceFile(targetUri)!.tree.rootNode;

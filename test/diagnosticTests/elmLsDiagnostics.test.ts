@@ -9,15 +9,16 @@ import { ElmLsDiagnostics } from "../../src/providers/diagnostics/elmLsDiagnosti
 import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics";
 import { Utils } from "../../src/util/utils";
 import { getSourceFiles } from "../utils/sourceParser";
-import { baseUri, SourceTreeParser } from "../utils/sourceTreeParser";
+import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";
 import diffDefault from "jest-diff";
+import path from "path";
 
 describe("ElmLsDiagnostics", () => {
   let elmDiagnostics: ElmLsDiagnostics;
   const treeParser = new SourceTreeParser();
 
   const debug = process.argv.find((arg) => arg === "--debug");
-  const uri = URI.file(baseUri + "Main.elm").toString();
+  const uri = URI.file(path.join(srcUri, "Main.elm")).toString();
 
   async function testDiagnostics(
     source: string,
@@ -32,7 +33,7 @@ describe("ElmLsDiagnostics", () => {
 
     let diagnostics: Array<IDiagnostic> = [];
     for (const fileName in sources) {
-      const filePath = URI.file(baseUri + fileName).toString();
+      const filePath = URI.file(path.join(srcUri, fileName)).toString();
       const sourceFile = program.getSourceFile(filePath);
 
       if (!sourceFile) {

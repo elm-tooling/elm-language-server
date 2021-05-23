@@ -14,8 +14,9 @@ import {
   getSourceFiles,
   getTargetPositionFromSource,
 } from "../utils/sourceParser";
-import { baseUri, SourceTreeParser } from "../utils/sourceTreeParser";
+import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";
 import diffDefault from "jest-diff";
+import path from "path";
 
 const basicsSources = `
 --@ Basics.elm
@@ -90,7 +91,7 @@ describe("test elm diagnostics", () => {
       throw new Error("Getting sources failed");
     }
 
-    const testUri = URI.file(baseUri + "Test.elm").toString();
+    const testUri = URI.file(path.join(srcUri, "Test.elm")).toString();
 
     const program = await treeParser.getProgram(result.sources);
     const sourceFile = program.getForest().getByUri(testUri);
