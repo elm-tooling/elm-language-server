@@ -69,7 +69,18 @@ connection.onInitialize(
       `Loading Elm tree-sitter syntax from ${pathToWasm}`,
     );
     const language = await Parser.Language.load(pathToWasm);
-    container.resolve<Parser>("Parser").setLanguage(language);
+    const parser = container.resolve<Parser>("Parser");
+    // const logger: Parser.Logger = (
+    //   message: string,
+    //   params: { [param: string]: string },
+    //   isLexMessage: "lex" | "parse",
+    // ) => {
+    //   let type = isLexMessage ? "lex" : "parse";
+    //   if (type === "lex") type += "  ";
+    //   connection.console.info(`${type} ${message}`);
+    // };
+    // parser.setLogger(logger);
+    parser.setLanguage(language);
 
     container.register(CapabilityCalculator, {
       useValue: new CapabilityCalculator(params.capabilities),
