@@ -36,7 +36,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
           title: "Move Function",
           command: {
             title: "Refactor",
-            command: "elm.refactor",
+            command: `elm.refactor-${params.program.getRootPath().toString()}`,
             arguments: [
               "moveFunction",
               { textDocument: params.textDocument, range: params.range },
