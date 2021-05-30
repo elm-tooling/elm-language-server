@@ -1,5 +1,23 @@
 # Change Log
 
+## 2.2.0
+
+Add server handling to discover tests (vscode)
+Add basic elm-review integration, showing diagnostics and offer fixes
+Add code action to create function in another module
+Add completions for anonymous function params
+Change default for `singleFieldRecord` rule to be false
+Rework how we find test folders - will be only in `tests` for now
+Reword remove all unused code action
+Improve performance of files with a lot of possible imports
+Prefer "Add Type Annotation" code action, followed by "Expose function" code action
+Fix type alias wrongly being shown as unused
+Fix duplicate completions for type aliases and constructors
+Fix wrong reference of Union constructor to import with the same name
+Fix unused_pattern for empty constructs
+Update parser
+Update dependencies
+
 ## 2.1.0
 
 - Drop node 10
