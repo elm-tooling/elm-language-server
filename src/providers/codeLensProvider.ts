@@ -97,14 +97,22 @@ export class CodeLensProvider {
           codelens.command = this.settings.extendedCapabilities
             ?.exposeUnexposeSupport
             ? exposed
-              ? Command.create("exposed", "elm.unexpose", {
-                  uri: data.uri,
-                  name: data.nameNode,
-                })
-              : Command.create("local", "elm.expose", {
-                  uri: data.uri,
-                  name: data.nameNode,
-                })
+              ? Command.create(
+                  "exposed",
+                  "elm.unexpose-" + program.getRootPath().toString(),
+                  {
+                    uri: data.uri,
+                    name: data.nameNode,
+                  },
+                )
+              : Command.create(
+                  "local",
+                  "elm.expose-" + program.getRootPath().toString(),
+                  {
+                    uri: data.uri,
+                    name: data.nameNode,
+                  },
+                )
             : exposed
             ? Command.create("exposed", "")
             : Command.create("local", "");
