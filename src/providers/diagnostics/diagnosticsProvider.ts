@@ -3,9 +3,9 @@ import {
   CancellationToken,
   Connection,
   Diagnostic as LspDiagnostic,
-  Range,
   DiagnosticSeverity,
   FileChangeType,
+  DidChangeTextDocumentParams,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
@@ -26,6 +26,7 @@ import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics";
 import { ISourceFile } from "../../compiler/forest";
 import { ElmReviewDiagnostics } from "./elmReviewDiagnostics";
+import { Url } from "url";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -218,8 +219,14 @@ export class DiagnosticsProvider {
       }
     });
 
-    this.documentEvents.on("change", () => {
+    this.documentEvents.on("change", (params: DidChangeTextDocumentParams) => {
       this.change();
+
+      this.updateDiagnostics(
+        params.textDocument.uri,
+        DiagnosticKind.ElmReview,
+        [],
+      );
 
       // We need to cancel the request as soon as possible
       if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
@@ -409,7 +416,6 @@ export class DiagnosticsProvider {
 
             next.immediate(() => {
               this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
-              this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
               this.updateDiagnostics(
                 uri,
                 DiagnosticKind.Syntactic,
@@ -525,9 +531,7 @@ export class DiagnosticsProvider {
     );
 
     // remove old elm-review diagnostics
-    this.currentDiagnostics.forEach((_, uri) => {
-      this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
-    });
+    this.resetDiagnostics(elmReviewDiagnostics, DiagnosticKind.ElmReview);
 
     // add new elm-review diagnostics
     elmReviewDiagnostics.forEach((diagnostics, uri) => {
