@@ -1,7 +1,7 @@
 {
   "name": "@elm-tooling/elm-language-server",
   "description": "Implementation of an elm language server in node.",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "author": "Kolja Lampe",
   "license": "MIT",
   "main": "./out/module.js",
