@@ -83,6 +83,12 @@ You will need to install `elm` and `elm-test` to get all diagnostics and `elm-fo
 npm install -g elm elm-test elm-format
 ```
 
+If you want to use `elm-review`:
+```sh
+npm install -g elm-review
+```
+
+
 Or use local versions from your `node_modules` directory, if you want to do that you need to set the paths, via the settings (e.g. set `elmPath` to `./node_modules/.bin/elm`).
 
 ## Configuration
@@ -171,7 +177,7 @@ It's recommended to install [syntax highlighting](https://github.com/andys8/vim-
 
 To enable support with [coc.nvim](https://github.com/neoclide/coc.nvim), run `:CocConfig` and add the language server config below.
 
-If needed, you can set the paths to `elm`, `elm-test` and `elm-format` with the `elmPath`, `elmTestPath` and `elmFormatPath` variables.
+If needed, you can set the paths to `elm`, `elm-test`, `elm-review` and `elm-format` with the `elmPath`, `elmTestPath`, `elmReviewPath` and `elmFormatPath` variables.
 
 ```jsonc
 {
@@ -211,7 +217,7 @@ Much of this is covered in the [Example vim configuration](https://github.com/ne
 let g:ale_linters = { 'elm': ['elm_ls'] }
 ```
 
-If needed, you can set the paths to `elm`, `elm-test` and `elm-format`. The configuration can be [found here](https://github.com/dense-analysis/ale/blob/master/doc/ale-elm.txt)
+If needed, you can set the paths to `elm`, `elm-test`,  `elm-review` and `elm-format`. The configuration can be [found here](https://github.com/dense-analysis/ale/blob/master/doc/ale-elm.txt)
 
 ```
 let g:ale_elm_ls_use_global = 1
@@ -324,6 +330,7 @@ You should now be able to use the integrations from Sublime. You might want to r
 - [elm-format](https://github.com/avh4/elm-format)
 - [elm-test](https://github.com/rtfeldman/node-test-runner)
 - [tree-sitter-elm](https://github.com/Razzeee/tree-sitter-elm)
+- [elm-review](https://github.com/jfmengels/elm-review)
 
 ## Contributing
 
