@@ -287,7 +287,7 @@ export class ElmLsDiagnostics {
               ("," . (list_expr))*
               .
               "]"
-            )
+            ) @listExpr
           ) @functionCall
           (#eq? @target "List.concat")
         )
@@ -861,6 +861,11 @@ export class ElmLsDiagnostics {
 
     const listConcats = this.unnecessaryListConcatQuery
       .matches(tree.rootNode)
+      .filter((match) =>
+        match.captures[2].node?.namedChildren.every(
+          (c) => c.type === "list_expr",
+        ),
+      )
       .map((match) => match.captures[0].node)
       .filter(Utils.notUndefinedOrNull);
 

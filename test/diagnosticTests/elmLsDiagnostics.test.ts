@@ -1345,6 +1345,29 @@ foo =
 
       await testDiagnostics(source, "unnecessary_list_concat", []);
     });
+
+    it("could not merge 2", async () => {
+      const source = `
+module Bar exposing (foo)
+
+test =
+    let
+        aList =
+            if True then
+                [ 2, 3 ]
+
+            else
+                []
+    in
+    List.concat
+        [ [ 1 ]
+        , aList
+        , [ 4 ]
+        ]
+			`;
+
+      await testDiagnostics(source, "unnecessary_list_concat", []);
+    });
   });
 
   describe("unnecessary port module", () => {
