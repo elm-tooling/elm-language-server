@@ -693,6 +693,70 @@ export class References {
             }
             break;
 
+          case "TypeVariable":
+            {
+              const topLevelAnnotation = TreeUtils.findParentOfType(
+                "type_annotation",
+                definitionNode.node,
+                true,
+              );
+
+              const typeVariableNodes: SyntaxNode[] = [];
+
+              if (topLevelAnnotation) {
+                const topLevelValueDeclaration = TreeUtils.getValueDeclaration(
+                  topLevelAnnotation,
+                );
+
+                const typeAnnotations = [
+                  topLevelAnnotation,
+                  ...(topLevelValueDeclaration?.descendantsOfType(
+                    "type_annotation",
+                  ) ?? []),
+                ];
+
+                typeVariableNodes.push(
+                  ...typeAnnotations.flatMap(
+                    (typeAnnotation) =>
+                      typeAnnotation
+                        .childForFieldName("typeExpression")
+                        ?.descendantsOfType("type_variable") ?? [],
+                  ),
+                );
+              }
+
+              const topLevelTypeOrTypeAlias =
+                TreeUtils.findParentOfType(
+                  "type_alias_declaration",
+                  definitionNode.node,
+                ) ??
+                TreeUtils.findParentOfType(
+                  "type_declaration",
+                  definitionNode.node,
+                );
+
+              if (topLevelTypeOrTypeAlias) {
+                typeVariableNodes.push(
+                  ...topLevelTypeOrTypeAlias.descendantsOfType([
+                    "type_variable",
+                    "lower_type_name",
+                  ]),
+                );
+              }
+
+              typeVariableNodes
+                .filter(
+                  (typeVariable) => typeVariable.text === definitionNode.name,
+                )
+                .forEach((typeVariable) =>
+                  references.push({
+                    node: typeVariable,
+                    uri: typeVariable.tree.uri,
+                  }),
+                );
+            }
+            break;
+
           default:
             break;
         }
