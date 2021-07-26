@@ -8,10 +8,10 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { SymbolInformationTranslator } from "../util/symbolTranslator";
-import { ThrottledCancellationToken } from "../cancellation";
-import { IDocumentSymbolParams } from "./paramsExtensions";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { SymbolInformationTranslator } from "../util/symbolTranslator.js";
+import { ThrottledCancellationToken } from "../cancellation.js";
+import { IDocumentSymbolParams } from "./paramsExtensions.js";
 
 type DocumentSymbolResult =
   | SymbolInformation[]

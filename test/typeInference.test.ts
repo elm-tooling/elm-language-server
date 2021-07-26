@@ -1,8 +1,8 @@
 import path from "path";
 import { URI } from "vscode-uri";
-import { TreeUtils } from "../src/util/treeUtils";
-import { getTargetPositionFromSource } from "./utils/sourceParser";
-import { SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
+import { TreeUtils } from "../src/util/treeUtils.js";
+import { getTargetPositionFromSource } from "./utils/sourceParser.js";
+import { SourceTreeParser, srcUri } from "./utils/sourceTreeParser.js";
 
 const basicsSources = `
 --@ Basics.elm

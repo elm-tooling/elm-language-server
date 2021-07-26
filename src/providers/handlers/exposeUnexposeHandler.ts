@@ -5,9 +5,9 @@ import {
   ExposeRequest,
   IExposeUnexposeParams,
   UnexposeRequest,
-} from "../../protocol";
-import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
+} from "../../protocol.js";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher.js";
+import { RefactorEditUtils } from "../../util/refactorEditUtils.js";
 
 export class ExposeUnexposeHandler {
   private connection: Connection;

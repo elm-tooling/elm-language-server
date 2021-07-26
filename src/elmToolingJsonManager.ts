@@ -1,7 +1,7 @@
 import path from "path";
 import { URI } from "vscode-uri";
-import { ISourceFile } from "./compiler/forest";
-import { NonEmptyArray } from "./util/utils";
+import { ISourceFile } from "./compiler/forest.js";
+import { NonEmptyArray } from "./util/utils.js";
 import util from "util";
 import * as fs from "fs";
 

@@ -6,13 +6,13 @@ import {
   TextDocumentPositionParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { DiagnosticsProvider } from ".";
-import { ISymbol } from "../compiler/binder";
-import { getEmptyTypes } from "../compiler/utils/elmUtils";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { HintHelper } from "../util/hintHelper";
-import { TreeUtils } from "../util/treeUtils";
-import { ITextDocumentPositionParams } from "./paramsExtensions";
+import { DiagnosticsProvider } from "./index.js";
+import { ISymbol } from "../compiler/binder.js";
+import { getEmptyTypes } from "../compiler/utils/elmUtils.js";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { HintHelper } from "../util/hintHelper.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { ITextDocumentPositionParams } from "./paramsExtensions.js";
 
 type HoverResult = Hover | null | undefined;
 

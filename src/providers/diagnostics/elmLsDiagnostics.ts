@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { ISourceFile } from "../../compiler/forest";
+import { ISourceFile } from "../../compiler/forest.js";
 import { container } from "tsyringe";
 import {
   Connection,
@@ -16,15 +16,15 @@ import {
   SyntaxNode,
   Tree,
 } from "web-tree-sitter";
-import { IProgram } from "../../compiler/program";
-import { PositionUtil } from "../../positionUtil";
-import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { TreeUtils } from "../../util/treeUtils";
-import { Utils } from "../../util/utils";
-import { IDiagnostic } from "./diagnosticsProvider";
+import { IProgram } from "../../compiler/program.js";
+import { PositionUtil } from "../../positionUtil.js";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher.js";
+import { TreeUtils } from "../../util/treeUtils.js";
+import { Utils } from "../../util/utils.js";
+import { IDiagnostic } from "./diagnosticsProvider.js";
 import * as path from "path";
-import { SyntaxNodeMap } from "../../compiler/utils/syntaxNodeMap";
-import { IElmAnalyseJsonService } from "./elmAnalyseJsonService";
+import { SyntaxNodeMap } from "../../compiler/utils/syntaxNodeMap.js";
+import { IElmAnalyseJsonService } from "./elmAnalyseJsonService.js";
 
 export class ElmLsDiagnostics {
   private language: Language;

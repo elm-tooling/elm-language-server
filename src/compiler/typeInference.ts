@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "../util/treeUtils";
-import { References } from "./references";
+import { TreeUtils } from "../util/treeUtils.js";
+import { References } from "./references.js";
 import {
   BinaryExprTree,
   IOperatorPrecedence,
   Operand,
   Binary,
-} from "./operatorPrecedence";
-import { DisjointSet } from "./utils/disjointSet";
-import { TypeReplacement } from "./typeReplacement";
+} from "./operatorPrecedence.js";
+import { DisjointSet } from "./utils/disjointSet.js";
+import { TypeReplacement } from "./typeReplacement.js";
 import {
   Expression,
   EValueDeclaration,
@@ -36,24 +36,24 @@ import {
   EFieldAccessExpr,
   ENegateExpr,
   ETypeAnnotation,
-} from "./utils/expressionTree";
-import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
-import { TypeExpression } from "./typeExpression";
-import { IProgram } from "./program";
-import { Sequence } from "../util/sequence";
-import { Utils } from "../util/utils";
-import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable";
-import { TypeChecker } from "./typeChecker";
+} from "./utils/expressionTree.js";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap.js";
+import { TypeExpression } from "./typeExpression.js";
+import { IProgram } from "./program.js";
+import { Sequence } from "../util/sequence.js";
+import { Utils } from "../util/utils.js";
+import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable.js";
+import { TypeChecker } from "./typeChecker.js";
 import { performance } from "perf_hooks";
-import { ICancellationToken } from "../cancellation";
+import { ICancellationToken } from "../cancellation.js";
 import {
   Diagnostic,
   Diagnostics,
   error,
   errorWithEndNode,
-} from "./diagnostics";
-import { isKernelProject, nameIsKernel } from "./utils/elmUtils";
-import { PatternMatches } from "./patternMatches";
+} from "./diagnostics.js";
+import { isKernelProject, nameIsKernel } from "./utils/elmUtils.js";
+import { PatternMatches } from "./patternMatches.js";
 
 export let inferTime = 0;
 export function resetInferTime(): void {

@@ -1,10 +1,10 @@
-import { IPackage } from "../src/compiler/elmPackageCache";
+import { IPackage } from "../src/compiler/elmPackageCache.js";
 import {
   IConstraint,
   IVersion,
   parseConstraint,
   solveDependencies,
-} from "../src/compiler/utils/elmUtils";
+} from "../src/compiler/utils/elmUtils.js";
 
 describe("module resolution solver", () => {
   function v(

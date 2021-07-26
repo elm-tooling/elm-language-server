@@ -1,5 +1,5 @@
 import { CancellationToken, Connection } from "vscode-languageserver";
-import { OperationCanceledException } from "../cancellation";
+import { OperationCanceledException } from "../cancellation.js";
 
 /**
  * MultistepOperation taken from Typescript: https://github.com/microsoft/TypeScript/blob/79ffd03f8b73010fa03cef624e5f1770bc9c975b/src/server/session.ts#L166

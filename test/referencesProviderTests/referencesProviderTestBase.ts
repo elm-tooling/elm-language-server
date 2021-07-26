@@ -1,10 +1,10 @@
 import path from "path";
 import { URI } from "vscode-uri";
-import { ReferenceResult, ReferencesProvider } from "../../src/providers";
-import { IReferenceParams } from "../../src/providers/paramsExtensions";
-import { TreeUtils } from "../../src/util/treeUtils";
-import { getReferencesTestFromSource } from "../utils/sourceParser";
-import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";
+import { ReferenceResult, ReferencesProvider } from "../../src/providers.js";
+import { IReferenceParams } from "../../src/providers/paramsExtensions.js";
+import { TreeUtils } from "../../src/util/treeUtils.js";
+import { getReferencesTestFromSource } from "../utils/sourceParser.js";
+import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser.js";
 
 class MockReferencesProvider extends ReferencesProvider {
   public handleReference(params: IReferenceParams): ReferenceResult {

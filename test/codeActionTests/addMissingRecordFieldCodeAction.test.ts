@@ -1,4 +1,4 @@
-import { testCodeAction } from "./codeActionTestBase";
+import { testCodeAction } from "./codeActionTestBase.js";
 
 describe("add missing record field code action", () => {
   it("should work with type alias on a single line", async () => {

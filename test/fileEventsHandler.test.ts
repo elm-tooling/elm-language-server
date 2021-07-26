@@ -1,5 +1,5 @@
 import { mockDeep } from "jest-mock-extended";
-import * as path from "../src/util/path";
+import * as path from "../src/util/path.js";
 import { container } from "tsyringe";
 import {
   CancellationTokenSource,
@@ -16,10 +16,10 @@ import {
 } from "vscode-languageserver";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { IProgram } from "../src/compiler/program";
-import { FileEventsHandler } from "../src/providers/handlers/fileEventsHandler";
-import { getSourceFiles } from "./utils/sourceParser";
-import { SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
+import { IProgram } from "../src/compiler/program.js";
+import { FileEventsHandler } from "../src/providers/handlers/fileEventsHandler.js";
+import { getSourceFiles } from "./utils/sourceParser.js";
+import { SourceTreeParser, srcUri } from "./utils/sourceTreeParser.js";
 
 describe("fileEventsHandler", () => {
   const treeParser = new SourceTreeParser();

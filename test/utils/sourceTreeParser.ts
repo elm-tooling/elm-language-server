@@ -1,13 +1,13 @@
 import { readFile } from "fs";
-import globby from "globby";
+import { globby } from "globby";
 import { container } from "tsyringe";
 import { promisify } from "util";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import Parser from "web-tree-sitter";
-import { Program, IProgram, IProgramHost } from "../../src/compiler/program";
-import * as path from "../../src/util/path";
-import { Utils } from "../../src/util/utils";
+import { Program, IProgram, IProgramHost } from "../../src/compiler/program.js";
+import * as path from "../../src/util/path.js";
+import { Utils } from "../../src/util/utils.js";
 
 export const baseUri = path.join(__dirname, "../sources/");
 export const srcUri = path.join(baseUri, "src");

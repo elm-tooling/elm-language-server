@@ -10,15 +10,15 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { ISourceFile } from "../../compiler/forest";
-import * as utils from "../../compiler/utils/elmUtils";
-import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { Settings } from "../../util/settings";
-import { NonEmptyArray } from "../../util/utils";
-import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
-import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
-import execa = require("execa");
-import { ElmToolingJsonManager } from "../../elmToolingJsonManager";
+import { ISourceFile } from "../../compiler/forest.js";
+import * as utils from "../../compiler/utils/elmUtils.js";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher.js";
+import { Settings } from "../../util/settings.js";
+import { NonEmptyArray } from "../../util/utils.js";
+import { IDiagnostic, IElmIssue } from "./diagnosticsProvider.js";
+import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper.js";
+import * as execa from "execa";
+import { ElmToolingJsonManager } from "../../elmToolingJsonManager.js";
 
 const ELM_MAKE = "Elm";
 export const NAMING_ERROR = "NAMING ERROR";

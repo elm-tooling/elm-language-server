@@ -1,15 +1,15 @@
 import { Position } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ISourceFile } from "../compiler/forest";
-import { comparePosition } from "../positionUtil";
-import { TRecord, Type } from "../compiler/typeInference";
-import { IProgram } from "../compiler/program";
+import { ISourceFile } from "../compiler/forest.js";
+import { comparePosition } from "../positionUtil.js";
+import { TRecord, Type } from "../compiler/typeInference.js";
+import { IProgram } from "../compiler/program.js";
 import {
   EFunctionCallExpr,
   mapSyntaxNodeToExpression,
-} from "../compiler/utils/expressionTree";
+} from "../compiler/utils/expressionTree.js";
 import { Range } from "vscode-languageserver-textdocument";
-import { ISymbol } from "../compiler/binder";
+import { ISymbol } from "../compiler/binder.js";
 
 export type NodeType =
   | "Function"

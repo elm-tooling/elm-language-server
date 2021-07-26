@@ -4,7 +4,7 @@ import {
   CodeActionProvider,
   ICodeAction,
   IRefactorCodeAction,
-} from "../../src/providers/codeActionProvider";
+} from "../../src/providers/codeActionProvider.js";
 import Parser from "web-tree-sitter";
 
 container.register<Parser>("Parser", {

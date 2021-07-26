@@ -1,32 +1,32 @@
 import fs from "fs";
-import globby from "globby";
+import { globby } from "globby";
 import os from "os";
 import { container } from "tsyringe";
 import util from "util";
 import { Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
-import { ICancellationToken } from "../cancellation";
-import { ElmPackageCache, IElmPackageCache } from "./elmPackageCache";
-import { Forest, IForest, ISourceFile } from "./forest";
-import * as utils from "./utils/elmUtils";
-import { IVersion } from "./utils/elmUtils";
-import * as path from "../util/path";
-import { normalizeUri } from "../util/path";
+import { ICancellationToken } from "../cancellation.js";
+import { ElmPackageCache, IElmPackageCache } from "./elmPackageCache.js";
+import { Forest, IForest, ISourceFile } from "./forest.js";
+import * as utils from "./utils/elmUtils.js";
+import { IVersion } from "./utils/elmUtils.js";
+import * as path from "../util/path.js";
+import { normalizeUri } from "../util/path.js";
 import {
   IPossibleImportsCache,
   PossibleImportsCache,
-} from "../util/possibleImportsCache";
-import { Settings } from "../util/settings";
-import { Diagnostic } from "./diagnostics";
-import { TypeCache } from "./typeCache";
+} from "../util/possibleImportsCache.js";
+import { Settings } from "../util/settings.js";
+import { Diagnostic } from "./diagnostics.js";
+import { TypeCache } from "./typeCache.js";
 import {
   createTypeChecker,
   DefinitionResult,
   TypeChecker,
-} from "./typeChecker";
+} from "./typeChecker.js";
 import chokidar from "chokidar";
-import { CommandManager } from "../commandManager";
+import { CommandManager } from "../commandManager.js";
 
 const readFile = util.promisify(fs.readFile);
 

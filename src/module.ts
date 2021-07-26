@@ -1,1 +1,1 @@
-export * as Protocol from "./protocol";
+export * as Protocol from "./protocol.js";

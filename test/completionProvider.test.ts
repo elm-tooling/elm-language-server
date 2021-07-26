@@ -7,10 +7,10 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { CompletionProvider, CompletionResult } from "../src/providers";
-import { ICompletionParams } from "../src/providers/paramsExtensions";
-import { getCaretPositionFromSource } from "./utils/sourceParser";
-import { baseUri, SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
+import { CompletionProvider, CompletionResult } from "../src/providers.js";
+import { ICompletionParams } from "../src/providers/paramsExtensions.js";
+import { getCaretPositionFromSource } from "./utils/sourceParser.js";
+import { baseUri, SourceTreeParser, srcUri } from "./utils/sourceTreeParser.js";
 
 class MockCompletionProvider extends CompletionProvider {
   public handleCompletion(params: ICompletionParams): CompletionResult {
@@ -47,9 +47,8 @@ describe("CompletionProvider", () => {
     await treeParser.init();
     const completionProvider = new MockCompletionProvider();
 
-    const { newSources, position, fileWithCaret } = getCaretPositionFromSource(
-      source,
-    );
+    const { newSources, position, fileWithCaret } =
+      getCaretPositionFromSource(source);
 
     if (!position) {
       throw new Error("Getting position failed");

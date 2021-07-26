@@ -13,11 +13,11 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
-import { IProgram } from "../compiler/program";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { RenameUtils } from "../util/renameUtils";
-import { TreeUtils } from "../util/treeUtils";
-import { IRenameParams, IPrepareRenameParams } from "./paramsExtensions";
+import { IProgram } from "../compiler/program.js";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { RenameUtils } from "../util/renameUtils.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { IRenameParams, IPrepareRenameParams } from "./paramsExtensions.js";
 
 export class RenameProvider {
   private connection: Connection;

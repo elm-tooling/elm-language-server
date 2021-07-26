@@ -1,15 +1,15 @@
 import "reflect-metadata";
 import { container } from "tsyringe";
 import { URI } from "vscode-uri";
-import { Program } from "../src/compiler/program";
+import { Program } from "../src/compiler/program.js";
 import * as path from "path";
-import { Settings } from "../src/util/settings";
+import { Settings } from "../src/util/settings.js";
 import Parser from "web-tree-sitter";
 import { spawnSync } from "child_process";
 import { readFileSync } from "fs";
-import { Diagnostic } from "../src/compiler/diagnostics";
+import { Diagnostic } from "../src/compiler/diagnostics.js";
 import { performance } from "perf_hooks";
-import { createProgramHost } from "./utils/sourceTreeParser";
+import { createProgramHost } from "./utils/sourceTreeParser.js";
 
 container.register("Connection", {
   useValue: {
