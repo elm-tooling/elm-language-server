@@ -59,7 +59,7 @@ export class Server implements ILanguageServer {
 
     if (uri) {
       // Cleanup the path on windows, as globby does not like backslashes
-      const globUri = uri.fsPath.replace(/\\/g, "/");
+      const globUri = uri.fsPath.replace(/\\/g, "/").replace(/\/$/, "");
       const elmJsonGlob = `${globUri}/**/elm.json`;
 
       const elmJsons = globby.sync(
