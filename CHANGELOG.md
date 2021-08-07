@@ -1,5 +1,13 @@
 # Change Log
 
+## 2.2.1
+
+- Add instructions for elm-review
+- Add type variable references/renames
+- Fix false positive for unnecessary list concat diagnostics
+- Fix possible trailing slash on init (for Nova Editor)
+- Update dependencies
+
 ## 2.2.0
 
 - Add server handling to discover tests (vscode)
