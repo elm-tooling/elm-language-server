@@ -1482,5 +1482,17 @@ func result =
   `;
       await testTypeInference(basicsSources + source, [], true);
     });
+
+    it("empty record pattern should not have an error", async () => {
+      const source = `
+--@ Test.elm
+module Test exposing (..)
+
+f : { a : Int } -> Int
+f {} =
+    5
+  `;
+      await testTypeInference(basicsSources + source, [], true);
+    });
   });
 });

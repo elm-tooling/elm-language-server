@@ -1709,7 +1709,9 @@ export class InferenceScope {
   ): void {
     // Bind all patters to a InProgressBinding type
     // so we can use them before we know the type
-    const declaredNames = pattern.descendantsOfType("lower_pattern");
+    const declaredNames = pattern
+      .descendantsOfType("lower_pattern")
+      .filter((pattern) => pattern.text !== "");
     declaredNames.forEach((name) =>
       this.bindings.set(name, TInProgressBinding),
     );

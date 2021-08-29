@@ -664,7 +664,8 @@ export function mapSyntaxNodeToExpression(
           node,
         )
           ?.map(mapSyntaxNodeToExpression)
-          .filter(Utils.notUndefined) as ELowerPattern[];
+          .filter(Utils.notUndefined)
+          .filter((pattern) => pattern.text !== "") as ELowerPattern[];
         return recordPattern;
       }
 
