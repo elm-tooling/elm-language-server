@@ -147,7 +147,7 @@ export async function testCodeAction(
       codeActions[testFixAll ? codeActions.length - 1 : 0].edit!.changes!;
 
     Object.entries(expectedSources).forEach(([uri, source]) => {
-      const edits = changesToApply[URI.file(srcUri + uri).toString()];
+      const edits = changesToApply[URI.file(path.join(srcUri, uri)).toString()];
       if (edits) {
         expect(
           applyEditsToSource(stripCommentLines(result.sources[uri]), edits),

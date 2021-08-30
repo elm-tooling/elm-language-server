@@ -486,6 +486,31 @@ export class RefactorEditUtils {
     );
   }
 
+  public static addUnionVariant(
+    typeDeclaration: SyntaxNode,
+    name: string,
+    params: string[],
+  ): TextEdit | undefined {
+    const lastUnionVariant = typeDeclaration.lastNamedChild;
+
+    if (lastUnionVariant) {
+      // Get the '|' unnamed node
+      const spaces = getSpaces(
+        lastUnionVariant.previousSibling?.startPosition.column ??
+          lastUnionVariant.startPosition.column,
+      );
+      return TextEdit.insert(
+        Position.create(
+          lastUnionVariant.endPosition.row,
+          lastUnionVariant.endPosition.column,
+        ),
+        `\n${spaces}| ${name}${params.length > 0 ? " " : ""}${params
+          .map((param) => (param.includes(" ") ? `(${param})` : param))
+          .join(" ")}`,
+      );
+    }
+  }
+
   private static removeValueFromExposingList(
     exposedNodes: SyntaxNode[],
     valueName: string,
