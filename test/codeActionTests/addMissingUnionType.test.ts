@@ -38,7 +38,7 @@ view =
 
     await testCodeAction(
       htmlSources + source,
-      [{ title: "Create missing union type" }],
+      [{ title: "Create missing union constructor" }],
       expectedSource,
     );
   });
@@ -78,7 +78,7 @@ type Msg
 
     await testCodeAction(
       htmlSources + source,
-      [{ title: "Create missing union type" }],
+      [{ title: "Create missing union constructor" }],
       expectedSource,
     );
   });
@@ -120,7 +120,7 @@ view =
 
     await testCodeAction(
       htmlSources + source,
-      [{ title: "Create missing union type" }],
+      [{ title: "Create missing union constructor" }],
       expectedSource,
     );
   });
