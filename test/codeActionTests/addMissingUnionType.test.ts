@@ -124,6 +124,46 @@ view =
       expectedSource,
     );
   });
+
+  it("should work with only one Msg", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+import Html exposing (Html, div)
+import Html.Events exposing (onClick)
+
+type Msg
+    = Msg1
+
+view : Html Msg
+view =
+    div [ onClick NewMsg ] []
+                  --^
+    `;
+
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (..)
+
+import Html exposing (Html, div)
+import Html.Events exposing (onClick)
+
+type Msg
+    = Msg1
+    | NewMsg
+
+view : Html Msg
+view =
+    div [ onClick NewMsg ] []
+    `;
+
+    await testCodeAction(
+      htmlSources + source,
+      [{ title: "Create missing union constructor" }],
+      expectedSource,
+    );
+  });
 });
 
 const htmlSources = `
