@@ -14,11 +14,11 @@ import { ISourceFile } from "../../compiler/forest";
 import * as utils from "../../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
-import { NonEmptyArray } from "../../util/utils";
 import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
 import { ElmToolingJsonManager } from "../../elmToolingJsonManager";
+import { IProgram } from "../../compiler/program";
 
 const ELM_MAKE = "Elm";
 export const NAMING_ERROR = "NAMING ERROR";
@@ -78,19 +78,15 @@ export class ElmMakeDiagnostics {
     sourceFile: ISourceFile,
   ): Promise<Map<string, IDiagnostic[]>> => {
     const filePath = URI.parse(sourceFile.uri);
-    const workspaceRootPath = this.elmWorkspaceMatcher
-      .getProgramFor(filePath)
-      .getRootPath();
-    return await this.checkForErrors(workspaceRootPath.fsPath, sourceFile).then(
-      (issues) => {
-        return issues.length === 0
-          ? new Map([[filePath.toString(), []]])
-          : ElmDiagnosticsHelper.issuesToDiagnosticMap(
-              issues,
-              workspaceRootPath,
-            );
-      },
-    );
+    const program = this.elmWorkspaceMatcher.getProgramFor(filePath);
+    return await this.checkForErrors(program, sourceFile).then((issues) => {
+      return issues.length === 0
+        ? new Map([[filePath.toString(), []]])
+        : ElmDiagnosticsHelper.issuesToDiagnosticMap(
+            issues,
+            program.getRootPath(),
+          );
+    });
   };
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
@@ -192,56 +188,85 @@ export class ElmMakeDiagnostics {
   }
 
   private async checkForErrors(
-    workspaceRootPath: string,
+    program: IProgram,
     sourceFile: ISourceFile,
   ): Promise<IElmIssue[]> {
     const settings = await this.settings.getClientSettings();
 
-    const [relativePathsToFiles, message]: [NonEmptyArray<string>, string] =
-      await this.elmToolingJsonManager.getEntrypoints(
-        workspaceRootPath,
-        sourceFile,
-      );
+    const workspaceRootPath = program.getRootPath().fsPath;
 
-    this.connection.console.info(
-      `Find entrypoints: ${message}. See https://github.com/elm-tooling/elm-language-server#configuration for more information.`,
+    const fileToRelativePath = (file: ISourceFile): string =>
+      path.relative(workspaceRootPath, URI.parse(file.uri).fsPath);
+
+    // Exclude installed packages (dependencies).
+    const isProjectPath = (pathString: string): boolean =>
+      !pathString.startsWith("..") && !path.isAbsolute(pathString);
+
+    const sourceFilePath = fileToRelativePath(sourceFile);
+
+    const forestFiles: Array<ISourceFile> = Array.from(
+      program.getForest().treeMap.values(),
     );
 
-    const argsMake = [
+    const allFiles = forestFiles.some((file) => file.uri === sourceFile.uri)
+      ? forestFiles
+      : forestFiles.concat(sourceFile);
+
+    const filesMake = allFiles.flatMap((file) => {
+      if (file.isTestFile) {
+        return [];
+      }
+      const relative = fileToRelativePath(file);
+      return isProjectPath(relative) ? [relative] : [];
+    });
+
+    const filesTest = allFiles.flatMap((file) => {
+      if (!file.isTestFile) {
+        return [];
+      }
+      const relative = fileToRelativePath(file);
+      return isProjectPath(relative) ? [relative] : [];
+    });
+
+    const argsMake: Array<string> = [
       "make",
-      ...relativePathsToFiles,
+      ...filesMake,
       "--report",
       "json",
       "--output",
       "/dev/null",
     ];
 
-    const argsTest = ["make", ...relativePathsToFiles, "--report", "json"];
-
-    const makeCommand: string = settings.elmPath;
-    const testCommand: string = settings.elmTestPath;
-    const isTestFile = sourceFile.isTestFile;
-    const args = isTestFile ? argsTest : argsMake;
-    const testOrMakeCommand = isTestFile ? testCommand : makeCommand;
-    const testOrMakeCommandWithOmittedSettings = isTestFile
-      ? "elm-test"
-      : "elm";
-    const options = {
-      cmdArguments: args,
-      notFoundText: isTestFile
-        ? "'elm-test' is not available. Install Elm via 'npm install -g elm-test'."
-        : "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.",
-    };
+    const argsTest: Array<string> = ["make", ...filesTest, "--report", "json"];
 
     try {
       // Do nothing on success, but return that there were no errors
-      utils.execCmdSync(
-        testOrMakeCommand,
-        testOrMakeCommandWithOmittedSettings,
-        options,
-        workspaceRootPath,
-        this.connection,
-      );
+      if (filesMake.length > 0) {
+        utils.execCmdSync(
+          settings.elmPath,
+          "elm",
+          {
+            cmdArguments: argsMake,
+            notFoundText:
+              "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.",
+          },
+          workspaceRootPath,
+          this.connection,
+        );
+      }
+      if (filesTest.length > 0) {
+        utils.execCmdSync(
+          settings.elmTestPath,
+          "elm-test",
+          {
+            cmdArguments: argsTest,
+            notFoundText:
+              "'elm-test' is not available. Install Elm via 'npm install -g elm-test'.",
+          },
+          workspaceRootPath,
+          this.connection,
+        );
+      }
       return [];
     } catch (error) {
       if (typeof error === "string") {
@@ -279,7 +304,7 @@ export class ElmMakeDiagnostics {
                     ? path.isAbsolute(error.path)
                       ? path.relative(workspaceRootPath, error.path)
                       : error.path
-                    : relativePathsToFiles[0],
+                    : sourceFilePath,
                   overview: problem.title,
                   region: problem.region,
                   subregion: "",
@@ -307,7 +332,7 @@ export class ElmMakeDiagnostics {
               // elm-test might supply absolute paths to files
               file: error.path
                 ? path.relative(workspaceRootPath, error.path)
-                : relativePathsToFiles[0],
+                : sourceFilePath,
               overview: error.title,
               region: {
                 end: {
