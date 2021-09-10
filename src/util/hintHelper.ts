@@ -20,7 +20,15 @@ export class HintHelper {
       } else if (node.type === "port_annotation") {
         const name = node.childForFieldName("name");
         if (name && typeString) {
-          return this.formatHint(`${name.text} : ${typeString}`, "");
+          let comment = "";
+          if (
+            node.previousNamedSibling &&
+            node.previousNamedSibling.type === "block_comment"
+          ) {
+            comment = node.previousNamedSibling.text;
+          }
+
+          return this.formatHint(`${name.text} : ${typeString}`, comment);
         }
       } else {
         return this.createHintFromDefinition(node);
