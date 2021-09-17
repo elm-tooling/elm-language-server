@@ -1,51 +1,48 @@
-import { Position, Range, TextEdit } from "vscode-languageserver";
+import { CodeAction, Position, Range, TextEdit } from "vscode-languageserver";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../compiler/diagnostics";
 import { CodeActionProvider, ICodeAction } from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
+import { SyntaxNode } from "web-tree-sitter";
 
 const errorCodes = [Diagnostics.MissingValue.code];
 const fixId = "introduce_new_function_argument";
 
 // TODO: qualified names should not suggest adding to arg list
 // TODO: currently always adding parenthesis even if redundant
-// TODO: handle nested functions
+// TODO: fix adding to function that already have the correct signature
+// TODO: introduce fresh variable name when adding to signature
 CodeActionProvider.registerCodeAction({
   errorCodes,
   fixId,
-  getCodeActions: (params: ICodeActionParams) => {
-    const edits = getEdits(params, params.range);
-
-    if (edits.length > 0) {
-      return [
-        CodeActionProvider.getCodeAction(
-          params,
-          "Introduce new argument to function",
-          edits,
-        ),
-      ];
-    }
-
-    return [];
-  },
+  getCodeActions: (params: ICodeActionParams) =>
+    getActions(params, params.range),
   getFixAllCodeAction: (params: ICodeActionParams): ICodeAction | undefined =>
     undefined,
 });
 
-function getEdits(params: ICodeActionParams, range: Range): TextEdit[] {
+function getActions(params: ICodeActionParams, range: Range): ICodeAction[] {
   const nodeAtPosition = TreeUtils.getNamedDescendantForRange(
     params.sourceFile,
     range,
   );
 
-  const valueDeclaration = TreeUtils.findParentOfType(
-    "value_declaration",
-    nodeAtPosition,
-  );
+  return TreeUtils.getAllAncestorsOfType("value_declaration", nodeAtPosition)
+    .map((valueDeclaration) =>
+      getActionsForValueDeclaration(valueDeclaration, nodeAtPosition, params),
+    )
+    .filter((e): e is ICodeAction => e != undefined);
+}
+
+function getActionsForValueDeclaration(
+  valueDeclaration: SyntaxNode,
+  nodeAtPosition: SyntaxNode,
+  params: ICodeActionParams,
+): CodeAction | undefined {
   const lastPattern = valueDeclaration?.firstChild?.lastChild;
 
-  if (!lastPattern) return [];
+  if (!lastPattern) return;
 
   const valueArgumentPosition = Position.create(
     lastPattern.endPosition.row,
@@ -73,5 +70,10 @@ function getEdits(params: ICodeActionParams, range: Range): TextEdit[] {
     edits.push(TextEdit.insert(typeArgumentPosition, `(${typeString}) -> `));
   }
 
-  return edits;
+  const functionName = valueDeclaration.firstChild?.firstChild?.text;
+  return CodeActionProvider.getCodeAction(
+    params,
+    `Introduce new argument to "${functionName}"`,
+    edits,
+  );
 }
