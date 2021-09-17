@@ -22,17 +22,27 @@ CodeActionProvider.registerCodeAction({
     undefined,
 });
 
-function getActions(params: ICodeActionParams, range: Range): ICodeAction[] {
+function getActions(
+  params: ICodeActionParams,
+  range: Range,
+): ICodeAction[] | undefined {
   const nodeAtPosition = TreeUtils.getNamedDescendantForRange(
     params.sourceFile,
     range,
   );
 
-  return TreeUtils.getAllAncestorsOfType("value_declaration", nodeAtPosition)
-    .map((valueDeclaration) =>
-      getActionsForValueDeclaration(valueDeclaration, nodeAtPosition, params),
-    )
-    .filter((e): e is ICodeAction => e != undefined);
+  if (
+    nodeAtPosition.type === "lower_case_identifier" &&
+    nodeAtPosition.parent?.parent?.type === "value_expr" &&
+    nodeAtPosition.parent?.parent?.parent &&
+    nodeAtPosition.previousSibling?.type !== "dot"
+  ) {
+    return TreeUtils.getAllAncestorsOfType("value_declaration", nodeAtPosition)
+      .map((valueDeclaration) =>
+        getActionsForValueDeclaration(valueDeclaration, nodeAtPosition, params),
+      )
+      .filter((e): e is ICodeAction => e != undefined);
+  }
 }
 
 function getActionsForValueDeclaration(
