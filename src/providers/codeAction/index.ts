@@ -10,3 +10,4 @@ import "./addMissingRecordFieldCodeAction";
 import "./addMissingCaseBranchesCodeAction";
 import "./elmReviewFixAction";
 import "./addMissingUnionType";
+import "./introduceNewFunctionArgument";
