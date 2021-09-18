@@ -208,7 +208,13 @@ export class ElmMakeDiagnostics {
       ? forestFiles
       : forestFiles.concat(sourceFile);
 
-    const projectFiles = allFiles.filter((file) => !file.isDependency);
+    const projectFiles = allFiles.filter(
+      (file) =>
+        !file.isDependency &&
+        file.project.sourceDirectories.some((dir) =>
+          URI.parse(file.uri).fsPath.startsWith(`${dir}${path.sep}`),
+        ),
+    );
 
     const testFilesForSure = projectFiles.filter((file) => file.isTestFile);
     const otherFiles = projectFiles.filter((file) => !file.isTestFile);
@@ -230,6 +236,15 @@ export class ElmMakeDiagnostics {
       entrypointsForSure,
     );
 
+    const urisReferencedByTestsForSure = this.getUrisReferencedByEntrypoints(
+      treeMap,
+      testFilesForSure,
+    );
+
+    const allEntrypointsCoveredByTestsForSure = entrypointsForSure.every(
+      (file) => urisReferencedByTestsForSure.has(file.uri),
+    );
+
     // Files that aren’t imported from any entrypoint. These could be:
     //
     // - Tests inside `src/`.
@@ -248,54 +263,85 @@ export class ElmMakeDiagnostics {
       (file) => !urisReferencedByEntrypoints.has(file.uri),
     );
 
-    const filesMake = entrypointsForSure;
-
-    const filesTest = testFilesForSure.concat(possiblyTestFiles);
-
-    const argsMake: Array<string> = [
+    const argsElm = (files: Array<ISourceFile>): Array<string> => [
       "make",
-      ...filesMake.map(fileToRelativePath),
+      ...files.map(fileToRelativePath),
       "--report",
       "json",
       "--output",
       "/dev/null",
     ];
 
-    const argsTest: Array<string> = [
+    const argsElmTest = (files: Array<ISourceFile>): Array<string> => [
       "make",
-      ...filesTest.map(fileToRelativePath),
+      ...files.map(fileToRelativePath),
       "--report",
       "json",
     ];
 
+    const elmNotFound =
+      "The 'elm' compiler is not available. Install via for example 'npm install -g elm'.";
+    const elmTestNotFound =
+      "'elm-test' (or 'elm-test-rs') is not available. Install via for example 'npm install -g elm-test'.";
+
+    // Do nothing on success, but return that there were no errors
     try {
-      // Do nothing on success, but return that there were no errors
-      if (filesMake.length > 0) {
-        utils.execCmdSync(
-          settings.elmPath,
-          "elm",
-          {
-            cmdArguments: argsMake,
-            notFoundText:
-              "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.",
-          },
-          workspaceRootPath,
-          this.connection,
-        );
-      }
-      if (filesTest.length > 0) {
-        utils.execCmdSync(
-          settings.elmTestPath,
-          "elm-test",
-          {
-            cmdArguments: argsTest,
-            notFoundText:
-              "'elm-test' is not available. Install Elm via 'npm install -g elm-test'.",
-          },
-          workspaceRootPath,
-          this.connection,
-        );
-      }
+      await Promise.all([
+        entrypointsForSure.length > 0 && !allEntrypointsCoveredByTestsForSure
+          ? utils.execCmd(
+              [settings.elmPath, argsElm(entrypointsForSure)],
+              [["elm", argsElm(entrypointsForSure)]],
+              { notFoundText: elmNotFound },
+              workspaceRootPath,
+              this.connection,
+            )
+          : undefined,
+        testFilesForSure.length === 0 && possiblyTestFiles.length > 0
+          ? utils.execCmd(
+              [settings.elmTestPath, argsElmTest(possiblyTestFiles)],
+              // These files _could_ be tests, but since there’s no `tests/` folder we can’t
+              // know if we should expect the user to have elm-test installed. If they don’t,
+              // they’ll get errors imports from "test-dependencies".
+              [
+                ["elm-test-rs", argsElmTest(possiblyTestFiles)],
+                ["elm-test", argsElmTest(possiblyTestFiles)],
+                ["elm", argsElm(possiblyTestFiles)],
+              ],
+              {
+                notFoundText:
+                  settings.elmTestPath === ""
+                    ? elmTestNotFound
+                    : // This uses `elmNotFound` since "elm" is the last alternative above.
+                      elmNotFound,
+              },
+              workspaceRootPath,
+              this.connection,
+            )
+          : undefined,
+        testFilesForSure.length > 0
+          ? utils.execCmd(
+              [
+                settings.elmTestPath,
+                argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
+              ],
+              // Try elm-test-rs first since it’s faster (no Node.js 100-200 ms startup time).
+              // Since there’s a `tests/` folder we expect the user to have elm-test installed.
+              [
+                [
+                  "elm-test-rs",
+                  argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
+                ],
+                [
+                  "elm-test",
+                  argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
+                ],
+              ],
+              { notFoundText: elmTestNotFound },
+              workspaceRootPath,
+              this.connection,
+            )
+          : undefined,
+      ]);
       return [];
     } catch (error) {
       if (typeof error === "string") {
