@@ -21,10 +21,18 @@ import { PositionUtil } from "../../positionUtil";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../../util/treeUtils";
 import { Utils } from "../../util/utils";
-import { IDiagnostic } from "./diagnosticsProvider";
+import {
+  convertFromCompilerDiagnostic,
+  IDiagnostic,
+} from "./diagnosticsProvider";
 import * as path from "path";
 import { SyntaxNodeMap } from "../../compiler/utils/syntaxNodeMap";
-import { IElmAnalyseJsonService } from "./elmAnalyseJsonService";
+import {
+  IElmAnalyseJson,
+  IElmAnalyseJsonService,
+} from "./elmAnalyseJsonService";
+import { Diagnostics } from "../../compiler/diagnostics";
+import { ServerCancellationToken } from "../../cancellation";
 
 export class ElmLsDiagnostics {
   private language: Language;
@@ -388,14 +396,11 @@ export class ElmLsDiagnostics {
     );
   }
 
-  public createDiagnostics = (
+  private excludedFolder(
     sourceFile: ISourceFile,
     program: IProgram,
-  ): IDiagnostic[] => {
-    const elmAnalyseJson = this.elmAnalyseJsonService.getElmAnalyseJson(
-      program.getRootPath().fsPath,
-    );
-    const tree = sourceFile.tree;
+    elmAnalyseJson: IElmAnalyseJson,
+  ): boolean {
     const uri = sourceFile.uri;
     const rootPath = program.getRootPath().fsPath;
 
@@ -412,9 +417,25 @@ export class ElmLsDiagnostics {
         }
       })
     ) {
+      return true;
+    }
+    return false;
+  }
+
+  public createDiagnostics = (
+    sourceFile: ISourceFile,
+    program: IProgram,
+  ): IDiagnostic[] => {
+    const elmAnalyseJson = this.elmAnalyseJsonService.getElmAnalyseJson(
+      program.getRootPath().fsPath,
+    );
+
+    if (this.excludedFolder(sourceFile, program, elmAnalyseJson)) {
       return [];
     }
 
+    const uri = sourceFile.uri;
+    const tree = sourceFile.tree;
     try {
       return [
         ...(elmAnalyseJson.checks?.UnusedImport === false
@@ -463,6 +484,40 @@ export class ElmLsDiagnostics {
           ? []
           : this.getUnusedValueConstructorDiagnostics(tree)),
       ];
+    } catch (e) {
+      this.connection.console.error(e);
+    }
+    return [];
+  };
+
+  public createSuggestionDiagnostics = (
+    sourceFile: ISourceFile,
+    program: IProgram,
+    serverCancellationToken: ServerCancellationToken,
+  ): IDiagnostic[] => {
+    const elmAnalyseJson = this.elmAnalyseJsonService.getElmAnalyseJson(
+      program.getRootPath().fsPath,
+    );
+
+    if (this.excludedFolder(sourceFile, program, elmAnalyseJson)) {
+      return [];
+    }
+
+    try {
+      return program
+        .getSuggestionDiagnostics(sourceFile, serverCancellationToken)
+        .map(convertFromCompilerDiagnostic)
+        .filter((diagnostic) => {
+          if (
+            diagnostic.data.code === Diagnostics.MissingTypeAnnotation.code &&
+            elmAnalyseJson.checks &&
+            elmAnalyseJson.checks.MissingTypeAnnotation !== undefined
+          ) {
+            return elmAnalyseJson.checks?.MissingTypeAnnotation;
+          } else {
+            return true;
+          }
+        });
     } catch (e) {
       this.connection.console.error(e);
     }
