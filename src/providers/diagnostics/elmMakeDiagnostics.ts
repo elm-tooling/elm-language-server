@@ -200,21 +200,57 @@ export class ElmMakeDiagnostics {
 
     const sourceFilePath = fileToRelativePath(sourceFile);
 
-    const forestFiles: Array<ISourceFile> = Array.from(
-      program.getForest().treeMap.values(),
-    );
+    const treeMap = program.getForest().treeMap;
+
+    const forestFiles: Array<ISourceFile> = Array.from(treeMap.values());
 
     const allFiles = forestFiles.some((file) => file.uri === sourceFile.uri)
       ? forestFiles
       : forestFiles.concat(sourceFile);
 
-    const filesMake = allFiles.filter(
-      (file) => !file.isTestFile && !file.isDependency,
+    const projectFiles = allFiles.filter((file) => !file.isDependency);
+
+    const testFilesForSure = projectFiles.filter((file) => file.isTestFile);
+    const otherFiles = projectFiles.filter((file) => !file.isTestFile);
+
+    const entrypointsForSure = otherFiles.filter((file) => {
+      switch (file.project.type) {
+        case "application":
+          return file.exposing?.has("main") ?? false;
+
+        case "package":
+          return file.moduleName === undefined
+            ? false
+            : file.project.exposedModules.has(file.moduleName);
+      }
+    });
+
+    const urisReferencedByEntrypoints = this.getUrisReferencedByEntrypoints(
+      treeMap,
+      entrypointsForSure,
     );
 
-    const filesTest = allFiles.filter(
-      (file) => file.isTestFile && !file.isDependency,
+    // Files that aren’t imported from any entrypoint. These could be:
+    //
+    // - Tests inside `src/`.
+    // - New files that aren’t imported by anything yet.
+    // - Old leftover files that aren’t imported by anything.
+    // - Files that _are_ used and aren’t tests but that still end up here
+    //   because of:
+    //   - The project doesn’t use `main =`, like `review/` for elm-review.
+    //   - The user has accidentally remove `main =` or not exposed it.
+    //
+    // Since these _could_ be test, we compile them with `elm-test make` rather
+    // than `elm make`, so that "test-dependencies" are allowed. If they _aren’t_
+    // tests, the only downside of this is that if you accidentally import a
+    // test-dependency, you won’t get an error for that. It should be an OK tradeoff.
+    const possiblyTestFiles = otherFiles.filter(
+      (file) => !urisReferencedByEntrypoints.has(file.uri),
     );
+
+    const filesMake = entrypointsForSure;
+
+    const filesTest = testFilesForSure.concat(possiblyTestFiles);
 
     const argsMake: Array<string> = [
       "make",
@@ -349,6 +385,7 @@ export class ElmMakeDiagnostics {
       }
     }
   }
+
   private checkIfVersionMismatchesAndCreateMessage(
     errorObject: IElmError,
   ): void {
@@ -361,5 +398,32 @@ export class ElmMakeDiagnostics {
           .join(""),
       );
     }
+  }
+
+  private getUrisReferencedByEntrypoints(
+    treeMap: Map<string, ISourceFile>,
+    entrypoints: ISourceFile[],
+  ): Set<string> {
+    const stack: ISourceFile[] = entrypoints.slice();
+    const result = new Set<string>(entrypoints.map((file) => file.uri));
+
+    for (let i = 0; i < stack.length; i++) {
+      const file = stack[i];
+      if (file.resolvedModules !== undefined) {
+        for (const uri of file.resolvedModules.values()) {
+          const nextFile = treeMap.get(uri);
+          if (
+            nextFile !== undefined &&
+            !nextFile.isDependency &&
+            !result.has(nextFile.uri)
+          ) {
+            result.add(nextFile.uri);
+            stack.push(nextFile);
+          }
+        }
+      }
+    }
+
+    return result;
   }
 }
