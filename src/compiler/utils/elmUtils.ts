@@ -40,8 +40,7 @@ export function execCmdSync(
     });
   } catch (error) {
     connection.console.warn(JSON.stringify(error));
-    const notFound = error.code === "ENOENT";
-    if (notFound) {
+    if (error.code === "ENOENT") {
       connection.window.showErrorMessage(
         options.notFoundText
           ? options.notFoundText + ` I'm looking for '${cmd}' at '${cwd}'`

@@ -9,3 +9,4 @@ import "./installPackageCodeAction";
 import "./addMissingRecordFieldCodeAction";
 import "./addMissingCaseBranchesCodeAction";
 import "./elmReviewFixAction";
+import "./addMissingUnionType";
