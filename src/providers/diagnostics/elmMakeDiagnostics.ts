@@ -284,71 +284,75 @@ export class ElmMakeDiagnostics {
     const elmTestNotFound =
       "'elm-test' (or 'elm-test-rs') is not available. Install via for example 'npm install -g elm-test'.";
 
-    // Do nothing on success, but return that there were no errors
-    try {
-      await Promise.all([
-        entrypointsForSure.length > 0 && !allEntrypointsCoveredByTestsForSure
-          ? utils.execCmd(
-              [settings.elmPath, argsElm(entrypointsForSure)],
-              [["elm", argsElm(entrypointsForSure)]],
-              { notFoundText: elmNotFound },
-              workspaceRootPath,
-              this.connection,
-            )
-          : undefined,
-        testFilesForSure.length === 0 && possiblyTestFiles.length > 0
-          ? utils.execCmd(
-              [settings.elmTestPath, argsElmTest(possiblyTestFiles)],
-              // These files _could_ be tests, but since there’s no `tests/` folder we can’t
-              // know if we should expect the user to have elm-test installed. If they don’t,
-              // they’ll get errors imports from "test-dependencies".
+    const results = await Promise.allSettled([
+      entrypointsForSure.length > 0 && !allEntrypointsCoveredByTestsForSure
+        ? utils.execCmd(
+            [settings.elmPath, argsElm(entrypointsForSure)],
+            [["elm", argsElm(entrypointsForSure)]],
+            { notFoundText: elmNotFound },
+            workspaceRootPath,
+            this.connection,
+          )
+        : undefined,
+      testFilesForSure.length === 0 && possiblyTestFiles.length > 0
+        ? utils.execCmd(
+            [settings.elmTestPath, argsElmTest(possiblyTestFiles)],
+            // These files _could_ be tests, but since there’s no `tests/` folder we can’t
+            // know if we should expect the user to have elm-test installed. If they don’t,
+            // they’ll get errors imports from "test-dependencies".
+            [
+              ["elm-test-rs", argsElmTest(possiblyTestFiles)],
+              ["elm-test", argsElmTest(possiblyTestFiles)],
+              ["elm", argsElm(possiblyTestFiles)],
+            ],
+            {
+              notFoundText:
+                settings.elmTestPath === ""
+                  ? elmTestNotFound
+                  : // This uses `elmNotFound` since "elm" is the last alternative above.
+                    elmNotFound,
+            },
+            workspaceRootPath,
+            this.connection,
+          )
+        : undefined,
+      testFilesForSure.length > 0
+        ? utils.execCmd(
+            [
+              settings.elmTestPath,
+              argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
+            ],
+            // Try elm-test-rs first since it’s faster (no Node.js 100-200 ms startup time).
+            // Since there’s a `tests/` folder we expect the user to have elm-test installed.
+            [
               [
-                ["elm-test-rs", argsElmTest(possiblyTestFiles)],
-                ["elm-test", argsElmTest(possiblyTestFiles)],
-                ["elm", argsElm(possiblyTestFiles)],
-              ],
-              {
-                notFoundText:
-                  settings.elmTestPath === ""
-                    ? elmTestNotFound
-                    : // This uses `elmNotFound` since "elm" is the last alternative above.
-                      elmNotFound,
-              },
-              workspaceRootPath,
-              this.connection,
-            )
-          : undefined,
-        testFilesForSure.length > 0
-          ? utils.execCmd(
-              [
-                settings.elmTestPath,
+                "elm-test-rs",
                 argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
               ],
-              // Try elm-test-rs first since it’s faster (no Node.js 100-200 ms startup time).
-              // Since there’s a `tests/` folder we expect the user to have elm-test installed.
               [
-                [
-                  "elm-test-rs",
-                  argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
-                ],
-                [
-                  "elm-test",
-                  argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
-                ],
+                "elm-test",
+                argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
               ],
-              { notFoundText: elmTestNotFound },
-              workspaceRootPath,
-              this.connection,
-            )
-          : undefined,
-      ]);
-      return [];
-    } catch (error) {
+            ],
+            { notFoundText: elmTestNotFound },
+            workspaceRootPath,
+            this.connection,
+          )
+        : undefined,
+    ]);
+
+    const lines: IElmIssue[] = [];
+    const linesSet = new Set<string>();
+
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        continue;
+      }
+      const error = result.reason as unknown;
       if (typeof error === "string") {
-        return [];
+        continue;
       } else {
         const execaError = error as execa.ExecaReturnValue<string>;
-        const lines: IElmIssue[] = [];
         execaError.stderr.split("\n").forEach((line: string) => {
           let errorObject: unknown;
           try {
@@ -366,8 +370,8 @@ export class ElmMakeDiagnostics {
           ) {
             const compilerError = errorObject as IElmCompilerError;
             compilerError.errors.forEach((error: IError) => {
-              const problems: IElmIssue[] = error.problems.map(
-                (problem: IProblem) => ({
+              error.problems.forEach((problem: IProblem) => {
+                const issue: IElmIssue = {
                   details: problem.message
                     .map((message: string | IStyledString) =>
                       typeof message === "string"
@@ -385,10 +389,13 @@ export class ElmMakeDiagnostics {
                   subregion: "",
                   tag: "error",
                   type: "error",
-                }),
-              );
-
-              lines.push(...problems);
+                };
+                const issueString = JSON.stringify(issue);
+                if (!linesSet.has(issueString)) {
+                  lines.push(issue);
+                  linesSet.add(issueString);
+                }
+              });
             });
           } else if (
             errorObject &&
@@ -398,7 +405,7 @@ export class ElmMakeDiagnostics {
             const error = errorObject as IElmError;
             this.checkIfVersionMismatchesAndCreateMessage(error);
 
-            const problem: IElmIssue = {
+            const issue: IElmIssue = {
               details: error.message
                 .map((message: string | IStyledString) =>
                   typeof message === "string" ? message : message.string,
@@ -424,12 +431,18 @@ export class ElmMakeDiagnostics {
               type: "error",
             };
 
-            lines.push(problem);
+            lines.push(issue);
+            const issueString = JSON.stringify(issue);
+            if (!linesSet.has(issueString)) {
+              lines.push(issue);
+              linesSet.add(issueString);
+            }
           }
         });
-        return lines;
       }
     }
+
+    return lines;
   }
 
   private checkIfVersionMismatchesAndCreateMessage(
