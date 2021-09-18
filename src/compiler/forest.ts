@@ -14,6 +14,7 @@ export interface ISourceFile {
   tree: Tree;
   project: ElmProject; // The project this source file is associated with
   isTestFile: boolean;
+  isDependency: boolean;
 
   parseDiagnostics: Diagnostic[];
   bindDiagnostics: Diagnostic[];
@@ -38,6 +39,7 @@ export interface IForest {
     referenced: boolean,
     tree: Tree,
     isTestFile: boolean,
+    isDependency: boolean,
     project?: ElmProject,
     packageName?: string,
   ): ISourceFile;
@@ -65,6 +67,7 @@ export class Forest implements IForest {
     referenced: boolean,
     tree: Tree,
     isTestFile: boolean,
+    isDependency: boolean,
     project: ElmProject = this.rootProject,
     maintainerAndPackageName?: string,
   ): ISourceFile {
@@ -78,6 +81,7 @@ export class Forest implements IForest {
       writeable,
       project,
       isTestFile,
+      isDependency,
       parseDiagnostics: [],
       bindDiagnostics: [],
     };

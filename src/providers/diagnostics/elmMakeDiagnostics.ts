@@ -198,10 +198,6 @@ export class ElmMakeDiagnostics {
     const fileToRelativePath = (file: ISourceFile): string =>
       path.relative(workspaceRootPath, URI.parse(file.uri).fsPath);
 
-    // Exclude installed packages (dependencies).
-    const isProjectPath = (pathString: string): boolean =>
-      !pathString.startsWith("..") && !path.isAbsolute(pathString);
-
     const sourceFilePath = fileToRelativePath(sourceFile);
 
     const forestFiles: Array<ISourceFile> = Array.from(
@@ -212,32 +208,29 @@ export class ElmMakeDiagnostics {
       ? forestFiles
       : forestFiles.concat(sourceFile);
 
-    const filesMake = allFiles.flatMap((file) => {
-      if (file.isTestFile) {
-        return [];
-      }
-      const relative = fileToRelativePath(file);
-      return isProjectPath(relative) ? [relative] : [];
-    });
+    const filesMake = allFiles.filter(
+      (file) => !file.isTestFile && !file.isDependency,
+    );
 
-    const filesTest = allFiles.flatMap((file) => {
-      if (!file.isTestFile) {
-        return [];
-      }
-      const relative = fileToRelativePath(file);
-      return isProjectPath(relative) ? [relative] : [];
-    });
+    const filesTest = allFiles.filter(
+      (file) => file.isTestFile && !file.isDependency,
+    );
 
     const argsMake: Array<string> = [
       "make",
-      ...filesMake,
+      ...filesMake.map(fileToRelativePath),
       "--report",
       "json",
       "--output",
       "/dev/null",
     ];
 
-    const argsTest: Array<string> = ["make", ...filesTest, "--report", "json"];
+    const argsTest: Array<string> = [
+      "make",
+      ...filesTest.map(fileToRelativePath),
+      "--report",
+      "json",
+    ];
 
     try {
       // Do nothing on success, but return that there were no errors
