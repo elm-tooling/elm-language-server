@@ -208,13 +208,7 @@ export class ElmMakeDiagnostics {
       ? forestFiles
       : forestFiles.concat(sourceFile);
 
-    const projectFiles = allFiles.filter(
-      (file) =>
-        !file.isDependency &&
-        file.project.sourceDirectories.some((dir) =>
-          URI.parse(file.uri).fsPath.startsWith(`${dir}${path.sep}`),
-        ),
-    );
+    const projectFiles = allFiles.filter((file) => !file.isDependency);
 
     const testFilesForSure = projectFiles.filter((file) => file.isTestFile);
     const otherFiles = projectFiles.filter((file) => !file.isTestFile);
