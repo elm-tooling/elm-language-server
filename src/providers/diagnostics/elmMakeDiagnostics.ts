@@ -278,6 +278,12 @@ export class ElmMakeDiagnostics {
     const elmTestNotFound =
       "'elm-test' (or 'elm-test-rs') is not available. Install via for example 'npm install -g elm-test'.";
 
+    // - If all entrypoints are covered by tests, we only need to run `elm-test make`.
+    // - Otherwise, call `elm make` for all entrypoints (if any).
+    // - Call `elm-test make` for all tests (if any), plus potential tests.
+    // - If there’s no `tests/` folder but files that _could_ be tests, try to
+    //   call `elm-test make` but fall back to `elm make` in case they’re not
+    //   tests and the user hasn’t got elm-test installed.
     const results = await Promise.allSettled([
       entrypointsForSure.length > 0 && !allEntrypointsCoveredByTestsForSure
         ? utils.execCmd(
