@@ -12,6 +12,7 @@ import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Settings } from "../util/settings";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 import { IDocumentFormattingParams } from "./paramsExtensions";
+import { createNodeProgramHost } from "../compiler/program";
 
 type DocumentFormattingResult = Promise<TextEdit[] | undefined>;
 
@@ -23,9 +24,9 @@ export class DocumentFormattingProvider {
   private diagnostics: DiagnosticsProvider;
 
   constructor() {
-    this.settings = container.resolve<Settings>("Settings");
+    this.settings = container.resolve(Settings);
     this.connection = container.resolve<Connection>("Connection");
-    this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
+    this.events = container.resolve(TextDocumentEvents);
     this.diagnostics = container.resolve(DiagnosticsProvider);
     this.connection.onDocumentFormatting(
       this.diagnostics.interruptDiagnostics(() =>
@@ -51,7 +52,7 @@ export class DocumentFormattingProvider {
       "elm-format",
       options,
       elmWorkspaceRootPath.fsPath,
-      this.connection,
+      createNodeProgramHost(this.connection),
       text,
     );
     return Diff.getTextRangeChanges(text, format.stdout);

@@ -10,9 +10,7 @@ import {
   EUnionVariant,
   EPortAnnotation,
 } from "./utils/expressionTree";
-import { IProgram } from "./program";
-import { container } from "tsyringe";
-import { Connection } from "vscode-languageserver";
+import { IProgram, IProgramHost } from "./program";
 import {
   Type,
   TUnknown,
@@ -97,7 +95,10 @@ export interface TypeChecker {
   ) => SyntaxNode[];
 }
 
-export function createTypeChecker(program: IProgram): TypeChecker {
+export function createTypeChecker(
+  program: IProgram,
+  host: IProgramHost,
+): TypeChecker {
   const forest = program.getForest();
   const imports = new Map<string, Imports>();
 
@@ -242,8 +243,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
 
       return TUnknown;
     } catch (error) {
-      const connection = container.resolve<Connection>("Connection");
-      connection.console.warn(`Error while trying to infer a type. ${error}`);
+      host.logger.warn(`Error while trying to infer a type. ${error}`);
       return TUnknown;
     }
   }

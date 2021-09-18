@@ -16,6 +16,7 @@ import { Range } from "vscode-languageserver-textdocument";
 import execa = require("execa");
 import { existsSync } from "fs";
 import * as path from "path";
+import { createNodeProgramHost } from "../../compiler/program";
 
 export type IElmReviewDiagnostic = IDiagnostic & {
   data: {
@@ -87,7 +88,7 @@ export class ElmReviewDiagnostics {
   private connection: Connection;
 
   constructor() {
-    this.settings = container.resolve("Settings");
+    this.settings = container.resolve(Settings);
     this.connection = container.resolve<Connection>("Connection");
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
   }
@@ -142,7 +143,7 @@ export class ElmReviewDiagnostics {
         "elm-review",
         options,
         workspaceRootPath,
-        this.connection,
+        createNodeProgramHost(this.connection),
       );
       return fileErrors;
     } catch (error) {

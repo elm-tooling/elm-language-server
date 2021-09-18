@@ -44,7 +44,7 @@ export class CodeLensProvider {
 
   constructor() {
     this.connection = container.resolve<Connection>("Connection");
-    this.settings = container.resolve<Settings>("Settings");
+    this.settings = container.resolve(Settings);
     this.connection.onCodeLens(
       new ElmWorkspaceMatcher((param: CodeLensParams) =>
         URI.parse(param.textDocument.uri),
