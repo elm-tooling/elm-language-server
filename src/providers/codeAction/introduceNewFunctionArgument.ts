@@ -1,5 +1,4 @@
 import { CodeAction, Position, Range, TextEdit } from "vscode-languageserver";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../compiler/diagnostics";
 import { CodeActionProvider, ICodeAction } from "../codeActionProvider";
@@ -9,8 +8,6 @@ import { SyntaxNode } from "web-tree-sitter";
 const errorCodes = [Diagnostics.MissingValue.code];
 const fixId = "introduce_new_function_argument";
 
-// TODO: qualified names should not suggest adding to arg list
-// TODO: currently always adding parenthesis even if redundant
 // TODO: fix adding to function that already have the correct signature
 // TODO: introduce fresh variable name when adding to signature
 CodeActionProvider.registerCodeAction({
@@ -71,19 +68,24 @@ function getActionsForValueDeclaration(
     const checker = params.program.getTypeChecker();
     const type = checker.findType(nodeAtPosition);
     const typeString = checker.typeToString(type, params.sourceFile);
+    const typeStringWithParen = typeString.includes(" ")
+      ? `(${typeString})`
+      : typeString;
 
     const typeArgumentPosition = Position.create(
       lastArgumentType.startPosition.row,
       lastArgumentType.startPosition.column,
     );
 
-    edits.push(TextEdit.insert(typeArgumentPosition, `(${typeString}) -> `));
+    edits.push(
+      TextEdit.insert(typeArgumentPosition, `${typeStringWithParen} -> `),
+    );
   }
 
   const functionName = valueDeclaration.firstChild?.firstChild?.text;
   return CodeActionProvider.getCodeAction(
     params,
-    `Introduce new argument to "${functionName}"`,
+    `Add new parameter to "${functionName}"`,
     edits,
   );
 }
