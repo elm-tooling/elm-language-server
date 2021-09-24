@@ -49,7 +49,7 @@ function getActionsForValueDeclaration(
 
   if (!lastPattern) return;
 
-  const valueArgumentPosition = Position.create(
+  const valueParameterPosition = Position.create(
     lastPattern.endPosition.row,
     lastPattern.endPosition.column + 1,
   );
@@ -60,7 +60,9 @@ function getActionsForValueDeclaration(
     valueDeclaration,
   );
 
-  edits.push(TextEdit.insert(valueArgumentPosition, nodeAtPosition.text + " "));
+  edits.push(
+    TextEdit.insert(valueParameterPosition, nodeAtPosition.text + " "),
+  );
 
   const functionName = valueDeclaration.firstChild?.firstChild?.text;
   return CodeActionProvider.getCodeAction(
@@ -76,10 +78,10 @@ function getEditsForSignatureUpdate(
   valueDeclaration: SyntaxNode,
 ): TextEdit[] {
   const typeAnnotation = TreeUtils.getTypeAnnotation(valueDeclaration);
-  const lastArgumentType =
+  const lastParameterType =
     typeAnnotation?.childForFieldName("typeExpression")?.lastChild;
 
-  if (!lastArgumentType) return [];
+  if (!lastParameterType) return [];
 
   const checker = params.program.getTypeChecker();
   const type = checker.findType(nodeAtPosition);
@@ -92,10 +94,10 @@ function getEditsForSignatureUpdate(
     typeString = `(${typeString})`;
   }
 
-  const typeArgumentPosition = Position.create(
-    lastArgumentType.startPosition.row,
-    lastArgumentType.startPosition.column,
+  const typeParameterPosition = Position.create(
+    lastParameterType.startPosition.row,
+    lastParameterType.startPosition.column,
   );
 
-  return [TextEdit.insert(typeArgumentPosition, `${typeString} -> `)];
+  return [TextEdit.insert(typeParameterPosition, `${typeString} -> `)];
 }
