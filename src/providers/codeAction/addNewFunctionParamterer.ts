@@ -4,10 +4,9 @@ import { Diagnostics } from "../../compiler/diagnostics";
 import { CodeActionProvider, ICodeAction } from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
 import { SyntaxNode } from "web-tree-sitter";
-import { TVar } from "../../compiler/typeInference";
 
 const errorCodes = [Diagnostics.MissingValue.code];
-const fixId = "introduce_new_function_argument";
+const fixId = "add_new_function_parameter";
 
 CodeActionProvider.registerCodeAction({
   errorCodes,
