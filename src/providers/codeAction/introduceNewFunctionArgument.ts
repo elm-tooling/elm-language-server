@@ -4,18 +4,17 @@ import { Diagnostics } from "../../compiler/diagnostics";
 import { CodeActionProvider, ICodeAction } from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
 import { SyntaxNode } from "web-tree-sitter";
+import { TVar } from "../../compiler/typeInference";
 
 const errorCodes = [Diagnostics.MissingValue.code];
 const fixId = "introduce_new_function_argument";
 
-// TODO: fix adding to function that already have the correct signature
-// TODO: introduce fresh variable name when adding to signature
 CodeActionProvider.registerCodeAction({
   errorCodes,
   fixId,
   getCodeActions: (params: ICodeActionParams) =>
     getActions(params, params.range),
-  getFixAllCodeAction: (params: ICodeActionParams): ICodeAction | undefined =>
+  getFixAllCodeAction: (_: ICodeActionParams): ICodeAction | undefined =>
     undefined,
 });
 
@@ -56,31 +55,13 @@ function getActionsForValueDeclaration(
     lastPattern.endPosition.column + 1,
   );
 
-  let edits = [
-    TextEdit.insert(valueArgumentPosition, nodeAtPosition.text + " "),
-  ];
+  const edits = getEditsForSignatureUpdate(
+    params,
+    nodeAtPosition,
+    valueDeclaration,
+  );
 
-  const typeAnnotation = TreeUtils.getTypeAnnotation(valueDeclaration);
-  const lastArgumentType =
-    typeAnnotation?.childForFieldName("typeExpression")?.lastChild;
-
-  if (lastArgumentType) {
-    const checker = params.program.getTypeChecker();
-    const type = checker.findType(nodeAtPosition);
-    const typeString = checker.typeToString(type, params.sourceFile);
-    const typeStringWithParen = typeString.includes(" ")
-      ? `(${typeString})`
-      : typeString;
-
-    const typeArgumentPosition = Position.create(
-      lastArgumentType.startPosition.row,
-      lastArgumentType.startPosition.column,
-    );
-
-    edits.push(
-      TextEdit.insert(typeArgumentPosition, `${typeStringWithParen} -> `),
-    );
-  }
+  edits.push(TextEdit.insert(valueArgumentPosition, nodeAtPosition.text + " "));
 
   const functionName = valueDeclaration.firstChild?.firstChild?.text;
   return CodeActionProvider.getCodeAction(
@@ -88,4 +69,34 @@ function getActionsForValueDeclaration(
     `Add new parameter to "${functionName}"`,
     edits,
   );
+}
+
+function getEditsForSignatureUpdate(
+  params: ICodeActionParams,
+  nodeAtPosition: SyntaxNode,
+  valueDeclaration: SyntaxNode,
+): TextEdit[] {
+  const typeAnnotation = TreeUtils.getTypeAnnotation(valueDeclaration);
+  const lastArgumentType =
+    typeAnnotation?.childForFieldName("typeExpression")?.lastChild;
+
+  if (!lastArgumentType) return [];
+
+  const checker = params.program.getTypeChecker();
+  const type = checker.findType(nodeAtPosition);
+
+  let typeString = checker.typeToString(type, params.sourceFile);
+  if (type.nodeType == "Var") {
+    typeString = nodeAtPosition.text;
+  }
+  if (typeString.includes(" ")) {
+    typeString = `(${typeString})`;
+  }
+
+  const typeArgumentPosition = Position.create(
+    lastArgumentType.startPosition.row,
+    lastArgumentType.startPosition.column,
+  );
+
+  return [TextEdit.insert(typeArgumentPosition, `${typeString} -> `)];
 }
