@@ -86,10 +86,11 @@ function getEditsForSignatureUpdate(
   const checker = params.program.getTypeChecker();
   const type = checker.findType(nodeAtPosition);
 
-  let typeString = checker.typeToString(type, params.sourceFile);
-  if (type.nodeType == "Var") {
-    typeString = nodeAtPosition.text;
-  }
+  let typeString =
+    type.nodeType == "Var"
+      ? nodeAtPosition.text
+      : checker.typeToString(type, params.sourceFile);
+
   if (typeString.includes(" ")) {
     typeString = `(${typeString})`;
   }
