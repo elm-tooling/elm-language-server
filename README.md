@@ -13,7 +13,6 @@ This is the language server implementation for the Elm programming language.
   - [Alternative: Compile and install from source](#alternative-compile-and-install-from-source)
   - [Alternative: Install with Nix](#alternative-install-with-nix)
 - [Requirements](#requirements)
-- [Configuration](#configuration)
 - [Features](#features)
 - [Server Settings](#server-settings)
 - [Editor Support](#editor-support)
