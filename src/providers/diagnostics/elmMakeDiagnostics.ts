@@ -276,7 +276,7 @@ export class ElmMakeDiagnostics {
     const elmNotFound =
       "The 'elm' compiler is not available. Install via for example 'npm install -g elm'.";
     const elmTestNotFound =
-      "'elm-test' (or 'elm-test-rs') is not available. Install via for example 'npm install -g elm-test'.";
+      "'elm-test' is not available. Install via for example 'npm install -g elm-test'.";
 
     // - If all entrypoints are covered by tests, we only need to run `elm-test make`.
     // - Otherwise, call `elm make` for all entrypoints (if any).
@@ -301,7 +301,6 @@ export class ElmMakeDiagnostics {
             // know if we should expect the user to have elm-test installed. If they don’t,
             // they’ll get errors imports from "test-dependencies".
             [
-              ["elm-test-rs", argsElmTest(possiblyTestFiles)],
               ["elm-test", argsElmTest(possiblyTestFiles)],
               ["elm", argsElm(possiblyTestFiles)],
             ],
@@ -322,13 +321,8 @@ export class ElmMakeDiagnostics {
               settings.elmTestPath,
               argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
             ],
-            // Try elm-test-rs first since it’s faster (no Node.js 100-200 ms startup time).
             // Since there’s a `tests/` folder we expect the user to have elm-test installed.
             [
-              [
-                "elm-test-rs",
-                argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
-              ],
               [
                 "elm-test",
                 argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
