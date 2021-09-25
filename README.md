@@ -92,28 +92,6 @@ npm install -g elm-review
 
 Or use local versions from your `node_modules` directory, if you want to do that you need to set the paths, via the settings (e.g. set `elmPath` to `./node_modules/.bin/elm`).
 
-## Configuration
-
-Create an [elm-tooling.json](https://elm-tooling.github.io/elm-tooling-cli/spec) file next to your `elm.json` to configure the language server.
-
-Currently there’s just one thing that you can configure: entrypoints. The language server runs `elm make` to get type errors. By default `elm make` is run on the current file only. To get errors for the entire project you can specify your entrypoint files – basically, those with `main =` in them. Then the language server will run `elm make` on those instead.
-
-Example `elm-tooling.json`:
-
-```json
-{
-  "entrypoints": ["./src/Main.elm"]
-}
-```
-
-The entrypoints are relative to the directory where your `elm.json` and `elm-tooling.json` is and must start with `./`.
-
-Check out the [elm-tooling](https://elm-tooling.github.io/elm-tooling-cli/) CLI for creating and validating your `elm-tooling.json`! You can run it without installing:
-
-```
-npx elm-tooling init
-```
-
 ## Features
 
 Supports Elm 0.19 and up

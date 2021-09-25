@@ -17,7 +17,6 @@ import { Settings } from "../../util/settings";
 import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
-import { ElmToolingJsonManager } from "../../elmToolingJsonManager";
 import { IProgram } from "../../compiler/program";
 
 const ELM_MAKE = "Elm";
@@ -62,15 +61,11 @@ export interface IStyledString {
 export class ElmMakeDiagnostics {
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
   private settings: Settings;
-  private elmToolingJsonManager: ElmToolingJsonManager;
   private connection: Connection;
 
   constructor() {
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<Connection>("Connection");
-    this.elmToolingJsonManager = container.resolve<ElmToolingJsonManager>(
-      "ElmToolingJsonManager",
-    );
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
   }
 
