@@ -91,6 +91,14 @@ npm install -g elm-review
 
 Or use local versions from your `node_modules` directory, if you want to do that you need to set the paths, via the settings (e.g. set `elmPath` to `./node_modules/.bin/elm`).
 
+## Configuration
+
+We used to have a file called `elm-tooling.json` where you could specifiy `"entrypoints"`. That’s not needed anymore – the language server finds the entrypoints automatically.
+
+If all you had in `elm-tooling.json` was `"entrypoints"`, you can safely remove that file.
+
+Currently, no configuration at all is needed.
+
 ## Features
 
 Supports Elm 0.19 and up
