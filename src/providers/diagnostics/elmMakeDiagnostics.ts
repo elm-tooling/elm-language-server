@@ -235,8 +235,8 @@ export class ElmMakeDiagnostics {
       testFilesForSure,
     );
 
-    const allEntrypointsCoveredByTestsForSure = entrypointsForSure.every(
-      (file) => urisReferencedByTestsForSure.has(file.uri),
+    const onlyRunElmTest = entrypointsForSure.every((file) =>
+      urisReferencedByTestsForSure.has(file.uri),
     );
 
     // Files that aren’t imported from any entrypoint. These could be:
@@ -285,7 +285,7 @@ export class ElmMakeDiagnostics {
     //   call `elm-test make` but fall back to `elm make` in case they’re not
     //   tests and the user hasn’t got elm-test installed.
     const results = await Promise.allSettled([
-      entrypointsForSure.length > 0 && !allEntrypointsCoveredByTestsForSure
+      entrypointsForSure.length > 0 && !onlyRunElmTest
         ? utils.execCmd(
             [settings.elmPath, argsElm(entrypointsForSure)],
             [["elm", argsElm(entrypointsForSure)]],
