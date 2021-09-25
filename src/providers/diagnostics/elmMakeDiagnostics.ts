@@ -274,9 +274,9 @@ export class ElmMakeDiagnostics {
     ];
 
     const elmNotFound =
-      "The 'elm' compiler is not available. Install via for example 'npm install -g elm'.";
+      "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.";
     const elmTestNotFound =
-      "'elm-test' is not available. Install via for example 'npm install -g elm-test'.";
+      "'elm-test' is not available. Install Elm via 'npm install -g elm-test'.";
 
     // - If all entrypoints are covered by tests, we only need to run `elm-test make`.
     // - Otherwise, call `elm make` for all entrypoints (if any).
