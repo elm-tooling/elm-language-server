@@ -17,7 +17,7 @@ import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { MultistepOperation } from "../../util/multistepOperation";
 import { IClientSettings } from "../../util/settings";
 import { TextDocumentEvents } from "../../util/textDocumentEvents";
-import { Diagnostic, Diagnostics } from "../../compiler/diagnostics";
+import { Diagnostic } from "../../compiler/diagnostics";
 import { ASTProvider } from "../astProvider";
 import { DiagnosticSource } from "./diagnosticSource";
 import { DiagnosticsRequest } from "./diagnosticsRequest";
@@ -415,10 +415,6 @@ export class DiagnosticsProvider {
 
             const sourceFile = program.getForest().getByUri(uri);
 
-            const elmAnalyseJson = this.elmAnalyseJsonService.getElmAnalyseJson(
-              program.getRootPath().fsPath,
-            );
-
             if (!sourceFile) {
               goNext();
               return;
@@ -458,25 +454,11 @@ export class DiagnosticsProvider {
                   this.updateDiagnostics(
                     uri,
                     DiagnosticKind.Suggestion,
-                    program
-                      .getSuggestionDiagnostics(
-                        sourceFile,
-                        serverCancellationToken,
-                      )
-                      .map(convertFromCompilerDiagnostic)
-                      .filter((diagnostic) => {
-                        if (
-                          diagnostic.data.code ===
-                            Diagnostics.MissingTypeAnnotation.code &&
-                          elmAnalyseJson.checks &&
-                          elmAnalyseJson.checks.MissingTypeAnnotation !==
-                            undefined
-                        ) {
-                          return elmAnalyseJson.checks?.MissingTypeAnnotation;
-                        } else {
-                          return true;
-                        }
-                      }),
+                    this.elmLsDiagnostics.createSuggestionDiagnostics(
+                      sourceFile,
+                      program,
+                      serverCancellationToken,
+                    ),
                   );
 
                   if (this.changeSeq !== seq) {
