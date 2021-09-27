@@ -518,7 +518,7 @@ export class ElmLsDiagnostics {
             return true;
           }
         });
-    } catch (e) {
+    } catch (e: any) {
       this.connection.console.error(e);
     }
     return [];
