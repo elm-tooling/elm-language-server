@@ -79,7 +79,7 @@ export async function execCmd(
       preferLocal,
       stripFinalNewline: false,
     });
-  } catch (error) {
+  } catch (error: any) {
     const notFound = error.code === "ENOENT";
     if (notFound && cmdStatic.length > 1) {
       return execCmd(
