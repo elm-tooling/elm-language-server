@@ -335,9 +335,11 @@ export class Program implements IProgram {
         this.connection,
       );
     } catch (error) {
-      this.connection.console.warn(
-        `Could not figure out elm version, this will impact how good the server works. \n ${error.stack}`,
-      );
+      if (error instanceof Error && error.stack) {
+        this.connection.console.warn(
+          `Could not figure out elm version, this will impact how good the server works. \n ${error.stack}`,
+        );
+      }
     }
 
     const pathToElmJson = path.join(this.rootPath.fsPath, "elm.json");
@@ -417,9 +419,11 @@ export class Program implements IProgram {
         `Done parsing all files for ${pathToElmJson}`,
       );
     } catch (error) {
-      this.connection.console.error(
-        `Error parsing files for ${pathToElmJson}:\n${error.stack}`,
-      );
+      if (error instanceof Error && error.stack) {
+        this.connection.console.error(
+          `Error parsing files for ${pathToElmJson}:\n${error.stack}`,
+        );
+      }
     }
   }
 
@@ -685,7 +689,9 @@ export class Program implements IProgram {
       );
       callback();
     } catch (error) {
-      this.connection.console.error(error.stack);
+      if (error instanceof Error && error.stack) {
+        this.connection.console.error(error.stack);
+      }
     }
   }
 

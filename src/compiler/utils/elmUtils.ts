@@ -40,7 +40,7 @@ export function execCmdSync(
       preferLocal,
       stripFinalNewline: false,
     });
-  } catch (error) {
+  } catch (error: any) {
     connection.console.warn(JSON.stringify(error));
     if (error.code && error.code === "ENOENT") {
       connection.window.showErrorMessage(

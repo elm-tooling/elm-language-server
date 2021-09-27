@@ -463,7 +463,7 @@ export class ElmLsDiagnostics {
           ? []
           : this.getUnusedValueConstructorDiagnostics(tree)),
       ];
-    } catch (e) {
+    } catch (e: any) {
       this.connection.console.error(e);
     }
     return [];

@@ -2049,9 +2049,11 @@ export class InferenceScope {
     try {
       assignable = this.assignable(type1, type2);
     } catch (error) {
-      this.diagnostics.push(
-        errorWithEndNode(expr, Diagnostics.General, endExpr, error.message),
-      );
+      if (error instanceof Error) {
+        this.diagnostics.push(
+          errorWithEndNode(expr, Diagnostics.General, endExpr, error.message),
+        );
+      }
       return false;
     }
 

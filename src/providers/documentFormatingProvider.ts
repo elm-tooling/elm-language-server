@@ -77,9 +77,10 @@ export class DocumentFormattingProvider {
     } catch (error) {
       this.connection.console.warn(JSON.stringify(error));
       if (
+        error instanceof Error &&
         error?.message &&
-        ((error.message as string).includes("SYNTAX PROBLEM") || //Elm-format 0.8.4 and below
-          (error.message as string).includes("Unable to parse file")) //Elm-format 0.8.5 and above
+        (error.message.includes("SYNTAX PROBLEM") || //Elm-format 0.8.4 and below
+          error.message.includes("Unable to parse file")) //Elm-format 0.8.5 and above
       ) {
         this.connection.window.showErrorMessage(
           "Running elm-format failed. Check the file for syntax errors.",
