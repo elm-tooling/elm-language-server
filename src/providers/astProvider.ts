@@ -87,10 +87,15 @@ export class ASTProvider {
             const regex = new RegExp(/\r\n|\r|\n/);
             const lines = currentText.split(regex);
             const range = {
-              start: {line: 0, character: 0},
-              end: {line: lines.length, character: 0},
+              start: { line: 0, character: 0 },
+              end: { line: lines.length, character: 0 },
             };
-            tree?.edit(this.getEditFromChange({text: change.text, range: range}, currentText));
+            tree?.edit(
+              this.getEditFromChange(
+                { text: change.text, range: range },
+                currentText,
+              ),
+            );
           }
         }
       }
