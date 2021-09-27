@@ -11,9 +11,6 @@ import {
 
 container.register("Connection", { useValue: mockDeep<Connection>() });
 container.register("ElmWorkspaces", { useValue: [] });
-container.register("ElmToolingJsonManager", {
-  useValue: {},
-});
 container.register("Settings", {
   useValue: new Settings({} as any, {}),
 });

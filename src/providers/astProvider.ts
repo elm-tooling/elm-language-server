@@ -174,12 +174,17 @@ export class ASTProvider {
             .getSourceDirectoryOfFile(document.uri)
             ?.endsWith("tests") ?? false;
 
+      const isDependency = params.sourceFile
+        ? params.sourceFile.isDependency
+        : false;
+
       const sourceFile = forest.setTree(
         pendingRenameUri ?? document.uri,
         true,
         true,
         tree,
         isTestFile,
+        isDependency,
       );
 
       // The program now needs to be synchronized

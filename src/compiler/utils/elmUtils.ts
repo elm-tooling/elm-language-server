@@ -5,16 +5,14 @@ import { URI } from "vscode-uri";
 import { IElmPackageCache } from "../elmPackageCache";
 import { IClientSettings } from "../../util/settings";
 import { ElmProject } from "../program";
+import { NonEmptyArray } from "../../util/utils";
 
 export const isWindows = process.platform === "win32";
 
 /** Options for execCmdSync */
-export interface IExecCmdOptions {
+export interface IExecCmdSyncOptions {
   /** Any arguments */
   cmdArguments?: string[];
-  /** Shows a message if an error occurs (in particular the command not being */
-  /* found), instead of rejecting. If this happens, the promise never resolves */
-  showMessageOnError?: boolean;
   /** Text to add when command is not found (maybe helping how to install) */
   notFoundText?: string;
 }
@@ -23,7 +21,7 @@ export interface IExecCmdOptions {
 export function execCmdSync(
   cmdFromUser: string,
   cmdStatic: string,
-  options: IExecCmdOptions = {},
+  options: IExecCmdSyncOptions = {},
   cwd: string,
   connection: Connection,
   input?: string,
@@ -42,11 +40,61 @@ export function execCmdSync(
     });
   } catch (error: any) {
     connection.console.warn(JSON.stringify(error));
-    if (error.code && error.code === "ENOENT") {
+    if (error.code === "ENOENT") {
       connection.window.showErrorMessage(
         options.notFoundText
           ? options.notFoundText + ` I'm looking for '${cmd}' at '${cwd}'`
           : `Cannot find executable with name '${cmd}'`,
+      );
+      throw "Executable not found";
+    } else {
+      throw error;
+    }
+  }
+}
+
+/** Options for execCmd */
+export interface IExecCmdOptions {
+  /** Text to add when command is not found (maybe helping how to install)
+   * Unlike the sync version, it’s required here (since `cmdStatic` has fallbacks).
+   */
+  notFoundText: string;
+}
+
+export async function execCmd(
+  cmdFromUser: [string, string[]],
+  cmdStatic: NonEmptyArray<[string, string[]]>,
+  options: IExecCmdOptions,
+  cwd: string,
+  connection: Connection,
+  input?: string,
+): Promise<ExecaSyncReturnValue<string>> {
+  const [cmd, args] = cmdFromUser[0] === "" ? cmdStatic[0] : cmdFromUser;
+  const preferLocal = cmdFromUser[0] === "";
+
+  try {
+    return await execa(cmd, args, {
+      cwd,
+      input,
+      preferLocal,
+      stripFinalNewline: false,
+    });
+  } catch (error) {
+    const notFound = error.code === "ENOENT";
+    if (notFound && cmdStatic.length > 1) {
+      return execCmd(
+        cmdFromUser,
+        cmdStatic.slice(1) as NonEmptyArray<[string, string[]]>,
+        options,
+        cwd,
+        connection,
+        input,
+      );
+    }
+    connection.console.warn(JSON.stringify(error));
+    if (notFound) {
+      connection.window.showErrorMessage(
+        options.notFoundText + ` I'm looking for commands at '${cwd}'`,
       );
       throw "Executable not found";
     } else {

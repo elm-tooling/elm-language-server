@@ -9,7 +9,7 @@
     "out"
   ],
   "engines": {
-    "node": ">=12.0.0"
+    "node": ">=12.9.0"
   },
   "repository": {
     "type": "git",

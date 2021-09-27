@@ -14,11 +14,10 @@ import { ISourceFile } from "../../compiler/forest";
 import * as utils from "../../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
-import { NonEmptyArray } from "../../util/utils";
 import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import execa = require("execa");
-import { ElmToolingJsonManager } from "../../elmToolingJsonManager";
+import { IProgram } from "../../compiler/program";
 
 const ELM_MAKE = "Elm";
 export const NAMING_ERROR = "NAMING ERROR";
@@ -62,15 +61,11 @@ export interface IStyledString {
 export class ElmMakeDiagnostics {
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
   private settings: Settings;
-  private elmToolingJsonManager: ElmToolingJsonManager;
   private connection: Connection;
 
   constructor() {
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<Connection>("Connection");
-    this.elmToolingJsonManager = container.resolve<ElmToolingJsonManager>(
-      "ElmToolingJsonManager",
-    );
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
   }
 
@@ -78,19 +73,15 @@ export class ElmMakeDiagnostics {
     sourceFile: ISourceFile,
   ): Promise<Map<string, IDiagnostic[]>> => {
     const filePath = URI.parse(sourceFile.uri);
-    const workspaceRootPath = this.elmWorkspaceMatcher
-      .getProgramFor(filePath)
-      .getRootPath();
-    return await this.checkForErrors(workspaceRootPath.fsPath, sourceFile).then(
-      (issues) => {
-        return issues.length === 0
-          ? new Map([[filePath.toString(), []]])
-          : ElmDiagnosticsHelper.issuesToDiagnosticMap(
-              issues,
-              workspaceRootPath,
-            );
-      },
-    );
+    const program = this.elmWorkspaceMatcher.getProgramFor(filePath);
+    return await this.checkForErrors(program, sourceFile).then((issues) => {
+      return issues.length === 0
+        ? new Map([[filePath.toString(), []]])
+        : ElmDiagnosticsHelper.issuesToDiagnosticMap(
+            issues,
+            program.getRootPath(),
+          );
+    });
   };
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
@@ -192,63 +183,165 @@ export class ElmMakeDiagnostics {
   }
 
   private async checkForErrors(
-    workspaceRootPath: string,
+    program: IProgram,
     sourceFile: ISourceFile,
   ): Promise<IElmIssue[]> {
     const settings = await this.settings.getClientSettings();
 
-    const [relativePathsToFiles, message]: [NonEmptyArray<string>, string] =
-      await this.elmToolingJsonManager.getEntrypoints(
-        workspaceRootPath,
-        sourceFile,
-      );
+    const workspaceRootPath = program.getRootPath().fsPath;
 
-    this.connection.console.info(
-      `Find entrypoints: ${message}. See https://github.com/elm-tooling/elm-language-server#configuration for more information.`,
+    const fileToRelativePath = (file: ISourceFile): string =>
+      path.relative(workspaceRootPath, URI.parse(file.uri).fsPath);
+
+    const sourceFilePath = fileToRelativePath(sourceFile);
+
+    const treeMap = program.getForest().treeMap;
+
+    const forestFiles: Array<ISourceFile> = Array.from(treeMap.values());
+
+    const allFiles = forestFiles.some((file) => file.uri === sourceFile.uri)
+      ? forestFiles
+      : forestFiles.concat(sourceFile);
+
+    const projectFiles = allFiles.filter((file) => !file.isDependency);
+
+    const testFilesForSure = projectFiles.filter((file) => file.isTestFile);
+    const otherFiles = projectFiles.filter((file) => !file.isTestFile);
+
+    const entrypointsForSure = otherFiles.filter((file) => {
+      switch (file.project.type) {
+        case "application":
+          return file.exposing?.has("main") ?? false;
+
+        case "package":
+          return file.moduleName === undefined
+            ? false
+            : file.project.exposedModules.has(file.moduleName);
+      }
+    });
+
+    const urisReferencedByEntrypoints = this.getUrisReferencedByEntrypoints(
+      treeMap,
+      entrypointsForSure,
     );
 
-    const argsMake = [
+    const urisReferencedByTestsForSure = this.getUrisReferencedByEntrypoints(
+      treeMap,
+      testFilesForSure,
+    );
+
+    const onlyRunElmTest = entrypointsForSure.every((file) =>
+      urisReferencedByTestsForSure.has(file.uri),
+    );
+
+    // Files that aren’t imported from any entrypoint. These could be:
+    //
+    // - Tests inside `src/`.
+    // - New files that aren’t imported by anything yet.
+    // - Old leftover files that aren’t imported by anything.
+    // - Files that _are_ used and aren’t tests but that still end up here
+    //   because of:
+    //   - The project doesn’t use `main =`, like `review/` for elm-review.
+    //   - The user has accidentally remove `main =` or not exposed it.
+    //
+    // Since these _could_ be test, we compile them with `elm-test make` rather
+    // than `elm make`, so that "test-dependencies" are allowed. If they _aren’t_
+    // tests, the only downside of this is that if you accidentally import a
+    // test-dependency, you won’t get an error for that. It should be an OK tradeoff.
+    const possiblyTestFiles = otherFiles.filter(
+      (file) => !urisReferencedByEntrypoints.has(file.uri),
+    );
+
+    const argsElm = (files: Array<ISourceFile>): Array<string> => [
       "make",
-      ...relativePathsToFiles,
+      ...files.map(fileToRelativePath),
       "--report",
       "json",
       "--output",
       "/dev/null",
     ];
 
-    const argsTest = ["make", ...relativePathsToFiles, "--report", "json"];
+    const argsElmTest = (files: Array<ISourceFile>): Array<string> => [
+      "make",
+      ...files.map(fileToRelativePath),
+      "--report",
+      "json",
+    ];
 
-    const makeCommand: string = settings.elmPath;
-    const testCommand: string = settings.elmTestPath;
-    const isTestFile = sourceFile.isTestFile;
-    const args = isTestFile ? argsTest : argsMake;
-    const testOrMakeCommand = isTestFile ? testCommand : makeCommand;
-    const testOrMakeCommandWithOmittedSettings = isTestFile
-      ? "elm-test"
-      : "elm";
-    const options = {
-      cmdArguments: args,
-      notFoundText: isTestFile
-        ? "'elm-test' is not available. Install Elm via 'npm install -g elm-test'."
-        : "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.",
-    };
+    const elmNotFound =
+      "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.";
+    const elmTestNotFound =
+      "'elm-test' is not available. Install Elm via 'npm install -g elm-test'.";
 
-    try {
-      // Do nothing on success, but return that there were no errors
-      utils.execCmdSync(
-        testOrMakeCommand,
-        testOrMakeCommandWithOmittedSettings,
-        options,
-        workspaceRootPath,
-        this.connection,
-      );
-      return [];
-    } catch (error) {
+    // - If all entrypoints are covered by tests, we only need to run `elm-test make`.
+    // - Otherwise, call `elm make` for all entrypoints (if any).
+    // - Call `elm-test make` for all tests (if any), plus potential tests.
+    // - If there’s no `tests/` folder but files that _could_ be tests, try to
+    //   call `elm-test make` but fall back to `elm make` in case they’re not
+    //   tests and the user hasn’t got elm-test installed.
+    const results = await Promise.allSettled([
+      entrypointsForSure.length > 0 && !onlyRunElmTest
+        ? utils.execCmd(
+            [settings.elmPath, argsElm(entrypointsForSure)],
+            [["elm", argsElm(entrypointsForSure)]],
+            { notFoundText: elmNotFound },
+            workspaceRootPath,
+            this.connection,
+          )
+        : undefined,
+      testFilesForSure.length === 0 && possiblyTestFiles.length > 0
+        ? utils.execCmd(
+            [settings.elmTestPath, argsElmTest(possiblyTestFiles)],
+            // These files _could_ be tests, but since there’s no `tests/` folder we can’t
+            // know if we should expect the user to have elm-test installed. If they don’t,
+            // they’ll get errors imports from "test-dependencies".
+            [
+              ["elm-test", argsElmTest(possiblyTestFiles)],
+              ["elm", argsElm(possiblyTestFiles)],
+            ],
+            {
+              notFoundText:
+                settings.elmTestPath === ""
+                  ? elmTestNotFound
+                  : // This uses `elmNotFound` since "elm" is the last alternative above.
+                    elmNotFound,
+            },
+            workspaceRootPath,
+            this.connection,
+          )
+        : undefined,
+      testFilesForSure.length > 0
+        ? utils.execCmd(
+            [
+              settings.elmTestPath,
+              argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
+            ],
+            // Since there’s a `tests/` folder we expect the user to have elm-test installed.
+            [
+              [
+                "elm-test",
+                argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
+              ],
+            ],
+            { notFoundText: elmTestNotFound },
+            workspaceRootPath,
+            this.connection,
+          )
+        : undefined,
+    ]);
+
+    const lines: IElmIssue[] = [];
+    const linesSet = new Set<string>();
+
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        continue;
+      }
+      const error = result.reason as unknown;
       if (typeof error === "string") {
-        return [];
+        continue;
       } else {
         const execaError = error as execa.ExecaReturnValue<string>;
-        const lines: IElmIssue[] = [];
         execaError.stderr.split("\n").forEach((line: string) => {
           let errorObject: unknown;
           try {
@@ -266,8 +359,8 @@ export class ElmMakeDiagnostics {
           ) {
             const compilerError = errorObject as IElmCompilerError;
             compilerError.errors.forEach((error: IError) => {
-              const problems: IElmIssue[] = error.problems.map(
-                (problem: IProblem) => ({
+              error.problems.forEach((problem: IProblem) => {
+                const issue: IElmIssue = {
                   details: problem.message
                     .map((message: string | IStyledString) =>
                       typeof message === "string"
@@ -279,16 +372,19 @@ export class ElmMakeDiagnostics {
                     ? path.isAbsolute(error.path)
                       ? path.relative(workspaceRootPath, error.path)
                       : error.path
-                    : relativePathsToFiles[0],
+                    : sourceFilePath,
                   overview: problem.title,
                   region: problem.region,
                   subregion: "",
                   tag: "error",
                   type: "error",
-                }),
-              );
-
-              lines.push(...problems);
+                };
+                const issueString = JSON.stringify(issue);
+                if (!linesSet.has(issueString)) {
+                  lines.push(issue);
+                  linesSet.add(issueString);
+                }
+              });
             });
           } else if (
             errorObject &&
@@ -298,7 +394,7 @@ export class ElmMakeDiagnostics {
             const error = errorObject as IElmError;
             this.checkIfVersionMismatchesAndCreateMessage(error);
 
-            const problem: IElmIssue = {
+            const issue: IElmIssue = {
               details: error.message
                 .map((message: string | IStyledString) =>
                   typeof message === "string" ? message : message.string,
@@ -307,7 +403,7 @@ export class ElmMakeDiagnostics {
               // elm-test might supply absolute paths to files
               file: error.path
                 ? path.relative(workspaceRootPath, error.path)
-                : relativePathsToFiles[0],
+                : sourceFilePath,
               overview: error.title,
               region: {
                 end: {
@@ -324,13 +420,20 @@ export class ElmMakeDiagnostics {
               type: "error",
             };
 
-            lines.push(problem);
+            lines.push(issue);
+            const issueString = JSON.stringify(issue);
+            if (!linesSet.has(issueString)) {
+              lines.push(issue);
+              linesSet.add(issueString);
+            }
           }
         });
-        return lines;
       }
     }
+
+    return lines;
   }
+
   private checkIfVersionMismatchesAndCreateMessage(
     errorObject: IElmError,
   ): void {
@@ -343,5 +446,32 @@ export class ElmMakeDiagnostics {
           .join(""),
       );
     }
+  }
+
+  private getUrisReferencedByEntrypoints(
+    treeMap: Map<string, ISourceFile>,
+    entrypoints: ISourceFile[],
+  ): Set<string> {
+    const stack: ISourceFile[] = entrypoints.slice();
+    const result = new Set<string>(entrypoints.map((file) => file.uri));
+
+    for (let i = 0; i < stack.length; i++) {
+      const file = stack[i];
+      if (file.resolvedModules !== undefined) {
+        for (const uri of file.resolvedModules.values()) {
+          const nextFile = treeMap.get(uri);
+          if (
+            nextFile !== undefined &&
+            !nextFile.isDependency &&
+            !result.has(nextFile.uri)
+          ) {
+            result.add(nextFile.uri);
+            stack.push(nextFile);
+          }
+        }
+      }
+    }
+
+    return result;
   }
 }

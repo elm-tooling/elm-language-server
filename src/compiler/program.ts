@@ -35,6 +35,7 @@ interface IElmFile {
   maintainerAndPackageName?: string;
   project: ElmProject;
   isTestFile: boolean;
+  isDependency: boolean;
 }
 
 export type ElmJson = IElmApplicationJson | IElmPackageJson;
@@ -133,6 +134,7 @@ interface IElmPackage extends IElmProject {
   type: "package";
   maintainerAndPackageName: string;
   exposedModules: Set<string>;
+  isDependency: boolean;
 }
 
 export interface IProgramHost {
@@ -496,6 +498,7 @@ export class Program implements IProgram {
         moduleToUriMap: new Map<string, string>(),
         maintainerAndPackageName: elmJson.name,
         testModuleToUriMap: new Map<string, string>(),
+        isDependency: false,
       } as IElmPackage;
     }
   }
@@ -545,6 +548,7 @@ export class Program implements IProgram {
         moduleToUriMap: new Map<string, string>(),
         maintainerAndPackageName: elmJson.name,
         testModuleToUriMap: new Map<string, string>(),
+        isDependency: true,
       } as IElmPackage;
 
       this.resolvedPackageCache.set(cacheKey, resolvedPackage);
@@ -618,6 +622,9 @@ export class Program implements IProgram {
     const maintainerAndPackageName =
       project.type === "package" ? project.maintainerAndPackageName : undefined;
 
+    const isDependency =
+      project.type === "package" ? project.isDependency : false;
+
     this.connection.console.info(`Glob ${sourceDir}/**/*.elm`);
 
     (await this.host.readDirectory(sourceDir)).forEach((matchingPath) => {
@@ -645,6 +652,7 @@ export class Program implements IProgram {
         path: matchingPath,
         project,
         isTestFile,
+        isDependency,
       });
     });
 
@@ -684,6 +692,7 @@ export class Program implements IProgram {
         true,
         tree,
         filePath.isTestFile,
+        filePath.isDependency,
         filePath.project,
         filePath.maintainerAndPackageName,
       );
