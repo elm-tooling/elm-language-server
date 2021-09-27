@@ -81,6 +81,22 @@ export class ASTProvider {
       for (const change of params.contentChanges) {
         if ("range" in change) {
           tree?.edit(this.getEditFromChange(change, tree.rootNode.text));
+        } else {
+          const currentText = tree?.rootNode.text;
+          if (currentText) {
+            const regex = new RegExp(/\r\n|\r|\n/);
+            const lines = currentText.split(regex);
+            const range = {
+              start: { line: 0, character: 0 },
+              end: { line: lines.length, character: 0 },
+            };
+            tree?.edit(
+              this.getEditFromChange(
+                { text: change.text, range: range },
+                currentText,
+              ),
+            );
+          }
         }
       }
     }
