@@ -44,13 +44,13 @@ function getActionsForValueDeclaration(
   nodeAtPosition: SyntaxNode,
   params: ICodeActionParams,
 ): CodeAction | undefined {
-  const lastPattern = valueDeclaration?.firstChild?.lastChild;
+  const lastFunctionParameter = valueDeclaration?.firstChild?.lastChild;
 
-  if (!lastPattern) return;
+  if (!lastFunctionParameter) return;
 
   const valueParameterPosition = Position.create(
-    lastPattern.endPosition.row,
-    lastPattern.endPosition.column + 1,
+    lastFunctionParameter.endPosition.row,
+    lastFunctionParameter.endPosition.column + 1,
   );
 
   const edits = getEditsForSignatureUpdate(
@@ -64,6 +64,9 @@ function getActionsForValueDeclaration(
   );
 
   const functionName = valueDeclaration.firstChild?.firstChild?.text;
+
+  if (!functionName) return;
+
   return CodeActionProvider.getCodeAction(
     params,
     `Add new parameter to "${functionName}"`,
