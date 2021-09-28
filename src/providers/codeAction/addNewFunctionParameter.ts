@@ -13,8 +13,7 @@ CodeActionProvider.registerCodeAction({
   fixId,
   getCodeActions: (params: ICodeActionParams) =>
     getActions(params, params.range),
-  getFixAllCodeAction: (_: ICodeActionParams): ICodeAction | undefined =>
-    undefined,
+  getFixAllCodeAction: (): ICodeAction | undefined => undefined,
 });
 
 function getActions(
