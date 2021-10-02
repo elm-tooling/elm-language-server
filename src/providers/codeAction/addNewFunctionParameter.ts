@@ -69,7 +69,7 @@ function getActionsForValueDeclaration(
 
   return CodeActionProvider.getCodeAction(
     params,
-    `Add new parameter to "${functionName}"`,
+    `Add new parameter to '${functionName}'`,
     edits,
   );
 }

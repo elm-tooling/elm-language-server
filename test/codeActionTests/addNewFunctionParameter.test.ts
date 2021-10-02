@@ -26,7 +26,7 @@ outer something =
 
     await testCodeAction(
       source,
-      [{ title: `Add new parameter to "outer"` }],
+      [{ title: `Add new parameter to 'outer'` }],
       expectedSource,
     );
   });
@@ -56,7 +56,7 @@ outer maybeToIntOrZero =
 
     await testCodeAction(
       source,
-      [{ title: `Add new parameter to "outer"` }],
+      [{ title: `Add new parameter to 'outer'` }],
       expectedSource,
     );
   });
@@ -96,7 +96,7 @@ outer =
 
     await testCodeAction(
       source,
-      [{ title: `Add new parameter to "inner"` }],
+      [{ title: `Add new parameter to 'inner'` }],
       expectedSource,
     );
   });
@@ -136,7 +136,7 @@ outer something =
 
     await testCodeAction(
       source,
-      [{ title: `Add new parameter to "outer"` }],
+      [{ title: `Add new parameter to 'outer'` }],
       expectedSource,
     );
   });
