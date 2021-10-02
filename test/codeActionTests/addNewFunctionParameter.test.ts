@@ -21,7 +21,6 @@ module Test exposing (..)
 outer : something -> number
 outer something =
     something
-      --^
 `;
 
     await testCodeAction(
@@ -51,7 +50,6 @@ module Test exposing (..)
 outer : (Maybe String -> Int) -> Int
 outer maybeToIntOrZero =
     maybeToIntOrZero (Just "one")
-    --^
 `;
 
     await testCodeAction(
@@ -73,7 +71,7 @@ outer =
         inner =
             something
             --^
-            
+
     in
     ()
 `;
@@ -88,8 +86,7 @@ outer =
     let
         inner something =
             something
-            --^
-            
+
     in
     ()
 `;
@@ -113,7 +110,7 @@ outer =
         inner =
             something
             --^
-            
+
     in
     ()
 `;
@@ -128,8 +125,7 @@ outer something =
     let
         inner something =
             something
-            --^
-            
+
     in
     ()
 `;
