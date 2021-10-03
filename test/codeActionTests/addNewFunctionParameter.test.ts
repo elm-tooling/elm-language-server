@@ -123,7 +123,7 @@ module Test exposing (..)
 outer : something -> ()
 outer something =
     let
-        inner something =
+        inner =
             something
 
     in
