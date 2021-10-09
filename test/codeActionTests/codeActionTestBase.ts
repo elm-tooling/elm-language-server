@@ -32,7 +32,7 @@ function codeActionEquals(a: CodeAction, b: CodeAction): boolean {
 
 const basicsSources = `
 --@ Basics.elm
-module Basics exposing ((+), (|>), (==), Int, Float, Bool(..), Order(..))
+module Basics exposing ((+), (|>), (==), Int, Float, String, Maybe(..), Bool(..), Order(..))
 
 infix left  0 (|>) = apR
 infix non   4 (==) = eq
@@ -43,6 +43,12 @@ type Int = Int
 type Float = Float
 
 type Bool = True | False
+
+type String = String
+
+type Maybe a
+    = Just a
+    | Nothing
 
 add : number -> number -> number
 add =
@@ -143,8 +149,17 @@ export async function testCodeAction(
       trimTrailingWhitespace(expectedResultAfterEdits),
     );
 
+    const filteredCodeActions = codeActions.filter((codeAction) =>
+      expectedCodeActions.find((c) => codeActionEquals(codeAction, c)),
+    );
+
+    if (filteredCodeActions.length === 0) {
+      throw new Error("Couldn't find code action");
+    }
+
     const changesToApply =
-      codeActions[testFixAll ? codeActions.length - 1 : 0].edit!.changes!;
+      filteredCodeActions[testFixAll ? filteredCodeActions.length - 1 : 0].edit!
+        .changes!;
 
     Object.entries(expectedSources).forEach(([uri, source]) => {
       const edits = changesToApply[URI.file(path.join(srcUri, uri)).toString()];
