@@ -1,5 +1,16 @@
 # Change Log
 
+## 2.3.0
+
+- Remove the need for "entrypoints" in elm-tooling.json
+- Add a code action to add function argument from missing declaration
+- Add a code action to add missing union constructors
+- Add annotations from ports to hovers and suggestions
+- "Add type annotation" can now be enabled/disabled via elm-analyse.json and will also honor excluded folders
+- Fix type inference for empty record pattern
+- Fix reporting when elm, elm-test or elm-review were not found
+- Fix clients that don't provide incremental changes
+
 ## 2.2.1
 
 - Add instructions for elm-review
