@@ -1,16 +1,18 @@
 import path from "path";
 import { URI } from "vscode-uri";
+import { getVarNames } from "../src/compiler/typeInference";
 import { TreeUtils } from "../src/util/treeUtils";
 import { getTargetPositionFromSource } from "./utils/sourceParser";
 import { SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
 
 const basicsSources = `
 --@ Basics.elm
-module Basics exposing ((+), (|>), (==), Int, Float, Bool(..))
+module Basics exposing ((+), (|>), (==), Int, Float, Bool(..), (>>))
 
 infix left  0 (|>) = apR
 infix non   4 (==) = eq
 infix left  6 (+)  = add
+infix right 9 (>>) = composeR
 
 type Int = Int
 
@@ -29,6 +31,10 @@ apR x f =
 eq : a -> a -> Bool
 eq =
   Elm.Kernel.Utils.equal
+
+composeR : (a -> b) -> (b -> c) -> (a -> c)
+composeR f g x =
+  g (f x)
 
 --@ String.elm
 module String exposing (String)
@@ -662,5 +668,48 @@ func =
   text (.greeting { greeting = \\name -> 1 + name + 3 } 4)
 `;
     await testTypeInference(basicsSources + source, "Int");
+  });
+
+  test("too many parameters", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+nest : a -> b -> ( a, b )
+nest a b =
+    ( a, b )
+
+nest5 : a -> b -> ( c -> ( d -> ( e -> ( f -> ( a, f ), e ), d ), c ), b )
+nest5 =
+    nest >> nest >> nest >> nest >> nest
+
+nest26 : a -> b -> (c -> (d -> (e -> (f -> (g -> (h -> (i -> (j -> (k -> (l -> (m -> (n -> (o -> (p -> (q -> (r -> (s -> (t -> (u -> (v -> (w -> (x -> (y -> (z -> (a1 -> (a, a1), z), y), x), w), v), u), t), s), r), q), p), o), n), m), l), k), j), i), h), g), f), e), d), c), b)
+nest26 =
+    nest5 >> nest5 >> nest5 >> nest5 >> nest5 >> nest
+
+bug =
+--^
+    nest26 >> nest
+`;
+    await testTypeInference(
+      basicsSources + source,
+      "a -> b -> (c -> (d -> (e -> (f -> (g -> (h -> (i -> (j -> (k -> (l -> (m -> (n -> (o -> (p -> (q -> (r -> (s -> (t -> (u -> (v -> (w -> (x -> (y -> (z -> (a1 -> (b1 -> (a, b1), a1), z), y), x), w), v), u), t), s), r), q), p), o), n), m), l), k), j), i), h), g), f), e), d), c), b)",
+    );
+  });
+
+  test("parameter generation", async () => {
+    const varNames = getVarNames(128);
+
+    for (let index = 0; index < varNames.length; index++) {
+      const varName = varNames[index];
+
+      if (index < 26) {
+        expect(varName.length).toBe(1);
+        expect(varName).toMatch(/^[a-z]{1}$/);
+      } else {
+        expect(varName.length).toBeGreaterThanOrEqual(2);
+        expect(varName).toMatch(/^[a-z]{1}[0-9]+$/);
+      }
+    }
   });
 });
