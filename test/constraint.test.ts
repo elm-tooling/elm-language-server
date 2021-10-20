@@ -3,7 +3,7 @@ import {
   IConstraint,
   IVersion,
   parseConstraint,
-  versionSatifiesConstraint,
+  versionSatisfiesConstraint,
 } from "../src/compiler/utils/elmUtils";
 
 describe("constraint test", () => {
@@ -33,10 +33,10 @@ describe("constraint test", () => {
       upperOperator: "<",
     };
 
-    expect(versionSatifiesConstraint(v(0, 9, 0), c)).toBe(false);
-    expect(versionSatifiesConstraint(v(1, 0, 0), c)).toBe(true);
-    expect(versionSatifiesConstraint(v(1, 1, 0), c)).toBe(true);
-    expect(versionSatifiesConstraint(v(2, 0, 0), c)).toBe(false);
+    expect(versionSatisfiesConstraint(v(0, 9, 0), c)).toBe(false);
+    expect(versionSatisfiesConstraint(v(1, 0, 0), c)).toBe(true);
+    expect(versionSatisfiesConstraint(v(1, 1, 0), c)).toBe(true);
+    expect(versionSatisfiesConstraint(v(2, 0, 0), c)).toBe(false);
   });
 
   it("can determine whether a version satisfies an inclusive constraint", () => {
@@ -47,11 +47,11 @@ describe("constraint test", () => {
       upperOperator: "<=",
     };
 
-    expect(versionSatifiesConstraint(v(0, 9, 0), c)).toBe(false);
-    expect(versionSatifiesConstraint(v(1, 0, 0), c)).toBe(true);
-    expect(versionSatifiesConstraint(v(1, 1, 0), c)).toBe(true);
-    expect(versionSatifiesConstraint(v(2, 0, 0), c)).toBe(true);
-    expect(versionSatifiesConstraint(v(2, 1, 0), c)).toBe(false);
+    expect(versionSatisfiesConstraint(v(0, 9, 0), c)).toBe(false);
+    expect(versionSatisfiesConstraint(v(1, 0, 0), c)).toBe(true);
+    expect(versionSatisfiesConstraint(v(1, 1, 0), c)).toBe(true);
+    expect(versionSatisfiesConstraint(v(2, 0, 0), c)).toBe(true);
+    expect(versionSatisfiesConstraint(v(2, 1, 0), c)).toBe(false);
   });
 
   it("can determine whether a version satisfies a SemVer constraint", () => {
@@ -61,14 +61,14 @@ describe("constraint test", () => {
       lowerOperator: "<=",
       upperOperator: "<",
     };
-    expect(versionSatifiesConstraint(v(0, 9, 0), c)).toBe(false);
-    expect(versionSatifiesConstraint(v(0, 9, 0, ["alpha"]), c)).toBe(false);
-    expect(versionSatifiesConstraint(v(1, 0, 0), c)).toBe(true);
-    expect(versionSatifiesConstraint(v(1, 0, 0, ["alpha"]), c)).toBe(true);
-    expect(versionSatifiesConstraint(v(1, 1, 0), c)).toBe(true);
-    expect(versionSatifiesConstraint(v(1, 1, 0, ["alpha"]), c)).toBe(true);
-    expect(versionSatifiesConstraint(v(2, 0, 0), c)).toBe(false);
-    expect(versionSatifiesConstraint(v(2, 0, 0, ["alpha"]), c)).toBe(false);
+    expect(versionSatisfiesConstraint(v(0, 9, 0), c)).toBe(false);
+    expect(versionSatisfiesConstraint(v(0, 9, 0, ["alpha"]), c)).toBe(false);
+    expect(versionSatisfiesConstraint(v(1, 0, 0), c)).toBe(true);
+    expect(versionSatisfiesConstraint(v(1, 0, 0, ["alpha"]), c)).toBe(true);
+    expect(versionSatisfiesConstraint(v(1, 1, 0), c)).toBe(true);
+    expect(versionSatisfiesConstraint(v(1, 1, 0, ["alpha"]), c)).toBe(true);
+    expect(versionSatisfiesConstraint(v(2, 0, 0), c)).toBe(false);
+    expect(versionSatisfiesConstraint(v(2, 0, 0, ["alpha"]), c)).toBe(false);
   });
 
   it("parse works on good input", () => {

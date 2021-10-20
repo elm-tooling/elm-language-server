@@ -233,7 +233,7 @@ async function solveDependenciesWorker(
 
   // Find versions that satisfy the constraint
   let candidates = (await packageCache.getVersions(dep.name))
-    .filter((version) => versionSatifiesConstraint(version, dep.constraint))
+    .filter((version) => versionSatisfiesConstraint(version, dep.constraint))
     .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
     .reverse();
 
@@ -319,7 +319,7 @@ export function parseConstraint(contraint: string): IConstraint {
   throw new Error("Could not parse version constraint");
 }
 
-export function versionSatifiesConstraint(
+export function versionSatisfiesConstraint(
   version: IVersion,
   constraint: IConstraint,
 ): boolean {
