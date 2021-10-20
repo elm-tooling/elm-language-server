@@ -355,12 +355,13 @@ const VAR_LETTERS = "abcdefghijklmnopqrstuvwxyz";
 
 export function getVarNames(count: number): string[] {
   const names = [];
+  const length = VAR_LETTERS.length;
   for (let i = 0; i < count; i++) {
-    const letter = VAR_LETTERS[i % 26];
-    if (i < 26) {
+    const letter = VAR_LETTERS[i % length];
+    if (i < length) {
       names.push(letter);
     } else {
-      names.push(`${letter}${i / 26}`);
+      names.push(`${letter}${Math.floor(i / length)}`);
     }
   }
   return names;

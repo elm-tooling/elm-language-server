@@ -1,5 +1,6 @@
 import path from "path";
 import { URI } from "vscode-uri";
+import { getVarNames } from "../src/compiler/typeInference";
 import { TreeUtils } from "../src/util/treeUtils";
 import { getTargetPositionFromSource } from "./utils/sourceParser";
 import { SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
@@ -694,5 +695,21 @@ bug =
       basicsSources + source,
       "a -> b -> (c -> (d -> (e -> (f -> (g -> (h -> (i -> (j -> (k -> (l -> (m -> (n -> (o -> (p -> (q -> (r -> (s -> (t -> (u -> (v -> (w -> (x -> (y -> (z -> (a1 -> (b1 -> (a, b1), a1), z), y), x), w), v), u), t), s), r), q), p), o), n), m), l), k), j), i), h), g), f), e), d), c), b)",
     );
+  });
+
+  test("parameter generation", async () => {
+    const varNames = getVarNames(128);
+
+    for (let index = 0; index < varNames.length; index++) {
+      const varName = varNames[index];
+
+      if (index < 26) {
+        expect(varName.length).toBe(1);
+        expect(varName).toMatch(/^[a-z]{1}$/);
+      } else {
+        expect(varName.length).toBeGreaterThanOrEqual(2);
+        expect(varName).toMatch(/^[a-z]{1}[0-9]+$/);
+      }
+    }
   });
 });
