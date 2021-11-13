@@ -56,6 +56,7 @@ interface IError {
     range: IRegion;
     string: string;
   }[];
+  suppressed?: boolean;
 }
 
 interface IRegion {
@@ -172,26 +173,28 @@ export class ElmReviewDiagnostics {
 
             fileErrors.set(
               uri,
-              errors.map((error: IError) => ({
-                message: error.message,
-                source: "elm-review",
-                range: toLsRange(error.region),
-                severity:
-                  settings.elmReviewDiagnostics === "error"
-                    ? DiagnosticSeverity.Error
-                    : DiagnosticSeverity.Warning,
-                tags: error.rule.startsWith("NoUnused")
-                  ? [DiagnosticTag.Unnecessary]
-                  : undefined,
-                data: {
-                  uri,
-                  code: "elm_review",
-                  fixes: (error.fix || []).map((fix) => ({
-                    string: fix.string,
-                    range: toLsRange(fix.range),
-                  })),
-                },
-              })),
+              errors
+                .filter((error: IError) => !error.suppressed)
+                .map((error: IError) => ({
+                  message: error.message,
+                  source: "elm-review",
+                  range: toLsRange(error.region),
+                  severity:
+                    settings.elmReviewDiagnostics === "error"
+                      ? DiagnosticSeverity.Error
+                      : DiagnosticSeverity.Warning,
+                  tags: error.rule.startsWith("NoUnused")
+                    ? [DiagnosticTag.Unnecessary]
+                    : undefined,
+                  data: {
+                    uri,
+                    code: "elm_review",
+                    fixes: (error.fix || []).map((fix) => ({
+                      string: fix.string,
+                      range: toLsRange(fix.range),
+                    })),
+                  },
+                })),
             );
           });
         }
