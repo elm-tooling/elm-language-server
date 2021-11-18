@@ -200,6 +200,7 @@ export class RefactorEditUtils {
   ): TextEdit | undefined {
     const lastImportNode =
       TreeUtils.getLastImportNode(tree) ??
+      TreeUtils.getModuleNameCommentNode(tree) ??
       TreeUtils.getModuleNameNode(tree)?.parent;
 
     return TextEdit.insert(

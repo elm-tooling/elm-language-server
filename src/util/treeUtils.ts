@@ -35,6 +35,14 @@ export class TreeUtils {
     return moduleDeclaration?.childForFieldName("name") ?? undefined;
   }
 
+  public static getModuleNameCommentNode(tree: Tree): SyntaxNode | undefined {
+    const moduleDeclaration: SyntaxNode | undefined =
+      this.findModuleDeclaration(tree);
+    return moduleDeclaration?.nextNamedSibling?.type === "block_comment"
+      ? moduleDeclaration.nextNamedSibling
+      : undefined;
+  }
+
   public static getModuleExposingListNodes(tree: Tree): SyntaxNode[] {
     const moduleNode = TreeUtils.findModuleDeclaration(tree);
 

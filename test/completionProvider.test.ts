@@ -47,9 +47,8 @@ describe("CompletionProvider", () => {
     await treeParser.init();
     const completionProvider = new MockCompletionProvider();
 
-    const { newSources, position, fileWithCaret } = getCaretPositionFromSource(
-      source,
-    );
+    const { newSources, position, fileWithCaret } =
+      getCaretPositionFromSource(source);
 
     if (!position) {
       throw new Error("Getting position failed");
@@ -1147,7 +1146,6 @@ test = Module.{-caret-}
     const source = `
 --@ Module.elm
 module Module exposing (..)
-
 testFunc = ""
 
 type Msg = Msg1 | Msg2
@@ -1156,7 +1154,6 @@ type alias Model = { field : String }
 
 --@ Test.elm
 module Test exposing (..)
-
 test = div [] [ Module.{-caret-} ]
 `;
 
@@ -1196,6 +1193,70 @@ test = div [] [ Module.{-caret-} ]
           detail: "Auto import module 'Module'",
           additionalTextEdits: [
             TextEdit.insert(Position.create(1, 0), "import Module\n"),
+          ],
+        },
+      ],
+      "exactMatch",
+      "triggeredByDot",
+    );
+  });
+
+  it("Non imported qualified modules should have value completions with auto imports after module docs", async () => {
+    const source = `
+--@ Module.elm
+module Module exposing (..)
+testFunc = ""
+
+type Msg = Msg1 | Msg2
+
+type alias Model = { field : String }
+
+--@ Test.elm
+module Test exposing (..)
+{-| Test
+-}
+
+{-| test
+-}
+test = div [] [ Module.{-caret-} ]
+`;
+
+    await testCompletions(
+      source,
+      [
+        {
+          label: "testFunc",
+          detail: "Auto import module 'Module'",
+          additionalTextEdits: [
+            TextEdit.insert(Position.create(3, 0), "import Module\n"),
+          ],
+        },
+        {
+          label: "Msg",
+          detail: "Auto import module 'Module'",
+          additionalTextEdits: [
+            TextEdit.insert(Position.create(3, 0), "import Module\n"),
+          ],
+        },
+        {
+          label: "Msg1",
+          detail: "Auto import module 'Module'",
+          additionalTextEdits: [
+            TextEdit.insert(Position.create(3, 0), "import Module\n"),
+          ],
+        },
+        {
+          label: "Msg2",
+          detail: "Auto import module 'Module'",
+          additionalTextEdits: [
+            TextEdit.insert(Position.create(3, 0), "import Module\n"),
+          ],
+        },
+        {
+          label: "Model",
+          detail: "Auto import module 'Module'",
+          additionalTextEdits: [
+            TextEdit.insert(Position.create(3, 0), "import Module\n"),
           ],
         },
       ],
