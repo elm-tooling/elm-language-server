@@ -276,18 +276,22 @@ lsp
 (elm +lsp)
 ```
 
-- Optional configuration for [lsp-mode](https://github.com/emacs-lsp/lsp-mode) and [lsp-ui-mode](https://github.com/emacs-lsp/lsp-ui). Add this to your `.doom.d/config.el`:
+- Optional configuration for [lsp-mode](https://github.com/emacs-lsp/lsp-mode) and [lsp-ui-mode](https://github.com/emacs-lsp/lsp-ui). Add this to your `.doom.d/config.el`.
 
 ```elisp
-(after! lsp
-  (setq lsp-enable-symbol-highlighting nil)
-  )
 (after! lsp-ui
   (setq lsp-ui-doc-max-width 100)
   (setq lsp-ui-doc-max-height 30)
-  (setq company-lsp-cache-candidates nil)
+  (setq lsp-ui-sideline-show-code-actions nil)
+  (setq lsp-ui-doc-enable nil)
+  (setq lsp-ui-doc-show-with-cursor nil)
+  (setq lsp-ui-doc-show-with-mouse nil)
+  (setq lsp-lens-enable nil)
+  (setq lsp-enable-symbol-highlighting nil)
   )
 ```
+
+You can also enable or disable more features:  https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off
 
 - Run `~/.emacs.d/bin/doom sync`
 
