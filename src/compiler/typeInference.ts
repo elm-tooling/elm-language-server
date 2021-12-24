@@ -2232,7 +2232,7 @@ export class InferenceScope {
             actualEntries.filter(([field]) => !expectedKeys.includes(field)),
           ),
       actual.baseType
-        ? new Map()
+        ? new Map<string, Type>()
         : new Map(
             expectedEntries.filter(([field]) => !actualKeys.includes(field)),
           ),

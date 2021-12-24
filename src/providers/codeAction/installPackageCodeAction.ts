@@ -100,8 +100,8 @@ CommandManager.register(
             connection.window.showInformationMessage(message);
           }
         })
-        .catch((e) => {
-          connection.console.warn(e);
+        .catch((e: unknown) => {
+          connection.console.warn(e as string);
         });
     }
   },

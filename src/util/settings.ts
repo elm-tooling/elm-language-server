@@ -56,7 +56,9 @@ export class Settings {
       this.clientCapabilities.workspace.configuration
     ) {
       this.updateSettings(
-        await this.connection.workspace.getConfiguration("elmLS"),
+        (await this.connection.workspace.getConfiguration(
+          "elmLS",
+        )) as IClientSettings,
       );
     }
     return this.clientSettings;

@@ -484,8 +484,8 @@ export class ElmLsDiagnostics {
           ? []
           : this.getUnusedValueConstructorDiagnostics(tree)),
       ];
-    } catch (e: any) {
-      this.connection.console.error(e);
+    } catch (e: unknown) {
+      this.connection.console.error(e as string);
     }
     return [];
   };
@@ -518,8 +518,8 @@ export class ElmLsDiagnostics {
             return true;
           }
         });
-    } catch (e: any) {
-      this.connection.console.error(e);
+    } catch (e: unknown) {
+      this.connection.console.error(e as string);
     }
     return [];
   };
