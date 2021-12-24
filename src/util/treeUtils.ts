@@ -1,7 +1,7 @@
 import { Position } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { ISourceFile } from "../compiler/forest";
-import { comparePosition } from "../positionUtil";
+import { comparePosition, positionEquals } from "../positionUtil";
 import { TRecord, Type } from "../compiler/typeInference";
 import { IProgram } from "../compiler/program";
 import {
@@ -785,16 +785,23 @@ export class TreeUtils {
     sourceFile: ISourceFile,
     range: Range,
   ): SyntaxNode {
-    return sourceFile.tree.rootNode.namedDescendantForPosition(
-      {
-        column: range.start.character,
-        row: range.start.line,
-      },
-      {
-        column: range.end.character,
-        row: range.end.line,
-      },
-    );
+    if (positionEquals(range.start, range.end)) {
+      return this.getNamedDescendantForPosition(sourceFile.tree.rootNode, {
+        character: range.start.character,
+        line: range.start.line,
+      });
+    } else {
+      return sourceFile.tree.rootNode.namedDescendantForPosition(
+        {
+          column: range.start.character,
+          row: range.start.line,
+        },
+        {
+          column: range.end.character,
+          row: range.end.line,
+        },
+      );
+    }
   }
 
   public static findPreviousNode(

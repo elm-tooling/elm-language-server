@@ -57,3 +57,7 @@ export function comparePosition(
 
   return 1;
 }
+
+export function positionEquals(a: VSPosition, b: VSPosition): boolean {
+  return a.line === b.line && a.character === b.character;
+}
