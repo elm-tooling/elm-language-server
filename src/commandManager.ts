@@ -24,6 +24,7 @@ export class CommandManager {
 
       if (handler) {
         if (params.arguments) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
           void handler(...params.arguments);
         } else {
           void handler();

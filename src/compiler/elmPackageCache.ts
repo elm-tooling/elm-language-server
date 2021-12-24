@@ -181,7 +181,7 @@ export class ElmPackageCache implements IElmPackageCache {
     return new Map<string, IConstraint>(
       Object.entries(elmJson.dependencies).map(([name, constraint]) => [
         name,
-        utils.parseConstraint(constraint),
+        utils.parseConstraint(constraint as string),
       ]),
     );
   }

@@ -20,7 +20,7 @@ import {
 } from "./providers/diagnostics/elmAnalyseJsonService";
 import { ILanguageServer } from "./server";
 import { DocumentEvents } from "./util/documentEvents";
-import { Settings } from "./util/settings";
+import { IClientSettings, Settings } from "./util/settings";
 import { TextDocumentEvents } from "./util/textDocumentEvents";
 
 // Show version for `-v` or `--version` arguments
@@ -86,7 +86,8 @@ connection.onInitialize(
       useValue: new CapabilityCalculator(params.capabilities),
     });
 
-    const initializationOptions = params.initializationOptions ?? {};
+    const initializationOptions: IClientSettings =
+      params.initializationOptions ?? {};
 
     container.register("Settings", {
       useValue: new Settings(initializationOptions, params.capabilities),
