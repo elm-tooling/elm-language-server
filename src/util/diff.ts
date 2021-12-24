@@ -1,9 +1,11 @@
 import diff from "fast-diff";
-import { Range, TextEdit } from "vscode-languageserver";
+import { Connection, Range, TextEdit } from "vscode-languageserver";
+import { URI } from "vscode-uri";
+import { execCmdSync } from "../compiler/utils/elmUtils";
 // Given two strings (`before`, `after`), return a list of all substrings
 // that appear in `after` but not in `before`, and the positions of each
 // of the substrings within `after`.
-export function getTextRangeChanges(
+function getTextRangeChanges(
   before: string,
   after: string,
 ): Promise<TextEdit[]> {
@@ -53,4 +55,26 @@ export function getTextRangeChanges(
     }
   });
   return Promise.resolve(newRanges);
+}
+
+export function formatText(
+  elmWorkspaceRootPath: URI,
+  elmFormatPath: string,
+  text: string,
+  connection: Connection,
+): Promise<TextEdit[]> {
+  const options = {
+    cmdArguments: ["--stdin", "--elm-version", "0.19", "--yes"],
+    notFoundText: "Install elm-format via 'npm install -g elm-format'.",
+  };
+
+  const format = execCmdSync(
+    elmFormatPath,
+    "elm-format",
+    options,
+    elmWorkspaceRootPath.fsPath,
+    connection,
+    text,
+  );
+  return getTextRangeChanges(text, format.stdout);
 }
