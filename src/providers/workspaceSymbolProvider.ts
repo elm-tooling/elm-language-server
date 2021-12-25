@@ -35,7 +35,7 @@ export class WorkspaceSymbolProvider {
         const traverse: (node: SyntaxNode) => void = (
           node: SyntaxNode,
         ): void => {
-          if (node.text.includes(param.query)) {
+          if (this.isPatternInSymbol(param.query, node.text)) {
             const symbolInformation =
               SymbolInformationTranslator.translateNodeToSymbolInformation(
                 tree.uri,
@@ -64,4 +64,23 @@ export class WorkspaceSymbolProvider {
 
     return Array.from(symbolInformationMap.values()).flat();
   };
+
+  // Determines if typed string matches a symbol
+  // name. Characters must appear in order.
+  // Return true if all typed characters are in symbol
+  private isPatternInSymbol(typedValue: string, symbolName: string): boolean {
+    const typedLower = typedValue.toLocaleLowerCase();
+    const symbolLower = symbolName.toLocaleLowerCase();
+    const typedLength = typedLower.length;
+    const symbolLength = symbolLower.length;
+    let typedPos = 0;
+    let symbolPos = 0;
+    while (typedPos < typedLength && symbolPos < symbolLength) {
+      if (typedLower[typedPos] === symbolLower[symbolPos]) {
+        typedPos += 1;
+      }
+      symbolPos += 1;
+    }
+    return typedPos === typedLength;
+  }
 }
