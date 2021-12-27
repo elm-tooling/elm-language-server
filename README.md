@@ -1,9 +1,10 @@
 # elm-language-server
 
 ![Matrix](https://img.shields.io/matrix/elm-language-server:matrix.org?label=Matrix%20chat&logo=Matrix)
-[![Packaging status](https://repology.org/badge/vertical-allrepos/elm-language-server.svg)](https://repology.org/project/elm-language-server/versions)
 [![Build Status](https://github.com/elm-tooling/elm-language-server/workflows/Lint%20and%20test/badge.svg)](https://github.com/elm-tooling/elm-language-server/actions)
 [![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/elm-tooling/elm-language-server)
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/elm-language-server.svg)](https://repology.org/project/elm-language-server/versions)
 
 This is the language server implementation for the Elm programming language.
 
