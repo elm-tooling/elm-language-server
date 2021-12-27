@@ -1,5 +1,7 @@
 # elm-language-server
 
+![Matrix](https://img.shields.io/matrix/elm-language-server:matrix.org?label=Matrix%20chat&logo=Matrix)
+[![Packaging status](https://repology.org/badge/vertical-allrepos/elm-language-server.svg)](https://repology.org/project/elm-language-server/versions)
 [![Build Status](https://github.com/elm-tooling/elm-language-server/workflows/Lint%20and%20test/badge.svg)](https://github.com/elm-tooling/elm-language-server/actions)
 [![Open in Visual Studio Code](https://open.vscode.dev/badges/open-in-vscode.svg)](https://open.vscode.dev/elm-tooling/elm-language-server)
 
@@ -7,6 +9,7 @@ This is the language server implementation for the Elm programming language.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
 **Table of Contents**
 
 - [Installation](#installation)
@@ -291,7 +294,7 @@ lsp
   )
 ```
 
-You can also enable or disable more features:  https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off
+You can also enable or disable more features: https://emacs-lsp.github.io/lsp-mode/tutorials/how-to-turn-off
 
 - Run `~/.emacs.d/bin/doom sync`
 
