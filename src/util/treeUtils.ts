@@ -137,7 +137,10 @@ export class TreeUtils {
         }
       }
       const descendants = TreeUtils.descendantsOfType(node, "exposed_type");
-      const match = descendants.find((desc) => desc.text.startsWith(typeName));
+      const match = descendants.find(
+        (desc) =>
+          desc.text === typeName || `${desc.text}(`.startsWith(typeName),
+      );
       if (match && match.firstNamedChild) {
         return match.firstNamedChild;
       }
