@@ -9,6 +9,7 @@ import Parser from "web-tree-sitter";
 
 container.register<Parser>("Parser", {
   useValue: mockDeep<Parser>({
+    // @ts-ignore
     getLanguage: () => ({
       query: () => {
         //
