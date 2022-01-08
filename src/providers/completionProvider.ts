@@ -1369,7 +1369,7 @@ export class CompletionProvider {
     return [
       this.createSnippet(
         "of",
-        ["of", "   $0"],
+        ["of", "    $0"],
         "The of keyword",
         CompletionItemKind.Keyword,
       ),
