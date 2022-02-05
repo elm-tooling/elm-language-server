@@ -1,5 +1,10 @@
 # Change Log
 
+## 2.4.1
+
+- Improve whitespace handling for `of` keyword
+- Updated tree sitter parser to fix some parse errors
+
 ## 2.4.0
 
 - Implement fuzzy matching when using the workspace symbol search
