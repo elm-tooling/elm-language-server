@@ -234,7 +234,7 @@ let g:ale_elm_ls_elm_test_path = "/path/to/elm-test"
 #### LanguageClient
 
 To use this language server with [LanguageClient](https://github.com/autozimu/LanguageClient-neovim)
-add the following configuration to you neovim/vim.
+add the following configuration to your neovim/vim.
 
 ```viml
 let g:LanguageClient_serverCommands = {
