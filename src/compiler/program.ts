@@ -448,7 +448,7 @@ export class Program implements IProgram {
     if (this.forest === null) {
       this.connection.window.showWarningMessage(
         `Extension will not work at all: workspace initialization failed for ${pathToElmJson}` +
-          "For more information, check the console output (F1 > Output, dropdown on the right, 'Elm (project name)')",
+          "For more information, check your extension logs (VSCode: F1 > Output, dropdown on the right, 'Elm (project name)')",
       );
     }
   }
