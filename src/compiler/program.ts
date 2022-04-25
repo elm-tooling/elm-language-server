@@ -385,7 +385,24 @@ export class Program implements IProgram {
         // On application projects, this will give a NO INPUT error message, but will still download the dependencies
       }
 
-      this.elmPackageCache = new ElmPackageCache(this.loadElmJson.bind(this));
+      try {
+        this.elmPackageCache = new ElmPackageCache(this.loadElmJson.bind(this));
+      } catch (error) {
+        if (error instanceof Error && error.stack) {
+          this.connection.window.showErrorMessage(
+            `Failed constructing ElmPackageCache for ${pathToElmJson}:\n${error.stack}`,
+          );
+        }
+
+        this.connection.window.showInformationMessage(
+          "The package cache is probably broken. Try a restart after removing '~/.elm' or '%APPDATA%\\elm'." +
+            "If the error still occurs, try running 'elm init' in a different folder." +
+            "If the error appears again, check your PATH for multiple elm installations and verify your installed version",
+        );
+
+        throw error;
+      }
+
       this.rootProject = await this.loadRootProject(pathToElmJson);
       this.forest = new Forest(this.rootProject);
 
@@ -426,6 +443,13 @@ export class Program implements IProgram {
           `Error parsing files for ${pathToElmJson}:\n${error.stack}`,
         );
       }
+    }
+
+    if (this.forest === null) {
+      this.connection.window.showWarningMessage(
+        `Extension will not work at all: workspace initialization failed for ${pathToElmJson}` +
+          "For more information, check your extension logs (VSCode: F1 > Output, dropdown on the right, 'Elm (project name)')",
+      );
     }
   }
 
