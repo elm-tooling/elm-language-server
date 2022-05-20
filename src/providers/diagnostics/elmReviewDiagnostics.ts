@@ -169,7 +169,7 @@ export class ElmReviewDiagnostics {
             const uri = Utils.joinPath(
               URI.parse(workspaceRootPath),
               path,
-            ).toString();
+            ).fsPath;
 
             fileErrors.set(
               uri,
