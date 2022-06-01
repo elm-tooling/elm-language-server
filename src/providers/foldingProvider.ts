@@ -54,7 +54,7 @@ export class FoldingRangeProvider {
 
     const traverse: () => void = (): void => {
       const node = treeCursor.currentNode();
-      if (node.parent?.lastChild && node.isNamed) {
+      if (node.parent?.lastChild && node.isNamed()) {
         if ("import_clause" === node.type) {
           const previousSibling = node.previousNamedSibling;
           if (
