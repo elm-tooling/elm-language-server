@@ -100,7 +100,7 @@ export class ElmReviewDiagnostics {
     const workspaceRootPath = this.elmWorkspaceMatcher
       .getProgramFor(filePath)
       .getRootPath();
-    return await this.checkForErrors(workspaceRootPath.fsPath);
+    return await this.checkForErrors(workspaceRootPath);
   };
 
   private hasType(error: any): error is IElmReviewError {
@@ -108,7 +108,7 @@ export class ElmReviewDiagnostics {
   }
 
   private async checkForErrors(
-    workspaceRootPath: string,
+    workspaceRootPath: URI,
   ): Promise<Map<string, IElmReviewDiagnostic[]>> {
     const settings = await this.settings.getClientSettings();
     const fileErrors = new Map<string, IElmReviewDiagnostic[]>();
@@ -116,7 +116,8 @@ export class ElmReviewDiagnostics {
     if (
       settings.elmReviewDiagnostics === "off" ||
       !existsSync(
-        path.join(workspaceRootPath, "review", "src", "ReviewConfig.elm"),
+        Utils.joinPath(workspaceRootPath, "review", "src", "ReviewConfig.elm")
+          .fsPath,
       )
     ) {
       return fileErrors;
@@ -142,7 +143,7 @@ export class ElmReviewDiagnostics {
         elmReviewCommand,
         "elm-review",
         options,
-        workspaceRootPath,
+        workspaceRootPath.fsPath,
         this.connection,
       );
       return fileErrors;
@@ -166,10 +167,7 @@ export class ElmReviewDiagnostics {
           errorObject.type === "review-errors"
         ) {
           errorObject.errors.forEach(({ path, errors }: IFileError) => {
-            const uri = Utils.joinPath(
-              URI.parse(workspaceRootPath),
-              path,
-            ).toString();
+            const uri = Utils.joinPath(workspaceRootPath, path).toString();
 
             fileErrors.set(
               uri,
