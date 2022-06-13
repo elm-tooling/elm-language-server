@@ -20,7 +20,7 @@
     "escape-string-regexp": "^4.0.0",
     "execa": "^5.1.1",
     "fast-diff": "^1.2.0",
-    "globby": "^11.0.4",
+    "globby": "^13.1.2",
     "pjson": "1.0.9",
     "reflect-metadata": "^0.1.13",
     "ts-debounce": "^4.0.0",

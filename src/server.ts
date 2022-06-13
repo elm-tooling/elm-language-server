@@ -1,4 +1,4 @@
-import globby from "globby";
+import { globbySync } from "globby";
 import path from "path";
 import { container } from "tsyringe";
 import {
@@ -61,7 +61,7 @@ export class Server implements ILanguageServer {
       const globUri = uri.fsPath.replace(/\\/g, "/").replace(/\/$/, "");
       const elmJsonGlob = `${globUri}/**/elm.json`;
 
-      const elmJsons = globby.sync(
+      const elmJsons = globbySync(
         [elmJsonGlob, "!**/node_modules/**", "!**/elm-stuff/**"],
         { suppressErrors: true },
       );

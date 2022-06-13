@@ -1,5 +1,5 @@
 import { readFile } from "fs";
-import globby from "globby";
+import { globby } from "globby";
 import { container } from "tsyringe";
 import { promisify } from "util";
 import { TextEdit } from "vscode-languageserver-textdocument";

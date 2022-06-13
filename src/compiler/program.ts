@@ -1,5 +1,5 @@
 import fs from "fs";
-import globby from "globby";
+import { globby } from "globby";
 import os from "os";
 import { container } from "tsyringe";
 import util from "util";
