@@ -1,6 +1,6 @@
 import { SyntaxNode } from "web-tree-sitter";
-import { EFieldType } from "./expressionTree";
-import { SyntaxNodeSet } from "./syntaxNodeSet";
+import { EFieldType } from "./expressionTree.js";
+import { SyntaxNodeSet } from "./syntaxNodeSet.js";
 
 export class RecordFieldReferenceTable {
   private refsByField: Map<string, SyntaxNodeSet>;

@@ -13,22 +13,22 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IProgram } from "../compiler/program";
-import { ISourceFile } from "../compiler/forest";
-import { comparePosition, PositionUtil } from "../positionUtil";
-import { getEmptyTypes } from "../compiler/utils/elmUtils";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { HintHelper } from "../util/hintHelper";
-import { ImportUtils, IPossibleImport } from "../util/importUtils";
-import { RefactorEditUtils } from "../util/refactorEditUtils";
-import { TreeUtils } from "../util/treeUtils";
-import RANKING_LIST from "./ranking";
-import { DiagnosticsProvider } from ".";
-import { TypeChecker } from "../compiler/typeChecker";
+import { IProgram } from "../compiler/program.js";
+import { ISourceFile } from "../compiler/forest.js";
+import { comparePosition, PositionUtil } from "../positionUtil.js";
+import { getEmptyTypes } from "../compiler/utils/elmUtils.js";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { HintHelper } from "../util/hintHelper.js";
+import { ImportUtils, IPossibleImport } from "../util/importUtils.js";
+import { RefactorEditUtils } from "../util/refactorEditUtils.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import RANKING_LIST from "./ranking.js";
+import { DiagnosticsProvider } from "./index.js";
+import { TypeChecker } from "../compiler/typeChecker.js";
 import escapeStringRegexp from "escape-string-regexp";
-import { TRecord } from "../compiler/typeInference";
-import { ICompletionParams } from "./paramsExtensions";
-import { Utils } from "../util/utils";
+import { TRecord } from "../compiler/typeInference.js";
+import { ICompletionParams } from "./paramsExtensions.js";
+import { Utils } from "../util/utils.js";
 
 export type CompletionResult =
   | CompletionItem[]

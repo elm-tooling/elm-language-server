@@ -1,10 +1,10 @@
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { Imports } from "./imports";
-import { TreeUtils } from "../util/treeUtils";
-import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
-import { IExposing, SymbolMap } from "./binder";
-import { Diagnostic } from "./diagnostics";
-import { ElmProject } from "./program";
+import { Imports } from "./imports.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap.js";
+import { IExposing, SymbolMap } from "./binder.js";
+import { Diagnostic } from "./diagnostics.js";
+import { ElmProject } from "./program.js";
 
 export interface ISourceFile {
   uri: string;

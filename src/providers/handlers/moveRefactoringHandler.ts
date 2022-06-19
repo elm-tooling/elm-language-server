@@ -7,11 +7,11 @@ import {
   IMoveDestinationsResponse,
   IMoveParams,
   MoveRequest,
-} from "../../protocol";
-import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
-import { References } from "../../compiler/references";
-import { TreeUtils } from "../../util/treeUtils";
+} from "../../protocol.js";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher.js";
+import { RefactorEditUtils } from "../../util/refactorEditUtils.js";
+import { References } from "../../compiler/references.js";
+import { TreeUtils } from "../../util/treeUtils.js";
 
 export class MoveRefactoringHandler {
   private connection: Connection;

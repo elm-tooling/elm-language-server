@@ -1,6 +1,6 @@
 import { TextEdit } from "vscode-languageserver";
-import { CodeActionProvider } from "../codeActionProvider";
-import { hasElmReviewFixes } from "../diagnostics/elmReviewDiagnostics";
+import { CodeActionProvider } from "../codeActionProvider.js";
+import { hasElmReviewFixes } from "../diagnostics/elmReviewDiagnostics.js";
 
 CodeActionProvider.registerCodeAction({
   errorCodes: ["elm_review"],

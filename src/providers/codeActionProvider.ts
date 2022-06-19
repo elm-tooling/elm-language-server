@@ -14,28 +14,28 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { ElmJson, IProgram } from "../compiler/program";
-import { ISourceFile } from "../compiler/forest";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { MultiMap } from "../util/multiMap";
-import { Settings } from "../util/settings";
-import { Diagnostic } from "../compiler/diagnostics";
+import { ElmJson, IProgram } from "../compiler/program.js";
+import { ISourceFile } from "../compiler/forest.js";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { MultiMap } from "../util/multiMap.js";
+import { Settings } from "../util/settings.js";
+import { Diagnostic } from "../compiler/diagnostics.js";
 import {
   convertFromCompilerDiagnostic,
   convertToCompilerDiagnostic,
   DiagnosticsProvider,
   IDiagnostic,
-} from "./diagnostics/diagnosticsProvider";
-import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics";
+} from "./diagnostics/diagnosticsProvider.js";
+import { ElmMakeDiagnostics } from "./diagnostics/elmMakeDiagnostics.js";
 import {
   DiagnosticKind,
   diagnosticsEquals,
-} from "./diagnostics/fileDiagnostics";
-import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
-import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
-import { ICodeActionParams } from "./paramsExtensions";
-import { ElmPackageCache } from "../compiler/elmPackageCache";
-import { comparePosition } from "../positionUtil";
+} from "./diagnostics/fileDiagnostics.js";
+import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler.js";
+import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler.js";
+import { ICodeActionParams } from "./paramsExtensions.js";
+import { ElmPackageCache } from "../compiler/elmPackageCache.js";
+import { comparePosition } from "../positionUtil.js";
 
 interface IPreferredAction {
   priority: number;

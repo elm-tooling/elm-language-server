@@ -1,8 +1,8 @@
 import { DiagnosticSeverity, Range } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import { Diagnostics } from "../../compiler/diagnostics";
-import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
-import { NAMING_ERROR } from "./elmMakeDiagnostics";
+import { Diagnostics } from "../../compiler/diagnostics.js";
+import { IDiagnostic, IElmIssue } from "./diagnosticsProvider.js";
+import { NAMING_ERROR } from "./elmMakeDiagnostics.js";
 
 export class ElmDiagnosticsHelper {
   public static issuesToDiagnosticMap(

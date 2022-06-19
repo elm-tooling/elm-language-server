@@ -1,14 +1,14 @@
 import { Range, TextEdit } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { CodeActionProvider, ICodeAction } from "..";
-import { ISourceFile } from "../../compiler/forest";
-import { getSpaces } from "../../util/refactorEditUtils";
-import { TreeUtils } from "../../util/treeUtils";
-import { Diagnostics } from "../../compiler/diagnostics";
-import { TypeChecker } from "../../compiler/typeChecker";
-import { Type } from "../../compiler/typeInference";
-import { ICodeActionParams } from "../paramsExtensions";
-import { Utils } from "../../util/utils";
+import { CodeActionProvider, ICodeAction } from "../index.js";
+import { ISourceFile } from "../../compiler/forest.js";
+import { getSpaces } from "../../util/refactorEditUtils.js";
+import { TreeUtils } from "../../util/treeUtils.js";
+import { Diagnostics } from "../../compiler/diagnostics.js";
+import { TypeChecker } from "../../compiler/typeChecker.js";
+import { Type } from "../../compiler/typeInference.js";
+import { ICodeActionParams } from "../paramsExtensions.js";
+import { Utils } from "../../util/utils.js";
 
 const errorCodes = [Diagnostics.RecordField.code];
 const fixId = "add_missing_record_field";

@@ -9,19 +9,19 @@ import {
   InitializeResult,
   ProposedFeatures,
 } from "vscode-languageserver";
-import { createConnection } from "vscode-languageserver/node";
+import { createConnection } from "vscode-languageserver/node.js";
 import Parser from "web-tree-sitter";
-import { getCancellationStrategyFromArgv } from "./cancellation";
-import { CapabilityCalculator } from "./capabilityCalculator";
-import { ASTProvider } from "./providers";
+import { getCancellationStrategyFromArgv } from "./cancellation.js";
+import { CapabilityCalculator } from "./capabilityCalculator.js";
+import { ASTProvider } from "./providers/index.js";
 import {
   ElmAnalyseJsonService,
   IElmAnalyseJsonService,
-} from "./providers/diagnostics/elmAnalyseJsonService";
-import { ILanguageServer } from "./server";
-import { DocumentEvents } from "./util/documentEvents";
-import { IClientSettings, Settings } from "./util/settings";
-import { TextDocumentEvents } from "./util/textDocumentEvents";
+} from "./providers/diagnostics/elmAnalyseJsonService.js";
+import { ILanguageServer } from "./server.js";
+import { DocumentEvents } from "./util/documentEvents.js";
+import { IClientSettings, Settings } from "./util/settings.js";
+import { TextDocumentEvents } from "./util/textDocumentEvents.js";
 
 // Show version for `-v` or `--version` arguments
 if (process.argv[2] === "-v" || process.argv[2] === "--version") {
@@ -93,7 +93,7 @@ connection.onInitialize(
       useValue: new Settings(initializationOptions, params.capabilities),
     });
 
-    const { Server } = await import("./server");
+    const { Server } = await import("./server.js");
     server = new Server(params, progress);
     await server.init();
 

@@ -7,10 +7,10 @@ import {
   ReferenceParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { References } from "../compiler/references";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { TreeUtils } from "../util/treeUtils";
-import { IReferenceParams } from "./paramsExtensions";
+import { References } from "../compiler/references.js";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { IReferenceParams } from "./paramsExtensions.js";
 
 export type ReferenceResult = Location[] | null | undefined;
 

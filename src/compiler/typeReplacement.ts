@@ -1,5 +1,5 @@
 import { performance } from "perf_hooks";
-import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable";
+import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable.js";
 import {
   TVar,
   Type,
@@ -10,7 +10,7 @@ import {
   TTuple,
   TRecord,
   TMutableRecord,
-} from "./typeInference";
+} from "./typeInference.js";
 
 export let replaceTime = 0;
 export function resetReplaceTime(): void {

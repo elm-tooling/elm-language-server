@@ -1,10 +1,10 @@
 import { Range } from "vscode-languageserver";
 import { TextEdit } from "vscode-languageserver-textdocument";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
-import { TreeUtils } from "../../util/treeUtils";
-import { Diagnostics } from "../../compiler/diagnostics";
-import { CodeActionProvider, ICodeAction } from "../codeActionProvider";
-import { ICodeActionParams } from "../paramsExtensions";
+import { RefactorEditUtils } from "../../util/refactorEditUtils.js";
+import { TreeUtils } from "../../util/treeUtils.js";
+import { Diagnostics } from "../../compiler/diagnostics.js";
+import { CodeActionProvider, ICodeAction } from "../codeActionProvider.js";
+import { ICodeActionParams } from "../paramsExtensions.js";
 
 const errorCodes = [Diagnostics.MissingValue.code];
 const fixId = "make_declaration_from_usage";

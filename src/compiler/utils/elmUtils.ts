@@ -1,11 +1,11 @@
-import execa, { ExecaSyncReturnValue } from "execa";
-import * as path from "../../util/path";
+import { execaSync, execa, ExecaSyncReturnValue } from "execa";
+import * as path from "../../util/path.js";
 import { Connection, CompletionItemKind } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmPackageCache } from "../elmPackageCache";
-import { IClientSettings } from "../../util/settings";
-import { ElmProject } from "../program";
-import { NonEmptyArray } from "../../util/utils";
+import { IElmPackageCache } from "../elmPackageCache.js";
+import { IClientSettings } from "../../util/settings.js";
+import { ElmProject } from "../program.js";
+import { NonEmptyArray } from "../../util/utils.js";
 
 export const isWindows = process.platform === "win32";
 
@@ -32,7 +32,7 @@ export function execCmdSync(
   const cmdArguments = options ? options.cmdArguments : [];
 
   try {
-    return execa.sync(cmd, cmdArguments, {
+    return execaSync(cmd, cmdArguments, {
       cwd,
       input,
       preferLocal,

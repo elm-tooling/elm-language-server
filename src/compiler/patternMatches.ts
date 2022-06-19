@@ -1,9 +1,9 @@
 import { SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "../util/treeUtils";
-import { Utils } from "../util/utils";
-import { Diagnostic, Diagnostics, error } from "./diagnostics";
-import { ISourceFile } from "./forest";
-import { IProgram } from "./program";
+import { TreeUtils } from "../util/treeUtils.js";
+import { Utils } from "../util/utils.js";
+import { Diagnostic, Diagnostics, error } from "./diagnostics.js";
+import { ISourceFile } from "./forest.js";
+import { IProgram } from "./program.js";
 
 type Union = {
   alts: CanCtor[];

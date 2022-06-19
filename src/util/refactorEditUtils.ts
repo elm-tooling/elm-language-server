@@ -1,6 +1,6 @@
 import { Position, Range, TextEdit } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { TreeUtils } from "./treeUtils";
+import { TreeUtils } from "./treeUtils.js";
 
 export class RefactorEditUtils {
   public static findLineNumberAfterCurrentFunction(

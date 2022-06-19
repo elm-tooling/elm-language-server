@@ -1,5 +1,5 @@
 import { SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "./treeUtils";
+import { TreeUtils } from "./treeUtils.js";
 
 export class HintHelper {
   public static createHint(

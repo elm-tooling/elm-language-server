@@ -7,13 +7,13 @@ import {
   DiagnosticTag,
 } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import { ISourceFile } from "../../compiler/forest";
-import * as utils from "../../compiler/utils/elmUtils";
-import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { Settings } from "../../util/settings";
-import { IDiagnostic } from "./diagnosticsProvider";
+import { ISourceFile } from "../../compiler/forest.js";
+import * as utils from "../../compiler/utils/elmUtils.js";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher.js";
+import { Settings } from "../../util/settings.js";
+import { IDiagnostic } from "./diagnosticsProvider.js";
 import { Range } from "vscode-languageserver-textdocument";
-import execa = require("execa");
+import { ExecaReturnValue } from "execa";
 import { existsSync } from "fs";
 import * as path from "path";
 
@@ -151,7 +151,7 @@ export class ElmReviewDiagnostics {
       if (typeof error === "string") {
         return fileErrors;
       } else {
-        const execaError = error as execa.ExecaReturnValue<string>;
+        const execaError = error as ExecaReturnValue<string>;
         let errorObject: unknown;
         try {
           errorObject = JSON.parse(execaError.stdout);

@@ -7,8 +7,8 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { IFoldingRangeParams } from "./paramsExtensions";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { IFoldingRangeParams } from "./paramsExtensions.js";
 
 export class FoldingRangeProvider {
   private readonly REGION_CONSTRUCTS: Set<string> = new Set([

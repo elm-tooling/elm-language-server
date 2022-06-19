@@ -47,4 +47,4 @@ jobs:
           elm make ./src/Arc2d.elm
       - name: Run performance test
         run: |
-          npx ts-node ./test/performance.ts ./ianmackenzie/elm-geometry
+          npx ts-node --esm ./test/performance.ts ./ianmackenzie/elm-geometry

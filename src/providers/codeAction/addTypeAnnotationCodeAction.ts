@@ -4,17 +4,17 @@ import {
   Range,
   TextEdit,
 } from "vscode-languageserver";
-import { PositionUtil } from "../../positionUtil";
-import { getSpaces } from "../../util/refactorEditUtils";
-import { TreeUtils } from "../../util/treeUtils";
-import { Diagnostics } from "../../compiler/diagnostics";
+import { PositionUtil } from "../../positionUtil.js";
+import { getSpaces } from "../../util/refactorEditUtils.js";
+import { TreeUtils } from "../../util/treeUtils.js";
+import { Diagnostics } from "../../compiler/diagnostics.js";
 import {
   CodeActionProvider,
   ICodeAction,
   IRefactorCodeAction,
   IRefactorEdit,
-} from "../codeActionProvider";
-import { ICodeActionParams } from "../paramsExtensions";
+} from "../codeActionProvider.js";
+import { ICodeActionParams } from "../paramsExtensions.js";
 
 const errorCodes = [Diagnostics.MissingTypeAnnotation.code];
 const fixId = "add_type_annotation";

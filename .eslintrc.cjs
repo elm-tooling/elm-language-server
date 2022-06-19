@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   env: {
     es6: true,
     node: true,
@@ -21,7 +21,7 @@ module.exports = {
     project: ["./tsconfig.test.json"],
   },
   plugins: ["@typescript-eslint", "prettier"],
-  ignorePatterns: ["*.test.ts", "jest.config.js", ".eslintrc.js"],
+  ignorePatterns: ["*.test.ts", "jest.config.js", ".eslintrc.cjs"],
   rules: {
     "prettier/prettier": "error",
     "no-prototype-builtins": "warn",
@@ -31,7 +31,7 @@ module.exports = {
     "@typescript-eslint/no-misused-promises": "warn",
     "@typescript-eslint/unbound-method": "warn",
     "@typescript-eslint/no-var-requires": "warn",
-    "@typescript-eslint/no-use-before-define":"off",
+    "@typescript-eslint/no-use-before-define": "off",
     "@typescript-eslint/no-explicit-any": "warn",
     "@typescript-eslint/no-non-null-assertion": "warn",
     "@typescript-eslint/explicit-function-return-type": "warn",

@@ -5,8 +5,8 @@ import {
   WorkspaceSymbolParams,
 } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { IProgram } from "../compiler/program";
-import { SymbolInformationTranslator } from "../util/symbolTranslator";
+import { IProgram } from "../compiler/program.js";
+import { SymbolInformationTranslator } from "../util/symbolTranslator.js";
 
 export class WorkspaceSymbolProvider {
   private readonly connection: Connection;

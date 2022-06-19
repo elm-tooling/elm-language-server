@@ -1,5 +1,5 @@
-import { Utils } from "../../util/utils";
-import { IDiagnostic } from "./diagnosticsProvider";
+import { Utils } from "../../util/utils.js";
+import { IDiagnostic } from "./diagnosticsProvider.js";
 
 export const enum DiagnosticKind {
   ElmMake,

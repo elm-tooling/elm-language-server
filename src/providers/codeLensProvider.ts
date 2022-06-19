@@ -10,13 +10,13 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { IProgram } from "../compiler/program";
-import { ISourceFile } from "../compiler/forest";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { References } from "../compiler/references";
-import { Settings } from "../util/settings";
-import { TreeUtils } from "../util/treeUtils";
-import { ICodeLensParams } from "./paramsExtensions";
+import { IProgram } from "../compiler/program.js";
+import { ISourceFile } from "../compiler/forest.js";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { References } from "../compiler/references.js";
+import { Settings } from "../util/settings.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { ICodeLensParams } from "./paramsExtensions.js";
 
 type CodeLensResult = CodeLens[] | null | undefined;
 

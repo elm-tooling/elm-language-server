@@ -1,28 +1,31 @@
 import "reflect-metadata";
 import { container } from "tsyringe";
 import { URI } from "vscode-uri";
-import { Program } from "../src/compiler/program";
-import { importsTime, resetImportsTime } from "../src/compiler/imports";
+import { Program } from "../src/compiler/program.js";
+import { importsTime, resetImportsTime } from "../src/compiler/imports.js";
 import {
   definitionTime,
   mappingTime,
   resetDefinitionAndMappingTime,
-} from "../src/compiler/utils/expressionTree";
-import { bindTime, resetBindTime } from "../src/compiler/typeChecker";
-import { inferTime, resetInferTime } from "../src/compiler/typeInference";
+} from "../src/compiler/utils/expressionTree.js";
+import { bindTime, resetBindTime } from "../src/compiler/typeChecker.js";
+import { inferTime, resetInferTime } from "../src/compiler/typeInference.js";
 import * as path from "path";
 import { argv } from "process";
-import { Settings } from "../src/util/settings";
+import { Settings } from "../src/util/settings.js";
 import Parser from "web-tree-sitter";
-import { replaceTime, resetReplaceTime } from "../src/compiler/typeReplacement";
+import {
+  replaceTime,
+  resetReplaceTime,
+} from "../src/compiler/typeReplacement.js";
 import {
   getCancellationFilePath,
   FileBasedCancellationTokenSource,
   getCancellationFolderPath,
   ThrottledCancellationToken,
-} from "../src/cancellation";
+} from "../src/cancellation.js";
 import { randomBytes } from "crypto";
-import { createProgramHost } from "./utils/sourceTreeParser";
+import { createProgramHost } from "./utils/sourceTreeParser.js";
 
 container.register("Connection", {
   useValue: {
@@ -117,7 +120,7 @@ export async function runPerformanceTests(uri: string): Promise<void> {
 
 /**
  * Run performance tests by passing in a path to the workspace
- * Example: `yarn ts-node ./test/performance.ts ../../my-elm-workspace/`
+ * Example: `yarn ts-node --esm ./test/performance.ts ../../my-elm-workspace/`
  */
 
 const inputPath = argv[argv.length - 1];

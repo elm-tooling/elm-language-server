@@ -4,12 +4,13 @@
   "version": "2.4.1",
   "author": "Kolja Lampe",
   "license": "MIT",
-  "main": "./out/module.js",
+  "exports": "./out/module.js",
+  "type": "module",
   "files": [
     "out"
   ],
   "engines": {
-    "node": ">=12.9.0"
+    "node": ">=14.16"
   },
   "repository": {
     "type": "git",
@@ -17,10 +18,10 @@
   },
   "dependencies": {
     "chokidar": "^3.5.3",
-    "escape-string-regexp": "^4.0.0",
-    "execa": "^5.1.1",
+    "escape-string-regexp": "^5.0.0",
+    "execa": "^6.1.0",
     "fast-diff": "^1.2.0",
-    "globby": "^11.0.4",
+    "globby": "^13.1.2",
     "pjson": "1.0.9",
     "reflect-metadata": "^0.1.13",
     "ts-debounce": "^4.0.0",
@@ -58,8 +59,8 @@
     "copy-wasm": "copyfiles ./tree-sitter-elm.wasm out",
     "compile": "npm run copy-wasm && tsc -p ./",
     "watch": "npm run copy-wasm && tsc -watch -p ./",
-    "lint": "eslint -c .eslintrc.js --ext .ts src",
-    "lint:fix": "eslint --fix -c .eslintrc.js --ext .ts src",
+    "lint": "eslint -c .eslintrc.cjs --ext .ts src",
+    "lint:fix": "eslint --fix -c .eslintrc.cjs --ext .ts src",
     "build-tree-sitter": "tree-sitter build-wasm ./node_modules/@elm-tooling/tree-sitter-elm",
     "test": "jest --coverage",
     "generate-toc": "doctoc README.md"
