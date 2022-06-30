@@ -342,6 +342,7 @@ export class CodeActionProvider {
                 refactorAction.edit = {
                   changes: { [refactorAction.data.uri]: e.edits },
                 }
+                refactorAction.data.renamePosition = e.renamePosition
               }
               return refactorAction
             }),
