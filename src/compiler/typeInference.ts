@@ -2475,7 +2475,10 @@ export class InferenceScope {
           TMutableRecord(Object.assign({}, type2.fields), type2.baseType),
         );
       } else {
-        assign(type1, type2);
+        const typeClass1 = getTypeclassName(type1);
+        if (type1.rigid || !typeClass1) {
+          assign(type1, type2);
+        }
       }
     }
   }

@@ -21,10 +21,11 @@ import { describe, expect } from "@jest/globals";
 
 const basicsSources = `
 --@ Basics.elm
-module Basics exposing ((+), (|>), (>>), (==), (>), Int, Float, Bool(..), Order(..), negate)
+module Basics exposing ((+), (|>), (>>), (==), (>), (++), Int, Float, Bool(..), Order(..), negate)
 
 infix left  0 (|>) = apR
 infix non   4 (==) = eq
+infix right 5 (++) = append
 infix left  6 (+)  = add
 infix right 9 (>>) = composeR
 infix non   4 (>)  = gt
@@ -60,13 +61,25 @@ type Order = LT | EQ | GT
 negate : number -> number
 negate n =
   -n
+
+append : appendable -> appendable -> appendable
+append =
+  Elm.Kernel.Utils.append
 `;
 
 const stringSources = `
 --@ String.elm
-module String exposing (String)
+module String exposing (String, fromInt, fromFloat)
 
 type String = String
+
+fromInt : Int -> String
+fromInt =
+  \\_ -> ""
+
+fromFloat : Float -> String
+fromFloat =
+  \\_ -> ""
 `;
 
 describe("test elm diagnostics", () => {
@@ -1519,5 +1532,59 @@ type DataType
   | IntData (Data Int)
 `;
     await testTypeInference(basicsSources + source, []);
+  });
+
+  it("should not have an error when converting a number to Float or Int", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+import String
+
+foo : Bool -> String
+foo asInt =
+    let
+        myGoodNumber =
+            216
+
+        ( myBadNumber, _ ) =
+            ( 216, 0 )
+    in
+    if asInt then
+        String.fromInt myGoodNumber
+            ++ String.fromInt myBadNumber
+
+    else
+        String.fromFloat myGoodNumber
+            ++ String.fromFloat myBadNumber
+`;
+    await testTypeInference(basicsSources + stringSources + source, []);
+  });
+
+  it("should have an error when converting a type annotation number to Float or Int", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+import String
+
+foo : Bool -> number -> String
+foo asInt myNumber =
+    let
+      myGoodNumber =
+        216
+    in
+    if asInt then
+        String.fromInt myNumber
+            ++ String.fromInt myGoodNumber
+
+    else
+        String.fromFloat myNumber
+                        --^
+            ++ String.fromFloat myGoodNumber
+`;
+    await testTypeInference(basicsSources + stringSources + source, [
+      { message: Diagnostics.TypeMismatch, args: ["Float", "Int"] },
+    ]);
   });
 });
