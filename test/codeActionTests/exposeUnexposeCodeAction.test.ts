@@ -1,7 +1,7 @@
 import { testCodeAction } from "./codeActionTestBase";
 
 describe("expose unexpose code actions", () => {
-  test("expose a function", async () => {
+  test("exposing a function is available", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (hello)
@@ -16,20 +16,50 @@ world =
     "world"
 `;
 
-    await testCodeAction(source, [{ title: `Expose Function` }]);
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (hello, world)
+
+hello : String
+hello =
+    "hello"
+
+world : String
+world =
+    "world"
+`;
+
+    await testCodeAction(source, [{ title: `Expose Function` }], expectedSource);
   })
 
-  test("unexpose a function", async () => {
+  test("unexposing a function is available", async () => {
     const source = `
 --@ Test.elm
-module Test exposing (hello)
+module Test exposing (hello, world)
 
 hello : String
 hello =
 --^
     "hello"
+
+world : String
+world =
+    "world"
 `;
 
-    await testCodeAction(source, [{ title: `Unexpose Function` }]);
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (world)
+
+hello : String
+hello =
+    "hello"
+
+world : String
+world =
+    "world"
+`;
+
+    await testCodeAction(source, [{ title: `Unexpose Function` }], expectedSource);
   })
 })
