@@ -1495,4 +1495,29 @@ f {} =
       await testTypeInference(basicsSources + source, [], true);
     });
   });
+
+  it.skip("should not have an error for a generic type alias used in different branches", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func : Bool -> DataType
+func n =
+  if n then
+    FloatData (Data 1.2)
+
+  else
+    IntData (Data 1)
+
+
+type alias Data data =
+  { field : data
+  }
+
+type DataType
+  = FloatData (Data Float)
+  | IntData (Data Int)
+`;
+    await testTypeInference(basicsSources + source, []);
+  });
 });
