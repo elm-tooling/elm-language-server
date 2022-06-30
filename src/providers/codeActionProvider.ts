@@ -337,12 +337,15 @@ export class CodeActionProvider {
           registration
             .getAvailableActions(params)
             ?.map((refactorAction) => {
-              const e = registration.getEditsForAction(params, refactorAction.data.actionName)
-              if (e.edits) {
+              const { edits, renamePosition } = registration.getEditsForAction(
+                params,
+                refactorAction.data.actionName,
+              )
+              if (edits) {
+                refactorAction.data.renamePosition = renamePosition
                 refactorAction.edit = {
-                  changes: { [refactorAction.data.uri]: e.edits },
+                  changes: { [refactorAction.data.uri]: edits },
                 }
-                refactorAction.data.renamePosition = e.renamePosition
               }
               return refactorAction
             }),
