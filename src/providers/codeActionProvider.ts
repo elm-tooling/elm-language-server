@@ -227,8 +227,8 @@ export class CodeActionProvider {
     const changes = callbackChanges
       ? {}
       : {
-        [params.sourceFile.uri]: edits,
-      };
+          [params.sourceFile.uri]: edits,
+        };
 
     const diagnostics: Diagnostic[] = [];
     CodeActionProvider.forEachDiagnostic(params, errorCodes, (diagnostic) => {
@@ -334,21 +334,19 @@ export class CodeActionProvider {
     results.push(
       ...Array.from(CodeActionProvider.refactorRegistrations.values()).flatMap(
         (registration) =>
-          registration
-            .getAvailableActions(params)
-            ?.map((refactorAction) => {
-              const { edits, renamePosition } = registration.getEditsForAction(
-                params,
-                refactorAction.data.actionName,
-              )
-              if (edits) {
-                refactorAction.data.renamePosition = renamePosition
-                refactorAction.edit = {
-                  changes: { [refactorAction.data.uri]: edits },
-                }
-              }
-              return refactorAction
-            }),
+          registration.getAvailableActions(params)?.map((refactorAction) => {
+            const { edits, renamePosition } = registration.getEditsForAction(
+              params,
+              refactorAction.data.actionName,
+            );
+            if (edits) {
+              refactorAction.data.renamePosition = renamePosition;
+              refactorAction.edit = {
+                changes: { [refactorAction.data.uri]: edits },
+              };
+            }
+            return refactorAction;
+          }),
       ),
     );
 
