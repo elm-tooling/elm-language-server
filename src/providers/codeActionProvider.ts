@@ -336,7 +336,20 @@ export class CodeActionProvider {
 
     results.push(
       ...Array.from(CodeActionProvider.refactorRegistrations.values()).flatMap(
-        (registration) => registration.getAvailableActions(params),
+        (registration) =>
+          registration
+            .getAvailableActions(params)
+            ?.map((refactorAction) => {
+              const e = registration.getEditsForAction(params, refactorAction.data.actionName)
+              if (e.edits) {
+                refactorAction.edit = {
+                  changes: {
+                    [refactorAction.data.uri]: e.edits
+                  }
+                }
+              }
+              return refactorAction
+            }),
       ),
     );
 
