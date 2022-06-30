@@ -348,15 +348,15 @@ export class CodeActionProvider {
           // This implmentation may bring performance defect to LSP clients without codeAction/resolve support.
           // However, that's not too worse than losing nice codeAction features.
           if (!this.isCodeActionResolveSupported()) {
-            actions?.map((refactorAction) => {
-              return this.applyRefactorEditsToAction(
+            actions?.map((refactorAction) =>
+              this.applyRefactorEditsToAction(
                 refactorAction,
                 registration.getEditsForAction(
                   params,
                   refactorAction.data.actionName,
                 ),
-              );
-            });
+              ),
+            );
           }
 
           return actions;
