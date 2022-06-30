@@ -112,14 +112,16 @@ export class CodeActionProvider {
       ),
     );
 
-    this.connection.onRequest(
-      CodeActionResolveRequest.method,
-      new ElmWorkspaceMatcher((codeAction: IRefactorCodeAction) =>
-        URI.parse(codeAction.data.uri),
-      ).handleResolve((codeAction, program, sourceFile) =>
-        this.onCodeActionResolve(codeAction, program, sourceFile),
-      ),
-    );
+    if (this.isCodeActionResolveSupported()) {
+      this.connection.onRequest(
+        CodeActionResolveRequest.method,
+        new ElmWorkspaceMatcher((codeAction: IRefactorCodeAction) =>
+          URI.parse(codeAction.data.uri),
+        ).handleResolve((codeAction, program, sourceFile) =>
+          this.onCodeActionResolve(codeAction, program, sourceFile),
+        ),
+      );
+    }
 
     if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
       new MoveRefactoringHandler();
@@ -337,20 +339,28 @@ export class CodeActionProvider {
 
     results.push(
       ...Array.from(CodeActionProvider.refactorRegistrations.values()).flatMap(
-        (registration) =>
-          registration.getAvailableActions(params)?.map((refactorAction) => {
-            const { edits, renamePosition } = registration.getEditsForAction(
-              params,
-              refactorAction.data.actionName,
-            );
-            if (edits) {
-              refactorAction.data.renamePosition = renamePosition;
-              refactorAction.edit = {
-                changes: { [refactorAction.data.uri]: edits },
-              };
-            }
-            return refactorAction;
-          }),
+        (registration) => {
+          const actions = registration.getAvailableActions(params);
+
+          // Some LSP clients such as vim-lsp does not support codeAction/resolve capability,
+          // but elm-language-server takes advantage of that capability to apply some refactor actions
+          // so if codeAction/resolve is not available, just applying refactor actions here instead, not lazily.
+          // This implmentation may bring performance defect to LSP clients without codeAction/resolve support.
+          // However, that's not too worse than losing nice codeAction features.
+          if (!this.isCodeActionResolveSupported()) {
+            actions?.map((refactorAction) => {
+              return this.applyRefactorEditsToAction(
+                refactorAction,
+                registration.getEditsForAction(
+                  params,
+                  refactorAction.data.actionName,
+                ),
+              );
+            });
+          }
+
+          return actions;
+        },
       ),
     );
 
@@ -453,6 +463,31 @@ export class CodeActionProvider {
 
       return true;
     });
+  }
+
+  protected isCodeActionResolveSupported(): boolean {
+    const value =
+      this.settings.clientCapabilities.textDocument?.codeAction?.resolveSupport?.properties.includes(
+        "edit",
+      );
+    if (value === undefined) {
+      return false;
+    }
+    return value;
+  }
+
+  protected applyRefactorEditsToAction(
+    refactorAction: IRefactorCodeAction,
+    refactorEdit: IRefactorEdit,
+  ): IRefactorCodeAction {
+    const { edits, renamePosition } = refactorEdit;
+    if (edits) {
+      refactorAction.data.renamePosition = renamePosition;
+      refactorAction.edit = {
+        changes: { [refactorAction.data.uri]: edits },
+      };
+    }
+    return refactorAction;
   }
 
   /**

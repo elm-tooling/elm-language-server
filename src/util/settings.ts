@@ -34,14 +34,13 @@ export class Settings {
     elmReviewDiagnostics: "off",
   };
   private connection: Connection;
-
   private initDone = false;
 
-  constructor(
-    config: IClientSettings,
-    private clientCapabilities: ClientCapabilities,
-  ) {
+  public readonly clientCapabilities: ClientCapabilities;
+
+  constructor(config: IClientSettings, clientCapabilities: ClientCapabilities) {
     this.connection = container.resolve<Connection>("Connection");
+    this.clientCapabilities = clientCapabilities;
     this.updateSettings(config);
   }
 
