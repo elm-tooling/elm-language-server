@@ -230,8 +230,8 @@ export class CodeActionProvider {
     const changes = callbackChanges
       ? {}
       : {
-          [params.sourceFile.uri]: edits,
-        };
+        [params.sourceFile.uri]: edits,
+      };
 
     const diagnostics: Diagnostic[] = [];
     CodeActionProvider.forEachDiagnostic(params, errorCodes, (diagnostic) => {
