@@ -31,6 +31,7 @@ import {
   DiagnosticKind,
   diagnosticsEquals,
 } from "./diagnostics/fileDiagnostics";
+import { ExposeUnexposeHandler } from "./handlers/exposeUnexposeHandler";
 import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 import { ICodeActionParams } from "./paramsExtensions";
 import { ElmPackageCache } from "../compiler/elmPackageCache";
@@ -123,6 +124,8 @@ export class CodeActionProvider {
     if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
       new MoveRefactoringHandler();
     }
+
+    new ExposeUnexposeHandler();
 
     setTimeout(() => {
       void new ElmPackageCache(
