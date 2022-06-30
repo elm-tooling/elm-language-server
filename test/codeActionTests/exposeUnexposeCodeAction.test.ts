@@ -29,7 +29,11 @@ world =
     "world"
 `;
 
-    await testCodeAction(source, [{ title: `Expose Function` }], expectedSource);
+    await testCodeAction(
+      source,
+      [{ title: `Expose Function` }],
+      expectedSource,
+    );
   })
 
   test("unexposing a function is available", async () => {
@@ -60,6 +64,10 @@ world =
     "world"
 `;
 
-    await testCodeAction(source, [{ title: `Unexpose Function` }], expectedSource);
+    await testCodeAction(
+      source,
+      [{ title: `Unexpose Function` }],
+      expectedSource,
+    );
   })
 })
