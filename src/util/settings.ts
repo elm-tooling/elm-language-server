@@ -34,13 +34,14 @@ export class Settings {
     elmReviewDiagnostics: "off",
   };
   private connection: Connection;
+
   private initDone = false;
 
-  public readonly clientCapabilities: ClientCapabilities;
-
-  constructor(config: IClientSettings, clientCapabilities: ClientCapabilities) {
+  constructor(
+    config: IClientSettings,
+    private clientCapabilities: ClientCapabilities,
+  ) {
     this.connection = container.resolve<Connection>("Connection");
-    this.clientCapabilities = clientCapabilities;
     this.updateSettings(config);
   }
 
@@ -69,5 +70,16 @@ export class Settings {
 
   private updateSettings(config: IClientSettings): void {
     this.clientSettings = { ...this.clientSettings, ...config };
+  }
+
+  public isCodeActionResolveSupported(property: string): boolean {
+    const value =
+      this.clientCapabilities.textDocument?.codeAction?.resolveSupport?.properties.includes(
+        property,
+      );
+    if (value === undefined) {
+      return false;
+    }
+    return value;
   }
 }

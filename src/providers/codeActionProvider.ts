@@ -112,7 +112,7 @@ export class CodeActionProvider {
       ),
     );
 
-    if (this.isCodeActionResolveSupported()) {
+    if (this.settings.isCodeActionResolveSupported("edit")) {
       this.connection.onRequest(
         CodeActionResolveRequest.method,
         new ElmWorkspaceMatcher((codeAction: IRefactorCodeAction) =>
@@ -233,8 +233,8 @@ export class CodeActionProvider {
     const changes = callbackChanges
       ? {}
       : {
-          [params.sourceFile.uri]: edits,
-        };
+        [params.sourceFile.uri]: edits,
+      };
 
     const diagnostics: Diagnostic[] = [];
     CodeActionProvider.forEachDiagnostic(params, errorCodes, (diagnostic) => {
@@ -347,7 +347,7 @@ export class CodeActionProvider {
           // so if codeAction/resolve is not available, just applying refactor actions here instead, not lazily.
           // This implmentation may bring performance defect to LSP clients without codeAction/resolve support.
           // However, that's not too worse than losing nice codeAction features.
-          if (!this.isCodeActionResolveSupported()) {
+          if (!this.settings.isCodeActionResolveSupported("edit")) {
             actions?.map((refactorAction) =>
               this.applyRefactorEditsToAction(
                 refactorAction,
@@ -463,17 +463,6 @@ export class CodeActionProvider {
 
       return true;
     });
-  }
-
-  protected isCodeActionResolveSupported(): boolean {
-    const value =
-      this.settings.clientCapabilities.textDocument?.codeAction?.resolveSupport?.properties.includes(
-        "edit",
-      );
-    if (value === undefined) {
-      return false;
-    }
-    return value;
   }
 
   protected applyRefactorEditsToAction(
