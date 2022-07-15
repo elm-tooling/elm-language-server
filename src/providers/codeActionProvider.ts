@@ -112,20 +112,23 @@ export class CodeActionProvider {
       ),
     );
 
-    this.connection.onRequest(
-      CodeActionResolveRequest.method,
-      new ElmWorkspaceMatcher((codeAction: IRefactorCodeAction) =>
-        URI.parse(codeAction.data.uri),
-      ).handleResolve((codeAction, program, sourceFile) =>
-        this.onCodeActionResolve(codeAction, program, sourceFile),
-      ),
-    );
+    if (this.settings.isCodeActionResolveSupported("edit")) {
+      this.connection.onRequest(
+        CodeActionResolveRequest.method,
+        new ElmWorkspaceMatcher((codeAction: IRefactorCodeAction) =>
+          URI.parse(codeAction.data.uri),
+        ).handleResolve((codeAction, program, sourceFile) =>
+          this.onCodeActionResolve(codeAction, program, sourceFile),
+        ),
+      );
+    }
 
     if (this.settings.extendedCapabilities?.moveFunctionRefactoringSupport) {
       new MoveRefactoringHandler();
     }
-
-    new ExposeUnexposeHandler();
+    if (this.settings.extendedCapabilities?.exposeUnexposeSupport) {
+      new ExposeUnexposeHandler();
+    }
 
     setTimeout(() => {
       void new ElmPackageCache(
@@ -336,7 +339,28 @@ export class CodeActionProvider {
 
     results.push(
       ...Array.from(CodeActionProvider.refactorRegistrations.values()).flatMap(
-        (registration) => registration.getAvailableActions(params),
+        (registration) => {
+          const actions = registration.getAvailableActions(params);
+
+          // Some LSP clients such as vim-lsp does not support codeAction/resolve capability,
+          // but elm-language-server takes advantage of that capability to apply some refactor actions
+          // so if codeAction/resolve is not available, just applying refactor actions here instead, not lazily.
+          // This implmentation may bring performance defect to LSP clients without codeAction/resolve support.
+          // However, that's not too worse than losing nice codeAction features.
+          if (!this.settings.isCodeActionResolveSupported("edit")) {
+            actions?.map((refactorAction) =>
+              this.applyRefactorEditsToAction(
+                refactorAction,
+                registration.getEditsForAction(
+                  params,
+                  refactorAction.data.actionName,
+                ),
+              ),
+            );
+          }
+
+          return actions;
+        },
       ),
     );
 
@@ -439,6 +463,20 @@ export class CodeActionProvider {
 
       return true;
     });
+  }
+
+  protected applyRefactorEditsToAction(
+    refactorAction: IRefactorCodeAction,
+    refactorEdit: IRefactorEdit,
+  ): IRefactorCodeAction {
+    const { edits, renamePosition } = refactorEdit;
+    if (edits) {
+      refactorAction.data.renamePosition = renamePosition;
+      refactorAction.edit = {
+        changes: { [refactorAction.data.uri]: edits },
+      };
+    }
+    return refactorAction;
   }
 
   /**

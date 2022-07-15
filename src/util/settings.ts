@@ -71,4 +71,15 @@ export class Settings {
   private updateSettings(config: IClientSettings): void {
     this.clientSettings = { ...this.clientSettings, ...config };
   }
+
+  public isCodeActionResolveSupported(property: string): boolean {
+    const value =
+      this.clientCapabilities.textDocument?.codeAction?.resolveSupport?.properties.includes(
+        property,
+      );
+    if (value === undefined) {
+      return false;
+    }
+    return value;
+  }
 }
