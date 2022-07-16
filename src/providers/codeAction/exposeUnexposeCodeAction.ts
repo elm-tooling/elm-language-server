@@ -90,6 +90,26 @@ CodeActionProvider.registerRefactorAction(refactorName, {
       }
     }
 
+    if (
+      nodeAtPosition.type === "upper_case_identifier" &&
+      nodeAtPosition.parent?.type === "union_variant"
+    ) {
+      const typeName = nodeAtPosition.text;
+
+      if (!TreeUtils.isExposedTypeOrTypeAlias(tree, typeName)) {
+        result.push({
+          title: `Expose Type with Variants`,
+          kind: CodeActionKind.Refactor,
+          data: {
+            actionName: "expose_type_with_variants",
+            refactorName,
+            uri: params.sourceFile.uri,
+            range: params.range,
+          },
+        });
+      }
+    }
+
     return result;
   },
   getEditsForAction: (
@@ -109,14 +129,17 @@ CodeActionProvider.registerRefactorAction(refactorName, {
         const edit = RefactorEditUtils.unexposedValueInModule(
           tree,
           nodeAtPosition.text,
+
         );
         return edit ? { edits: [edit] } : {};
       }
       case "expose_function":
-      case "expose_type": {
+      case "expose_type":
+      case "expose_type_with_variants": {
         const edit = RefactorEditUtils.exposeValueInModule(
           tree,
           nodeAtPosition.text,
+          actionName === "expose_type_with_variants",
         );
         return edit ? { edits: [edit] } : {};
       }
