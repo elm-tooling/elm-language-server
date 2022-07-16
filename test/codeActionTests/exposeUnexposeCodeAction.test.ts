@@ -136,4 +136,37 @@ type World =
       expectedSource,
     );
   })
+
+  test("exposing a type with all variants is available", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (hello)
+
+hello : string
+hello =
+    "hello"
+
+type World =
+    World
+  --^
+`;
+
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (hello, World(..))
+
+hello : string
+hello =
+    "hello"
+
+type World =
+    World
+`;
+
+    await testCodeAction(
+      source,
+      [{ title: `Expose Type with Variants` }],
+      expectedSource,
+    );
+  })
 })
