@@ -120,7 +120,7 @@ export class Server implements ILanguageServer {
   }
 
   public async init(): Promise<void> {
-    const progress = await this.connection.window.createWorkDoneProgress()
+    const progress = await this.connection.window.createWorkDoneProgress();
     const elmWorkspaces = container.resolve<IProgram[]>("ElmWorkspaces");
     progress.begin("Indexing modules", 0);
     await Promise.all(
