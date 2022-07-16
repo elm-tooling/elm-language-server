@@ -129,7 +129,6 @@ CodeActionProvider.registerRefactorAction(refactorName, {
         const edit = RefactorEditUtils.unexposedValueInModule(
           tree,
           nodeAtPosition.text,
-
         );
         return edit ? { edits: [edit] } : {};
       }

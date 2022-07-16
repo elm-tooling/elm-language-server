@@ -113,7 +113,7 @@ export class RefactorEditUtils {
       const lastExposedNode = exposedNodes[exposedNodes.length - 1];
 
       if (withVariants) {
-        valueName += '(..)'
+        valueName += "(..)";
       }
 
       if (lastExposedNode) {
