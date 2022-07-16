@@ -60,7 +60,6 @@ connection.onInitialize(
   async (
     params: InitializeParams,
     cancel,
-    progress,
   ): Promise<InitializeResult> => {
     await Parser.init();
     const absolute = Path.join(__dirname, "tree-sitter-elm.wasm");
@@ -94,7 +93,7 @@ connection.onInitialize(
     });
 
     const { Server } = await import("./server");
-    server = new Server(params, progress);
+    server = new Server(params);
     await server.init();
 
     container.register(ASTProvider, {

@@ -48,10 +48,7 @@ export interface ILanguageServer {
 export class Server implements ILanguageServer {
   private connection: Connection;
 
-  constructor(
-    params: InitializeParams,
-    private progress: WorkDoneProgressReporter,
-  ) {
+  constructor(params: InitializeParams) {
     this.connection = container.resolve("Connection");
 
     const uri = this.getWorkspaceUri(params);
@@ -123,8 +120,9 @@ export class Server implements ILanguageServer {
   }
 
   public async init(): Promise<void> {
-    this.progress.begin("Indexing Elm", 0);
+    const progress = await this.connection.window.createWorkDoneProgress()
     const elmWorkspaces = container.resolve<IProgram[]>("ElmWorkspaces");
+    progress.begin("Indexing Elm", 0);
     await Promise.all(
       elmWorkspaces
         .map((ws) => ({ ws, indexedPercent: 0 }))
@@ -137,11 +135,11 @@ export class Server implements ILanguageServer {
             const avgIndexed =
               all.reduce((sum, { indexedPercent }) => sum + indexedPercent, 0) /
               all.length;
-            this.progress.report(avgIndexed, `${Math.round(avgIndexed)}%`);
+            progress.report(Math.round(avgIndexed));
           }),
         ),
     );
-    this.progress.done();
+    progress.done();
   }
 
   public async registerInitializedProviders(): Promise<void> {
