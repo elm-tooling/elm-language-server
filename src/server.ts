@@ -122,7 +122,7 @@ export class Server implements ILanguageServer {
   public async init(): Promise<void> {
     const progress = await this.connection.window.createWorkDoneProgress()
     const elmWorkspaces = container.resolve<IProgram[]>("ElmWorkspaces");
-    progress.begin("Indexing Elm", 0);
+    progress.begin("Indexing modules", 0);
     await Promise.all(
       elmWorkspaces
         .map((ws) => ({ ws, indexedPercent: 0 }))
