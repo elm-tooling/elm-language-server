@@ -146,21 +146,23 @@ hello : string
 hello =
     "hello"
 
-type World =
-    World
-  --^
+type Hoge
+   --^
+    = Hello
+    | World
 `;
 
     const expectedSource = `
 --@ Test.elm
-module Test exposing (hello, World(..))
+module Test exposing (hello, Hoge(..))
 
 hello : string
 hello =
     "hello"
 
-type World =
-    World
+type Hoge
+    = Hello
+    | World
 `;
 
     await testCodeAction(

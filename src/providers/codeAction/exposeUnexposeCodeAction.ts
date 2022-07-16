@@ -87,26 +87,19 @@ CodeActionProvider.registerRefactorAction(refactorName, {
             range: params.range,
           },
         });
-      }
-    }
 
-    if (
-      nodeAtPosition.type === "upper_case_identifier" &&
-      nodeAtPosition.parent?.type === "union_variant"
-    ) {
-      const typeName = nodeAtPosition.text;
-
-      if (!TreeUtils.isExposedTypeOrTypeAlias(tree, typeName)) {
-        result.push({
-          title: `Expose Type with Variants`,
-          kind: CodeActionKind.Refactor,
-          data: {
-            actionName: "expose_type_with_variants",
-            refactorName,
-            uri: params.sourceFile.uri,
-            range: params.range,
-          },
-        });
+        if (nodeAtPosition.parent?.type === "type_declaration") {
+          result.push({
+            title: `Expose Type with Variants`,
+            kind: CodeActionKind.Refactor,
+            data: {
+              actionName: "expose_type_with_variants",
+              refactorName,
+              uri: params.sourceFile.uri,
+              range: params.range,
+            },
+          });
+        }
       }
     }
 
