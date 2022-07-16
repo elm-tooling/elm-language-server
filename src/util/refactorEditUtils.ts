@@ -105,11 +105,16 @@ export class RefactorEditUtils {
   public static exposeValueInModule(
     tree: Tree,
     valueName: string,
+    withVariants = false,
   ): TextEdit | undefined {
     const exposedNodes = TreeUtils.getModuleExposingListNodes(tree);
 
     if (exposedNodes.length > 0) {
       const lastExposedNode = exposedNodes[exposedNodes.length - 1];
+
+      if (withVariants) {
+        valueName += "(..)";
+      }
 
       if (lastExposedNode) {
         return TextEdit.insert(

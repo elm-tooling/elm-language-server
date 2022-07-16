@@ -70,4 +70,105 @@ world =
       expectedSource,
     );
   })
+
+  test("exposing a type is available", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (hello)
+
+hello : string
+hello =
+    "hello"
+
+type World =
+   --^
+    World
+`;
+
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (hello, World)
+
+hello : string
+hello =
+    "hello"
+
+type World =
+    World
+`;
+
+    await testCodeAction(
+      source,
+      [{ title: `Expose Type` }],
+      expectedSource,
+    );
+  })
+
+  test("unexposing a type is available", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (hello, World)
+
+hello : string
+hello =
+    "hello"
+
+type World =
+   --^
+    World
+`;
+
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (hello)
+
+hello : string
+hello =
+    "hello"
+
+type World =
+    World
+`;
+
+    await testCodeAction(
+      source,
+      [{ title: `Unexpose Type` }],
+      expectedSource,
+    );
+  })
+
+  test("exposing a type with all variants is available", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (hello)
+
+hello : string
+hello =
+    "hello"
+
+type Hoge
+   --^
+    = Hello
+    | World
+`;
+
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (hello, Hoge(..))
+
+hello : string
+hello =
+    "hello"
+
+type Hoge
+    = Hello
+    | World
+`;
+
+    await testCodeAction(
+      source,
+      [{ title: `Expose Type with Variants` }],
+      expectedSource,
+    );
+  })
 })
