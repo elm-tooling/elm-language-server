@@ -123,7 +123,7 @@ export class Server implements ILanguageServer {
   }
 
   public async init(): Promise<void> {
-    this.progress.begin("Indexing Elm", 0);
+    this.progress.begin("Initializing workspace", 0);
     const elmWorkspaces = container.resolve<IProgram[]>("ElmWorkspaces");
     await Promise.all(
       elmWorkspaces
@@ -137,7 +137,7 @@ export class Server implements ILanguageServer {
             const avgIndexed =
               all.reduce((sum, { indexedPercent }) => sum + indexedPercent, 0) /
               all.length;
-            this.progress.report(avgIndexed, `${Math.round(avgIndexed)}%`);
+            this.progress.report(Math.round(avgIndexed), "Indexing");
           }),
         ),
     );
