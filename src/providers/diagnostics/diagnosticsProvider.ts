@@ -138,7 +138,9 @@ export class DiagnosticsProvider {
     const disableDiagnosticsOnChange =
       this.clientSettings.onlyUpdateDiagnosticsOnSave;
 
-    const handleSaveOrOpen = (d: { document: TextDocument }): void => {
+    const handleSaveOrOpen = async (d: {
+      document: TextDocument;
+    }): Promise<void> => {
       const program = this.elmWorkspaceMatcher.getProgramFor(
         URI.parse(d.document.uri),
       );
@@ -150,8 +152,8 @@ export class DiagnosticsProvider {
 
       void this.getElmMakeDiagnostics(sourceFile).then((hasElmMakeErrors) => {
         if (hasElmMakeErrors) {
-          this.currentDiagnostics.forEach((_, uri) => {
-            this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
+          this.currentDiagnostics.forEach(async (_, uri) => {
+            await this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
           });
         } else {
           void this.getElmReviewDiagnostics(sourceFile);
@@ -160,7 +162,7 @@ export class DiagnosticsProvider {
 
       // If we aren't doing them on change, we need to trigger them here
       if (disableDiagnosticsOnChange) {
-        this.updateDiagnostics(
+        await this.updateDiagnostics(
           sourceFile.uri,
           DiagnosticKind.ElmLS,
           this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
@@ -175,8 +177,8 @@ export class DiagnosticsProvider {
       const newDeleteEvents = event.changes
         .filter((a) => a.type === FileChangeType.Deleted)
         .map((a) => a.uri);
-      newDeleteEvents.forEach((uri) => {
-        this.deleteDiagnostics(uri);
+      newDeleteEvents.forEach(async (uri) => {
+        await this.deleteDiagnostics(uri);
       });
     });
 
@@ -192,8 +194,9 @@ export class DiagnosticsProvider {
       this.clientSettings = <IClientSettings>params.settings;
 
       if (this.clientSettings.disableElmLSDiagnostics) {
-        this.currentDiagnostics.forEach((_, uri) =>
-          this.updateDiagnostics(uri, DiagnosticKind.ElmLS, []),
+        this.currentDiagnostics.forEach(
+          async (_, uri) =>
+            await this.updateDiagnostics(uri, DiagnosticKind.ElmLS, []),
         );
       } else {
         this.workspaces.forEach((program) => {
@@ -201,9 +204,9 @@ export class DiagnosticsProvider {
             return;
           }
 
-          program.getForest().treeMap.forEach((sourceFile) => {
+          program.getForest().treeMap.forEach(async (sourceFile) => {
             if (sourceFile.writeable) {
-              this.updateDiagnostics(
+              await this.updateDiagnostics(
                 sourceFile.uri,
                 DiagnosticKind.ElmLS,
                 this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
@@ -225,23 +228,26 @@ export class DiagnosticsProvider {
       }
     });
 
-    this.documentEvents.on("change", (params: DidChangeTextDocumentParams) => {
-      this.change();
+    this.documentEvents.on(
+      "change",
+      async (params: DidChangeTextDocumentParams) => {
+        this.change();
 
-      this.updateDiagnostics(
-        params.textDocument.uri,
-        DiagnosticKind.ElmReview,
-        [],
-      );
+        await this.updateDiagnostics(
+          params.textDocument.uri,
+          DiagnosticKind.ElmReview,
+          [],
+        );
 
-      // We need to cancel the request as soon as possible
-      if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
-        if (this.pendingRequest) {
-          this.pendingRequest.cancel();
-          this.pendingRequest = undefined;
+        // We need to cancel the request as soon as possible
+        if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
+          if (this.pendingRequest) {
+            this.pendingRequest.cancel();
+            this.pendingRequest = undefined;
+          }
         }
-      }
-    });
+      },
+    );
   }
 
   public interruptDiagnostics<T>(f: () => T): T {
@@ -271,11 +277,11 @@ export class DiagnosticsProvider {
   /**
    * Used for tests only
    */
-  public forceElmLsDiagnosticsUpdate(
+  public async forceElmLsDiagnosticsUpdate(
     sourceFile: ISourceFile,
     program: IProgram,
-  ): void {
-    this.updateDiagnostics(
+  ): Promise<void> {
+    await this.updateDiagnostics(
       sourceFile.uri,
       DiagnosticKind.ElmLS,
       this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
@@ -344,11 +350,11 @@ export class DiagnosticsProvider {
     void this.diagnosticsDelayer.trigger(sendPendingDiagnostics, delay);
   }
 
-  private updateDiagnostics(
+  private async updateDiagnostics(
     uri: string,
     kind: DiagnosticKind,
     diagnostics: IDiagnostic[],
-  ): void {
+  ): Promise<void> {
     let didUpdate = false;
 
     let fileDiagnostics = this.currentDiagnostics.get(uri);
@@ -364,16 +370,16 @@ export class DiagnosticsProvider {
 
     if (didUpdate) {
       const fileDiagnostics = this.currentDiagnostics.get(uri);
-      this.connection.sendDiagnostics({
+      await this.connection.sendDiagnostics({
         uri,
         diagnostics: fileDiagnostics ? fileDiagnostics.get() : [],
       });
     }
   }
 
-  private deleteDiagnostics(uri: string): void {
+  private async deleteDiagnostics(uri: string): Promise<void> {
     this.currentDiagnostics.delete(uri);
-    this.connection.sendDiagnostics({
+    await this.connection.sendDiagnostics({
       uri,
       diagnostics: [],
     });
@@ -420,9 +426,9 @@ export class DiagnosticsProvider {
               return;
             }
 
-            next.immediate(() => {
-              this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
-              this.updateDiagnostics(
+            next.immediate(async () => {
+              await this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
+              await this.updateDiagnostics(
                 uri,
                 DiagnosticKind.Syntactic,
                 program
@@ -444,14 +450,14 @@ export class DiagnosticsProvider {
                   return;
                 }
 
-                this.updateDiagnostics(
+                await this.updateDiagnostics(
                   uri,
                   DiagnosticKind.Semantic,
                   diagnostics.map(convertFromCompilerDiagnostic),
                 );
 
-                next.immediate(() => {
-                  this.updateDiagnostics(
+                next.immediate(async () => {
+                  await this.updateDiagnostics(
                     uri,
                     DiagnosticKind.Suggestion,
                     this.elmLsDiagnostics.createSuggestionDiagnostics(
@@ -466,8 +472,8 @@ export class DiagnosticsProvider {
                   }
 
                   if (!this.clientSettings.disableElmLSDiagnostics) {
-                    next.immediate(() => {
-                      this.updateDiagnostics(
+                    next.immediate(async () => {
+                      await this.updateDiagnostics(
                         uri,
                         DiagnosticKind.ElmLS,
                         this.elmLsDiagnostics.createDiagnostics(
@@ -504,19 +510,23 @@ export class DiagnosticsProvider {
 
     this.resetDiagnostics(elmMakeDiagnostics, DiagnosticKind.ElmMake);
 
-    elmMakeDiagnostics.forEach((diagnostics, diagnosticsUri) => {
-      this.updateDiagnostics(diagnosticsUri, DiagnosticKind.Syntactic, []);
-      this.updateDiagnostics(diagnosticsUri, DiagnosticKind.Semantic, []);
-      this.updateDiagnostics(
+    elmMakeDiagnostics.forEach(async (diagnostics, diagnosticsUri) => {
+      await this.updateDiagnostics(
+        diagnosticsUri,
+        DiagnosticKind.Syntactic,
+        [],
+      );
+      await this.updateDiagnostics(diagnosticsUri, DiagnosticKind.Semantic, []);
+      await this.updateDiagnostics(
         diagnosticsUri,
         DiagnosticKind.ElmMake,
         diagnostics,
       );
     });
 
-    this.currentDiagnostics.forEach((_, uri) => {
+    this.currentDiagnostics.forEach(async (_, uri) => {
       if (!elmMakeDiagnostics.has(uri)) {
-        this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
+        await this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
       }
     });
 
@@ -538,8 +548,8 @@ export class DiagnosticsProvider {
     this.resetDiagnostics(elmReviewDiagnostics, DiagnosticKind.ElmReview);
 
     // add new elm-review diagnostics
-    elmReviewDiagnostics.forEach((diagnostics, uri) => {
-      this.updateDiagnostics(uri, DiagnosticKind.ElmReview, diagnostics);
+    elmReviewDiagnostics.forEach(async (diagnostics, uri) => {
+      await this.updateDiagnostics(uri, DiagnosticKind.ElmReview, diagnostics);
     });
   }
 
