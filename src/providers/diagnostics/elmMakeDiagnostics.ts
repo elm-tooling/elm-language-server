@@ -261,12 +261,21 @@ export class ElmMakeDiagnostics {
       "/dev/null",
     ];
 
-    const argsElmTest = (files: Array<ISourceFile>): Array<string> => [
-      "make",
-      ...files.map(fileToRelativePath),
-      "--report",
-      "json",
-    ];
+    const argsElmTest = (files: Array<ISourceFile>): Array<string> => {
+      const args = [
+        "make",
+        ...files.map(fileToRelativePath),
+        "--report",
+        "json",
+      ];
+
+      if (settings.elmPath) {
+        args.push("--compiler");
+        args.push(settings.elmPath);
+      }
+
+      return args;
+    };
 
     const elmNotFound =
       "The 'elm' compiler is not available. Install Elm via 'npm install -g elm'.";
