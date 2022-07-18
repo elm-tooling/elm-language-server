@@ -269,9 +269,8 @@ export class ElmMakeDiagnostics {
         "json",
       ];
 
-      if (settings.elmPath) {
-        args.push("--compiler");
-        args.push(settings.elmPath);
+      if (settings.elmPath.trim().length > 0) {
+        args.push("--compiler", settings.elmPath);
       }
 
       return args;
