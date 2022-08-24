@@ -37,22 +37,31 @@ describe("fileEventsHandler", () => {
   >;
   let appliedWorkspaceEdit: WorkspaceEdit;
 
-  // container.register("Connection", {
-  //   useValue: mockDeep<Connection>({
-  //     workspace: {
-  //       onDidCreateFiles: (handler) => (createFilesHandler = handler),
-  //       onWillRenameFiles: (handler) => (renameFilesHandler = handler),
-  //       onWillDeleteFiles: (handler) => (deleteFilesHandler = handler),
-  //       applyEdit: (edit) => {
-  //         if (WorkspaceEdit.is(edit)) {
-  //           appliedWorkspaceEdit = edit;
-  //         }
+  container.register("Connection", {
+    useValue: mockDeep<Connection>({
+      workspace: {
+        onDidCreateFiles: (handler) => {
+          createFilesHandler = handler;
+          return { dispose: () => {} };
+        },
+        onWillRenameFiles: (handler) => {
+          renameFilesHandler = handler;
+          return { dispose: () => {} };
+        },
+        onWillDeleteFiles: (handler) => {
+          deleteFilesHandler = handler;
+          return { dispose: () => {} };
+        },
+        applyEdit: (edit) => {
+          if (WorkspaceEdit.is(edit)) {
+            appliedWorkspaceEdit = edit;
+          }
 
-  //         return Promise.resolve({ applied: true });
-  //       },
-  //     },
-  //   }),
-  // });
+          return Promise.resolve({ applied: true });
+        },
+      },
+    }),
+  });
 
   const token = new CancellationTokenSource().token;
 
@@ -97,7 +106,7 @@ describe("fileEventsHandler", () => {
     return URI.file(path.join(src, uri)).toString();
   }
 
-  xit("handles file create event", async () => {
+  it("handles file create event", async () => {
     await createProgram("");
     const newPath = uri("New/Module.elm");
     createFilesHandler({ files: [{ uri: newPath }] });
@@ -123,7 +132,7 @@ describe("fileEventsHandler", () => {
     });
   });
 
-  xit("handles multiple files create event", async () => {
+  it("handles multiple files create event", async () => {
     await createProgram("");
     const newPath = uri("New/Module.elm");
     const newPath2 = uri("New/Another/Module.elm");
@@ -164,7 +173,7 @@ describe("fileEventsHandler", () => {
     });
   });
 
-  xit("handles file rename event", async () => {
+  it("handles file rename event", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)
@@ -191,7 +200,7 @@ func = ""
     });
   });
 
-  xit("handles folder rename event", async () => {
+  it("handles folder rename event", async () => {
     const source = `
 --@ Folder/TestA.elm
 module Folder.TestA exposing (..)
@@ -254,7 +263,7 @@ func = ""
     expect(edit.changes[testCPath]).toBeUndefined();
   });
 
-  xit("handles file delete event", async () => {
+  it("handles file delete event", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)
