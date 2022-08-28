@@ -42,7 +42,7 @@
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.0.0",
     "jest": "^28.1.1",
-    "jest-diff": "^28.1.1",
+    "jest-diff": "^29.0.1",
     "jest-mock-extended": "^2.0.6",
     "prettier": "^2.7.1",
     "tree-sitter-cli": "^0.20.4",
