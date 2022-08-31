@@ -26,7 +26,7 @@
     "ts-debounce": "^4.0.0",
     "tsyringe": "^4.7.0",
     "vscode-languageserver": "^8.0.1",
-    "vscode-languageserver-textdocument": "1.0.5",
+    "vscode-languageserver-textdocument": "1.0.7",
     "vscode-uri": "^3.0.3",
     "web-tree-sitter": "^0.20.3"
   },
