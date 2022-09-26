@@ -8,14 +8,19 @@ import {
 import Parser from "web-tree-sitter";
 
 container.register<Parser>("Parser", {
-  useValue: mockDeep<Parser>({
-    // @ts-ignore
-    getLanguage: () => ({
-      query: () => {
-        //
-      },
-    }),
-  }),
+  useValue: mockDeep<Parser>(
+    {
+      funcPropSupport: true,
+    },
+    {
+      // @ts-ignore
+      getLanguage: () => ({
+        query: () => {
+          //
+        },
+      }),
+    },
+  ),
 });
 
 class MockCodeActionsProvider extends CodeActionProvider {
