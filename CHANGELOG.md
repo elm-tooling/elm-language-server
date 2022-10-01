@@ -1,5 +1,18 @@
 # Change Log
 
+## 2.5.0
+
+- Removed node 12 compatibility
+- Update to new language server version
+- Improve error handling for broken package cache
+- Rework expose/unexpose code action
+- Use `--compiler` option for elm-test when elmPath is specified
+- Add expose/unexpose `type` with variants action
+- Fix type inference of non-rigid number vars
+- Fix elm review path handling on windows
+- Small improvements to progress messaging
+- Update dependencies
+
 ## 2.4.1
 
 - Improve whitespace handling for `of` keyword
