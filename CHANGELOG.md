@@ -1,5 +1,9 @@
 # Change Log
 
+## 2.5.2
+
+- Fix a bug that caused the language server to stop working
+
 ## 2.5.0
 
 - Removed node 12 compatibility
