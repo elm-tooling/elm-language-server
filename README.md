@@ -103,6 +103,13 @@ If all you had in `elm-tooling.json` was `"entrypoints"`, you can safely remove 
 
 Currently, no configuration at all is needed.
 
+### Configuring linting rules
+
+Linting is handled by [Elm-Analyse](https://stil4m.github.io/elm-analyse/).
+All diagnostic checks are enabled by default, but you can fine-tune the linting rules by placing a `elm-analyse.json` file in the root of the workspace.
+
+See [elm-analyse configuration docs](https://stil4m.github.io/elm-analyse/#/configuration) for details on creating an `elm-analyse.json` file.
+
 ## Features
 
 Supports Elm 0.19 and up
