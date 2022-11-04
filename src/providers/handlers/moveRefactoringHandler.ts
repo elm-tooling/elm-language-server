@@ -12,6 +12,7 @@ import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { References } from "../../compiler/references";
 import { TreeUtils } from "../../util/treeUtils";
+import * as path from "path";
 
 export class MoveRefactoringHandler {
   private connection: Connection;
@@ -45,7 +46,7 @@ export class MoveRefactoringHandler {
         const rootPath = params.program.getRootPath().fsPath;
 
         uri = uri.slice(rootPath.length + 1);
-        const index = uri.lastIndexOf("\\");
+        const index = uri.lastIndexOf(path.sep);
 
         return {
           name: uri.slice(index + 1),
