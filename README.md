@@ -103,6 +103,10 @@ If all you had in `elm-tooling.json` was `"entrypoints"`, you can safely remove 
 
 Currently, no configuration at all is needed.
 
+### Linting
+
+The Elm Language Server has built-in support for linting. Check out the [documentation](docs/linting.md) for configuring the linter. 
+
 ## Features
 
 Supports Elm 0.19 and up
