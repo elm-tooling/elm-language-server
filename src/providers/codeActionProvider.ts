@@ -280,6 +280,14 @@ export class CodeActionProvider {
 
   protected onCodeAction(params: ICodeActionParams): CodeAction[] | undefined {
     this.connection.console.info("A code action was requested");
+
+    // Don't try to get them if there is a top level parse error
+    // It can create many diagnostics which cause a huge performance hit
+    // Code actions aren't useful in this case anyways
+    if (params.sourceFile.tree.rootNode.type === "ERROR") {
+      return [];
+    }
+
     const make = this.elmMake.onCodeAction(params);
 
     const results: (ICodeAction | IRefactorCodeAction)[] = [];
