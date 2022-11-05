@@ -1737,4 +1737,38 @@ testFunction =
 
     await testCompletions(source, ["field"]);
   });
+
+  it("Destructed record function parameter", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Model =
+  { prop1: String
+  , prop2: Int
+  }
+
+testFunction : Model -> a
+testFunction { prop1, prop2 } =
+    pr{-caret-}
+`;
+
+    await testCompletions(source, ["prop1", "prop2"], "partialMatch");
+  });
+
+  it("port completion", async () => {
+    const source = `
+--@ Test.elm
+port module Test exposing (..)
+
+x = 
+    f{-caret-}
+
+port foo : String -> Cmd msg
+
+port fbar : (String -> msg) -> Sub msg
+`;
+
+    await testCompletions(source, ["foo", "fbar"], "partialMatch");
+  });
 });

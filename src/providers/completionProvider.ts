@@ -263,7 +263,8 @@ export class CompletionProvider {
           )?.namedChildren.map((n) => n.text) ?? [];
 
         return this.getSameFileTopLevelCompletions(
-          tree,
+          checker,
+          sourceFile,
           replaceRange,
           true,
         ).filter((completion) => !exposingList.includes(completion.label));
@@ -375,10 +376,19 @@ export class CompletionProvider {
       }
 
       completions.push(
-        ...this.getSameFileTopLevelCompletions(tree, replaceRange),
+        ...this.getSameFileTopLevelCompletions(
+          checker,
+          sourceFile,
+          replaceRange,
+        ),
       );
       completions.push(
-        ...this.findDefinitionsForScope(nodeAtPosition, tree, replaceRange),
+        ...this.findDefinitionsForScope(
+          checker,
+          nodeAtPosition,
+          sourceFile,
+          replaceRange,
+        ),
       );
 
       completions.push(
@@ -653,49 +663,35 @@ export class CompletionProvider {
   }
 
   private getSameFileTopLevelCompletions(
-    tree: Tree,
+    checker: TypeChecker,
+    sourceFile: ISourceFile,
     range: Range,
     moduleDefinition = false,
   ): CompletionItem[] {
     const completions: CompletionItem[] = [];
-    const topLevelFunctions =
-      TreeUtils.findAllTopLevelFunctionDeclarations(tree);
     const sortPrefix = "b";
-    // Add functions
-    if (topLevelFunctions) {
-      const declarations = topLevelFunctions.filter(
-        (a) =>
-          a.firstNamedChild !== null &&
-          a.firstNamedChild.type === "function_declaration_left" &&
-          a.firstNamedChild.firstNamedChild !== null &&
-          a.firstNamedChild.firstNamedChild.type === "lower_case_identifier",
-      );
-      for (const declaration of declarations) {
-        const markdownDocumentation = HintHelper.createHint(declaration);
-        completions.push(
-          this.createFunctionCompletion({
-            markdownDocumentation,
-            label: declaration.firstNamedChild!.firstNamedChild!.text,
-            range,
-            sortPrefix,
-          }),
-        );
-      }
-    }
-    // Add types
-    const typeDeclarations = TreeUtils.findAllTypeDeclarations(tree);
-    if (typeDeclarations) {
-      for (const declaration of typeDeclarations) {
-        const markdownDocumentation = HintHelper.createHint(declaration);
-        const name = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
-          declaration,
-        );
-        if (name) {
+
+    checker
+      .getSymbolsInScope(sourceFile.tree.rootNode, sourceFile)
+      .forEach((symbol) => {
+        if (symbol.type === "Function" || symbol.type === "Port") {
+          const markdownDocumentation = HintHelper.createHint(symbol.node);
+          completions.push(
+            this.createFunctionCompletion({
+              markdownDocumentation,
+              label: symbol.name,
+              range,
+              sortPrefix,
+            }),
+          );
+        }
+
+        if (symbol.type === "Type") {
+          const markdownDocumentation = HintHelper.createHint(symbol.node);
           completions.push(
             this.createTypeCompletion({
               markdownDocumentation,
-              label: name.text,
+              label: symbol.name,
               range,
               sortPrefix,
             }),
@@ -704,56 +700,36 @@ export class CompletionProvider {
             completions.push(
               this.createTypeCompletion({
                 markdownDocumentation,
-                label: `${name.text}(..)`,
+                label: `${symbol.name}(..)`,
                 range,
                 sortPrefix,
               }),
             );
           }
-        }
-        // Add types constructors
-        const unionVariants = TreeUtils.descendantsOfType(
-          declaration,
-          "union_variant",
-        );
-        for (const unionVariant of unionVariants) {
-          const unionVariantName = TreeUtils.findFirstNamedChildOfType(
-            "upper_case_identifier",
-            unionVariant,
-          );
-          if (unionVariantName) {
+
+          symbol.constructors?.forEach((unionVariant) => {
             completions.push(
               this.createUnionConstructorCompletion({
-                label: unionVariantName.text,
+                label: unionVariant.name,
                 range,
                 sortPrefix,
               }),
             );
-          }
+          });
         }
-      }
-    }
-    // Add alias types
-    const typeAliasDeclarations = TreeUtils.findAllTypeAliasDeclarations(tree);
-    if (typeAliasDeclarations) {
-      for (const declaration of typeAliasDeclarations) {
-        const markdownDocumentation = HintHelper.createHint(declaration);
-        const name = TreeUtils.findFirstNamedChildOfType(
-          "upper_case_identifier",
-          declaration,
-        );
-        if (name) {
+
+        if (symbol.type === "TypeAlias") {
+          const markdownDocumentation = HintHelper.createHint(symbol.node);
           completions.push(
             this.createTypeAliasCompletion({
               markdownDocumentation,
-              label: name.text,
+              label: symbol.name,
               range,
               sortPrefix,
             }),
           );
         }
-      }
-    }
+      });
 
     return completions;
   }
@@ -971,128 +947,100 @@ export class CompletionProvider {
   }
 
   private findDefinitionsForScope(
+    checker: TypeChecker,
     node: SyntaxNode,
-    tree: Tree,
+    sourceFile: ISourceFile,
     range: Range,
   ): CompletionItem[] {
     const result: CompletionItem[] = [];
-    const sortPrefix = "a";
-    if (node.parent) {
-      if (node.parent.type === "let_in_expr") {
-        node.parent.children.forEach((nodeToProcess) => {
-          if (
-            nodeToProcess.type === "value_declaration" &&
-            nodeToProcess.firstNamedChild?.type ===
-              "function_declaration_left" &&
-            nodeToProcess.firstNamedChild.firstNamedChild?.type ===
-              "lower_case_identifier"
-          ) {
-            const markdownDocumentation =
-              HintHelper.createHintFromDefinitionInLet(nodeToProcess);
-            result.push(
-              this.createFunctionCompletion({
-                markdownDocumentation,
-                label: nodeToProcess.firstNamedChild.firstNamedChild.text,
-                range,
-                sortPrefix,
-              }),
-            );
-          }
-        });
-      }
-      if (node.parent.type === "case_of_branch") {
-        const pattern = node.parent.childForFieldName("pattern");
+    const tree = sourceFile.tree;
 
-        if (pattern) {
-          const caseBranchVariableNodes =
-            pattern.descendantsOfType("lower_pattern");
-          if (caseBranchVariableNodes) {
-            caseBranchVariableNodes.forEach((a) => {
-              const markdownDocumentation =
-                HintHelper.createHintFromDefinitionInCaseBranch();
-              result.push(
-                this.createVariableCompletion({
-                  markdownDocumentation,
-                  label: a.text,
-                  range,
-                  sortPrefix,
-                }),
-              );
-            });
+    checker.getSymbolsInScope(node, sourceFile).forEach((symbol, i) => {
+      const sortPrefix = `a${i}`;
+      if (symbol.type === "Function") {
+        // Only get let functions here
+        if (symbol.node.parent?.parent?.parent) {
+          const markdownDocumentation =
+            HintHelper.createHintFromDefinitionInLet(symbol.node);
+          result.push(
+            this.createFunctionCompletion({
+              markdownDocumentation,
+              label: symbol.name,
+              range,
+              sortPrefix: sortPrefix,
+            }),
+          );
+        }
+      }
+
+      if (symbol.type === "CasePattern") {
+        const markdownDocumentation =
+          HintHelper.createHintFromDefinitionInCaseBranch();
+        result.push(
+          this.createVariableCompletion({
+            markdownDocumentation,
+            label: symbol.name,
+            range,
+            sortPrefix,
+          }),
+        );
+      }
+
+      if (symbol.type === "FunctionParameter") {
+        const markdownDocumentation =
+          HintHelper.createHintFromFunctionParameter(symbol.node);
+        result.push(
+          this.createVariableCompletion({
+            markdownDocumentation,
+            label: symbol.name,
+            range,
+            sortPrefix,
+          }),
+        );
+
+        const annotationTypeNode =
+          TreeUtils.getTypeOrTypeAliasOfFunctionParameter(symbol.node);
+        if (annotationTypeNode) {
+          const typeDeclarationNode = TreeUtils.findTypeAliasDeclaration(
+            tree,
+            annotationTypeNode.text,
+          );
+          if (typeDeclarationNode) {
+            const fields =
+              TreeUtils.getAllFieldsFromTypeAlias(typeDeclarationNode);
+            if (fields) {
+              fields.forEach((element) => {
+                const hint = HintHelper.createHintForTypeAliasReference(
+                  element.type,
+                  element.field,
+                  symbol.name,
+                );
+                result.push(
+                  this.createFieldOrParameterCompletion(
+                    hint,
+                    `${symbol.name}.${element.field}`,
+                    range,
+                  ),
+                );
+              });
+            }
           }
         }
       }
-      if (
-        node.parent.type === "value_declaration" &&
-        node.parent.firstChild &&
-        node.parent.firstChild.type === "function_declaration_left"
-      ) {
-        node.parent.firstChild.children.forEach((child) => {
-          if (child.type === "lower_pattern") {
-            const markdownDocumentation =
-              HintHelper.createHintFromFunctionParameter(child);
-            result.push(
-              this.createVariableCompletion({
-                markdownDocumentation,
-                label: child.text,
-                range,
-                sortPrefix,
-              }),
-            );
 
-            const annotationTypeNode =
-              TreeUtils.getTypeOrTypeAliasOfFunctionParameter(child);
-            if (annotationTypeNode) {
-              const typeDeclarationNode = TreeUtils.findTypeAliasDeclaration(
-                tree,
-                annotationTypeNode.text,
-              );
-              if (typeDeclarationNode) {
-                const fields =
-                  TreeUtils.getAllFieldsFromTypeAlias(typeDeclarationNode);
-                if (fields) {
-                  fields.forEach((element) => {
-                    const hint = HintHelper.createHintForTypeAliasReference(
-                      element.type,
-                      element.field,
-                      child.text,
-                    );
-                    result.push(
-                      this.createFieldOrParameterCompletion(
-                        hint,
-                        `${child.text}.${element.field}`,
-                        range,
-                      ),
-                    );
-                  });
-                }
-              }
-            }
-          }
-        });
+      if (symbol.type === "AnonymousFunctionParameter") {
+        const markdownDocumentation =
+          HintHelper.createHintFromFunctionParameter(symbol.node);
+        result.push(
+          this.createVariableCompletion({
+            markdownDocumentation,
+            label: symbol.name,
+            range,
+            sortPrefix,
+          }),
+        );
       }
-      if (node.parent.type === "anonymous_function_expr") {
-        node.parent?.children.forEach((child) => {
-          if (child.type === "pattern") {
-            const lowerPatterns = child.descendantsOfType("lower_pattern");
-
-            lowerPatterns.forEach((pattern) => {
-              const markdownDocumentation =
-                HintHelper.createHintFromFunctionParameter(pattern);
-              result.push(
-                this.createVariableCompletion({
-                  markdownDocumentation,
-                  label: pattern.text,
-                  range,
-                  sortPrefix,
-                }),
-              );
-            });
-          }
-        });
-      }
-      result.push(...this.findDefinitionsForScope(node.parent, tree, range));
-    }
+    });
 
     return result;
   }
