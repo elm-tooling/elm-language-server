@@ -998,32 +998,23 @@ export class CompletionProvider {
           }),
         );
 
-        const annotationTypeNode =
-          TreeUtils.getTypeOrTypeAliasOfFunctionParameter(symbol.node);
-        if (annotationTypeNode) {
-          const typeDeclarationNode = TreeUtils.findTypeAliasDeclaration(
-            tree,
-            annotationTypeNode.text,
-          );
-          if (typeDeclarationNode) {
-            const fields =
-              TreeUtils.getAllFieldsFromTypeAlias(typeDeclarationNode);
-            if (fields) {
-              fields.forEach((element) => {
-                const hint = HintHelper.createHintForTypeAliasReference(
-                  element.type,
-                  element.field,
-                  symbol.name,
-                );
-                result.push(
-                  this.createFieldOrParameterCompletion(
-                    hint,
-                    `${symbol.name}.${element.field}`,
-                    range,
-                  ),
-                );
-              });
-            }
+        const parameterType = checker.findType(symbol.node);
+
+        if (parameterType.nodeType === "Record") {
+          for (const field in parameterType.fields) {
+            const hint = HintHelper.createHintForTypeAliasReference(
+              checker.typeToString(parameterType.fields[field]),
+              field,
+              symbol.name,
+            );
+
+            result.push(
+              this.createFieldOrParameterCompletion(
+                hint,
+                `${symbol.name}.${field}`,
+                range,
+              ),
+            );
           }
         }
       }

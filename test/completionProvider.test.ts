@@ -1771,4 +1771,26 @@ port fbar : (String -> msg) -> Sub msg
 
     await testCompletions(source, ["foo", "fbar"], "partialMatch");
   });
+
+  it("Completions for record fields", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Model =
+  { prop1: String
+  , prop2: Int
+  }
+
+view : Model -> String
+view model =
+    m{-caret-}
+`;
+
+    await testCompletions(
+      source,
+      ["model.prop1", "model.prop2"],
+      "partialMatch",
+    );
+  });
 });
