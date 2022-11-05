@@ -955,6 +955,8 @@ export class CompletionProvider {
     const result: CompletionItem[] = [];
 
     checker.getSymbolsInScope(node, sourceFile).forEach((symbol, i) => {
+      // getSymbolsInScope returns ths symbols in order of inner scope to outer scope,
+      // so we add the index to the sort order so the variables that are "closer" to the position are sorted first
       const sortPrefix = `a${i}`;
       if (symbol.type === "Function") {
         // Only get let functions here
