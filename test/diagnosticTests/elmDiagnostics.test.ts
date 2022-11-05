@@ -127,11 +127,11 @@ describe("test elm diagnostics", () => {
 
     let nodeAtPosition: SyntaxNode = undefined!;
 
-    if ("position" in result) {
+    if ("range" in result) {
       const rootNode = program.getSourceFile(testUri)!.tree.rootNode;
       nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
         rootNode,
-        result.position,
+        result.range.start,
       );
     }
 
