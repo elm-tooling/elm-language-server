@@ -175,7 +175,7 @@ export function getTargetPositionFromSource(
           };
         } else if (!endPosition) {
           endPosition = {
-            line: line - 1,
+            line: line - 2,
             character: invokeCharacter + 2,
           };
         }
