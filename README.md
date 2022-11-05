@@ -17,6 +17,7 @@ This is the language server implementation for the Elm programming language.
   - [Alternative: Install with Nix](#alternative-install-with-nix)
 - [Requirements](#requirements)
 - [Configuration](#configuration)
+  - [Linting](#linting)
 - [Features](#features)
 - [Server Settings](#server-settings)
 - [Editor Support](#editor-support)
