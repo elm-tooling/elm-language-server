@@ -116,6 +116,10 @@ export class RefactorEditUtils {
         valueName += "(..)";
       }
 
+      if (exposedNodes.findIndex((n) => n.text === valueName) !== -1) {
+        return;
+      }
+
       if (lastExposedNode) {
         return TextEdit.insert(
           Position.create(
