@@ -58,7 +58,7 @@ describe("renameProvider", () => {
     const renameRange = renameProvider.onPrepareRenameRequest({
       program,
       sourceFile,
-      position: result.position,
+      position: result.range.start,
       textDocument: { uri: testUri },
     });
 
@@ -90,7 +90,7 @@ describe("renameProvider", () => {
     const renameEdit = renameProvider.onRenameRequest({
       program,
       sourceFile,
-      position: result.position,
+      position: result.range.start,
       textDocument: { uri: testUri },
       newName,
     });

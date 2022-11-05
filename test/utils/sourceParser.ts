@@ -1,8 +1,6 @@
-import { Position } from "vscode-languageserver";
+import { Position, Range } from "vscode-languageserver";
 
-export function getCaretPositionFromSource(
-  source: string,
-): {
+export function getCaretPositionFromSource(source: string): {
   position: Position;
   newSources: { [K: string]: string };
   fileWithCaret: string;
@@ -159,27 +157,35 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
 
 export function getTargetPositionFromSource(
   source: string,
-): { position: Position; sources: { [K: string]: string } } | undefined {
+): { range: Range; sources: { [K: string]: string } } | undefined {
   const sources = getSourceFiles(source);
 
-  let position: Position | undefined;
+  let startPosition: Position | undefined;
+  let endPosition: Position | undefined;
 
   for (const fileName in sources) {
     sources[fileName].split("\n").forEach((s, line) => {
       const invokeCharacter = s.search(/--(\^)/);
 
       if (invokeCharacter >= 0) {
-        position = {
-          line: line - 1,
-          character: invokeCharacter + 2,
-        };
+        if (!startPosition) {
+          startPosition = {
+            line: line - 1,
+            character: invokeCharacter + 2,
+          };
+        } else if (!endPosition) {
+          endPosition = {
+            line: line - 1,
+            character: invokeCharacter + 2,
+          };
+        }
       }
     });
   }
 
-  if (position) {
+  if (startPosition) {
     return {
-      position,
+      range: { start: startPosition, end: endPosition ?? startPosition },
       sources,
     };
   }

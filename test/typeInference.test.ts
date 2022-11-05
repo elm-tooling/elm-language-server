@@ -67,7 +67,7 @@ describe("test type inference", () => {
 
     const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
       sourceFile.tree.rootNode,
-      result.position,
+      result.range.start,
     );
 
     const declaration = TreeUtils.findParentOfType(

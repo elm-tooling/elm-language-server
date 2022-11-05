@@ -113,12 +113,11 @@ export async function testCodeAction(
     .resolve(DiagnosticsProvider)
     .forceElmLsDiagnosticsUpdate(sourceFile, program);
 
-  const range = { start: result.position, end: result.position };
   const codeActions =
     codeActionProvider.handleCodeAction({
       program,
       sourceFile,
-      range,
+      range: result.range,
       textDocument: { uri: testUri },
       context: {
         diagnostics: [
@@ -129,7 +128,7 @@ export async function testCodeAction(
             .createDiagnostics(sourceFile, program)
             .map(convertToCompilerDiagnostic),
         ]
-          .filter((diag) => Utils.rangeOverlaps(diag.range, range))
+          .filter((diag) => Utils.rangeOverlaps(diag.range, result.range))
           .map(convertFromCompilerDiagnostic),
       },
     }) ?? [];
@@ -165,7 +164,9 @@ export async function testCodeAction(
       const edits = changesToApply[URI.file(path.join(srcUri, uri)).toString()];
       if (edits) {
         expect(
-          applyEditsToSource(stripCommentLines(result.sources[uri]), edits),
+          trimTrailingWhitespace(
+            applyEditsToSource(stripCommentLines(result.sources[uri]), edits),
+          ),
         ).toEqual(source);
       }
     });

@@ -129,6 +129,9 @@ CodeActionProvider.registerRefactorAction(refactorName, {
 
     const args: SyntaxNode[] = [];
 
+    const nodeParent = node.parent;
+    const imports = checker.getAllImports(params.sourceFile);
+
     // Get the list of references that won't be visible
     node
       .descendantsOfType(["value_expr", "record_base_identifier"])
@@ -142,32 +145,27 @@ CodeActionProvider.registerRefactorAction(refactorName, {
           return;
         }
 
-        const ref = checker.findDefinition(
-          val.firstNamedChild?.firstNamedChild ?? val.firstNamedChild ?? val,
-          params.sourceFile,
-        );
-
-        // Reference in other file will be visible
-        if (ref.symbol?.node.tree.uri !== params.sourceFile.uri) {
-          return;
+        // If we find it in the scope we are extracting, it should not be a arg
+        let scope: SyntaxNode | null = val;
+        while (scope && scope.id !== nodeParent?.id) {
+          if (params.sourceFile.symbolLinks?.get(scope)?.get(val.text)) {
+            return;
+          }
+          scope = scope.parent;
         }
 
-        // Reference inside self will be visible
-        if (
-          node.startIndex <= ref.symbol.node.startIndex &&
-          node.endIndex >= ref.symbol.node.endIndex
-        ) {
-          return;
-        }
-
-        let scope: SyntaxNode | null = targetScope;
-
-        // Check the target scope and parent scopes for the reference
+        // If we find it in the target scope, it should not be an arg
+        scope = targetScope;
         while (scope) {
           if (params.sourceFile.symbolLinks?.get(scope)?.get(val.text)) {
             return;
           }
           scope = scope.parent;
+        }
+
+        // If we find it in imports, it should not be an arg
+        if (imports.getVar(val.text).length > 0) {
+          return;
         }
 
         args.push(val);
