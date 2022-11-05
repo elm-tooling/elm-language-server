@@ -953,7 +953,6 @@ export class CompletionProvider {
     range: Range,
   ): CompletionItem[] {
     const result: CompletionItem[] = [];
-    const tree = sourceFile.tree;
 
     checker.getSymbolsInScope(node, sourceFile).forEach((symbol, i) => {
       const sortPrefix = `a${i}`;

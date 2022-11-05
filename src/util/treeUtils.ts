@@ -173,24 +173,6 @@ export class TreeUtils {
     return false;
   }
 
-  public static findUnionConstructor(
-    tree: Tree,
-    unionConstructorName: string,
-  ): SyntaxNode | undefined {
-    const unionVariants = TreeUtils.descendantsOfType(
-      tree.rootNode,
-      "union_variant",
-    );
-    if (unionVariants.length > 0) {
-      return unionVariants.find(
-        (a) =>
-          a.firstChild !== null &&
-          a.firstChild.type === "upper_case_identifier" &&
-          a.firstChild.text === unionConstructorName,
-      );
-    }
-  }
-
   public static findUnionConstructorCalls(
     tree: Tree,
     unionConstructorName: string,
@@ -212,64 +194,6 @@ export class TreeUtils {
       );
       return result.length === 0 ? undefined : result;
     }
-  }
-
-  public static findFunction(
-    syntaxNode: SyntaxNode,
-    functionName: string,
-    onlySearchTopLevel = true,
-  ): SyntaxNode | undefined {
-    const functions = onlySearchTopLevel
-      ? syntaxNode.children.filter((a) => a.type === "value_declaration")
-      : syntaxNode.descendantsOfType("value_declaration");
-
-    let ret;
-    if (functions) {
-      ret = functions
-        .map((elmFunction) =>
-          TreeUtils.findFirstNamedChildOfType(
-            "function_declaration_left",
-            elmFunction,
-          ),
-        )
-        .find((declaration) => {
-          if (declaration && declaration.firstNamedChild) {
-            return functionName === declaration.firstNamedChild.text;
-          }
-        });
-
-      if (!ret) {
-        for (const elmFunction of functions) {
-          const pattern = TreeUtils.findFirstNamedChildOfType(
-            "pattern",
-            elmFunction,
-          );
-          if (pattern) {
-            ret =
-              pattern
-                .descendantsOfType("lower_pattern")
-                .find((a) => functionName === a.text) ?? undefined;
-
-            if (ret) {
-              break;
-            }
-          }
-        }
-      }
-      return ret;
-    }
-  }
-
-  public static findPort(tree: Tree, portName: string): SyntaxNode | undefined {
-    return TreeUtils.findAllNamedChildrenOfType(
-      "port_annotation",
-      tree.rootNode,
-    )?.find(
-      (node) =>
-        node.children.length > 1 &&
-        node.children[1].type === "lower_case_identifier" &&
-        node.children[1].text === portName,
-    );
   }
 
   public static findOperator(
@@ -313,37 +237,11 @@ export class TreeUtils {
     return tree.rootNode.childForFieldName("moduleDeclaration") ?? undefined;
   }
 
-  public static findTypeAliasDeclaration(
-    tree: Tree,
-    typeAliasName: string,
-  ): SyntaxNode | undefined {
-    const typeAliases = this.findAllTypeAliasDeclarations(tree);
-    if (typeAliases) {
-      return typeAliases.find(
-        (a) =>
-          a.children.length > 2 &&
-          a.children[2].type === "upper_case_identifier" &&
-          a.children[2].text === typeAliasName,
-      );
-    }
-  }
-
   public static findAllTopLevelFunctionDeclarations(
     tree: Tree,
   ): SyntaxNode[] | undefined {
     const result = tree.rootNode.children.filter(
       (a) => a.type === "value_declaration",
-    );
-    return result.length === 0 ? undefined : result;
-  }
-
-  public static findAllTopLevelFunctionDeclarationsWithoutTypeAnnotation(
-    tree: Tree,
-  ): SyntaxNode[] | undefined {
-    const result = tree.rootNode.children.filter(
-      (a) =>
-        a.type === "value_declaration" &&
-        a.previousNamedSibling?.type !== "type_annotation",
     );
     return result.length === 0 ? undefined : result;
   }
@@ -405,34 +303,6 @@ export class TreeUtils {
 
   public static findAllTypeDeclarations(tree: Tree): SyntaxNode[] | undefined {
     return this.findAllNamedChildrenOfType("type_declaration", tree.rootNode);
-  }
-
-  public static findAllTypeAliasDeclarations(
-    tree: Tree,
-  ): SyntaxNode[] | undefined {
-    return this.findAllNamedChildrenOfType(
-      "type_alias_declaration",
-      tree.rootNode,
-    );
-  }
-
-  public static findTypeAliasTypeVariable(
-    nodeAtPosition: SyntaxNode,
-    nodeAtPositionText: string,
-  ): SyntaxNode | undefined {
-    const parentTypeAlias = this.findParentOfType(
-      "type_alias_declaration",
-      nodeAtPosition,
-    );
-
-    if (parentTypeAlias) {
-      const lowerTypeNames = TreeUtils.findAllNamedChildrenOfType(
-        "lower_type_name",
-        parentTypeAlias,
-      );
-
-      return lowerTypeNames?.find((t) => t.text === nodeAtPositionText);
-    }
   }
 
   /**
@@ -580,59 +450,6 @@ export class TreeUtils {
 
             if (typeAliasNode) {
               return typeAliasNode.node;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  public static getTypeAliasOfCase(
-    type: SyntaxNode | undefined,
-    sourceFile: ISourceFile,
-    program: IProgram,
-  ): SyntaxNode | undefined {
-    if (type) {
-      const definitionNode = program
-        .getTypeChecker()
-        .findDefinition(type, sourceFile).symbol;
-
-      if (definitionNode) {
-        const definitionTree = program
-          .getForest()
-          .getByUri(definitionNode.node.tree.uri);
-
-        let aliasNode;
-        if (definitionNode.type === "FunctionParameter") {
-          aliasNode = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(
-            definitionNode.node,
-          );
-        } else if (definitionNode.type === "Function") {
-          aliasNode = TreeUtils.getReturnTypeOrTypeAliasOfFunctionDefinition(
-            definitionNode.node,
-          );
-        } else if (definitionNode.type === "FieldType") {
-          aliasNode = TreeUtils.findFirstNamedChildOfType(
-            "type_expression",
-            definitionNode.node,
-          );
-        } else if (definitionNode.type === "TypeAlias") {
-          return definitionNode.node;
-        }
-
-        if (aliasNode && definitionTree) {
-          const childNode = TreeUtils.descendantsOfType(
-            aliasNode,
-            "upper_case_identifier",
-          );
-
-          if (childNode.length > 0) {
-            const typeNode = program
-              .getTypeChecker()
-              .findDefinition(childNode[0], definitionTree).symbol;
-
-            if (typeNode) {
-              return typeNode.node;
             }
           }
         }
