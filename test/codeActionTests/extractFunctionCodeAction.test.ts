@@ -18,8 +18,8 @@ foo val str =
                     prop1 + prop2 + val + field2
 
                 Nothing ->
-                               --^
                     field2 + val2
+                               --^
 
         Nothing ->
             str + val2
@@ -72,8 +72,8 @@ foo val str =
             (\\{ prop1, prop2 } ->
           --^
                 prop1 + prop2 + val + field2)
-                --^
             field1
+                --^
 
         Nothing ->
             str + val2
@@ -127,8 +127,8 @@ foo val str =
             (\\{ prop1, prop2 } ->
           --^
                 prop1 + prop2 + val + field2)
-                --^
             field1
+                --^
 
         Nothing ->
             str + val2
@@ -185,8 +185,8 @@ foo val =
     val 
   --^
         + val2 
-                --^
         + Foo.val2
+                --^
   
 `;
 
@@ -236,8 +236,8 @@ foo val str =
                     prop1 + prop2 + val + field2 + field4
 
                 Nothing ->
-                               --^
                     field2 + val2
+                               --^
 
         Nothing ->
             str + val2
@@ -300,8 +300,8 @@ foo val str =
                     prop1 + prop2 + val + field2 + field4
 
                 Nothing ->
-                               --^
                     field2 + val2
+                               --^
 
         Nothing ->
             str + val2
