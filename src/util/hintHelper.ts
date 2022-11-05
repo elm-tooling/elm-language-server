@@ -19,7 +19,8 @@ export class HintHelper {
         return this.createHintFromFieldType(node);
       } else if (node.type === "port_annotation") {
         const name = node.childForFieldName("name");
-        if (name && typeString) {
+        const typeExpression = node.childForFieldName("typeExpression");
+        if (name && typeExpression) {
           let comment = "";
           if (
             node.previousNamedSibling &&
@@ -28,7 +29,10 @@ export class HintHelper {
             comment = node.previousNamedSibling.text;
           }
 
-          return this.formatHint(`${name.text} : ${typeString}`, comment);
+          return this.formatHint(
+            `${name.text} : ${typeExpression.text}`,
+            comment,
+          );
         }
       } else {
         return this.createHintFromDefinition(node);

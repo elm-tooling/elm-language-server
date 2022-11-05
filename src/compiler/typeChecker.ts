@@ -95,6 +95,7 @@ export interface TypeChecker {
     moduleNameOrAlias: string,
     sourceFile: ISourceFile,
   ) => SyntaxNode[];
+  getSymbolsInScope(node: SyntaxNode, sourceFile: ISourceFile): ISymbol[];
 }
 
 export function createTypeChecker(program: IProgram): TypeChecker {
@@ -124,6 +125,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     getDiagnosticsAsync,
     getSuggestionDiagnostics,
     findImportModuleNameNodes,
+    getSymbolsInScope,
   };
 
   return typeChecker;
@@ -888,6 +890,23 @@ export function createTypeChecker(program: IProgram): TypeChecker {
         .map((s) => s.node.childForFieldName("moduleName"))
         .filter(Utils.notUndefinedOrNull) ?? []
     );
+  }
+
+  function getSymbolsInScope(
+    node: SyntaxNode,
+    sourceFile: ISourceFile,
+  ): ISymbol[] {
+    const symbols: ISymbol[] = [];
+
+    let targetScope: SyntaxNode | null = node;
+    while (targetScope != null) {
+      sourceFile.symbolLinks
+        ?.get(targetScope)
+        ?.forEach((symbol) => symbols.push(symbol));
+      targetScope = targetScope.parent;
+    }
+
+    return symbols;
   }
 
   function checkNode(node: SyntaxNode): void {
