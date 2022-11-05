@@ -449,6 +449,21 @@ export function createTypeChecker(program: IProgram): TypeChecker {
           diagnostics: [],
         };
       }
+
+      // This is for values, with type annotation, but *inside* a let.
+      if (nodeParent.nextNamedSibling?.type === "value_declaration") {
+        // A value_declaration with a type annotation got it's type_annotation node
+        // added. So, we confirm the value_declaration does indeed follow, and return
+        // type node text with value declaration node.
+        return {
+          symbol: {
+            name: nodeText,
+            node: nodeParent.nextNamedSibling.children[0], // the function_declaration_left
+            type: "Function",
+          },
+          diagnostics: [],
+        };
+      }
     } else if (
       (nodeParentType === "exposed_type" &&
         nodeParent.parent?.parent?.type === "module_declaration") ||
