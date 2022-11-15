@@ -82,7 +82,13 @@ export interface TVar {
   name: string;
   rigid?: boolean;
   alias?: Alias;
+  unconstrainedTypeclass?: boolean;
 }
+export type VarTypeclass =
+  | "number"
+  | "appendable"
+  | "comparable"
+  | "compappend";
 export interface TFunction {
   nodeType: "Function";
   params: Type[];
@@ -137,8 +143,17 @@ export const TUnion = (
   return { nodeType: "Union", module, name, params, alias };
 };
 
-export const TVar = (name: string, rigid = false): TVar => {
-  return { nodeType: "Var", name, rigid };
+export const TVar = (
+  name: string,
+  rigid = false,
+  unconstrainedTypeclass = false,
+): TVar => {
+  return {
+    nodeType: "Var",
+    name,
+    rigid,
+    unconstrainedTypeclass,
+  };
 };
 
 export const TFunction = (
@@ -337,8 +352,9 @@ function getParentPatternDeclaration(
   return parentPattern.pattern ? parentPattern : undefined;
 }
 
-export function getTypeclassName(type: TVar): string | undefined {
-  if (type.name.length < 6) {
+export function getTypeclassName(type: TVar): VarTypeclass | undefined {
+  if (type.name.length < 6 || type.unconstrainedTypeclass) {
+    // if (type.name.length < 6) {
     return;
   } else if (type.name.startsWith("number")) {
     return "number";
@@ -2033,6 +2049,7 @@ export class InferenceScope {
     type2: Type,
     endExpr?: Expression,
     patternBinding = false,
+    allowUnconstrainedTypeclasses = false,
   ): boolean {
     if (!type1 || !type2) {
       throw new Error("Undefined type error");
@@ -2048,7 +2065,7 @@ export class InferenceScope {
     }
 
     try {
-      assignable = this.assignable(type1, type2);
+      assignable = this.assignable(type1, type2, allowUnconstrainedTypeclasses);
     } catch (error) {
       if (error instanceof Error) {
         this.diagnostics.push(
@@ -2103,7 +2120,11 @@ export class InferenceScope {
     });
   }
 
-  private assignable(type1: Type, type2: Type): boolean {
+  private assignable(
+    type1: Type,
+    type2: Type,
+    allowUnconstrainedTypeclasses = false,
+  ): boolean {
     const ty1 = this.replacements.get(type1);
     const ty2 = this.replacements.get(type2);
 
@@ -2321,19 +2342,24 @@ export class InferenceScope {
     type: Type | undefined,
     typeVar: TVar,
   ): boolean {
-    const allAssignableTo = (types: Type[], typeClass: string): boolean => {
-      return types.every((t) => this.assignable(t, TVar(typeClass)));
+    const allAssignableTo = (
+      types: Type[],
+      typeclass: VarTypeclass,
+    ): boolean => {
+      return types.every((t) => this.assignable(t, TVar(typeclass)));
     };
 
-    if (typeVar.name.startsWith("number")) {
+    const typeclass = getTypeclassName(typeVar);
+
+    if (typeclass === "number") {
       return (
         type?.nodeType === "Union" && (typeIsFloat(type) || typeIsInt(type))
       );
-    } else if (typeVar.name.startsWith("appendable")) {
+    } else if (typeclass === "appendable") {
       return (
         type?.nodeType === "Union" && (typeIsString(type) || typeIsList(type))
       );
-    } else if (typeVar.name.startsWith("comparable")) {
+    } else if (typeclass === "comparable") {
       if (type?.nodeType === "Tuple") {
         return allAssignableTo(type.types, "comparable");
       } else if (type?.nodeType === "Union") {
@@ -2363,8 +2389,8 @@ export class InferenceScope {
   }
 
   private typeclassesCompatible(
-    name1: string,
-    name2?: string,
+    name1: VarTypeclass,
+    name2?: VarTypeclass,
     unconstrainedAllowed = true,
   ): boolean {
     if (!name2) {
@@ -2395,8 +2421,8 @@ export class InferenceScope {
   }
 
   private typeclassesConstrainToCompappend(
-    tc1?: string,
-    tc2?: string,
+    tc1?: VarTypeclass,
+    tc2?: VarTypeclass,
   ): boolean {
     if (tc1 === "comparable") {
       return tc2 === "appendable" || tc2 === "compappend";

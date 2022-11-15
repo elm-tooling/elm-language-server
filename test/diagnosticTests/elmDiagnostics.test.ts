@@ -1520,4 +1520,70 @@ type DataType
 `;
     await testTypeInference(basicsSources + source, []);
   });
+
+  it("type classes should not be respected for type aliases", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias A appendable =
+    appendable
+
+a : A Int
+a =
+    1
+`;
+    await testTypeInference(basicsSources + source, [], true);
+  });
+
+  it("type classes should not be respected for custom types", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type A appendable =
+    B appendable
+
+a : A Int
+a =
+    B 1
+`;
+    await testTypeInference(basicsSources + source, [], true);
+  });
+
+  it("type classes should be respected for record constructors", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias A appendable =
+    { a : appendable }
+
+a =
+    A 1
+    --^
+`;
+    await testTypeInference(
+      basicsSources + source,
+      [{ message: Diagnostics.TypeMismatch, args: ["appendable", "number"] }],
+      true,
+    );
+  });
+
+  it("type classes should be respected in type annotations", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func : number
+func =
+    []
+  --^
+`;
+    await testTypeInference(
+      basicsSources + source,
+      [{ message: Diagnostics.TypeMismatch, args: ["number", "List a"] }],
+      true,
+    );
+  });
 });

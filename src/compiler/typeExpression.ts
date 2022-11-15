@@ -56,6 +56,7 @@ export class TypeExpression {
     private program: IProgram,
     private rigidVars: boolean,
     private activeAliases: Set<ETypeAliasDeclaration> = new Set(),
+    private unconstrainedTypeclasses: boolean = false,
   ) {}
 
   public static typeDeclarationInference(
@@ -101,6 +102,7 @@ export class TypeExpression {
         program,
         /* rigidVars */ false,
         activeAliases,
+        // /* unconstrainedTypeclasses */ true,
       ).inferTypeAliasDeclaration(e);
 
       TypeReplacement.freeze(inferenceResult.type);
@@ -237,7 +239,9 @@ export class TypeExpression {
       ? this.typeExpressionType(declaration.typeExpression)
       : TUnknown;
 
-    const params = declaration.typeVariables.map(this.getTypeVar.bind(this));
+    const params = declaration.typeVariables.map((typeVar) =>
+      this.getTypeVar(typeVar),
+    );
     const moduleName =
       TreeUtils.getModuleNameNode(declaration.tree)?.text ?? "";
     const alias: Alias = {
@@ -526,7 +530,7 @@ export class TypeExpression {
 
   private getTypeVar(e: Expression): TVar {
     return this.varsByExpression.getOrSet(e, () =>
-      TVar(e.text, this.rigidVars),
+      TVar(e.text, this.rigidVars, this.unconstrainedTypeclasses),
     );
   }
 }

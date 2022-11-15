@@ -25,6 +25,7 @@ export class TypeReplacement {
     private freshen: boolean,
     private keepRecordsMutable: boolean,
     private varsToRemainRigid?: TVar[],
+    private constrainTypeclasses = false,
   ) {}
 
   public static replace(
@@ -65,6 +66,16 @@ export class TypeReplacement {
     ).replace(type);
   }
 
+  public static unconstrainTypeclasses(type: Type): Type {
+    return new TypeReplacement(
+      new Map(),
+      true,
+      false,
+      undefined,
+      /* constrainTypeclasses */ true,
+    ).replace(type);
+  }
+
   public static freeze(type: Type): void {
     switch (type.nodeType) {
       case "Tuple":
@@ -91,7 +102,8 @@ export class TypeReplacement {
   }
 
   private wouldChange(type: Type): boolean {
-    const changeAllVars = this.freshen || !!this.varsToRemainRigid;
+    const changeAllVars =
+      this.freshen || !!this.varsToRemainRigid || this.constrainTypeclasses;
 
     const wouldChangeWorker = (type: Type): boolean => {
       let result = false;
@@ -298,6 +310,8 @@ export class TypeReplacement {
         } else {
           const newVar = TVar(key.name);
           newVar.alias = key.alias;
+          newVar.unconstrainedTypeclass =
+            this.constrainTypeclasses || key.unconstrainedTypeclass;
           this.cachedReplacements.set(key, newVar);
           return newVar;
         }
