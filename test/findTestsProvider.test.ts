@@ -9,7 +9,7 @@ import { TestSuite } from "../src/protocol";
 
 const basicsSources = `
 --@ Basics.elm
-module Basics exposing ((<|),(++), Int, Float, Bool(..), Order(..), negate)
+module Basics exposing ((<|), (++), Int, Float, Bool(..), Order(..), negate)
 
 infix left  0 (<|) = apL
 infix right 5 (++) = append

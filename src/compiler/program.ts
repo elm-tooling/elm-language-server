@@ -94,7 +94,6 @@ export interface IProgram {
   getTypeChecker(): TypeChecker;
   markAsDirty(): void;
   getPossibleImportsCache(): IPossibleImportsCache;
-  getOperatorsCache(): Map<string, DefinitionResult>;
   getSemanticDiagnostics(
     sourceFile: ISourceFile,
     cancellationToken?: ICancellationToken,
@@ -151,7 +150,6 @@ export class Program implements IProgram {
   private typeChecker: TypeChecker | undefined;
   private dirty = true;
   private possibleImportsCache: IPossibleImportsCache;
-  private operatorsCache: Map<string, DefinitionResult>;
   private diagnosticsCache: Map<string, Diagnostic[]>;
   private rootProject!: ElmProject;
   private forest!: IForest;
@@ -170,7 +168,6 @@ export class Program implements IProgram {
 
     this.typeCache = new TypeCache();
     this.possibleImportsCache = new PossibleImportsCache();
-    this.operatorsCache = new Map<string, DefinitionResult>();
     this.diagnosticsCache = new Map<string, Diagnostic[]>();
     this.host = programHost ?? createNodeProgramHost();
   }
@@ -253,10 +250,6 @@ export class Program implements IProgram {
 
   public getPossibleImportsCache(): IPossibleImportsCache {
     return this.possibleImportsCache;
-  }
-
-  public getOperatorsCache(): Map<string, DefinitionResult> {
-    return this.operatorsCache;
   }
 
   public getSemanticDiagnostics(
