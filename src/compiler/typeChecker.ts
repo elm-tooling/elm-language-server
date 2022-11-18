@@ -683,12 +683,6 @@ export function createTypeChecker(program: IProgram): TypeChecker {
         };
       }
     } else if (nodeAtPosition.type === "operator_identifier") {
-      const operatorsCache = program.getOperatorsCache();
-      const cached = operatorsCache.get(nodeText);
-      if (cached) {
-        return cached;
-      }
-
       const definitionNode = TreeUtils.findOperator(sourceFile, nodeText);
       if (definitionNode) {
         const result: DefinitionResult = {
@@ -699,7 +693,6 @@ export function createTypeChecker(program: IProgram): TypeChecker {
           },
           diagnostics: [],
         };
-        operatorsCache.set(nodeText, Object.freeze(result));
         return result;
       } else {
         const operatorImport = findImport(sourceFile, nodeText, "Var")[0];
@@ -709,7 +702,6 @@ export function createTypeChecker(program: IProgram): TypeChecker {
             symbol: operatorImport,
             diagnostics: [],
           };
-          operatorsCache.set(nodeText, Object.freeze(result));
           return result;
         }
       }

@@ -18,69 +18,12 @@ import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";
 import { diff } from "jest-diff";
 import path from "path";
 import { describe, expect } from "@jest/globals";
-
-const basicsSources = `
---@ Basics.elm
-module Basics exposing ((+), (|>), (>>), (==), (>), (++), Int, Float, Bool(..), Order(..), negate)
-
-infix left  0 (|>) = apR
-infix non   4 (==) = eq
-infix right 5 (++) = append
-infix left  6 (+)  = add
-infix right 9 (>>) = composeR
-infix non   4 (>)  = gt
-
-type Int = Int
-
-type Float = Float
-
-type Bool = True | False
-
-add : number -> number -> number
-add =
-  Elm.Kernel.Basics.add
-
-apR : a -> (a -> b) -> b
-apR x f =
-  f x
-
-eq : a -> a -> Bool
-eq =
-  Elm.Kernel.Utils.equal
-
-composeR : (a -> b) -> (b -> c) -> (a -> c)
-composeR f g x =
-  g (f x)
-
-gt : comparable -> comparable -> Bool
-gt =
-  Elm.Kernel.Utils.gt
-
-type Order = LT | EQ | GT
-
-negate : number -> number
-negate n =
-  -n
-
-append : appendable -> appendable -> appendable
-append =
-  Elm.Kernel.Utils.append
-`;
-
-const stringSources = `
---@ String.elm
-module String exposing (String, fromInt, fromFloat)
-
-type String = String
-
-fromInt : Int -> String
-fromInt =
-  \\_ -> ""
-
-fromFloat : Float -> String
-fromFloat =
-  \\_ -> ""
-`;
+import {
+  basicsSources,
+  listSources,
+  parserSources,
+  stringSources,
+} from "./sources";
 
 describe("test elm diagnostics", () => {
   const treeParser = new SourceTreeParser();
@@ -114,8 +57,18 @@ describe("test elm diagnostics", () => {
 
     const diagnostics: Diagnostic[] = [];
 
+    const coreModules = [
+      "Basics",
+      "List",
+      "Parser",
+      "Parser.Advanced",
+      "String",
+      "Set",
+      "Dict",
+      "Char",
+    ];
     program.getForest().treeMap.forEach((sourceFile) => {
-      if (!sourceFile.uri.includes("Basic")) {
+      if (!coreModules.find((module) => sourceFile.uri.includes(module))) {
         diagnostics.push(...program.getSyntacticDiagnostics(sourceFile));
         diagnostics.push(...program.getSemanticDiagnostics(sourceFile));
 
@@ -1586,5 +1539,52 @@ foo asInt myNumber =
     await testTypeInference(basicsSources + stringSources + source, [
       { message: Diagnostics.TypeMismatch, args: ["Float", "Int"] },
     ]);
+  });
+
+  it.only("operators from different files should not have an errors", async () => {
+    const source = `
+--@ Other.elm
+module Other exposing (foo)
+
+import Parser exposing ((|.), (|=), Parser)
+
+foo : number
+foo =
+    3
+
+
+oneOrMore : Parser a -> Parser (List a)
+oneOrMore parser =
+    Parser.andThen
+        (\\firstValue ->
+            Parser.loop [ firstValue ]
+                (\\reversedValues ->
+                    Parser.oneOf
+                        [ Parser.succeed (Parser.Done (List.reverse reversedValues))
+                            |. Parser.end
+                        , Parser.succeed (\\nextValue -> Parser.Loop (nextValue :: reversedValues))
+                            |= parser
+                        , Parser.succeed (Parser.Done (List.reverse reversedValues))
+                        ]
+                )
+        )
+        parser
+
+        
+--@ Test.elm
+module Test exposing (..)
+
+import Parser.Advanced as Parser exposing ((|.), (|=))
+
+test : Parser.Parser Never () ()
+test =
+    Parser.succeed (\\_ -> ())
+        |= Parser.getOffset  
+`;
+
+    await testTypeInference(
+      basicsSources + listSources + stringSources + parserSources + source,
+      [],
+    );
   });
 });
