@@ -45,6 +45,8 @@ interface ICompletionOptions {
   detail?: string;
   additionalTextEdits?: TextEdit[];
   filterText?: string;
+  labelDescription?: string;
+  labelDetail?: string;
 }
 
 export class CompletionProvider {
@@ -565,6 +567,7 @@ export class CompletionProvider {
       }
 
       const label = element.name;
+      const labelDescription = element.fromModule.name;
       let filterText = label;
 
       const dotIndex = label.lastIndexOf(".");
@@ -599,6 +602,7 @@ export class CompletionProvider {
               range,
               sortPrefix,
               filterText,
+              labelDescription,
             }),
           );
           break;
@@ -609,6 +613,7 @@ export class CompletionProvider {
               range,
               sortPrefix,
               filterText,
+              labelDescription,
             }),
           );
           break;
@@ -619,6 +624,7 @@ export class CompletionProvider {
               label,
               range,
               sortPrefix,
+              labelDescription,
             }),
           );
           break;
@@ -630,6 +636,7 @@ export class CompletionProvider {
               range,
               sortPrefix,
               filterText,
+              labelDescription,
             }),
           );
           break;
@@ -641,6 +648,7 @@ export class CompletionProvider {
               range,
               sortPrefix,
               filterText,
+              labelDescription,
             }),
           );
           break;
@@ -830,7 +838,7 @@ export class CompletionProvider {
     targetNode: SyntaxNode,
     replaceRange: Range,
   ): CompletionItem[] {
-    const result = [];
+    const result: CompletionItem[] = [];
     const foundType = checker.findType(targetNode);
 
     if (foundType.nodeType === "Record") {
@@ -923,6 +931,10 @@ export class CompletionProvider {
       detail: options.detail,
       additionalTextEdits: options.additionalTextEdits,
       filterText: options.filterText,
+      labelDetails: {
+        description: options.labelDescription,
+        detail: options.labelDetail,
+      },
     };
   }
 
@@ -987,7 +999,10 @@ export class CompletionProvider {
         );
       }
 
-      if (symbol.type === "FunctionParameter") {
+      if (
+        symbol.type === "FunctionParameter" ||
+        symbol.type === "AnonymousFunctionParameter"
+      ) {
         const markdownDocumentation =
           HintHelper.createHintFromFunctionParameter(symbol.node);
         result.push(
@@ -1018,19 +1033,6 @@ export class CompletionProvider {
             );
           }
         }
-      }
-
-      if (symbol.type === "AnonymousFunctionParameter") {
-        const markdownDocumentation =
-          HintHelper.createHintFromFunctionParameter(symbol.node);
-        result.push(
-          this.createVariableCompletion({
-            markdownDocumentation,
-            label: symbol.name,
-            range,
-            sortPrefix,
-          }),
-        );
       }
     });
 
@@ -1143,13 +1145,14 @@ export class CompletionProvider {
 
       const sortText = i < 10 ? `0${i}` : i;
 
-      const completionOptions = {
+      const completionOptions: ICompletionOptions = {
         markdownDocumentation,
         label: possibleImport.value,
         range,
         sortPrefix: `f${sortText}`,
         detail,
         additionalTextEdits: importTextEdit ? [importTextEdit] : undefined,
+        labelDescription: possibleImport.module,
       };
       if (possibleImport.type === "Function") {
         result.push(this.createFunctionCompletion(completionOptions));
@@ -1165,6 +1168,7 @@ export class CompletionProvider {
             sortPrefix: `f${i}`,
             detail,
             additionalTextEdits: importTextEdit ? [importTextEdit] : undefined,
+            labelDescription: possibleImport.module,
           }),
         );
       }
