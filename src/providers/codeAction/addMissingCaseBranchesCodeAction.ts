@@ -1,12 +1,12 @@
 import { Range, TextEdit } from "vscode-languageserver";
-import { CodeActionProvider, ICodeAction } from "..";
-import { getSpaces } from "../../util/refactorEditUtils";
-import { TreeUtils } from "../../util/treeUtils";
-import { Diagnostics } from "../../compiler/diagnostics";
-import { ICodeActionParams } from "../paramsExtensions";
-import { Utils } from "../../util/utils";
-import { PatternMatches } from "../../compiler/patternMatches";
-import { PositionUtil } from "../../positionUtil";
+import { CodeActionProvider, ICodeAction } from "../index.js";
+import { getSpaces } from "../../util/refactorEditUtils.js";
+import { TreeUtils } from "../../util/treeUtils.js";
+import { Diagnostics } from "../../compiler/diagnostics.js";
+import { ICodeActionParams } from "../paramsExtensions.js";
+import { Utils } from "../../util/utils.js";
+import { PatternMatches } from "../../compiler/patternMatches.js";
+import { PositionUtil } from "../../positionUtil.js";
 
 const errorCodes = [Diagnostics.IncompleteCasePattern(0).code];
 const fixId = "add_missing_case_branches";
@@ -55,7 +55,7 @@ function getEdits(params: ICodeActionParams, range: Range): TextEdit[] {
     const branchIndent = getSpaces(branches[0].startPosition.column);
     const branchExprIndent = getSpaces(
       branches[0].childForFieldName("expr")?.startPosition.column ??
-        branches[0].startPosition.column + 4,
+      branches[0].startPosition.column + 4,
     );
 
     const edit = PatternMatches.missing(patterns, params.program).reduce(

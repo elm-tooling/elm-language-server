@@ -6,13 +6,13 @@ import {
   TextDocumentPositionParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { DiagnosticsProvider } from ".";
-import { ISymbol } from "../compiler/binder";
-import { getEmptyTypes } from "../compiler/utils/elmUtils";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { HintHelper } from "../util/hintHelper";
-import { TreeUtils } from "../util/treeUtils";
-import { ITextDocumentPositionParams } from "./paramsExtensions";
+import { ISymbol } from "../compiler/binder.js";
+import { getEmptyTypes } from "../compiler/utils/elmUtils.js";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { HintHelper } from "../util/hintHelper.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { DiagnosticsProvider } from "./index.js";
+import { ITextDocumentPositionParams } from "./paramsExtensions.js";
 
 type HoverResult = Hover | null | undefined;
 
@@ -94,12 +94,12 @@ export class HoverProvider {
     if (definitionNode) {
       const value =
         definitionNode.type === "FunctionParameter" ||
-        definitionNode.type === "AnonymousFunctionParameter" ||
-        definitionNode.type === "CasePattern"
+          definitionNode.type === "AnonymousFunctionParameter" ||
+          definitionNode.type === "CasePattern"
           ? HintHelper.createHintFromFunctionParameter(
-              definitionNode.node,
-              typeString,
-            )
+            definitionNode.node,
+            typeString,
+          )
           : HintHelper.createHint(definitionNode.node, typeString);
 
       if (value) {

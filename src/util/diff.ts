@@ -1,7 +1,7 @@
 import diff from "fast-diff";
 import { Connection, Range, TextEdit } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { execCmdSync } from "../compiler/utils/elmUtils";
+import { execCmdSync } from "../compiler/utils/elmUtils.js";
 // Given two strings (`before`, `after`), return a list of all substrings
 // that appear in `after` but not in `before`, and the positions of each
 // of the substrings within `after`.

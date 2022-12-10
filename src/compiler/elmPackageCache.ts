@@ -1,10 +1,10 @@
 import { readdir } from "fs";
-import * as utils from "./utils/elmUtils";
-import { ElmJson } from "./program";
+import * as utils from "./utils/elmUtils.js";
+import { ElmJson } from "./program.js";
 import { promisify } from "util";
-import { IConstraint, IVersion } from "./utils/elmUtils";
-import { MultiMap } from "../util/multiMap";
-import * as path from "../util/path";
+import { IConstraint, IVersion } from "./utils/elmUtils.js";
+import { MultiMap } from "../util/multiMap.js";
+import * as path from "../util/path.js";
 
 const readDir = promisify(readdir);
 
@@ -47,7 +47,7 @@ export class ElmPackageCache implements IElmPackageCache {
     return this._packagesRoot;
   }
 
-  constructor(private loadElmJson: (elmJsonPath: string) => Promise<ElmJson>) {}
+  constructor(private loadElmJson: (elmJsonPath: string) => Promise<ElmJson>) { }
 
   public async getVersions(packageName: string): Promise<IVersion[]> {
     const cached = ElmPackageCache.versionsCache.get(packageName);

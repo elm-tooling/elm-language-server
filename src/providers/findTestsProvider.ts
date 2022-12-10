@@ -1,10 +1,10 @@
 import { container } from "tsyringe";
 import { Connection, ResponseError } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { ISourceFile } from "../compiler/forest";
-import { IProgram, Program } from "../compiler/program";
-import { TypeChecker } from "../compiler/typeChecker";
-import { Type } from "../compiler/typeInference";
+import { ISourceFile } from "../compiler/forest.js";
+import { IProgram, Program } from "../compiler/program.js";
+import { TypeChecker } from "../compiler/typeChecker.js";
+import { Type } from "../compiler/typeInference.js";
 import {
   EFunctionCallExpr,
   EValueExpr,
@@ -13,16 +13,16 @@ import {
   mapSyntaxNodeToExpression,
   Expression,
   ELetInExpr,
-} from "../compiler/utils/expressionTree";
+} from "../compiler/utils/expressionTree.js";
 import {
   FindTestsRequest,
   IFindTestsParams,
   IFindTestsResponse,
   TestSuite,
-} from "../protocol";
-import { NoWorkspaceContainsError } from "../util/noWorkspaceContainsError";
-import { TreeUtils } from "../util/treeUtils";
-import { Utils } from "../util/utils";
+} from "../protocol.js";
+import { NoWorkspaceContainsError } from "../util/noWorkspaceContainsError.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { Utils } from "../util/utils.js";
 
 export class FindTestsProvider {
   constructor() {
@@ -42,8 +42,7 @@ export class FindTestsProvider {
         }
         const suites = findAllTestSuites(program);
         connection.console.info(
-          `Found ${
-            suites.length
+          `Found ${suites.length
           } top test suites in ${params.projectFolder.toString()}`,
         );
         return <IFindTestsResponse>{ suites };
@@ -88,11 +87,11 @@ function rootSuite(
   const label = sourceFile.moduleName;
   return label && topSuites.length > 0
     ? <TestSuite>{
-        label,
-        tests: topSuites,
-        file,
-        position: { line: 0, character: 0 },
-      }
+      label,
+      tests: topSuites,
+      file,
+      position: { line: 0, character: 0 },
+    }
     : undefined;
 }
 

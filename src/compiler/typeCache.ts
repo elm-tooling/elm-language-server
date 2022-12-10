@@ -1,8 +1,8 @@
 import { SyntaxNode } from "web-tree-sitter";
-import { MultiMap } from "../util/multiMap";
-import { TreeUtils } from "../util/treeUtils";
-import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
-import { InferenceResult } from "./typeInference";
+import { MultiMap } from "../util/multiMap.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap.js";
+import { InferenceResult } from "./typeInference.js";
 
 type CacheKey =
   | "PACKAGE_TYPE_ANNOTATION"
@@ -102,10 +102,10 @@ export class TypeCache {
       annotation.parent?.type === "file"
         ? TreeUtils.getValueDeclaration(annotation)
         : TreeUtils.findParentOfType(
-            "value_declaration",
-            annotation,
+          "value_declaration",
+          annotation,
             /* topLevel */ true,
-          );
+        );
 
     if (declaration) {
       this.declarationAnnotations.set(declaration.id, annotation);

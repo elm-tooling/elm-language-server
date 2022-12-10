@@ -1,14 +1,14 @@
 import { CodeActionKind, Position, TextEdit } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
-import { TreeUtils } from "../../util/treeUtils";
-import { TFunction } from "../../compiler/typeInference";
+import { RefactorEditUtils } from "../../util/refactorEditUtils.js";
+import { TreeUtils } from "../../util/treeUtils.js";
+import { TFunction } from "../../compiler/typeInference.js";
 import {
   CodeActionProvider,
   IRefactorCodeAction,
   IRefactorEdit,
-} from "../codeActionProvider";
-import { ICodeActionParams } from "../paramsExtensions";
+} from "../codeActionProvider.js";
+import { ICodeActionParams } from "../paramsExtensions.js";
 
 const refactorName = "extract_function";
 CodeActionProvider.registerRefactorAction(refactorName, {

@@ -1,7 +1,7 @@
 import path from "path";
 import { URI } from "vscode-uri";
-import { getVarNames } from "../src/compiler/typeInference";
-import { TreeUtils } from "../src/util/treeUtils";
+import { getVarNames } from "../src/compiler/typeInference.js";
+import { TreeUtils } from "../src/util/treeUtils.js";
 import { getTargetPositionFromSource } from "./utils/sourceParser";
 import { SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
 

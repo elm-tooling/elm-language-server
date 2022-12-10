@@ -1,15 +1,15 @@
 import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
-import { convertFromCompilerDiagnostic } from "../../src/providers";
-import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics";
-import { TreeUtils } from "../../src/util/treeUtils";
+import { convertFromCompilerDiagnostic } from "../../src/providers/index.js";
+import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics.js";
+import { TreeUtils } from "../../src/util/treeUtils.js";
 import {
   Diagnostic,
   Diagnostics,
   error,
   IDiagnosticMessage,
-} from "../../src/compiler/diagnostics";
-import { Utils } from "../../src/util/utils";
+} from "../../src/compiler/diagnostics.js";
+import { Utils } from "../../src/util/utils.js";
 import {
   getSourceFiles,
   getTargetPositionFromSource,
@@ -1570,7 +1570,7 @@ oneOrMore parser =
         )
         parser
 
-        
+
 --@ Test.elm
 module Test exposing (..)
 
@@ -1579,7 +1579,7 @@ import Parser.Advanced as Parser exposing ((|.), (|=))
 test : Parser.Parser Never () ()
 test =
     Parser.succeed (\\_ -> ())
-        |= Parser.getOffset  
+        |= Parser.getOffset
 `;
 
     await testTypeInference(

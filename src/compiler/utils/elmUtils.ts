@@ -1,11 +1,11 @@
 import execa, { ExecaSyncReturnValue } from "execa";
-import * as path from "../../util/path";
+import * as path from "../../util/path.js";
 import { Connection, CompletionItemKind } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IElmPackageCache } from "../elmPackageCache";
-import { IClientSettings } from "../../util/settings";
-import { ElmProject } from "../program";
-import { NonEmptyArray } from "../../util/utils";
+import { IElmPackageCache } from "../elmPackageCache.js";
+import { IClientSettings } from "../../util/settings.js";
+import { ElmProject } from "../program.js";
+import { NonEmptyArray } from "../../util/utils.js";
 
 export const isWindows = process.platform === "win32";
 
@@ -154,9 +154,9 @@ export function getElmVersion(
 
 type SolverResult =
   | {
-      pending: ReadonlyMap<string, IConstraint>;
-      solutions: ReadonlyMap<string, IVersion>;
-    }
+    pending: ReadonlyMap<string, IConstraint>;
+    solutions: ReadonlyMap<string, IVersion>;
+  }
   | undefined;
 
 export async function solveDependencies(

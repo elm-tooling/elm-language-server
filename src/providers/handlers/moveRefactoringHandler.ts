@@ -7,11 +7,11 @@ import {
   IMoveDestinationsResponse,
   IMoveParams,
   MoveRequest,
-} from "../../protocol";
-import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
-import { References } from "../../compiler/references";
-import { TreeUtils } from "../../util/treeUtils";
+} from "../../protocol.js";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher.js";
+import { RefactorEditUtils } from "../../util/refactorEditUtils.js";
+import { References } from "../../compiler/references.js";
+import { TreeUtils } from "../../util/treeUtils.js";
 import * as path from "path";
 
 export class MoveRefactoringHandler {
@@ -85,21 +85,21 @@ export class MoveRefactoringHandler {
           ? nodeAtPosition.parent?.parent?.previousNamedSibling
           : undefined
         : isTypeNode
-        ? nodeAtPosition.parent
-        : undefined;
+          ? nodeAtPosition.parent
+          : undefined;
 
       const declarationNode = isDeclarationNode
         ? nodeAtPosition.parent?.parent
         : isTypeNode
-        ? nodeAtPosition.parent?.nextNamedSibling
-        : undefined;
+          ? nodeAtPosition.parent?.nextNamedSibling
+          : undefined;
 
       const commentNode =
         typeNode?.previousNamedSibling?.type === "block_comment"
           ? typeNode.previousNamedSibling
           : declarationNode?.previousNamedSibling?.type === "block_comment"
-          ? declarationNode.previousNamedSibling
-          : undefined;
+            ? declarationNode.previousNamedSibling
+            : undefined;
 
       const functionName = nodeAtPosition.text;
 

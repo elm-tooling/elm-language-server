@@ -1,11 +1,11 @@
 import path from "path";
 import { WorkspaceEdit, Range, Position } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { RenameProvider } from "../src/providers";
+import { RenameProvider } from "../src/providers/index.js";
 import {
   IPrepareRenameParams,
   IRenameParams,
-} from "../src/providers/paramsExtensions";
+} from "../src/providers/paramsExtensions.js";
 import {
   getSourceFiles,
   getTargetPositionFromSource,
@@ -108,7 +108,7 @@ describe("renameProvider", () => {
         applyEditsToSource(
           stripCommentLines(source),
           renameEdit.changes![URI.file(path.join(srcUri, uri)).toString()] ??
-            [],
+          [],
         ),
       ).toEqual(expectedSources[uri]);
     });

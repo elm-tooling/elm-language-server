@@ -1,15 +1,15 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "../util/treeUtils";
-import { References } from "./references";
+import { TreeUtils } from "../util/treeUtils.js";
+import { References } from "./references.js";
 import {
   BinaryExprTree,
   IOperatorPrecedence,
   Operand,
   Binary,
-} from "./operatorPrecedence";
-import { DisjointSet } from "./utils/disjointSet";
-import { TypeReplacement } from "./typeReplacement";
+} from "./operatorPrecedence.js";
+import { DisjointSet } from "./utils/disjointSet.js";
+import { TypeReplacement } from "./typeReplacement.js";
 import {
   Expression,
   EValueDeclaration,
@@ -36,24 +36,24 @@ import {
   EFieldAccessExpr,
   ENegateExpr,
   ETypeAnnotation,
-} from "./utils/expressionTree";
-import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
-import { TypeExpression } from "./typeExpression";
-import { IProgram } from "./program";
-import { Sequence } from "../util/sequence";
-import { Utils } from "../util/utils";
-import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable";
-import { TypeChecker } from "./typeChecker";
+} from "./utils/expressionTree.js";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap.js";
+import { TypeExpression } from "./typeExpression.js";
+import { IProgram } from "./program.js";
+import { Sequence } from "../util/sequence.js";
+import { Utils } from "../util/utils.js";
+import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable.js";
+import { TypeChecker } from "./typeChecker.js";
 import { performance } from "perf_hooks";
-import { ICancellationToken } from "../cancellation";
+import { ICancellationToken } from "../cancellation.js";
 import {
   Diagnostic,
   Diagnostics,
   error,
   errorWithEndNode,
-} from "./diagnostics";
-import { isKernelProject, nameIsKernel } from "./utils/elmUtils";
-import { PatternMatches } from "./patternMatches";
+} from "./diagnostics.js";
+import { isKernelProject, nameIsKernel } from "./utils/elmUtils.js";
+import { PatternMatches } from "./patternMatches.js";
 
 export let inferTime = 0;
 export function resetInferTime(): void {
@@ -291,7 +291,7 @@ function anyTypeVar(type: Type, predicate: (tvar: TVar) => boolean): boolean {
   return (
     result ||
     type.alias?.parameters.some((param) => anyTypeVar(param, predicate)) ===
-      true
+    true
   );
 }
 
@@ -615,10 +615,10 @@ export class InferenceScope {
       binding.bindingType === "Annotated"
         ? (<Annotated>binding).type
         : binding.bindingType === "Unannotated"
-        ? binding.count === 0
-          ? bodyType
-          : uncurryFunction(TFunction((<Unannotated>binding).params, bodyType))
-        : bodyType;
+          ? binding.count === 0
+            ? bodyType
+            : uncurryFunction(TFunction((<Unannotated>binding).params, bodyType))
+          : bodyType;
 
     return this.toTopLevelResult(type, replaceExpressionTypes);
   }
@@ -1121,15 +1121,15 @@ export class InferenceScope {
 
       type = !parentScope
         ? InferenceScope.valueDeclarationInference(
-            declaration,
-            declaration.tree.uri,
-            this.program,
-            this.activeScopes,
-            this.recursionAllowed,
-            this.cancellationToken,
-          ).type
+          declaration,
+          declaration.tree.uri,
+          this.program,
+          this.activeScopes,
+          this.recursionAllowed,
+          this.cancellationToken,
+        ).type
         : parentScope.inferChildDeclaration(declaration, this.activeScopes)
-            .type;
+          .type;
     }
 
     this.resolvedDeclarations.set(declaration, type);
@@ -1221,10 +1221,10 @@ export class InferenceScope {
 
     const resultType: Type = allAssignable
       ? TypeReplacement.replace(
-          curryFunction(targetType, e.args.length),
-          this.replacements.toMap(),
-          true,
-        )
+        curryFunction(targetType, e.args.length),
+        this.replacements.toMap(),
+        true,
+      )
       : TUnknown;
 
     this.expressionTypes.set(e, resultType);
@@ -1297,10 +1297,10 @@ export class InferenceScope {
           const type: Type =
             leftAssignable && rightAssignable
               ? TypeReplacement.replace(
-                  curryFunction(func, 2),
-                  this.replacements.toMap(),
-                  true,
-                )
+                curryFunction(func, 2),
+                this.replacements.toMap(),
+                true,
+              )
               : TUnknown;
 
           return { start: left.start, end: right.end, type };
@@ -1650,12 +1650,12 @@ export class InferenceScope {
   ): ParameterBindingResult {
     const typeRefResult = valueDeclaration.typeAnnotation
       ? TypeExpression.typeAnnotationInference(
-          mapSyntaxNodeToExpression(
-            valueDeclaration.typeAnnotation,
-          ) as ETypeAnnotation,
-          this.program,
-          true,
-        )
+        mapSyntaxNodeToExpression(
+          valueDeclaration.typeAnnotation,
+        ) as ETypeAnnotation,
+        this.program,
+        true,
+      )
       : undefined;
 
     const patterns = functionDeclaration.params;
@@ -1719,8 +1719,8 @@ export class InferenceScope {
 
     const bodyType: Type = valueDeclaration.body
       ? this.infer(
-          mapSyntaxNodeToExpression(valueDeclaration.body) as Expression,
-        )
+        mapSyntaxNodeToExpression(valueDeclaration.body) as Expression,
+      )
       : TUnknown;
     this.bindPattern(pattern, bodyType, false);
 
@@ -1989,9 +1989,9 @@ export class InferenceScope {
         const recordDiff: RecordDiff | undefined =
           ty.nodeType === "Record"
             ? {
-                ...this.calculateRecordDiff(actualTy, ty),
-                missing: new Map<string, Type>(),
-              }
+              ...this.calculateRecordDiff(actualTy, ty),
+              missing: new Map<string, Type>(),
+            }
             : undefined;
 
         this.diagnostics.push(
@@ -2229,13 +2229,13 @@ export class InferenceScope {
       expected.baseType
         ? new Map<string, Type>()
         : new Map(
-            actualEntries.filter(([field]) => !expectedKeys.includes(field)),
-          ),
+          actualEntries.filter(([field]) => !expectedKeys.includes(field)),
+        ),
       actual.baseType
         ? new Map<string, Type>()
         : new Map(
-            expectedEntries.filter(([field]) => !actualKeys.includes(field)),
-          ),
+          expectedEntries.filter(([field]) => !actualKeys.includes(field)),
+        ),
       new Map(
         actualEntries
           .map(([k, v]) => {

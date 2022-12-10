@@ -1,5 +1,5 @@
 import { SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "./treeUtils";
+import { TreeUtils } from "./treeUtils.js";
 
 export class HintHelper {
   public static createHint(
@@ -101,12 +101,10 @@ export class HintHelper {
 
     return this.formatHint(
       node.text,
-      `Field${
-        typeAlias
-          ? ` on the type alias \`${
-              typeAlias?.childForFieldName("name")?.text ?? ""
-            }\``
-          : ""
+      `Field${typeAlias
+        ? ` on the type alias \`${typeAlias?.childForFieldName("name")?.text ?? ""
+        }\``
+        : ""
       }`,
     );
   }
@@ -161,7 +159,7 @@ export class HintHelper {
           if (
             declaration.previousNamedSibling.previousNamedSibling &&
             declaration.previousNamedSibling.previousNamedSibling.type ===
-              "block_comment"
+            "block_comment"
           ) {
             comment =
               declaration.previousNamedSibling.previousNamedSibling.text;

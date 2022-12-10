@@ -1,8 +1,8 @@
 import { CodeAction, Position, Range, TextEdit } from "vscode-languageserver";
-import { TreeUtils } from "../../util/treeUtils";
-import { Diagnostics } from "../../compiler/diagnostics";
-import { CodeActionProvider, ICodeAction } from "../codeActionProvider";
-import { ICodeActionParams } from "../paramsExtensions";
+import { TreeUtils } from "../../util/treeUtils.js";
+import { Diagnostics } from "../../compiler/diagnostics.js";
+import { CodeActionProvider, ICodeAction } from "../codeActionProvider.js";
+import { ICodeActionParams } from "../paramsExtensions.js";
 import { SyntaxNode } from "web-tree-sitter";
 
 const errorCodes = [Diagnostics.MissingValue.code];

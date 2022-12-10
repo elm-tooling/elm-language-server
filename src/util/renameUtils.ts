@@ -1,8 +1,8 @@
-import { IProgram } from "../compiler/program";
+import { IProgram } from "../compiler/program.js";
 import { Position, ResponseError } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { References } from "../compiler/references";
-import { TreeUtils } from "./treeUtils";
+import { References } from "../compiler/references.js";
+import { TreeUtils } from "./treeUtils.js";
 
 export class RenameUtils {
   static getRenameAffectedNodes(
@@ -11,12 +11,12 @@ export class RenameUtils {
     position: Position,
   ):
     | {
-        originalNode: SyntaxNode;
-        references: {
-          node: SyntaxNode;
-          uri: string;
-        }[];
-      }
+      originalNode: SyntaxNode;
+      references: {
+        node: SyntaxNode;
+        uri: string;
+      }[];
+    }
     | undefined {
     const checker = program.getTypeChecker();
     const sourceFile = program.getSourceFile(uri);

@@ -13,11 +13,11 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
-import { IProgram } from "../compiler/program";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { RenameUtils } from "../util/renameUtils";
-import { TreeUtils } from "../util/treeUtils";
-import { IRenameParams, IPrepareRenameParams } from "./paramsExtensions";
+import { IProgram } from "../compiler/program.js";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { RenameUtils } from "../util/renameUtils.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { IRenameParams, IPrepareRenameParams } from "./paramsExtensions.js";
 
 export class RenameProvider {
   private connection: Connection;
@@ -126,9 +126,9 @@ export class RenameProvider {
   public static getRenameEdits(
     affectedNodes:
       | {
-          originalNode: SyntaxNode;
-          references: { node: SyntaxNode; uri: string }[];
-        }
+        originalNode: SyntaxNode;
+        references: { node: SyntaxNode; uri: string }[];
+      }
       | undefined,
     newName: string,
   ): [{ [uri: string]: TextEdit[] }, TextDocumentEdit[]] {
@@ -189,12 +189,12 @@ export class RenameProvider {
   private createModuleDeclarationRenameChange(
     affectedNodes:
       | {
-          originalNode: SyntaxNode;
-          references: {
-            node: SyntaxNode;
-            uri: string;
-          }[];
-        }
+        originalNode: SyntaxNode;
+        references: {
+          node: SyntaxNode;
+          uri: string;
+        }[];
+      }
       | undefined,
     program: IProgram,
     params: RenameParams,
@@ -223,9 +223,9 @@ export class RenameProvider {
     newName: string,
     affectedNodes:
       | {
-          originalNode: SyntaxNode;
-          references: { node: SyntaxNode; uri: string }[];
-        }
+        originalNode: SyntaxNode;
+        references: { node: SyntaxNode; uri: string }[];
+      }
       | undefined,
   ): string {
     if (

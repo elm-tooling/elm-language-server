@@ -1,16 +1,16 @@
 import { container } from "tsyringe";
 import { CodeAction } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IProgram } from "../../src/compiler/program";
+import { IProgram } from "../../src/compiler/program.js";
 import {
   CodeActionProvider,
   convertFromCompilerDiagnostic,
   convertToCompilerDiagnostic,
   DiagnosticsProvider,
-} from "../../src/providers";
-import { ElmLsDiagnostics } from "../../src/providers/diagnostics/elmLsDiagnostics";
-import { ICodeActionParams } from "../../src/providers/paramsExtensions";
-import { Utils } from "../../src/util/utils";
+} from "../../src/providers/index.js";
+import { ElmLsDiagnostics } from "../../src/providers/diagnostics/elmLsDiagnostics.js";
+import { ICodeActionParams } from "../../src/providers/paramsExtensions.js";
+import { Utils } from "../../src/util/utils.js";
 import {
   getTargetPositionFromSource,
   getSourceFiles,

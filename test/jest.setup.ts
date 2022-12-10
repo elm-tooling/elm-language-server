@@ -2,12 +2,12 @@ import "reflect-metadata";
 import { container } from "tsyringe";
 import { Connection } from "vscode-languageserver";
 import { mockDeep } from "jest-mock-extended";
-import { Settings } from "../src/util/settings";
-import { DocumentEvents } from "../src/util/documentEvents";
+import { Settings } from "../src/util/settings.js";
+import { DocumentEvents } from "../src/util/documentEvents.js";
 import {
   IElmAnalyseJsonService,
   IElmAnalyseJson,
-} from "../src/providers/diagnostics/elmAnalyseJsonService";
+} from "../src/providers/diagnostics/elmAnalyseJsonService.js";
 
 container.register("Connection", { useValue: mockDeep<Connection>() });
 container.register("ElmWorkspaces", { useValue: [] });

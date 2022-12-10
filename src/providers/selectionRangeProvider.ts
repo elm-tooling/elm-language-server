@@ -8,10 +8,10 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { PositionUtil } from "../positionUtil";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { TreeUtils } from "../util/treeUtils";
-import { ISelectionRangeParams } from "./paramsExtensions";
+import { PositionUtil } from "../positionUtil.js";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { ISelectionRangeParams } from "./paramsExtensions.js";
 
 export class SelectionRangeProvider {
   private connection: Connection;

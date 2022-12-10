@@ -1,12 +1,12 @@
-import { ISourceFile } from "./forest";
-import { TypeChecker } from "./typeChecker";
+import { ISourceFile } from "./forest.js";
+import { TypeChecker } from "./typeChecker.js";
 import {
   getTypeclassName,
   getVarNames,
   TUnion,
   TVar,
   Type,
-} from "./typeInference";
+} from "./typeInference.js";
 
 export class TypeRenderer {
   private usedVarNames = new Map<TVar, string>();
@@ -14,7 +14,7 @@ export class TypeRenderer {
   constructor(
     private typeChecker: TypeChecker,
     private sourceFile?: ISourceFile,
-  ) {}
+  ) { }
 
   public render(t: Type): string {
     if (t.alias) {
@@ -43,11 +43,10 @@ export class TypeRenderer {
         return this.renderUnion(t);
       case "Record":
       case "MutableRecord":
-        return `{ ${
-          t.baseType ? `${this.render(t.baseType)} | ` : ""
-        }${Object.entries(t.fields)
-          .map(([field, type]) => `${field} : ${this.render(type)}`)
-          .join(", ")} }`;
+        return `{ ${t.baseType ? `${this.render(t.baseType)} | ` : ""
+          }${Object.entries(t.fields)
+            .map(([field, type]) => `${field} : ${this.render(type)}`)
+            .join(", ")} }`;
     }
   }
 
@@ -63,8 +62,8 @@ export class TypeRenderer {
       type = `${t.name} ${t.params
         .map((p) =>
           p.nodeType === "Function" ||
-          (p.nodeType === "Union" && p.params.length > 0) ||
-          (p.alias?.parameters.length ?? 0 > 0)
+            (p.nodeType === "Union" && p.params.length > 0) ||
+            (p.alias?.parameters.length ?? 0 > 0)
             ? `(${this.render(p)})`
             : this.render(p),
         )
@@ -72,13 +71,12 @@ export class TypeRenderer {
     }
 
     if (this.sourceFile) {
-      return `${
-        this.typeChecker.getQualifierForName(
-          this.sourceFile,
-          t.module,
-          t.name,
-        ) ?? ""
-      }${type}`;
+      return `${this.typeChecker.getQualifierForName(
+        this.sourceFile,
+        t.module,
+        t.name,
+      ) ?? ""
+        }${type}`;
     } else {
       return type;
     }

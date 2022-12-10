@@ -9,9 +9,9 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { TreeUtils } from "../util/treeUtils";
-import { ITextDocumentPositionParams } from "./paramsExtensions";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { ITextDocumentPositionParams } from "./paramsExtensions.js";
 
 export type DefinitionResult =
   | Location

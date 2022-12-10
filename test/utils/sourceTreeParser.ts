@@ -5,9 +5,9 @@ import { promisify } from "util";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import Parser from "web-tree-sitter";
-import { Program, IProgram, IProgramHost } from "../../src/compiler/program";
-import * as path from "../../src/util/path";
-import { Utils } from "../../src/util/utils";
+import { Program, IProgram, IProgramHost } from "../../src/compiler/program.js";
+import * as path from "../../src/util/path.js";
+import { Utils } from "../../src/util/utils.js";
 
 export const baseUri = path.join(__dirname, "../sources/");
 export const srcUri = path.join(baseUri, "src");
@@ -75,8 +75,8 @@ export class SourceTreeParser {
           path.normalizeUri(uri) === path.normalizeUri(srcUri)
             ? Object.keys(sources).map((sourceUri) => path.join(uri, sourceUri))
             : path.normalizeUri(uri) === path.normalizeUri(testsUri)
-            ? Object.keys(testSources).map((testUri) => path.join(uri, testUri))
-            : [],
+              ? Object.keys(testSources).map((testUri) => path.join(uri, testUri))
+              : [],
         );
       },
       watchFile: (): void => {

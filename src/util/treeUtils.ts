@@ -1,15 +1,15 @@
 import { Position } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { ISourceFile } from "../compiler/forest";
-import { comparePosition, positionEquals } from "../positionUtil";
-import { TRecord, Type } from "../compiler/typeInference";
-import { IProgram } from "../compiler/program";
+import { ISourceFile } from "../compiler/forest.js";
+import { comparePosition, positionEquals } from "../positionUtil.js";
+import { TRecord, Type } from "../compiler/typeInference.js";
+import { IProgram } from "../compiler/program.js";
 import {
   EFunctionCallExpr,
   mapSyntaxNodeToExpression,
-} from "../compiler/utils/expressionTree";
+} from "../compiler/utils/expressionTree.js";
 import { Range } from "vscode-languageserver-textdocument";
-import { ISymbol } from "../compiler/binder";
+import { ISymbol } from "../compiler/binder.js";
 
 export type NodeType =
   | "Function"
@@ -333,7 +333,7 @@ export class TreeUtils {
       node.parent.parent.parent &&
       node.parent.parent.parent.previousNamedSibling &&
       node.parent.parent.parent.previousNamedSibling.type ===
-        "type_annotation" &&
+      "type_annotation" &&
       node.parent.parent.parent.previousNamedSibling.lastNamedChild
     ) {
       const functionParameterNodes = TreeUtils.findAllNamedChildrenOfType(
@@ -580,7 +580,7 @@ export class TreeUtils {
       position.character === 0 ? 0 : position.character - 1;
     const charBeforeCursor = node.text
       .split("\n")
-      [position.line].substring(previousCharColumn, position.character);
+    [position.line].substring(previousCharColumn, position.character);
 
     if (!functionNameRegex.test(charBeforeCursor)) {
       return node.namedDescendantForPosition({
@@ -739,7 +739,7 @@ export class TreeUtils {
     return (
       node.previousNamedSibling?.type === "dot" &&
       node.previousNamedSibling?.previousNamedSibling?.type ===
-        "upper_case_identifier"
+      "upper_case_identifier"
     );
   }
 

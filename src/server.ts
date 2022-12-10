@@ -8,13 +8,13 @@ import {
   WorkDoneProgressReporter,
 } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import { CapabilityCalculator } from "./capabilityCalculator";
+import { CapabilityCalculator } from "./capabilityCalculator.js";
 import {
   Program,
   IProgram,
   createNodeProgramHost,
   IProgramHost,
-} from "./compiler/program";
+} from "./compiler/program.js";
 import {
   CodeActionProvider,
   CodeLensProvider,
@@ -31,13 +31,13 @@ import {
   RenameProvider,
   SelectionRangeProvider,
   WorkspaceSymbolProvider,
-} from "./providers";
-import { ElmLsDiagnostics } from "./providers/diagnostics/elmLsDiagnostics";
-import { FileEventsHandler } from "./providers/handlers/fileEventsHandler";
-import { Settings } from "./util/settings";
-import { TextDocumentEvents } from "./util/textDocumentEvents";
-import { FindTestsProvider } from "./providers/findTestsProvider";
-import { ElmReviewDiagnostics } from "./providers/diagnostics/elmReviewDiagnostics";
+} from "./providers/index.js";
+import { ElmLsDiagnostics } from "./providers/diagnostics/elmLsDiagnostics.js";
+import { FileEventsHandler } from "./providers/handlers/fileEventsHandler.js";
+import { Settings } from "./util/settings.js";
+import { TextDocumentEvents } from "./util/textDocumentEvents.js";
+import { FindTestsProvider } from "./providers/findTestsProvider.js";
+import { ElmReviewDiagnostics } from "./providers/diagnostics/elmReviewDiagnostics.js";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;

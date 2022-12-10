@@ -1,6 +1,6 @@
 import { Position, Range, TextEdit } from "vscode-languageserver";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { TreeUtils } from "./treeUtils";
+import { TreeUtils } from "./treeUtils.js";
 
 export class RefactorEditUtils {
   public static findLineNumberAfterCurrentFunction(
@@ -84,15 +84,13 @@ export class RefactorEditUtils {
     if (hasArity0) {
       return TextEdit.insert(
         Position.create(insertLineNumber, 0),
-        `\n\n${
-          typeString ? `${spaces}${valueName}` + " : " + typeString + "\n" : ""
+        `\n\n${typeString ? `${spaces}${valueName}` + " : " + typeString + "\n" : ""
         }${spaces}${valueName} =\n${bodySpaces}${content}\n`,
       );
     } else {
       return TextEdit.insert(
         Position.create(insertLineNumber, 0),
-        `\n\n${
-          typeString ? `${spaces}${valueName}` + " : " + typeString + "\n" : ""
+        `\n\n${typeString ? `${spaces}${valueName}` + " : " + typeString + "\n" : ""
         }${spaces}${valueName} ${argList} =\n${bodySpaces}${content}\n`,
       );
     }
@@ -507,7 +505,7 @@ export class RefactorEditUtils {
       // Get the '|' unnamed node
       const spaces = getSpaces(
         lastUnionVariant.previousSibling?.startPosition.column ??
-          lastUnionVariant.startPosition.column,
+        lastUnionVariant.startPosition.column,
       );
       return TextEdit.insert(
         Position.create(

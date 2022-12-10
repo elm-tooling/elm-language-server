@@ -1,10 +1,10 @@
-import { IProgram } from "./program";
-import { ISourceFile } from "./forest";
+import { IProgram } from "./program.js";
+import { ISourceFile } from "./forest.js";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { TreeUtils } from "../util/treeUtils";
-import { Utils } from "../util/utils";
-import { Imports } from "./imports";
-import { ISymbol } from "./binder";
+import { TreeUtils } from "../util/treeUtils.js";
+import { Utils } from "../util/utils.js";
+import { Imports } from "./imports.js";
+import { ISymbol } from "./binder.js";
 
 export class References {
   public static find(
@@ -65,9 +65,9 @@ export class References {
                 const localFunctions = letParent
                   ? this.findFunctionCalls(letParent, functionName)
                   : this.findFunctionCalls(
-                      refSourceTree.tree.rootNode,
-                      functionName,
-                    );
+                    refSourceTree.tree.rootNode,
+                    functionName,
+                  );
 
                 if (localFunctions && refSourceTree.writeable) {
                   references.push(

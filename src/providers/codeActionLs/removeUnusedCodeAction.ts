@@ -1,13 +1,13 @@
 import { TextEdit, Range, Position } from "vscode-languageserver";
-import { ISourceFile } from "../../compiler/forest";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
-import { TreeUtils } from "../../util/treeUtils";
-import { Utils } from "../../util/utils";
-import { CodeActionProvider } from "../codeActionProvider";
+import { ISourceFile } from "../../compiler/forest.js";
+import { RefactorEditUtils } from "../../util/refactorEditUtils.js";
+import { TreeUtils } from "../../util/treeUtils.js";
+import { Utils } from "../../util/utils.js";
+import { CodeActionProvider } from "../codeActionProvider.js";
 import {
   convertFromCompilerDiagnostic,
   IDiagnostic,
-} from "../diagnostics/diagnosticsProvider";
+} from "../diagnostics/diagnosticsProvider.js";
 
 const errorCodes = [
   "unused_import",
@@ -266,9 +266,8 @@ function getEditsForDiagnostic(
         }
 
         return {
-          title: `Remove unused ${
-            node.type === "exposed_type" ? "type" : "value"
-          } \`${node.text}\``,
+          title: `Remove unused ${node.type === "exposed_type" ? "type" : "value"
+            } \`${node.text}\``,
           edits: [removeValueEdit],
         };
       }

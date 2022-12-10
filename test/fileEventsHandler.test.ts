@@ -1,5 +1,5 @@
 import { mockDeep } from "jest-mock-extended";
-import * as path from "../src/util/path";
+import * as path from "../src/util/path.js";
 import { container } from "tsyringe";
 import {
   CancellationTokenSource,
@@ -16,8 +16,8 @@ import {
 } from "vscode-languageserver";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { IProgram } from "../src/compiler/program";
-import { FileEventsHandler } from "../src/providers/handlers/fileEventsHandler";
+import { IProgram } from "../src/compiler/program.js";
+import { FileEventsHandler } from "../src/providers/handlers/fileEventsHandler.js";
 import { getSourceFiles } from "./utils/sourceParser";
 import { SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
 
@@ -42,15 +42,15 @@ describe("fileEventsHandler", () => {
       workspace: {
         onDidCreateFiles: (handler) => {
           createFilesHandler = handler;
-          return { dispose: () => {} };
+          return { dispose: () => { } };
         },
         onWillRenameFiles: (handler) => {
           renameFilesHandler = handler;
-          return { dispose: () => {} };
+          return { dispose: () => { } };
         },
         onWillDeleteFiles: (handler) => {
           deleteFilesHandler = handler;
-          return { dispose: () => {} };
+          return { dispose: () => { } };
         },
         applyEdit: (edit) => {
           if (WorkspaceEdit.is(edit)) {

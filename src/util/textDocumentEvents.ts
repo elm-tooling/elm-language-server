@@ -8,7 +8,7 @@ import {
   TextDocumentsConfiguration,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { IDocumentEvents } from "./documentEvents";
+import { IDocumentEvents } from "./documentEvents.js";
 
 // This is loosely based on https://github.com/Microsoft/vscode-languageserver-node/blob/73180893ca/server/src/main.ts#L124
 // With some simplifications and the ability to support multiple listeners

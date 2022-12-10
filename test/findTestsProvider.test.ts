@@ -4,8 +4,8 @@ import { URI } from "vscode-uri";
 import {
   findAllTestSuites,
   stringLiteralToLabel,
-} from "../src/providers/findTestsProvider";
-import { TestSuite } from "../src/protocol";
+} from "../src/providers/findTestsProvider.js";
+import { TestSuite } from "../src/protocol.js";
 
 const basicsSources = `
 --@ Basics.elm

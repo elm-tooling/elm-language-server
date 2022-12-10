@@ -1,26 +1,26 @@
 import "reflect-metadata";
 import { container } from "tsyringe";
 import { URI } from "vscode-uri";
-import { Program } from "../src/compiler/program";
-import { importsTime, resetImportsTime } from "../src/compiler/imports";
+import { Program } from "../src/compiler/program.js";
+import { importsTime, resetImportsTime } from "../src/compiler/imports.js";
 import {
   definitionTime,
   mappingTime,
   resetDefinitionAndMappingTime,
-} from "../src/compiler/utils/expressionTree";
-import { bindTime, resetBindTime } from "../src/compiler/typeChecker";
-import { inferTime, resetInferTime } from "../src/compiler/typeInference";
+} from "../src/compiler/utils/expressionTree.js";
+import { bindTime, resetBindTime } from "../src/compiler/typeChecker.js";
+import { inferTime, resetInferTime } from "../src/compiler/typeInference.js";
 import * as path from "path";
 import { argv } from "process";
-import { Settings } from "../src/util/settings";
+import { Settings } from "../src/util/settings.js";
 import Parser from "web-tree-sitter";
-import { replaceTime, resetReplaceTime } from "../src/compiler/typeReplacement";
+import { replaceTime, resetReplaceTime } from "../src/compiler/typeReplacement.js";
 import {
   getCancellationFilePath,
   FileBasedCancellationTokenSource,
   getCancellationFolderPath,
   ThrottledCancellationToken,
-} from "../src/cancellation";
+} from "../src/cancellation.js";
 import { randomBytes } from "crypto";
 import { createProgramHost } from "./utils/sourceTreeParser";
 

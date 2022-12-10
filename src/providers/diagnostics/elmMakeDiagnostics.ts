@@ -10,14 +10,14 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { ISourceFile } from "../../compiler/forest";
-import * as utils from "../../compiler/utils/elmUtils";
-import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { Settings } from "../../util/settings";
-import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
-import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
+import { ISourceFile } from "../../compiler/forest.js";
+import * as utils from "../../compiler/utils/elmUtils.js";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher.js";
+import { Settings } from "../../util/settings.js";
+import { IDiagnostic, IElmIssue } from "./diagnosticsProvider.js";
+import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper.js";
 import execa = require("execa");
-import { IProgram } from "../../compiler/program";
+import { IProgram } from "../../compiler/program.js";
 
 const ELM_MAKE = "Elm";
 export const NAMING_ERROR = "NAMING ERROR";
@@ -78,9 +78,9 @@ export class ElmMakeDiagnostics {
       return issues.length === 0
         ? new Map([[filePath.toString(), []]])
         : ElmDiagnosticsHelper.issuesToDiagnosticMap(
-            issues,
-            program.getRootPath(),
-          );
+          issues,
+          program.getRootPath(),
+        );
     });
   };
 
@@ -290,51 +290,51 @@ export class ElmMakeDiagnostics {
     const results = await Promise.allSettled([
       entrypointsForSure.length > 0 && !onlyRunElmTest
         ? utils.execCmd(
-            [settings.elmPath, argsElm(entrypointsForSure)],
-            [["elm", argsElm(entrypointsForSure)]],
-            { notFoundText: elmNotFound },
-            workspaceRootPath,
-            this.connection,
-          )
+          [settings.elmPath, argsElm(entrypointsForSure)],
+          [["elm", argsElm(entrypointsForSure)]],
+          { notFoundText: elmNotFound },
+          workspaceRootPath,
+          this.connection,
+        )
         : undefined,
       testFilesForSure.length === 0 && possiblyTestFiles.length > 0
         ? utils.execCmd(
-            [settings.elmTestPath, argsElmTest(possiblyTestFiles)],
-            // These files _could_ be tests, but since there’s no `tests/` folder we can’t
-            // know if we should expect the user to have elm-test installed. If they don’t,
-            // they’ll get errors imports from "test-dependencies".
-            [
-              ["elm-test", argsElmTest(possiblyTestFiles)],
-              ["elm", argsElm(possiblyTestFiles)],
-            ],
-            {
-              notFoundText:
-                settings.elmTestPath === ""
-                  ? elmTestNotFound
-                  : // This uses `elmNotFound` since "elm" is the last alternative above.
-                    elmNotFound,
-            },
-            workspaceRootPath,
-            this.connection,
-          )
+          [settings.elmTestPath, argsElmTest(possiblyTestFiles)],
+          // These files _could_ be tests, but since there’s no `tests/` folder we can’t
+          // know if we should expect the user to have elm-test installed. If they don’t,
+          // they’ll get errors imports from "test-dependencies".
+          [
+            ["elm-test", argsElmTest(possiblyTestFiles)],
+            ["elm", argsElm(possiblyTestFiles)],
+          ],
+          {
+            notFoundText:
+              settings.elmTestPath === ""
+                ? elmTestNotFound
+                : // This uses `elmNotFound` since "elm" is the last alternative above.
+                elmNotFound,
+          },
+          workspaceRootPath,
+          this.connection,
+        )
         : undefined,
       testFilesForSure.length > 0
         ? utils.execCmd(
+          [
+            settings.elmTestPath,
+            argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
+          ],
+          // Since there’s a `tests/` folder we expect the user to have elm-test installed.
+          [
             [
-              settings.elmTestPath,
+              "elm-test",
               argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
             ],
-            // Since there’s a `tests/` folder we expect the user to have elm-test installed.
-            [
-              [
-                "elm-test",
-                argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
-              ],
-            ],
-            { notFoundText: elmTestNotFound },
-            workspaceRootPath,
-            this.connection,
-          )
+          ],
+          { notFoundText: elmTestNotFound },
+          workspaceRootPath,
+          this.connection,
+        )
         : undefined,
     ]);
 

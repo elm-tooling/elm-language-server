@@ -1,11 +1,11 @@
 import { Range, TextEdit } from "vscode-languageserver";
-import { CodeActionProvider, ICodeAction } from "..";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
-import { TreeUtils } from "../../util/treeUtils";
-import { Diagnostics } from "../../compiler/diagnostics";
-import { Type } from "../../compiler/typeInference";
-import { ICodeActionParams } from "../paramsExtensions";
-import { Utils } from "../../util/utils";
+import { CodeActionProvider, ICodeAction } from "../index.js";
+import { RefactorEditUtils } from "../../util/refactorEditUtils.js";
+import { TreeUtils } from "../../util/treeUtils.js";
+import { Diagnostics } from "../../compiler/diagnostics.js";
+import { Type } from "../../compiler/typeInference.js";
+import { ICodeActionParams } from "../paramsExtensions.js";
+import { Utils } from "../../util/utils.js";
 
 const errorCodes = [Diagnostics.MissingValue.code];
 const fixId = "add_missing_union_type";
@@ -74,8 +74,8 @@ function getEdits(
         type.module === params.sourceFile.moduleName
           ? TreeUtils.findTypeDeclaration(params.sourceFile.tree, type.name)
           : checker
-              .getAllImports(params.sourceFile)
-              .getType(type.name, type.module)[0]?.node;
+            .getAllImports(params.sourceFile)
+            .getType(type.name, type.module)[0]?.node;
 
       if (typeDeclaration) {
         const typeDeclarationSourceFile = params.program.getSourceFile(

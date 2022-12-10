@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { container } from "tsyringe";
 import { URI } from "vscode-uri";
-import { formatText } from "../src/util/diff";
+import { formatText } from "../src/util/diff.js";
 import { Connection } from "vscode-languageserver";
 
 container.register("Connection", {

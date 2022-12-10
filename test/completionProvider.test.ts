@@ -7,8 +7,8 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { CompletionProvider, CompletionResult } from "../src/providers";
-import { ICompletionParams } from "../src/providers/paramsExtensions";
+import { CompletionProvider, CompletionResult } from "../src/providers/index.js";
+import { ICompletionParams } from "../src/providers/paramsExtensions.js";
 import { getCaretPositionFromSource } from "./utils/sourceParser";
 import { baseUri, SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
 
@@ -1761,7 +1761,7 @@ testFunction { prop1, prop2 } =
 --@ Test.elm
 port module Test exposing (..)
 
-x = 
+x =
     f{-caret-}
 
 port foo : String -> Cmd msg

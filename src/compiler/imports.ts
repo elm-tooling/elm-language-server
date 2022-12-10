@@ -1,12 +1,12 @@
 import Parser, { SyntaxNode } from "web-tree-sitter";
-import { IForest, ISourceFile } from "./forest";
-import { TreeUtils } from "../util/treeUtils";
+import { IForest, ISourceFile } from "./forest.js";
+import { TreeUtils } from "../util/treeUtils.js";
 import { container } from "tsyringe";
-import { MultiMap } from "../util/multiMap";
+import { MultiMap } from "../util/multiMap.js";
 import { performance } from "perf_hooks";
-import { isCoreProject } from "./utils/elmUtils";
-import { Diagnostic, Diagnostics, error } from "./diagnostics";
-import { ISymbol } from "./binder";
+import { isCoreProject } from "./utils/elmUtils.js";
+import { Diagnostic, Diagnostics, error } from "./diagnostics.js";
+import { ISymbol } from "./binder.js";
 
 export let importsTime = 0;
 export function resetImportsTime(): void {
@@ -27,7 +27,7 @@ function importModuleEqual(a: IImport, b: IImport): boolean {
   return (
     a.fromModule.name === b.fromModule.name &&
     a.fromModule.maintainerAndPackageName ===
-      b.fromModule.maintainerAndPackageName
+    b.fromModule.maintainerAndPackageName
   );
 }
 

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "../util/treeUtils";
+import { TreeUtils } from "../util/treeUtils.js";
 import {
   Expression,
   EValueDeclaration,
@@ -9,8 +9,8 @@ import {
   ETypeDeclaration,
   EUnionVariant,
   EPortAnnotation,
-} from "./utils/expressionTree";
-import { IProgram } from "./program";
+} from "./utils/expressionTree.js";
+import { IProgram } from "./program.js";
 import { container } from "tsyringe";
 import { Connection } from "vscode-languageserver";
 import {
@@ -18,20 +18,20 @@ import {
   TUnknown,
   InferenceScope,
   InferenceResult,
-} from "./typeInference";
-import { ISourceFile } from "./forest";
-import { IImport, Imports } from "./imports";
-import { TypeRenderer } from "./typeRenderer";
+} from "./typeInference.js";
+import { ISourceFile } from "./forest.js";
+import { IImport, Imports } from "./imports.js";
+import { TypeRenderer } from "./typeRenderer.js";
 import { performance } from "perf_hooks";
-import { bindTreeContainer, ISymbol } from "./binder";
-import { Sequence } from "../util/sequence";
-import { Utils } from "../util/utils";
-import { TypeExpression } from "./typeExpression";
-import { ICancellationToken } from "../cancellation";
-import { Diagnostic, Diagnostics, error } from "./diagnostics";
-import { isKernelProject, nameIsKernel } from "./utils/elmUtils";
+import { bindTreeContainer, ISymbol } from "./binder.js";
+import { Sequence } from "../util/sequence.js";
+import { Utils } from "../util/utils.js";
+import { TypeExpression } from "./typeExpression.js";
+import { ICancellationToken } from "../cancellation.js";
+import { Diagnostic, Diagnostics, error } from "./diagnostics.js";
+import { isKernelProject, nameIsKernel } from "./utils/elmUtils.js";
 import { existsSync } from "fs";
-import * as path from "../util/path";
+import * as path from "../util/path.js";
 import { URI } from "vscode-uri";
 
 export let bindTime = 0;
@@ -524,9 +524,9 @@ export function createTypeChecker(program: IProgram): TypeChecker {
             isTypeUsage
               ? symbol.type === "Type" || symbol.type === "TypeAlias"
               : isConstructorUsage
-              ? symbol.type === "UnionConstructor" ||
+                ? symbol.type === "UnionConstructor" ||
                 (symbol.type === "TypeAlias" && symbol.constructors?.length)
-              : symbol.type === "UnionConstructor",
+                : symbol.type === "UnionConstructor",
           ) ?? [];
 
       if (localSymbols.length > 0) {
@@ -548,14 +548,14 @@ export function createTypeChecker(program: IProgram): TypeChecker {
           diagnostics:
             imports.length > 1
               ? [
-                  error(
-                    upperCaseQid,
-                    isTypeUsage
-                      ? Diagnostics.AmbiguousType
-                      : Diagnostics.AmbiguousVariant,
-                    upperCaseQidText,
-                  ),
-                ]
+                error(
+                  upperCaseQid,
+                  isTypeUsage
+                    ? Diagnostics.AmbiguousType
+                    : Diagnostics.AmbiguousVariant,
+                  upperCaseQidText,
+                ),
+              ]
               : [],
         };
       }
@@ -582,7 +582,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       const moduleImport = findImport(
         sourceFile,
         findImportModuleNameNodes(upperCaseQidText, sourceFile)[0]?.text ??
-          upperCaseQidText,
+        upperCaseQidText,
         "Module",
       )[0];
 
@@ -772,7 +772,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       const moduleImport = findImport(
         sourceFile,
         findImportModuleNameNodes(fullModuleName, sourceFile)[0]?.text ??
-          fullModuleName,
+        fullModuleName,
         "Module",
       )[0];
 

@@ -11,7 +11,7 @@ import {
   TList,
   TRecord,
   Alias,
-} from "./typeInference";
+} from "./typeInference.js";
 import {
   Expression,
   ETypeExpression,
@@ -28,14 +28,14 @@ import {
   mapTypeDeclaration,
   mapTypeAliasDeclaration,
   mapTypeAnnotation,
-} from "./utils/expressionTree";
-import { TreeUtils } from "../util/treeUtils";
-import { TypeReplacement } from "./typeReplacement";
-import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
-import { Utils } from "../util/utils";
-import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable";
-import { IProgram } from "./program";
-import { Diagnostic, Diagnostics, error } from "./diagnostics";
+} from "./utils/expressionTree.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { TypeReplacement } from "./typeReplacement.js";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap.js";
+import { Utils } from "../util/utils.js";
+import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable.js";
+import { IProgram } from "./program.js";
+import { Diagnostic, Diagnostics, error } from "./diagnostics.js";
 
 export class TypeExpression {
   // All the type variables we've seen
@@ -56,7 +56,7 @@ export class TypeExpression {
     private program: IProgram,
     private rigidVars: boolean,
     private activeAliases: Set<ETypeAliasDeclaration> = new Set(),
-  ) {}
+  ) { }
 
   public static typeDeclarationInference(
     e: ETypeDeclaration,
@@ -256,11 +256,11 @@ export class TypeExpression {
       segmentTypes.length === 1
         ? segmentTypes[0]
         : uncurryFunction(
-            TFunction(
-              segmentTypes.slice(0, segmentTypes.length - 1),
-              segmentTypes[segmentTypes.length - 1],
-            ),
-          );
+          TFunction(
+            segmentTypes.slice(0, segmentTypes.length - 1),
+            segmentTypes[segmentTypes.length - 1],
+          ),
+        );
 
     this.expressionTypes.set(typeExpr, type);
 
@@ -293,8 +293,8 @@ export class TypeExpression {
         type = segment.unitExpr
           ? TUnit
           : TTuple(
-              segment.typeExpressions.map((t) => this.typeExpressionType(t)),
-            );
+            segment.typeExpressions.map((t) => this.typeExpressionType(t)),
+          );
         break;
       case "RecordType":
         type = this.recordTypeDeclarationType(segment);
@@ -383,8 +383,8 @@ export class TypeExpression {
     const baseType = baseTypeDefinition
       ? this.getTypeVar(baseTypeDefinition)
       : record.baseType
-      ? TVar(record.baseType.text)
-      : undefined;
+        ? TVar(record.baseType.text)
+        : undefined;
 
     const type = TRecord(fieldTypes, baseType, undefined, fieldRefs);
 
@@ -481,8 +481,8 @@ export class TypeExpression {
     const params = declaredType?.alias
       ? declaredType.alias.parameters
       : declaredType?.nodeType === "Union"
-      ? declaredType.params
-      : [];
+        ? declaredType.params
+        : [];
 
     if (declaredType.nodeType !== "Unknown" && params.length !== args.length) {
       this.diagnostics.push(
@@ -518,7 +518,7 @@ export class TypeExpression {
 
     return TUnion(
       this.program.getForest().getByUri(typeDeclaration.tree.uri)?.moduleName ??
-        "",
+      "",
       typeDeclaration.name,
       params,
     );

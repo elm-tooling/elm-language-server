@@ -10,16 +10,16 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Edit, Point, SyntaxNode } from "web-tree-sitter";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
 import { Position, Range } from "vscode-languageserver-textdocument";
-import { TextDocumentEvents } from "../util/textDocumentEvents";
-import { TreeUtils } from "../util/treeUtils";
-import { ISourceFile } from "../compiler/forest";
+import { TextDocumentEvents } from "../util/textDocumentEvents.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { ISourceFile } from "../compiler/forest.js";
 import {
   IDidChangeTextDocumentParams,
   IDidOpenTextDocumentParams,
-} from "./paramsExtensions";
-import { Utils } from "../util/utils";
+} from "./paramsExtensions.js";
+import { Utils } from "../util/utils.js";
 
 export class ASTProvider {
   private connection: Connection;
@@ -171,8 +171,8 @@ export class ASTProvider {
       const isTestFile = params.sourceFile
         ? params.sourceFile.isTestFile
         : params.program
-            .getSourceDirectoryOfFile(document.uri)
-            ?.endsWith("tests") ?? false;
+          .getSourceDirectoryOfFile(document.uri)
+          ?.endsWith("tests") ?? false;
 
       const isDependency = params.sourceFile
         ? params.sourceFile.isDependency

@@ -1,9 +1,9 @@
 import { SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "../util/treeUtils";
-import { Utils } from "../util/utils";
-import { Diagnostic, Diagnostics, error } from "./diagnostics";
-import { ISourceFile } from "./forest";
-import { IProgram } from "./program";
+import { TreeUtils } from "../util/treeUtils.js";
+import { Utils } from "../util/utils.js";
+import { Diagnostic, Diagnostics, error } from "./diagnostics.js";
+import { ISourceFile } from "./forest.js";
+import { IProgram } from "./program.js";
 
 type Union = {
   alts: CanCtor[];
@@ -76,7 +76,7 @@ const list: Union = {
 const nil: Pattern = Ctor(list, nilName, []);
 
 export class PatternMatches {
-  constructor(private program: IProgram, private sourceFile: ISourceFile) {}
+  constructor(private program: IProgram, private sourceFile: ISourceFile) { }
 
   public static check(
     region: SyntaxNode,
@@ -412,11 +412,11 @@ export class PatternMatches {
 
         const unionVariants = definition.symbol
           ? TreeUtils.findParentOfType(
-              "type_declaration",
-              definition.symbol.node,
-            )
-              ?.namedChildren.filter((n) => n.type === "union_variant")
-              .map(nodeToCanCtor) ?? []
+            "type_declaration",
+            definition.symbol.node,
+          )
+            ?.namedChildren.filter((n) => n.type === "union_variant")
+            .map(nodeToCanCtor) ?? []
           : [];
 
         const numAlts = unionVariants.length;
@@ -521,11 +521,10 @@ function patternToDoc(
           "Unambiguous",
         )}, ${patternToDoc(result.pattern.args[2], "Unambiguous")} )`;
       } else {
-        const ctorDoc = `${result.pattern.name}${
-          result.pattern.args.length > 0 ? " " : ""
-        }${result.pattern.args
-          .map((arg) => patternToDoc(arg, "Arg"))
-          .join(" ")}`;
+        const ctorDoc = `${result.pattern.name}${result.pattern.args.length > 0 ? " " : ""
+          }${result.pattern.args
+            .map((arg) => patternToDoc(arg, "Arg"))
+            .join(" ")}`;
 
         if (context === "Arg" && result.pattern.args.length > 0) {
           return `(${ctorDoc})`;

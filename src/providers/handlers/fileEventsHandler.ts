@@ -11,20 +11,20 @@ import {
 } from "vscode-languageserver";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
-import { IProgram } from "../../compiler/program";
-import { PositionUtil } from "../../positionUtil";
-import { getModuleName } from "../../compiler/utils/elmUtils";
-import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
-import { RenameUtils } from "../../util/renameUtils";
-import { TreeUtils } from "../../util/treeUtils";
-import { ASTProvider } from "../astProvider";
+import { IProgram } from "../../compiler/program.js";
+import { PositionUtil } from "../../positionUtil.js";
+import { getModuleName } from "../../compiler/utils/elmUtils.js";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher.js";
+import { RefactorEditUtils } from "../../util/refactorEditUtils.js";
+import { RenameUtils } from "../../util/renameUtils.js";
+import { TreeUtils } from "../../util/treeUtils.js";
+import { ASTProvider } from "../astProvider.js";
 import {
   ICreateFileParams,
   IDeleteFileParams,
   IRenameFileParams,
-} from "../paramsExtensions";
-import { RenameProvider } from "../renameProvider";
+} from "../paramsExtensions.js";
+import { RenameProvider } from "../renameProvider.js";
 
 export class FileEventsHandler {
   private connection: Connection;

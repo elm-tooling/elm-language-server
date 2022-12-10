@@ -5,9 +5,9 @@ import {
   Range,
 } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { PositionUtil } from "../positionUtil";
-import { DiagnosticSource } from "../providers/diagnostics/diagnosticSource";
-import { getSpaces } from "../util/refactorEditUtils";
+import { PositionUtil } from "../positionUtil.js";
+import { DiagnosticSource } from "../providers/diagnostics/diagnosticSource.js";
+import { getSpaces } from "../util/refactorEditUtils.js";
 
 export interface Diagnostic {
   code: string;
@@ -180,10 +180,10 @@ export const Diagnostics = {
       n < 2
         ? "Alias problem. This type alias is recursive, forming an infinite type."
         : `Alias problem. This type alias is part of a mutually recursive set of type aliases:\n${Array.from(
-            Array(n).keys(),
-          )
-            .map((i) => `{${i}}`)
-            .join(" -> ")}`,
+          Array(n).keys(),
+        )
+          .map((i) => `{${i}}`)
+          .join(" -> ")}`,
       DiagnosticSeverity.Error,
     ),
   RecursiveDeclaration: (n: number): IDiagnosticMessage =>
@@ -192,10 +192,10 @@ export const Diagnostics = {
       n < 2
         ? "Cyclic definition. The value `{0}` is defined directly in terms of itself, causing an infinite loop."
         : `Cyclic definition. The value \`{0}\`  depends on itself through the following chain of definitions:\n${Array.from(
-            Array(n).keys(),
-          )
-            .map((i) => `{${i}}`)
-            .join(" -> ")}`,
+          Array(n).keys(),
+        )
+          .map((i) => `{${i}}`)
+          .join(" -> ")}`,
       DiagnosticSeverity.Error,
     ),
   RecursiveLet: (n: number): IDiagnosticMessage =>
@@ -204,10 +204,10 @@ export const Diagnostics = {
       n < 2
         ? "Cyclic value. The value `{0}` is defined directly in terms of itself, causing an infinite loop."
         : `Cyclic value. The value \`{0}\` depends on itself through the following chain of definitions:\n${Array.from(
-            Array(n).keys(),
-          )
-            .map((i) => `{${i}}`)
-            .join(" -> ")}`,
+          Array(n).keys(),
+        )
+          .map((i) => `{${i}}`)
+          .join(" -> ")}`,
       DiagnosticSeverity.Error,
     ),
   Redefinition: diag(
