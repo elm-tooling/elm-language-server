@@ -5,8 +5,8 @@
     // https://github.com/microsoft/TypeScript/issues/10866
     // "baseUrl": ".",
     "target": "es6",
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "sourceMap": true,
     "outDir": "out",
     "rootDir": "src",

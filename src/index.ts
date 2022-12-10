@@ -93,7 +93,7 @@ connection.onInitialize(
       useValue: new Settings(initializationOptions, params.capabilities),
     });
 
-    const { Server } = await import("./server");
+    const { Server } = await import("./server.js");
     server = new Server(params, progress);
     await server.init();
 
