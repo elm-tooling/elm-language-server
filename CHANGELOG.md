@@ -1,5 +1,17 @@
 # Change Log
 
+## 2.6.0
+
+- Start using completion item label description for module name
+- Add completions for destructured record patterns and ports
+- Add function parameter record field completions
+- Don't try to get code actions when there is a top level parsing error
+- Fix move function refactor
+- Fix expose being able to expose the same function multiple times
+- Fix a bug with extract function parameter calculation
+- Fix for reference count of function in a let, with a type annotation.
+- Don't cache operator definitions, fixes a type inference error with `Parser.Advanced`
+
 ## 2.5.2
 
 - Fix a bug that caused the language server to stop working
