@@ -43,10 +43,12 @@ export interface ILanguageServer {
   readonly capabilities: InitializeResult;
   init(): Promise<void>;
   registerInitializedProviders(): void;
+  initSuccessfull: boolean;
 }
 
 export class Server implements ILanguageServer {
   private connection: Connection;
+  public initSuccessfull = false;
 
   constructor(
     params: InitializeParams,
@@ -103,6 +105,8 @@ export class Server implements ILanguageServer {
         container.register("ElmWorkspaces", {
           useValue: elmWorkspaces,
         });
+
+        this.initSuccessfull = true;
       } else {
         this.connection.window.showErrorMessage(
           "No elm.json found. Please run 'elm init' in your main directory.",
@@ -124,6 +128,10 @@ export class Server implements ILanguageServer {
 
   public async init(): Promise<void> {
     this.progress.begin("Initializing workspace", 0);
+    if (!this.initSuccessfull) {
+      this.progress.done();
+      return;
+    }
     const elmWorkspaces = container.resolve<IProgram[]>("ElmWorkspaces");
     await Promise.all(
       elmWorkspaces

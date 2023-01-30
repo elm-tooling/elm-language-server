@@ -55,6 +55,7 @@ container.register(TextDocumentEvents, {
 const connection = container.resolve<Connection>("Connection");
 
 let server: ILanguageServer;
+let initSuccessfull = false;
 
 connection.onInitialize(
   async (
@@ -95,6 +96,16 @@ connection.onInitialize(
 
     const { Server } = await import("./server");
     server = new Server(params, progress);
+
+    initSuccessfull = server.initSuccessfull.valueOf();
+
+    if (!initSuccessfull) {
+      connection.console.info("Server initialization failed");
+      return {
+        capabilities: {},
+      };
+    }
+
     await server.init();
 
     container.register(ASTProvider, {
@@ -106,7 +117,9 @@ connection.onInitialize(
 );
 
 connection.onInitialized(() => {
-  server.registerInitializedProviders();
+  if (initSuccessfull) {
+    server.registerInitializedProviders();
+  }
 });
 
 // Listen on the connection
