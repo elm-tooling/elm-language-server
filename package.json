@@ -18,7 +18,7 @@
   "dependencies": {
     "chokidar": "^3.5.3",
     "escape-string-regexp": "^4.0.0",
-    "execa": "^5.1.1",
+    "execa": "^7.0.0",
     "fast-diff": "^1.2.0",
     "globby": "^11.0.4",
     "pjson": "1.0.9",
