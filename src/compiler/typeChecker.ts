@@ -96,6 +96,10 @@ export interface TypeChecker {
     sourceFile: ISourceFile,
   ) => SyntaxNode[];
   getSymbolsInScope(node: SyntaxNode, sourceFile: ISourceFile): ISymbol[];
+  findSymbolOfUnionType(
+    unionType: Type,
+    sourceFile: ISourceFile,
+  ): ISymbol | undefined;
 }
 
 export function createTypeChecker(program: IProgram): TypeChecker {
@@ -126,6 +130,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     getSuggestionDiagnostics,
     findImportModuleNameNodes,
     getSymbolsInScope,
+    findSymbolOfUnionType,
   };
 
   return typeChecker;
@@ -922,6 +927,21 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     }
 
     return symbols;
+  }
+
+  function findSymbolOfUnionType(
+    unionType: Type,
+    sourceFile: ISourceFile,
+  ): ISymbol | undefined {
+    if (unionType.nodeType !== "Union") {
+      return;
+    }
+
+    return unionType.module === sourceFile.moduleName
+      ? sourceFile.symbolLinks
+          ?.get(sourceFile.tree.rootNode)
+          ?.get(unionType.name)
+      : getAllImports(sourceFile).getType(unionType.name, unionType.module)[0];
   }
 
   function checkNode(node: SyntaxNode): void {

@@ -20,7 +20,7 @@ import { getEmptyTypes } from "../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { HintHelper } from "../util/hintHelper";
 import { ImportUtils, IPossibleImport } from "../util/importUtils";
-import { RefactorEditUtils } from "../util/refactorEditUtils";
+import { getSpaces, RefactorEditUtils } from "../util/refactorEditUtils";
 import { TreeUtils } from "../util/treeUtils";
 import RANKING_LIST from "./ranking";
 import { DiagnosticsProvider } from ".";
@@ -29,6 +29,7 @@ import escapeStringRegexp from "escape-string-regexp";
 import { TRecord } from "../compiler/typeInference";
 import { ICompletionParams } from "./paramsExtensions";
 import { Utils } from "../util/utils";
+import { repeat } from "../compiler/patternMatches";
 
 export type CompletionResult =
   | CompletionItem[]
@@ -1016,6 +1017,43 @@ export class CompletionProvider {
                 range,
               ),
             );
+          }
+        }
+
+        if (parameterType.nodeType === "Union") {
+          const typeSymbol = checker.findSymbolOfUnionType(
+            parameterType,
+            sourceFile,
+          );
+
+          const branchIndent = getSpaces(4);
+
+          if (typeSymbol?.constructors?.length) {
+            const edit = typeSymbol?.constructors
+              ?.map((t) => ({
+                name: t.name,
+                arity: t.node.namedChildren.slice(1).length,
+              }))
+              .reduce(
+                (edit, { name, arity }) =>
+                  edit.concat(
+                    `${name} ${repeat("_ ", arity).join("")}->`,
+                    `${branchIndent}Debug.todo "branch '${name}' not implemented"`,
+                    "",
+                  ),
+                [`case ${symbol.name} of`],
+              )
+              .join(`\n${branchIndent}`);
+
+            if (edit) {
+              result.push({
+                label: `case ${symbol.name} of ...`,
+                textEdit: TextEdit.replace(range, edit),
+                sortText: `${sortPrefix}_${symbol.name}`,
+                filterText: symbol.name,
+                kind: CompletionItemKind.Snippet,
+              });
+            }
           }
         }
       }

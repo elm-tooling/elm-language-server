@@ -339,7 +339,8 @@ export function mapSyntaxNodeToExpression(
             functionCallExpr.args = node.children
               .slice(1)
               .filter((n) => !n.type.includes("comment"))
-              .map(mapSyntaxNodeToExpression) as Expression[];
+              .map(mapSyntaxNodeToExpression)
+              .filter(Utils.notUndefined);
 
             return functionCallExpr;
           }

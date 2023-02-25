@@ -138,7 +138,7 @@ export class PatternMatches {
 
   private isExhaustive(matrix: Pattern[][], n: number): Pattern[][] {
     if (matrix.length === 0) {
-      return [replicate(Anything, n)];
+      return [repeat(Anything, n)];
     } else {
       if (n === 0) {
         return [];
@@ -257,7 +257,7 @@ export class PatternMatches {
                       this.specializeRowByCtor(alt.name, alt.arity, row),
                     )
                     .filter(Utils.notUndefined),
-                  [...replicate(Anything, alt.arity), ...patterns],
+                  [...repeat(Anything, alt.arity), ...patterns],
                 );
               });
             }
@@ -292,7 +292,7 @@ export class PatternMatches {
         }
 
       case "Anything":
-        return [...replicate(Anything, arity), ...patterns];
+        return [...repeat(Anything, arity), ...patterns];
 
       default:
         throw new Error("Compiler bug");
@@ -471,7 +471,7 @@ function isMissing(
   if (ctors.has(ctor.name)) {
     return;
   } else {
-    return Ctor(union, ctor.name, replicate(Anything, ctor.arity));
+    return Ctor(union, ctor.name, repeat(Anything, ctor.arity));
   }
 }
 
@@ -580,7 +580,7 @@ function delist(pattern: Pattern, revEntries: Pattern[]): Structure {
   }
 }
 
-function replicate<T>(value: T, length: number): T[] {
+export function repeat<T>(value: T, length: number): T[] {
   return Array.from(Array(length)).map(() => value);
 }
 

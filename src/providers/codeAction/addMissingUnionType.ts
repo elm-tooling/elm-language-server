@@ -70,12 +70,10 @@ function getEdits(
     }
 
     if (type.nodeType === "Union") {
-      const typeDeclaration =
-        type.module === params.sourceFile.moduleName
-          ? TreeUtils.findTypeDeclaration(params.sourceFile.tree, type.name)
-          : checker
-              .getAllImports(params.sourceFile)
-              .getType(type.name, type.module)[0]?.node;
+      const typeDeclaration = checker.findSymbolOfUnionType(
+        type,
+        params.sourceFile,
+      )?.node;
 
       if (typeDeclaration) {
         const typeDeclarationSourceFile = params.program.getSourceFile(
