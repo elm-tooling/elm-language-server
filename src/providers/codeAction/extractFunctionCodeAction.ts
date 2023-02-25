@@ -145,6 +145,11 @@ CodeActionProvider.registerRefactorAction(refactorName, {
           return;
         }
 
+        // Types are always visible
+        if (val.firstNamedChild?.type === "upper_case_qid") {
+          return;
+        }
+
         // If we find it in the scope we are extracting, it should not be a arg
         let scope: SyntaxNode | null = val;
         while (scope && scope.id !== nodeParent?.id) {
