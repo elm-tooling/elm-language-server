@@ -76,9 +76,23 @@ describe("CompletionProvider", () => {
           sourceFile,
         }) ?? [];
 
-      const completionsList = Array.isArray(completions)
-        ? completions
-        : completions.items;
+      const completionsList = (
+        Array.isArray(completions) ? completions : completions.items
+      ).sort((a, b) => {
+        if (a.sortText && b.sortText) {
+          return a.sortText.localeCompare(b.sortText);
+        }
+
+        if (a.sortText) {
+          return -1;
+        }
+
+        if (b.sortText) {
+          return 1;
+        }
+
+        return a.label.localeCompare(b.label);
+      });
 
       if (debug && completionsList.length === 0) {
         console.log(
@@ -106,8 +120,9 @@ describe("CompletionProvider", () => {
         );
       }
 
+      let lastFoundIndex = -1;
       expectedCompletions.forEach((completion) => {
-        let result = !!completionsList.find((c) => {
+        const foundIndex = completionsList.findIndex((c) => {
           if (typeof completion === "string") {
             return c.label === completion;
           } else if ("shouldNotExist" in completion) {
@@ -126,6 +141,8 @@ describe("CompletionProvider", () => {
             );
           }
         });
+
+        const result = foundIndex >= 0;
 
         // Flip result if it should not exist
         if (
@@ -146,6 +163,21 @@ describe("CompletionProvider", () => {
         }
 
         expect(result).toBe(true);
+
+        if (foundIndex <= lastFoundIndex && debug) {
+          console.log(
+            `Completion ${
+              typeof completion === "object" && "label" in completion
+                ? completion.label
+                : completion
+            } was in the wrong order. Completion order is [ ${completionsList
+              .map((c) => c.label)
+              .join(", ")} ]`,
+          );
+        }
+
+        expect(foundIndex).toBeGreaterThan(lastFoundIndex);
+        lastFoundIndex = foundIndex;
       });
     }
 
@@ -505,7 +537,7 @@ import OtherModule exposing ({-caret-})
 
     await testCompletions(
       otherSource + source,
-      ["testFunction", "Msg", "TestType"],
+      ["Msg", "testFunction", "TestType"],
       "exactMatch",
     );
 
@@ -518,7 +550,7 @@ import OtherModule exposing (testFunction, {-caret-})
 
     await testCompletions(
       otherSource + source2,
-      ["testFunction", "Msg", "TestType"],
+      ["Msg", "testFunction", "TestType"],
       "exactMatch",
     );
 
@@ -531,7 +563,7 @@ import OtherModule exposing (testFunction, T{-caret-})
 
     await testCompletions(
       otherSource + source3,
-      ["testFunction", "Msg", "TestType"],
+      ["Msg", "testFunction", "TestType"],
       "exactMatch",
     );
   });
@@ -553,7 +585,7 @@ type alias TestType =
 
     await testCompletions(
       source,
-      ["testFunc", "Msg", "Msg(..)", "Msg1", "Msg2", "TestType"],
+      ["Msg", "Msg(..)", "Msg1", "Msg2", "testFunc", "TestType"],
       "exactMatch",
     );
 
@@ -573,7 +605,7 @@ type alias TestType =
 
     await testCompletions(
       source2,
-      ["testFunc", "Msg", "Msg(..)", "Msg1", "Msg2", "TestType"],
+      ["Msg", "Msg(..)", "Msg1", "Msg2", "testFunc", "TestType"],
       "exactMatch",
     );
   });
@@ -821,8 +853,8 @@ testFunction = ""
 
     await testCompletions(
       source,
-      ["Home", "Away"],
-      "partialMatch",
+      ["Away", "Home", "Page"],
+      "exactMatch",
       "triggeredByDot",
     );
 
@@ -843,8 +875,8 @@ defaultPage =
 
     await testCompletions(
       source2,
-      ["Home", "Away"],
-      "partialMatch",
+      ["Away", "Home", "Page"],
+      "exactMatch",
       "triggeredByDot",
     );
   });
@@ -947,7 +979,7 @@ test = Module.Submodule.{-caret-}
 
     await testCompletions(
       source2,
-      ["AnotherSubmodule", "testFunction"],
+      ["testFunction", "AnotherSubmodule"],
       "exactMatch",
       "triggeredByDot",
     );
@@ -1087,7 +1119,7 @@ test = div [] [ Module.{-caret-} ]
 
     await testCompletions(
       source,
-      ["testFunc", "Msg", "Msg1", "Msg2", "Model"],
+      ["Model", "Msg", "Msg1", "Msg2", "testFunc"],
       "exactMatch",
       "triggeredByDot",
     );
@@ -1112,7 +1144,7 @@ test = Module.fu{-caret-}
 
     await testCompletions(
       source2,
-      ["testFunc", "Msg", "Msg1", "Msg2", "Model"],
+      ["Model", "Msg", "Msg1", "Msg2", "testFunc"],
       "exactMatch",
     );
 
@@ -1136,7 +1168,7 @@ test = Module.{-caret-}
 
     await testCompletions(
       source3,
-      ["testFunc", "Msg", "Msg1", "Msg2", "Model"],
+      ["Model", "Msg", "Msg1", "Msg2", "testFunc"],
       "exactMatch",
       "triggeredByDot",
     );
@@ -1161,12 +1193,13 @@ test = div [] [ Module.{-caret-} ]
       source,
       [
         {
-          label: "testFunc",
+          label: "Model",
           detail: "Auto import module 'Module'",
           additionalTextEdits: [
             TextEdit.insert(Position.create(1, 0), "import Module\n"),
           ],
         },
+
         {
           label: "Msg",
           detail: "Auto import module 'Module'",
@@ -1189,7 +1222,7 @@ test = div [] [ Module.{-caret-} ]
           ],
         },
         {
-          label: "Model",
+          label: "testFunc",
           detail: "Auto import module 'Module'",
           additionalTextEdits: [
             TextEdit.insert(Position.create(1, 0), "import Module\n"),
@@ -1225,12 +1258,13 @@ test = div [] [ Module.{-caret-} ]
       source,
       [
         {
-          label: "testFunc",
+          label: "Model",
           detail: "Auto import module 'Module'",
           additionalTextEdits: [
             TextEdit.insert(Position.create(3, 0), "import Module\n"),
           ],
         },
+
         {
           label: "Msg",
           detail: "Auto import module 'Module'",
@@ -1253,7 +1287,7 @@ test = div [] [ Module.{-caret-} ]
           ],
         },
         {
-          label: "Model",
+          label: "testFunc",
           detail: "Auto import module 'Module'",
           additionalTextEdits: [
             TextEdit.insert(Position.create(3, 0), "import Module\n"),
@@ -1297,7 +1331,7 @@ view model =
 
     await testCompletions(
       source,
-      ["testFunc", "Data"],
+      ["Data", "testFunc"],
       "exactMatch",
       "triggeredByDot",
     );
@@ -1480,7 +1514,7 @@ testFunction model =
 
   it("Functions from other modules should be importable", async () => {
     const source = `
-    --@ Test.elm
+--@ Test.elm
 module Test exposing (..)
 
 test =
@@ -1613,7 +1647,7 @@ testFunction =
 
     await testCompletions(
       source,
-      ["foo", "Maybe", "Just", "Nothing"],
+      ["foo", "Just", "Maybe", "Nothing"],
       "exactMatch",
     );
   });
@@ -1667,7 +1701,7 @@ testFunction =
 
     await testCompletions(
       source,
-      ["foo", "Maybe", "Just", "Nothing", "bar", "Result", "Ok", "Err"],
+      ["bar", "Err", "foo", "Just", "Maybe", "Nothing", "Ok", "Result"],
       "exactMatch",
     );
   });
@@ -1709,7 +1743,7 @@ testFunction =
     Cmd.{-caret-}
 `;
 
-    await testCompletions(source, ["Cmd", "batch"], "exactMatch");
+    await testCompletions(source, ["batch", "Cmd"], "exactMatch");
   });
 
   it("Completions from lambda function", async () => {
@@ -1769,7 +1803,7 @@ port foo : String -> Cmd msg
 port fbar : (String -> msg) -> Sub msg
 `;
 
-    await testCompletions(source, ["foo", "fbar"], "partialMatch");
+    await testCompletions(source, ["fbar", "foo"], "partialMatch");
   });
 
   it("Completions for record fields", async () => {

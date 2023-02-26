@@ -551,20 +551,10 @@ export class CompletionProvider {
   ): CompletionItem[] {
     const completions: CompletionItem[] = [];
 
-    checker.getAllImports(sourceFile).forEach((element): void => {
-      const markdownDocumentation = HintHelper.createHint(element.node);
-      let sortPrefix = "d";
-      if (element.fromModule.maintainerAndPackageName) {
-        const matchedRanking: string = (
-          RANKING_LIST as {
-            [index: string]: string;
-          }
-        )[element.fromModule.maintainerAndPackageName];
+    const imports = checker.getAllImports(sourceFile);
 
-        if (matchedRanking) {
-          sortPrefix = `e${matchedRanking}`;
-        }
-      }
+    imports.forEach((element): void => {
+      const markdownDocumentation = HintHelper.createHint(element.node);
 
       const label = element.name;
       const labelDescription = element.fromModule.name;
@@ -591,6 +581,29 @@ export class CompletionProvider {
         valuePart.toLowerCase().startsWith(inputText.toLowerCase())
       ) {
         filterText = valuePart;
+      }
+
+      let sortPrefix = "d";
+
+      // If the value is imported directly already, then the qualified import should be sorted after
+      if (dotIndex >= 0) {
+        const valueImport = imports.getVar(valuePart, element.fromModule.name);
+
+        if (valueImport.length > 0) {
+          sortPrefix = "e";
+        }
+      }
+
+      if (element.fromModule.maintainerAndPackageName) {
+        const matchedRanking: string = (
+          RANKING_LIST as {
+            [index: string]: string;
+          }
+        )[element.fromModule.maintainerAndPackageName];
+
+        if (matchedRanking) {
+          sortPrefix = `e${matchedRanking}`;
+        }
       }
 
       switch (element.type) {
