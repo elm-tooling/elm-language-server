@@ -14,7 +14,7 @@ import { HintHelper } from "../util/hintHelper";
 import { TreeUtils } from "../util/treeUtils";
 import { ITextDocumentPositionParams } from "./paramsExtensions";
 
-type HoverResult = Hover | null | undefined;
+export type HoverResult = Hover | null | undefined;
 
 export class HoverProvider {
   private connection: Connection;

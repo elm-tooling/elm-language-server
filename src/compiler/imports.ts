@@ -21,6 +21,7 @@ type FromModule = {
 
 export interface IImport extends ISymbol {
   fromModule: FromModule;
+  importNode?: SyntaxNode;
 }
 
 function importModuleEqual(a: IImport, b: IImport): boolean {
@@ -118,6 +119,7 @@ export class Imports {
               node: foundModuleNode,
               type: "Module",
               fromModule,
+              importNode,
             });
 
             const exposedFromRemoteModule = foundModule.exposing;

@@ -131,18 +131,16 @@ function isTestSuite(
   const funName = findExpr("ValueExpr", call.target)?.name;
   const dot = funName?.lastIndexOf(".") ?? -1;
   const prefix = dot > -1 ? funName?.substring(0, dot) : undefined;
-  const qualifier: string =
+  const qualifier =
     prefix !== undefined
-      ? typeChecker.getQualifierForName(sourceFile, prefix, "describe") ?? ""
+      ? typeChecker.getQualifierForName(sourceFile, "Test", "describe")
       : "";
-  const moduleName =
-    prefix !== undefined
-      ? typeChecker.findImportModuleNameNodes(prefix, sourceFile)[0]?.text
-      : "Test";
   return (
-    qualifier !== undefined &&
     funName === `${qualifier}describe` &&
-    moduleName === "Test"
+    (!prefix ||
+      typeChecker
+        .findImportModuleNameNodes(prefix, sourceFile)
+        .some((n) => n.text === "Test"))
   );
 }
 

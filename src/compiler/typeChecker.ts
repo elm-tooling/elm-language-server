@@ -76,7 +76,7 @@ export interface TypeChecker {
     sourceFile: ISourceFile,
     module: string,
     name: string,
-  ) => string | undefined;
+  ) => string;
   typeToString: (t: Type, sourceFile?: ISourceFile) => string;
   getDiagnostics: (
     sourceFile: ISourceFile,
@@ -564,6 +564,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       if (TreeUtils.nextNode(nodeAtPosition)?.type === "dot") {
         const endPos = upperCaseQidText.indexOf(nodeText) + nodeText.length;
 
+        // There may be multiple imports with the same name/alias, but we just go to the first one
         const moduleNameOrAlias = nodeParent.text.substring(0, endPos);
         const moduleName =
           findImportModuleNameNodes(moduleNameOrAlias, sourceFile)[0]?.text ??
@@ -579,6 +580,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
         }
       }
 
+      // There may be multiple imports with the same name/alias, but we just go to the first one
       const moduleImport = findImport(
         sourceFile,
         findImportModuleNameNodes(upperCaseQidText, sourceFile)[0]?.text ??
@@ -849,9 +851,8 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     sourceFile: ISourceFile,
     module: string,
     name: string,
-  ): string | undefined {
-    const found = findImport(sourceFile, name)[0];
-    if (found) {
+  ): string {
+    if (findImport(sourceFile, name).length > 0) {
       return "";
     }
 
@@ -859,11 +860,11 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       return "";
     }
 
-    const moduleImport = findImportModuleNameNodes(module, sourceFile)[0]
-      ?.parent;
+    const moduleImport = findImport(sourceFile, module, "Module")[0]
+      ?.importNode;
 
     if (!moduleImport) {
-      return;
+      return "";
     }
 
     const asClause = TreeUtils.findFirstNamedChildOfType(
@@ -889,14 +890,28 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     moduleNameOrAlias: string,
     sourceFile: ISourceFile,
   ): SyntaxNode[] {
-    return (
+    // This will find an import based on module name only, not alias
+    const moduleImport = getAllImports(sourceFile)
+      .getModule(moduleNameOrAlias)
+      ?.importNode?.childForFieldName("moduleName");
+
+    // This will not find a module by name if it is aliased
+    const moduleOrAliasImports =
       sourceFile.symbolLinks
         ?.get(sourceFile.tree.rootNode)
         ?.getAll(moduleNameOrAlias)
         ?.filter((s) => s.type === "Import")
         .map((s) => s.node.childForFieldName("moduleName"))
-        .filter(Utils.notUndefinedOrNull) ?? []
-    );
+        .filter(Utils.notUndefinedOrNull) ?? [];
+
+    if (
+      moduleImport &&
+      moduleOrAliasImports.every((n) => n.id !== moduleImport.id)
+    ) {
+      return [moduleImport, ...moduleOrAliasImports];
+    }
+
+    return moduleOrAliasImports;
   }
 
   function getSymbolsInScope(
