@@ -1,0 +1,5 @@
+- Update the changelog in `CHANGELOG.md`
+- Run `npm run version-patch`, `npm run version-minor` or `npm run version-major`
+- Push the code to github and wait for the CI
+- Create a new release on github
+- Update Nix upstream ([instructions](https://github.com/turboMaCk/nixpkgs/blob/98997bb48997b27287a2995460d2fb6e1db88de7/pkgs/development/compilers/elm/packages/README.md#upgrades))

@@ -1,0 +1,80 @@
+{
+  "name": "@elm-tooling/elm-language-server",
+  "description": "Implementation of an elm language server in node.",
+  "version": "2.6.0",
+  "author": "Kolja Lampe",
+  "license": "MIT",
+  "main": "./out/module.js",
+  "files": [
+    "out"
+  ],
+  "engines": {
+    "node": ">=12.9.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elm-tooling/elm-language-server"
+  },
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "escape-string-regexp": "^4.0.0",
+    "execa": "^5.1.1",
+    "fast-diff": "^1.2.0",
+    "globby": "^11.0.4",
+    "pjson": "1.0.9",
+    "reflect-metadata": "^0.1.13",
+    "ts-debounce": "^4.0.0",
+    "tsyringe": "^4.7.0",
+    "vscode-languageserver": "^8.0.1",
+    "vscode-languageserver-textdocument": "1.0.8",
+    "vscode-uri": "^3.0.3",
+    "web-tree-sitter": "^0.20.3"
+  },
+  "devDependencies": {
+    "@elm-tooling/tree-sitter-elm": "^5.5.1",
+    "@types/jest": "^28.1.2",
+    "@types/node": "^18.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.28.0",
+    "@typescript-eslint/parser": "^5.28.0",
+    "copyfiles": "^2.4.1",
+    "doctoc": "^2.2.0",
+    "eslint": "^8.18.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "jest": "^28.1.1",
+    "jest-diff": "^29.0.1",
+    "jest-mock-extended": "^3.0.1",
+    "prettier": "^2.7.1",
+    "tree-sitter-cli": "^0.20.4",
+    "ts-jest": "^28.0.5",
+    "ts-node": "^10.8.1",
+    "typescript": "4.9.4"
+  },
+  "scripts": {
+    "version-patch": "npm --no-git-tag-version version patch",
+    "version-minor": "npm --no-git-tag-version version minor",
+    "version-major": "npm --no-git-tag-version version major",
+    "version": "npm i && npm run compile",
+    "copy-wasm": "copyfiles ./tree-sitter-elm.wasm out",
+    "compile": "npm run copy-wasm && tsc -p ./",
+    "watch": "npm run copy-wasm && tsc -watch -p ./",
+    "lint": "eslint -c .eslintrc.js --ext .ts src",
+    "lint:fix": "eslint --fix -c .eslintrc.js --ext .ts src",
+    "build-tree-sitter": "tree-sitter build-wasm ./node_modules/@elm-tooling/tree-sitter-elm",
+    "test": "jest --coverage",
+    "generate-toc": "doctoc README.md"
+  },
+  "bin": {
+    "elm-language-server": "out/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "elm",
+    "elm-lang",
+    "language server",
+    "language-server",
+    "lsp"
+  ]
+}
