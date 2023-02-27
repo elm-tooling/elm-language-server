@@ -442,38 +442,22 @@ export class References {
                   continue;
                 }
 
-                const moduleNameToLookFor =
-                  TreeUtils.findImportAliasOfModule(
-                    moduleNameNode.text,
-                    sourceFileToCheck.tree,
-                  ) ?? moduleNameNode.text;
-
-                // Check if it is imported
-                const imported = sourceFileToCheck.symbolLinks
-                  ?.get(sourceFileToCheck.tree.rootNode)
-                  ?.get(
-                    moduleNameToLookFor,
-                    (symbol) => symbol.type === "Import",
-                  );
+                const imported = checker
+                  .getAllImports(sourceFileToCheck)
+                  .getModule(moduleNameNode.text)
+                  ?.importNode?.childForFieldName("moduleName");
 
                 if (imported) {
-                  const importNameNode = checker.findImportModuleNameNodes(
-                    moduleNameToLookFor,
-                    sourceFileToCheck,
-                  )[0];
-
-                  if (importNameNode) {
-                    references.push({ node: importNameNode, uri });
-                  }
+                  references.push({ node: imported, uri });
                 }
 
-                // If it is not imported as an alias, find all references in file
-                if (imported && moduleNameToLookFor === moduleNameNode.text) {
+                // Find all references in file
+                if (imported) {
                   sourceFileToCheck.tree.rootNode
                     .descendantsOfType("value_expr")
                     .forEach((valueNode) => {
                       if (
-                        RegExp(`${moduleNameToLookFor}.[a-z].*`).exec(
+                        RegExp(`${moduleNameNode.text}.[a-z].*`).exec(
                           valueNode.text,
                         )
                       ) {

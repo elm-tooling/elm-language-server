@@ -70,7 +70,7 @@ describe("CompletionProvider", () => {
       const completions =
         completionProvider.handleCompletion({
           textDocument: { uri: testUri },
-          position: position!,
+          position,
           context,
           program,
           sourceFile,

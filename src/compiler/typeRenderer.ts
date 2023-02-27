@@ -38,7 +38,7 @@ export class TypeRenderer {
           )
           .join(" -> ")}`;
       case "Tuple":
-        return `(${t.types.map(this.render.bind(this)).join(", ")})`;
+        return `( ${t.types.map(this.render.bind(this)).join(", ")} )`;
       case "Union":
         return this.renderUnion(t);
       case "Record":

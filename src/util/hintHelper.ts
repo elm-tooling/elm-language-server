@@ -6,37 +6,39 @@ export class HintHelper {
     node: SyntaxNode | undefined,
     typeString?: string,
   ): string | undefined {
-    if (node) {
-      if (node.type === "module_declaration") {
-        return this.createHintFromModule(node);
-      } else if (
-        node.parent?.type === "let_in_expr" ||
-        (node.type === "lower_pattern" &&
-          !!TreeUtils.findParentOfType("let_in_expr", node))
-      ) {
-        return this.createHintFromDefinitionInLet(node, typeString);
-      } else if (node.type === "field_type") {
-        return this.createHintFromFieldType(node);
-      } else if (node.type === "port_annotation") {
-        const name = node.childForFieldName("name");
-        const typeExpression = node.childForFieldName("typeExpression");
-        if (name && typeExpression) {
-          let comment = "";
-          if (
-            node.previousNamedSibling &&
-            node.previousNamedSibling.type === "block_comment"
-          ) {
-            comment = node.previousNamedSibling.text;
-          }
+    if (!node) {
+      return;
+    }
 
-          return this.formatHint(
-            `${name.text} : ${typeExpression.text}`,
-            comment,
-          );
+    if (node.type === "module_declaration") {
+      return this.createHintFromModule(node);
+    } else if (
+      node.parent?.type === "let_in_expr" ||
+      (node.type === "lower_pattern" &&
+        !!TreeUtils.findParentOfType("let_in_expr", node))
+    ) {
+      return this.createHintFromDefinitionInLet(node, typeString);
+    } else if (node.type === "field_type") {
+      return this.createHintFromFieldType(node);
+    } else if (node.type === "port_annotation") {
+      const name = node.childForFieldName("name");
+      const typeExpression = node.childForFieldName("typeExpression");
+      if (name && typeExpression) {
+        let comment = "";
+        if (
+          node.previousNamedSibling &&
+          node.previousNamedSibling.type === "block_comment"
+        ) {
+          comment = node.previousNamedSibling.text;
         }
-      } else {
-        return this.createHintFromDefinition(node);
+
+        return this.formatHint(
+          `${name.text} : ${typeExpression.text}`,
+          comment,
+        );
       }
+    } else {
+      return this.createHintFromDefinition(node, typeString);
     }
   }
 
@@ -118,67 +120,74 @@ export class HintHelper {
 
   private static createHintFromDefinition(
     declaration: SyntaxNode | undefined,
+    typeString?: string,
   ): string | undefined {
-    if (declaration) {
-      let code: string | undefined;
-      let comment = "";
-      let annotation = "";
-      if (
-        declaration.type === "type_declaration" ||
-        declaration.type === "type_alias_declaration"
-      ) {
-        code = declaration.text;
-      }
-      if (declaration.type === "union_variant") {
-        if (
-          declaration.parent?.previousNamedSibling?.type !== "block_comment"
-        ) {
-          code = declaration.text;
-
-          if (declaration.parent) {
-            const typeName = TreeUtils.findFirstNamedChildOfType(
-              "upper_case_identifier",
-              declaration.parent,
-            )?.text;
-            comment =
-              `A variant on the union type \`${typeName ?? "unknown"}\`` || "";
-          }
-        } else {
-          declaration = declaration.parent ? declaration.parent : declaration;
-        }
-      }
-
-      if (
-        declaration.parent &&
-        declaration.type === "function_declaration_left"
-      ) {
-        declaration = declaration.parent;
-      }
-
-      if (declaration.previousNamedSibling) {
-        if (declaration.previousNamedSibling.type === "type_annotation") {
-          annotation = declaration.previousNamedSibling.text;
-          if (
-            declaration.previousNamedSibling.previousNamedSibling &&
-            declaration.previousNamedSibling.previousNamedSibling.type ===
-              "block_comment"
-          ) {
-            comment =
-              declaration.previousNamedSibling.previousNamedSibling.text;
-          }
-        } else if (declaration.previousNamedSibling.type === "block_comment") {
-          comment = declaration.previousNamedSibling.text;
-        }
-
-        if (
-          declaration.type === "value_declaration" &&
-          declaration.firstNamedChild?.type === "function_declaration_left"
-        ) {
-          code = declaration.firstNamedChild.text;
-        }
-      }
-      return this.formatHint(annotation, comment, code);
+    if (!declaration) {
+      return;
     }
+
+    let code: string | undefined;
+    let comment = "";
+    let annotation = "";
+    if (
+      declaration.type === "type_declaration" ||
+      declaration.type === "type_alias_declaration"
+    ) {
+      code = declaration.text;
+    }
+    if (declaration.type === "union_variant") {
+      if (declaration.parent?.previousNamedSibling?.type !== "block_comment") {
+        code = declaration.text;
+
+        if (declaration.parent) {
+          const typeName = TreeUtils.findFirstNamedChildOfType(
+            "upper_case_identifier",
+            declaration.parent,
+          )?.text;
+          comment =
+            `A variant on the union type \`${typeName ?? "unknown"}\`` || "";
+        }
+      } else {
+        declaration = declaration.parent ? declaration.parent : declaration;
+      }
+    }
+
+    if (
+      declaration.parent &&
+      declaration.type === "function_declaration_left"
+    ) {
+      declaration = declaration.parent;
+    }
+
+    if (declaration.previousNamedSibling) {
+      if (declaration.previousNamedSibling.type === "type_annotation") {
+        annotation = declaration.previousNamedSibling.text;
+        if (
+          declaration.previousNamedSibling.previousNamedSibling &&
+          declaration.previousNamedSibling.previousNamedSibling.type ===
+            "block_comment"
+        ) {
+          comment = declaration.previousNamedSibling.previousNamedSibling.text;
+        }
+      } else if (declaration.previousNamedSibling.type === "block_comment") {
+        comment = declaration.previousNamedSibling.text;
+      }
+
+      if (
+        declaration.type === "value_declaration" &&
+        declaration.firstNamedChild?.type === "function_declaration_left"
+      ) {
+        code = declaration.firstNamedChild.text;
+      }
+    }
+
+    const name = declaration.firstNamedChild?.firstNamedChild?.text;
+
+    if (name && typeString) {
+      annotation = `${name} : ${typeString}`;
+    }
+
+    return this.formatHint(annotation, comment, code);
   }
 
   private static createHintFromModule(

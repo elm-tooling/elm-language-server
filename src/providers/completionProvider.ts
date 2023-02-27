@@ -563,10 +563,9 @@ export class CompletionProvider {
       const dotIndex = label.lastIndexOf(".");
       const valuePart = label.slice(dotIndex + 1);
 
-      const importNode = checker.findImportModuleNameNodes(
-        element.fromModule.name,
-        sourceFile,
-      )[0]?.parent;
+      const importNode = checker
+        .getAllImports(sourceFile)
+        .getModule(element.fromModule.name)?.importNode;
 
       // Check if a value is already imported for this module using the exposing list
       // In this case, we want to prefex the unqualified value since they are using the import exposing list
@@ -1107,14 +1106,12 @@ export class CompletionProvider {
             } else if (!aMatches && bMatches) {
               return 1;
             } else {
-              const aModuleImported = !!checker.findImportModuleNameNodes(
-                a.module,
-                sourceFile,
-              )[0];
-              const bModuleImported = !!checker.findImportModuleNameNodes(
-                b.module,
-                sourceFile,
-              )[0];
+              const aModuleImported = !!checker
+                .getAllImports(sourceFile)
+                .getModule(a.module);
+              const bModuleImported = !!checker
+                .getAllImports(sourceFile)
+                .getModule(b.module);
 
               if (aModuleImported && !bModuleImported) {
                 return -1;
@@ -1255,7 +1252,13 @@ export class CompletionProvider {
     matchedSourceFiles
       .flatMap(ImportUtils.getPossibleImportsOfTree.bind(this))
       .forEach((value) => {
-        const markdownDocumentation = HintHelper.createHint(value.node);
+        const type = checker.findType(value.node);
+        const typeString = checker.typeToString(type, sourceFile);
+
+        const markdownDocumentation = HintHelper.createHint(
+          value.node,
+          typeString,
+        );
         let additionalTextEdits: TextEdit[] | undefined;
         let detail: string | undefined;
 

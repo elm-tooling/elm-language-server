@@ -1,3 +1,4 @@
+import { fail } from "assert";
 import { Position, Range } from "vscode-languageserver";
 
 export function getCaretPositionFromSource(source: string): {
@@ -153,6 +154,36 @@ export function getInvokeAndTargetPositionFromSource(source: string): TestType {
       invokeFile,
     };
   }
+}
+
+export function getInvokePositionFromSource(source: string): IInvokeTest {
+  const sources = getSourceFiles(source);
+
+  let invokePosition;
+  let invokeFile = "";
+
+  for (const fileName in sources) {
+    sources[fileName].split("\n").forEach((s, line) => {
+      const invokeCharacter = s.search(/--(\^)/);
+
+      if (invokeCharacter >= 0) {
+        invokePosition = {
+          line: line - 1,
+          character: invokeCharacter + 2,
+        };
+        invokeFile = fileName;
+      }
+    });
+  }
+
+  if (!invokePosition) {
+    fail();
+  }
+  return {
+    invokePosition,
+    sources,
+    invokeFile,
+  };
 }
 
 export function getTargetPositionFromSource(

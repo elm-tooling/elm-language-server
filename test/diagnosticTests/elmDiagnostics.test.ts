@@ -1541,7 +1541,7 @@ foo asInt myNumber =
     ]);
   });
 
-  it.only("operators from different files should not have an errors", async () => {
+  it("operators from different files should not have an errors", async () => {
     const source = `
 --@ Other.elm
 module Other exposing (foo)
