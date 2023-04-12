@@ -28,10 +28,12 @@ export class ASTProvider {
 
   private treeChangeEvent = new Emitter<{
     sourceFile: ISourceFile;
+    newText: string;
     declaration?: SyntaxNode;
   }>();
   readonly onTreeChange: Event<{
     sourceFile: ISourceFile;
+    newText: string;
     declaration?: SyntaxNode;
   }> = this.treeChangeEvent.event;
 
@@ -194,6 +196,7 @@ export class ASTProvider {
         if (tree) {
           this.treeChangeEvent.fire({
             sourceFile,
+            newText,
             declaration: changedDeclaration,
           });
         }

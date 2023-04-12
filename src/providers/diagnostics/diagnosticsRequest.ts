@@ -37,6 +37,11 @@ export class DiagnosticsRequest {
         if (this.done) {
           return;
         }
+
+        if (this.isCancelled) {
+          return;
+        }
+
         this.done = true;
         onDone();
       });
@@ -49,5 +54,9 @@ export class DiagnosticsRequest {
     }
 
     this.token.dispose();
+  }
+
+  public get isCancelled(): boolean {
+    return this.token.token.isCancellationRequested;
   }
 }

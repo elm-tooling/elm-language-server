@@ -7,15 +7,17 @@ import {
   DiagnosticTag,
 } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import { ISourceFile } from "../../compiler/forest";
-import * as utils from "../../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { Settings } from "../../util/settings";
+import { IClientSettings, Settings } from "../../util/settings";
 import { IDiagnostic } from "./diagnosticsProvider";
 import { Range } from "vscode-languageserver-textdocument";
-import execa = require("execa");
 import { existsSync } from "fs";
-import * as path from "path";
+
+// import AppState from "elm-review/lib/state";
+import { SHARE_ENV, Worker } from "worker_threads";
+import path = require("path");
+import { ASTProvider } from "../astProvider";
+import { IProgram } from "../../compiler/program";
 
 export type IElmReviewDiagnostic = IDiagnostic & {
   data: {
@@ -42,7 +44,7 @@ interface IElmReviewError {
 }
 
 interface IFileError {
-  path: string;
+  path: string | null;
   errors: IError[];
 }
 
@@ -86,22 +88,57 @@ export class ElmReviewDiagnostics {
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
   private settings: Settings;
   private connection: Connection;
+  private elmWorkspaces: IProgram[];
+  private workers: Map<
+    string,
+    { worker: Worker; errors: Map<string, IElmReviewDiagnostic[]> | undefined }
+  >;
 
   constructor() {
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<Connection>("Connection");
+    this.elmWorkspaces = container.resolve("ElmWorkspaces");
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
+    this.workers = new Map<
+      string,
+      {
+        worker: Worker;
+        errors: Map<string, IElmReviewDiagnostic[]> | undefined;
+      }
+    >();
+
+    const astProvider = container.resolve(ASTProvider);
+
+    astProvider.onTreeChange(({ sourceFile, newText }) => {
+      const filePath = URI.parse(sourceFile.uri);
+      const workspaceRootPath = this.elmWorkspaceMatcher
+        .getProgramFor(filePath)
+        .getRootPath();
+
+      const worker = this.workers.get(workspaceRootPath.toString());
+      if (worker) {
+        worker.worker.postMessage([
+          "fileUpdated",
+          { path: filePath.fsPath, source: newText },
+        ]);
+        worker.errors = undefined;
+      }
+    });
   }
 
-  public createDiagnostics = async (
-    sourceFile: ISourceFile,
-  ): Promise<Map<string, IDiagnostic[]>> => {
-    const filePath = URI.parse(sourceFile.uri);
-    const workspaceRootPath = this.elmWorkspaceMatcher
-      .getProgramFor(filePath)
-      .getRootPath();
-    return await this.checkForErrors(workspaceRootPath);
-  };
+  public async createDiagnostics(): Promise<Map<string, IDiagnostic[]>> {
+    const errorMaps = await Promise.all(
+      this.elmWorkspaces.map((program) =>
+        this.checkForErrors(program.getRootPath()),
+      ),
+    );
+
+    const errors = new Map<string, IElmReviewDiagnostic[]>();
+    errorMaps.forEach((errorMap) =>
+      errorMap.forEach((value, key) => errors.set(key, value)),
+    );
+    return errors;
+  }
 
   private hasType(error: any): error is IElmReviewError {
     return "type" in error;
@@ -111,7 +148,6 @@ export class ElmReviewDiagnostics {
     workspaceRootPath: URI,
   ): Promise<Map<string, IElmReviewDiagnostic[]>> {
     const settings = await this.settings.getClientSettings();
-    const fileErrors = new Map<string, IElmReviewDiagnostic[]>();
 
     if (
       settings.elmReviewDiagnostics === "off" ||
@@ -120,84 +156,140 @@ export class ElmReviewDiagnostics {
           .fsPath,
       )
     ) {
-      return fileErrors;
+      return new Map<string, IElmReviewDiagnostic[]>();
     }
 
-    const elmReviewCommand: string = settings.elmReviewPath;
-    const cmdArguments = ["--report", "json", "--namespace", "vscode"];
+    let worker = this.workers.get(workspaceRootPath.toString());
+
+    if (worker) {
+      if (worker.errors) {
+        this.connection.console.info("Returning existing elm-review errors");
+        return worker.errors;
+      }
+
+      this.connection.console.info("Running elm-review for existing worker");
+      worker.worker.postMessage(["requestReview", {}]);
+      return await this.waitForReviewResult(
+        worker.worker,
+        workspaceRootPath,
+        settings,
+      ).finally(() => {
+        this.connection.console.info("Finished elm-review for existing worker");
+      });
+    }
+
+    const cmdArguments = [
+      "--report",
+      "json",
+      "--namespace",
+      "vscode",
+      "--elmjson",
+      path.join(workspaceRootPath.fsPath, "elm.json"),
+    ];
     if (settings.elmPath.trim().length > 0) {
       cmdArguments.push("--compiler", settings.elmPath);
     }
     if (settings.elmFormatPath.trim().length > 0) {
       cmdArguments.push("--elm-format-path", settings.elmFormatPath);
     }
-    const options = {
-      cmdArguments: cmdArguments,
-      notFoundText:
-        "'elm-review' is not available. Install elm-review via 'npm install -g elm-review'.",
+
+    const elmReviewPath = path.join(__dirname, "elmReview.js");
+
+    worker = {
+      worker: new Worker(elmReviewPath, {
+        argv: cmdArguments,
+        stdout: true,
+        env: SHARE_ENV,
+      }),
+      errors: undefined,
     };
 
-    try {
-      // Do nothing on success, but return that there were no errors
-      utils.execCmdSync(
-        elmReviewCommand,
-        "elm-review",
-        options,
-        workspaceRootPath.fsPath,
-        this.connection,
-      );
-      return fileErrors;
-    } catch (error) {
-      if (typeof error === "string") {
-        return fileErrors;
-      } else {
-        const execaError = error as execa.ExecaReturnValue<string>;
-        let errorObject: unknown;
+    worker.worker.on("error", (err) => {
+      this.connection.console.error(err.message);
+    });
+
+    this.workers.set(workspaceRootPath.toString(), worker);
+
+    return await this.waitForReviewResult(
+      worker.worker,
+      workspaceRootPath,
+      settings,
+    );
+  }
+
+  private async waitForReviewResult(
+    worker: Worker,
+    workspaceRootPath: URI,
+    settings: IClientSettings,
+  ): Promise<Map<string, IElmReviewDiagnostic[]>> {
+    return new Promise((resolve) => {
+      const listener = (data: Buffer): void => {
         try {
-          errorObject = JSON.parse(execaError.stdout);
-        } catch (error) {
-          this.connection.console.warn(
-            "Received an invalid json, skipping error.",
+          worker.stdout.removeListener("data", listener);
+          resolve(
+            this.toReviewErrors(data.toString(), workspaceRootPath, settings),
           );
+        } catch (e: unknown) {
+          this.connection.console.warn(e as string);
         }
+      };
 
-        if (
-          errorObject &&
-          this.hasType(errorObject) &&
-          errorObject.type === "review-errors"
-        ) {
-          errorObject.errors.forEach(({ path, errors }: IFileError) => {
-            const uri = Utils.joinPath(workspaceRootPath, path).toString();
+      worker.stdout.on("data", listener);
+    });
+  }
 
-            fileErrors.set(
-              uri,
-              errors
-                .filter((error: IError) => !error.suppressed)
-                .map((error: IError) => ({
-                  message: error.message,
-                  source: "elm-review",
-                  range: toLsRange(error.region),
-                  severity:
-                    settings.elmReviewDiagnostics === "error"
-                      ? DiagnosticSeverity.Error
-                      : DiagnosticSeverity.Warning,
-                  tags: error.rule.startsWith("NoUnused")
-                    ? [DiagnosticTag.Unnecessary]
-                    : undefined,
-                  data: {
-                    uri,
-                    code: "elm_review",
-                    fixes: (error.fix || []).map((fix) => ({
-                      string: fix.string,
-                      range: toLsRange(fix.range),
-                    })),
-                  },
-                })),
-            );
-          });
-        }
-        return fileErrors;
-      }
+  private toReviewErrors(
+    json: string,
+    workspaceRootPath: URI,
+    settings: IClientSettings,
+  ): Map<string, IElmReviewDiagnostic[]> {
+    const fileErrors = new Map<string, IElmReviewDiagnostic[]>();
+    let errorObject: unknown;
+    try {
+      errorObject = JSON.parse(json);
+    } catch (error) {
+      this.connection.console.warn("Received an invalid json, skipping error.");
     }
+
+    if (
+      errorObject &&
+      this.hasType(errorObject) &&
+      errorObject.type === "review-errors"
+    ) {
+      errorObject.errors.forEach(({ path, errors }: IFileError) => {
+        if (!path) {
+          return;
+        }
+
+        const uri = Utils.joinPath(workspaceRootPath, path).toString();
+
+        fileErrors.set(
+          uri,
+          errors
+            .filter((error: IError) => !error.suppressed)
+            .map((error: IError) => ({
+              message: error.message,
+              source: "elm-review",
+              range: toLsRange(error.region),
+              severity:
+                settings.elmReviewDiagnostics === "error"
+                  ? DiagnosticSeverity.Error
+                  : DiagnosticSeverity.Warning,
+              tags: error.rule.startsWith("NoUnused")
+                ? [DiagnosticTag.Unnecessary]
+                : undefined,
+              data: {
+                uri,
+                code: "elm_review",
+                fixes: (error.fix || []).map((fix) => ({
+                  string: fix.string,
+                  range: toLsRange(fix.range),
+                })),
+              },
+            })),
+        );
+      });
+    }
+    return fileErrors;
   }
 }
