@@ -206,11 +206,15 @@ export class RefactorEditUtils {
     tree: Tree,
     moduleName: string,
     valueName?: string,
+    moduleAlias?: string,
   ): TextEdit | undefined {
     const lastImportNode =
       TreeUtils.getLastImportNode(tree) ??
       TreeUtils.getModuleNameCommentNode(tree) ??
       TreeUtils.getModuleNameNode(tree)?.parent;
+
+    const aliasText =
+      moduleAlias && moduleAlias !== moduleName ? ` as ${moduleAlias}` : "";
 
     return TextEdit.insert(
       Position.create(
@@ -220,8 +224,8 @@ export class RefactorEditUtils {
         0,
       ),
       valueName
-        ? `import ${moduleName} exposing (${valueName})\n`
-        : `import ${moduleName}\n`,
+        ? `import ${moduleName}${aliasText} exposing (${valueName})\n`
+        : `import ${moduleName}${aliasText}\n`,
     );
   }
 

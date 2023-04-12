@@ -1234,6 +1234,168 @@ test = div [] [ Module.{-caret-} ]
     );
   });
 
+  it("Non imported qualified modules with aliases should have value completions with auto imports", async () => {
+    const source = `
+--@ Module/Foo.elm
+module Module.Foo exposing (..)
+testFunc = ""
+
+type Msg = Msg1 | Msg2
+
+type alias Model = { field : String }
+
+--@ Test.elm
+module Test exposing (..)
+test = div [] [ Foo.{-caret-} ]
+`;
+
+    await testCompletions(
+      source,
+      [
+        {
+          label: "Model",
+          detail: "Auto import module 'Module.Foo' as 'Foo'",
+          additionalTextEdits: [
+            TextEdit.insert(
+              Position.create(1, 0),
+              "import Module.Foo as Foo\n",
+            ),
+          ],
+        },
+        {
+          label: "Msg",
+          detail: "Auto import module 'Module.Foo' as 'Foo'",
+          additionalTextEdits: [
+            TextEdit.insert(
+              Position.create(1, 0),
+              "import Module.Foo as Foo\n",
+            ),
+          ],
+        },
+        {
+          label: "Msg1",
+          detail: "Auto import module 'Module.Foo' as 'Foo'",
+          additionalTextEdits: [
+            TextEdit.insert(
+              Position.create(1, 0),
+              "import Module.Foo as Foo\n",
+            ),
+          ],
+        },
+        {
+          label: "Msg2",
+          detail: "Auto import module 'Module.Foo' as 'Foo'",
+          additionalTextEdits: [
+            TextEdit.insert(
+              Position.create(1, 0),
+              "import Module.Foo as Foo\n",
+            ),
+          ],
+        },
+        {
+          label: "testFunc",
+          detail: "Auto import module 'Module.Foo' as 'Foo'",
+          additionalTextEdits: [
+            TextEdit.insert(
+              Position.create(1, 0),
+              "import Module.Foo as Foo\n",
+            ),
+          ],
+        },
+      ],
+      "exactMatch",
+      "triggeredByDot",
+    );
+
+    const source2 = `
+--@ Module/Foo/Bar.elm
+module Module.Foo.Bar exposing (..)
+testFunc = ""
+
+type Msg = Msg1 | Msg2
+
+type alias Model = { field : String }
+
+--@ Test.elm
+module Test exposing (..)
+test = div [] [ Bar.{-caret-} ]
+`;
+
+    await testCompletions(
+      source2,
+      [
+        {
+          label: "Model",
+          detail: "Auto import module 'Module.Foo.Bar' as 'Bar'",
+          additionalTextEdits: [
+            TextEdit.insert(
+              Position.create(1, 0),
+              "import Module.Foo.Bar as Bar\n",
+            ),
+          ],
+        },
+        {
+          label: "Msg",
+          detail: "Auto import module 'Module.Foo.Bar' as 'Bar'",
+          additionalTextEdits: [
+            TextEdit.insert(
+              Position.create(1, 0),
+              "import Module.Foo.Bar as Bar\n",
+            ),
+          ],
+        },
+        {
+          label: "Msg1",
+          detail: "Auto import module 'Module.Foo.Bar' as 'Bar'",
+          additionalTextEdits: [
+            TextEdit.insert(
+              Position.create(1, 0),
+              "import Module.Foo.Bar as Bar\n",
+            ),
+          ],
+        },
+        {
+          label: "Msg2",
+          detail: "Auto import module 'Module.Foo.Bar' as 'Bar'",
+          additionalTextEdits: [
+            TextEdit.insert(
+              Position.create(1, 0),
+              "import Module.Foo.Bar as Bar\n",
+            ),
+          ],
+        },
+        {
+          label: "testFunc",
+          detail: "Auto import module 'Module.Foo.Bar' as 'Bar'",
+          additionalTextEdits: [
+            TextEdit.insert(
+              Position.create(1, 0),
+              "import Module.Foo.Bar as Bar\n",
+            ),
+          ],
+        },
+      ],
+      "exactMatch",
+      "triggeredByDot",
+    );
+
+    const source3 = `
+--@ Module/Foo/Bar.elm
+module Module.Foo.Bar exposing (..)
+testFunc = ""
+
+type Msg = Msg1 | Msg2
+
+type alias Model = { field : String }
+
+--@ Test.elm
+module Test exposing (..)
+test = div [] [ Foo.{-caret-} ]
+`;
+
+    await testCompletions(source3, [], "exactMatch", "triggeredByDot");
+  });
+
   it("Non imported qualified modules should have value completions with auto imports after module docs", async () => {
     const source = `
 --@ Module.elm
