@@ -34,12 +34,14 @@ CodeActionProvider.registerCodeAction({
 
       const valueToImport = getValueToImport(valueNode, possibleImport);
 
+      const importAlias = edit?.importAlias ? ` as "${edit.importAlias}"` : "";
+
       return CodeActionProvider.getCodeAction(
         params,
         valueToImport
-          ? `Import '${valueToImport}' from module "${possibleImport.module}"`
-          : `Import module "${possibleImport.module}"`,
-        edit ? [edit] : [],
+          ? `Import '${valueToImport}' from module "${possibleImport.module}"${importAlias}`
+          : `Import module "${possibleImport.module}"${importAlias}`,
+        edit ? [edit.edit] : [],
       );
     });
   },
@@ -63,7 +65,7 @@ CodeActionProvider.registerCodeAction({
             params.sourceFile,
             diagnostic.range,
             firstPossibleImport,
-          );
+          )?.edit;
 
           if (edit && !edits.find((e) => e.newText === edit.newText)) {
             edits.push(edit);
@@ -93,19 +95,30 @@ function getPossibleImports(
 
   // Add import quick fixes
   if (valueNode) {
-    return possibleImports.filter(
-      (exposed) =>
-        exposed.value === valueNode.text ||
-        ((valueNode.type === "upper_case_qid" ||
-          valueNode.type === "value_qid") &&
-          exposed.value ===
-            valueNode.namedChildren[valueNode.namedChildren.length - 1].text &&
-          exposed.module ===
-            valueNode.namedChildren
-              .slice(0, valueNode.namedChildren.length - 2) // Dots are also namedNodes
-              .map((a) => a.text)
-              .join("")),
-    );
+    return possibleImports.filter((exposed) => {
+      if (exposed.value === valueNode.text) {
+        return true;
+      }
+
+      if (
+        valueNode.type === "upper_case_qid" ||
+        valueNode.type === "value_qid"
+      ) {
+        const targetValue =
+          valueNode.namedChildren[valueNode.namedChildren.length - 1].text;
+
+        const targetModule = getTargetModule(valueNode);
+
+        return (
+          exposed.value === targetValue &&
+          (targetModule.includes(".")
+            ? exposed.module === targetModule
+            : exposed.module.endsWith(targetModule))
+        );
+      }
+
+      return false;
+    });
   }
 
   return [];
@@ -115,14 +128,24 @@ function getEditFromPossibleImport(
   sourceFile: ISourceFile,
   range: Range,
   possibleImport: IPossibleImport,
-): TextEdit | undefined {
+): { edit: TextEdit; importAlias: string | undefined } | undefined {
   const valueNode = TreeUtils.getNamedDescendantForRange(sourceFile, range);
 
-  return RefactorEditUtils.addImport(
+  const targetModule = getTargetModule(valueNode);
+  const edit = RefactorEditUtils.addImport(
     sourceFile.tree,
     possibleImport.module,
     getValueToImport(valueNode, possibleImport),
+    targetModule,
   );
+
+  if (edit) {
+    return {
+      edit,
+      importAlias:
+        possibleImport.module !== targetModule ? targetModule : undefined,
+    };
+  }
 }
 
 function getValueToImport(
@@ -132,4 +155,11 @@ function getValueToImport(
   return valueNode.type !== "upper_case_qid" && valueNode.type !== "value_qid"
     ? possibleImport.valueToImport ?? possibleImport.value
     : undefined;
+}
+
+function getTargetModule(valueNode: SyntaxNode): string {
+  return valueNode.namedChildren
+    .slice(0, valueNode.namedChildren.length - 2) // Dots are also namedNodes
+    .map((a) => a.text)
+    .join("");
 }
