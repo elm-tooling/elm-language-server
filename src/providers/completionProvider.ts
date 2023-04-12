@@ -1209,9 +1209,7 @@ export class CompletionProvider {
       return result;
     }
 
-    let alreadyImported = false;
-
-    const matchedSourceFiles: ISourceFile[] = [];
+    const matchedSourceFiles: [ISourceFile, boolean][] = [];
 
     const imports =
       sourceFile.symbolLinks
@@ -1226,32 +1224,57 @@ export class CompletionProvider {
             const moduleName =
               imp.node.childForFieldName("moduleName")?.text ?? "";
 
-            return program.getSourceFileOfImportableModule(
+            const importSourceFile = program.getSourceFileOfImportableModule(
               sourceFile,
               moduleName,
             );
+
+            if (importSourceFile) {
+              return [importSourceFile, true] as [ISourceFile, boolean];
+            }
+
+            return undefined;
           })
           .filter(Utils.notUndefined),
       );
-
-      alreadyImported = true;
     } else if (!checker.getAllImports(sourceFile).getModule(targetModule)) {
       // Try to find a module that may not be imported
-      const moduleSourceFile = program.getSourceFileOfImportableModule(
-        sourceFile,
-        targetModule,
-      );
+      // If it incudes a dot then we don't look for an alias, only an exact module
+      if (targetModule.includes(".")) {
+        const moduleSourceFile = program.getSourceFileOfImportableModule(
+          sourceFile,
+          targetModule,
+        );
 
-      if (moduleSourceFile) {
-        matchedSourceFiles.push(moduleSourceFile);
-        alreadyImported = false;
+        if (moduleSourceFile) {
+          matchedSourceFiles.push([moduleSourceFile, false]);
+        }
+      } else {
+        program
+          .getImportableModules(sourceFile)
+          .filter(
+            ({ moduleName }) =>
+              moduleName === targetModule ||
+              moduleName.endsWith(`.${targetModule}`),
+          )
+          .forEach((module) => {
+            const moduleSourceFile = program.getSourceFile(module.uri);
+
+            if (moduleSourceFile) {
+              matchedSourceFiles.push([moduleSourceFile, false]);
+            }
+          });
       }
     }
 
     // Get exposed values
     matchedSourceFiles
-      .flatMap(ImportUtils.getPossibleImportsOfTree.bind(this))
-      .forEach((value) => {
+      .flatMap(([importSourceFile, alreadyImported]) =>
+        ImportUtils.getPossibleImportsOfTree(importSourceFile).map(
+          (value) => [value, alreadyImported] as [IPossibleImport, boolean],
+        ),
+      )
+      .forEach(([value, alreadyImported]) => {
         const type = checker.findType(value.node);
         const typeString = checker.typeToString(type, sourceFile);
 
@@ -1264,11 +1287,18 @@ export class CompletionProvider {
 
         // Add the import text edit if not imported
         if (!alreadyImported) {
-          const importEdit = RefactorEditUtils.addImport(tree, targetModule);
+          const importEdit = RefactorEditUtils.addImport(
+            tree,
+            value.module,
+            undefined,
+            targetModule,
+          );
 
           if (importEdit) {
+            const aliasDetail =
+              targetModule !== value.module ? ` as '${targetModule}'` : "";
             additionalTextEdits = [importEdit];
-            detail = `Auto import module '${targetModule}'`;
+            detail = `Auto import module '${value.module}'${aliasDetail}`;
           }
         }
 
