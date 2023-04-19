@@ -11,13 +11,15 @@ import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { IClientSettings, Settings } from "../../util/settings";
 import { IDiagnostic } from "./diagnosticsProvider";
 import { Range } from "vscode-languageserver-textdocument";
-import { existsSync } from "fs";
-
-// import AppState from "elm-review/lib/state";
+import * as fs from "fs";
 import { SHARE_ENV, Worker } from "worker_threads";
-import path = require("path");
+import * as path from "path";
 import { ASTProvider } from "../astProvider";
 import { IProgram } from "../../compiler/program";
+import util from "util";
+import { TextDocumentEvents } from "../../util/textDocumentEvents";
+
+const readFile = util.promisify(fs.readFile);
 
 export type IElmReviewDiagnostic = IDiagnostic & {
   data: {
@@ -93,6 +95,7 @@ export class ElmReviewDiagnostics {
     string,
     { worker: Worker; errors: Map<string, IElmReviewDiagnostic[]> | undefined }
   >;
+  private pathsToElmReview: Map<string, Promise<string>>;
 
   constructor() {
     this.settings = container.resolve("Settings");
@@ -106,8 +109,11 @@ export class ElmReviewDiagnostics {
         errors: Map<string, IElmReviewDiagnostic[]> | undefined;
       }
     >();
+    this.pathsToElmReview = new Map<string, Promise<string>>();
 
     const astProvider = container.resolve(ASTProvider);
+    const documentEvents = container.resolve(TextDocumentEvents);
+    const connection = container.resolve<Connection>("Connection");
 
     astProvider.onTreeChange(({ sourceFile, newText }) => {
       const filePath = URI.parse(sourceFile.uri);
@@ -123,6 +129,64 @@ export class ElmReviewDiagnostics {
         ]);
         worker.errors = undefined;
       }
+    });
+
+    connection.workspace.onDidCreateFiles(({ files }) => {
+      files.forEach((file) => {
+        const filePath = URI.parse(file.uri);
+        const workspaceRootPath = this.elmWorkspaceMatcher
+          .getProgramFor(filePath)
+          .getRootPath();
+
+        const worker = this.workers.get(workspaceRootPath.toString());
+        if (worker) {
+          worker.worker.postMessage([
+            "fileCreated",
+            {
+              path: filePath.fsPath,
+              source:
+                documentEvents.get(file.uri)?.getText() ??
+                fs.readFileSync(filePath.fsPath, "utf8"),
+            },
+          ]);
+          worker.errors = undefined;
+        }
+      });
+    });
+
+    connection.workspace.onDidDeleteFiles(({ files }) => {
+      files.forEach((file) => {
+        const filePath = URI.parse(file.uri);
+        const workspaceRootPath = this.elmWorkspaceMatcher
+          .getProgramFor(filePath)
+          .getRootPath();
+
+        const worker = this.workers.get(workspaceRootPath.toString());
+        if (worker) {
+          worker.worker.postMessage([
+            "fileDeleted",
+            {
+              path: filePath.fsPath,
+            },
+          ]);
+        }
+      });
+    });
+
+    this.elmWorkspaces.forEach((program) => {
+      const rootPath = program.getRootPath();
+      this.pathsToElmReview.set(
+        rootPath.toString(),
+        this.getPathToElmReview(rootPath),
+      );
+    });
+
+    this.connection.onShutdown(async () => {
+      await Promise.all(
+        Array.from(this.workers.values()).map((worker) =>
+          worker.worker.terminate(),
+        ),
+      );
     });
   }
 
@@ -151,7 +215,7 @@ export class ElmReviewDiagnostics {
 
     if (
       settings.elmReviewDiagnostics === "off" ||
-      !existsSync(
+      !fs.existsSync(
         Utils.joinPath(workspaceRootPath, "review", "src", "ReviewConfig.elm")
           .fsPath,
       )
@@ -193,13 +257,16 @@ export class ElmReviewDiagnostics {
       cmdArguments.push("--elm-format-path", settings.elmFormatPath);
     }
 
-    const elmReviewPath = path.join(__dirname, "elmReview.js");
+    const elmReviewWorkerPath = path.join(__dirname, "elmReview.js");
 
     worker = {
-      worker: new Worker(elmReviewPath, {
+      worker: new Worker(elmReviewWorkerPath, {
         argv: cmdArguments,
         stdout: true,
         env: SHARE_ENV,
+        workerData: {
+          pathToElmReview: await this.getPathToElmReview(workspaceRootPath),
+        },
       }),
       errors: undefined,
     };
@@ -291,5 +358,47 @@ export class ElmReviewDiagnostics {
       });
     }
     return fileErrors;
+  }
+
+  private async getPathToElmReview(workspaceRootPath: URI): Promise<string> {
+    const cachedPath = this.pathsToElmReview.get(workspaceRootPath.toString());
+    if (cachedPath) {
+      return cachedPath;
+    }
+
+    let currentPath = workspaceRootPath.fsPath;
+    let previousPath: string | undefined;
+    while (currentPath !== previousPath) {
+      const elmReviewPath = path.join(currentPath, "node_modules/elm-review");
+      const elmReviewPathJsonPath = path.join(elmReviewPath, "package.json");
+
+      try {
+        type PackageJson = { version: string };
+        const elmReviewPackageJson = JSON.parse(
+          await readFile(elmReviewPathJsonPath, {
+            encoding: "utf-8",
+          }),
+        ) as PackageJson;
+
+        this.pathsToElmReview.set(
+          workspaceRootPath.toString(),
+          Promise.resolve(elmReviewPath),
+        );
+
+        this.connection.console.info(
+          `Running elm-review '${elmReviewPackageJson.version}' from '${elmReviewPath}'`,
+        );
+
+        return elmReviewPath;
+      } catch (e) {
+        previousPath = currentPath;
+        currentPath = path.resolve(currentPath, "..");
+      }
+    }
+
+    this.connection.console.error(
+      "Could not find a local version of elm-review, using global version.",
+    );
+    return "elm-review";
   }
 }
