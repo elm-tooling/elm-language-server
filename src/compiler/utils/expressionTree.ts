@@ -433,6 +433,7 @@ export function mapSyntaxNodeToExpression(
         unionVariant.name = node.childForFieldName("name")?.text ?? "";
         unionVariant.params = node.children
           .slice(1)
+          .filter((n) => !n.type.includes("comment"))
           .map(mapSyntaxNodeToExpression)
           .filter(Utils.notUndefined);
         return unionVariant;

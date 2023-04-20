@@ -1587,4 +1587,27 @@ test =
       [],
     );
   });
+
+  // https://github.com/elm-tooling/elm-language-server/issues/945
+  it("should not have an error when there is a comment in between type paramaters", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type MyType
+    = MyType
+        -- First comment
+        -- Second comment
+        -- Third comment
+        Int
+
+
+someFunction : MyType -> Bool
+someFunction mytype =
+    case mytype of
+        MyType _ ->
+            True
+`;
+    await testTypeInference(basicsSources + source, [], true);
+  });
 });

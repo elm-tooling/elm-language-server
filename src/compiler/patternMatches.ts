@@ -52,7 +52,9 @@ type CanCtor = {
 function nodeToCanCtor(node: SyntaxNode): CanCtor {
   return {
     name: node.firstNamedChild!.text,
-    arity: node.namedChildren.slice(1).length,
+    arity: node.namedChildren
+      .slice(1)
+      .filter((n) => !n.type.includes("comment")).length,
   };
 }
 
