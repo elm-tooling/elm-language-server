@@ -86,49 +86,36 @@ function toLsRange({ start, end }: IRegion): Range {
   };
 }
 
+type WorkerWrapper = {
+  worker: Worker;
+  errors: Map<string, IElmReviewDiagnostic[]> | undefined;
+  pendingReview: Promise<Map<string, IElmReviewDiagnostic[]>> | undefined;
+};
+
 export class ElmReviewDiagnostics {
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
   private settings: Settings;
   private connection: Connection;
+  private documentEvents: TextDocumentEvents;
   private elmWorkspaces: IProgram[];
-  private workers: Map<
-    string,
-    { worker: Worker; errors: Map<string, IElmReviewDiagnostic[]> | undefined }
-  >;
+  private workers: Map<string, WorkerWrapper>;
   private pathsToElmReview: Map<string, Promise<string>>;
+  private updatedFiles = new Set<string>();
 
   constructor() {
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<Connection>("Connection");
     this.elmWorkspaces = container.resolve("ElmWorkspaces");
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
-    this.workers = new Map<
-      string,
-      {
-        worker: Worker;
-        errors: Map<string, IElmReviewDiagnostic[]> | undefined;
-      }
-    >();
+    this.workers = new Map<string, WorkerWrapper>();
     this.pathsToElmReview = new Map<string, Promise<string>>();
 
+    this.documentEvents = container.resolve(TextDocumentEvents);
     const astProvider = container.resolve(ASTProvider);
-    const documentEvents = container.resolve(TextDocumentEvents);
     const connection = container.resolve<Connection>("Connection");
 
-    astProvider.onTreeChange(({ sourceFile, newText }) => {
-      const filePath = URI.parse(sourceFile.uri);
-      const workspaceRootPath = this.elmWorkspaceMatcher
-        .getProgramFor(filePath)
-        .getRootPath();
-
-      const worker = this.workers.get(workspaceRootPath.toString());
-      if (worker) {
-        worker.worker.postMessage([
-          "fileUpdated",
-          { path: filePath.fsPath, source: newText },
-        ]);
-        worker.errors = undefined;
-      }
+    astProvider.onTreeChange(({ sourceFile }) => {
+      this.updatedFiles.add(sourceFile.uri);
     });
 
     connection.workspace.onDidCreateFiles(({ files }) => {
@@ -145,7 +132,7 @@ export class ElmReviewDiagnostics {
             {
               path: filePath.fsPath,
               source:
-                documentEvents.get(file.uri)?.getText() ??
+                this.documentEvents.get(file.uri)?.getText() ??
                 fs.readFileSync(filePath.fsPath, "utf8"),
             },
           ]);
@@ -190,7 +177,32 @@ export class ElmReviewDiagnostics {
     });
   }
 
+  public startDiagnostics(): void {
+    this.updatedFiles.forEach((uri) => {
+      const filePath = URI.parse(uri);
+      const workspaceRootPath = this.elmWorkspaceMatcher
+        .getProgramFor(filePath)
+        .getRootPath();
+
+      const worker = this.workers.get(workspaceRootPath.toString());
+      if (worker) {
+        const newText =
+          this.documentEvents.get(uri)?.getText() ??
+          fs.readFileSync(filePath.fsPath, "utf8");
+
+        worker.worker.postMessage([
+          "fileUpdated",
+          { path: filePath.fsPath, source: newText },
+        ]);
+        worker.errors = undefined;
+      }
+    });
+    this.updatedFiles.clear();
+  }
+
   public async createDiagnostics(): Promise<Map<string, IDiagnostic[]>> {
+    // This should be called earlier, but we need to here just in case
+    this.startDiagnostics();
     const errorMaps = await Promise.all(
       this.elmWorkspaces.map((program) =>
         this.checkForErrors(program.getRootPath()),
@@ -231,10 +243,14 @@ export class ElmReviewDiagnostics {
         return worker.errors;
       }
 
+      if (worker.pendingReview) {
+        await worker.pendingReview;
+      }
+
       this.connection.console.info("Running elm-review for existing worker");
       worker.worker.postMessage(["requestReview", {}]);
       return await this.waitForReviewResult(
-        worker.worker,
+        worker,
         workspaceRootPath,
         settings,
       ).finally(() => {
@@ -269,6 +285,7 @@ export class ElmReviewDiagnostics {
         },
       }),
       errors: undefined,
+      pendingReview: undefined,
     };
 
     worker.worker.on("error", (err) => {
@@ -277,32 +294,32 @@ export class ElmReviewDiagnostics {
 
     this.workers.set(workspaceRootPath.toString(), worker);
 
-    return await this.waitForReviewResult(
-      worker.worker,
-      workspaceRootPath,
-      settings,
-    );
+    return await this.waitForReviewResult(worker, workspaceRootPath, settings);
   }
 
   private async waitForReviewResult(
-    worker: Worker,
+    worker: WorkerWrapper,
     workspaceRootPath: URI,
     settings: IClientSettings,
   ): Promise<Map<string, IElmReviewDiagnostic[]>> {
-    return new Promise((resolve) => {
+    worker.pendingReview = new Promise((resolve) => {
       const listener = (data: Buffer): void => {
         try {
-          worker.stdout.removeListener("data", listener);
           resolve(
             this.toReviewErrors(data.toString(), workspaceRootPath, settings),
           );
+          worker.worker.stdout.removeListener("data", listener);
         } catch (e: unknown) {
           this.connection.console.warn(e as string);
         }
       };
 
-      worker.stdout.on("data", listener);
+      worker.worker.stdout.on("data", listener);
     });
+
+    worker.errors = await worker.pendingReview;
+
+    return worker.errors;
   }
 
   private toReviewErrors(
@@ -368,8 +385,34 @@ export class ElmReviewDiagnostics {
 
     let currentPath = workspaceRootPath.fsPath;
     let previousPath: string | undefined;
-    while (currentPath !== previousPath) {
-      const elmReviewPath = path.join(currentPath, "node_modules/elm-review");
+    let checkingEnv = false;
+    const envPaths = process.env[pathKey()]?.split(path.delimiter) || [];
+
+    function getNextPathToCheck(): string | undefined {
+      if (checkingEnv) {
+        return envPaths.shift();
+      }
+
+      if (!previousPath) {
+        previousPath = currentPath;
+        return currentPath;
+      }
+
+      previousPath = currentPath;
+      currentPath = path.resolve(currentPath, "..");
+
+      if (currentPath !== previousPath) {
+        return currentPath;
+      }
+
+      checkingEnv = true;
+      return envPaths.shift();
+    }
+
+    let pathToCheck = getNextPathToCheck();
+
+    while (pathToCheck) {
+      const elmReviewPath = path.join(pathToCheck, "node_modules/elm-review");
       const elmReviewPathJsonPath = path.join(elmReviewPath, "package.json");
 
       try {
@@ -391,8 +434,7 @@ export class ElmReviewDiagnostics {
 
         return elmReviewPath;
       } catch (e) {
-        previousPath = currentPath;
-        currentPath = path.resolve(currentPath, "..");
+        pathToCheck = getNextPathToCheck();
       }
     }
 
@@ -401,4 +443,19 @@ export class ElmReviewDiagnostics {
     );
     return "elm-review";
   }
+}
+
+function pathKey(): string {
+  const env = process.env;
+  const platform = process.platform;
+
+  if (platform !== "win32") {
+    return "PATH";
+  }
+
+  return (
+    Object.keys(env)
+      .reverse()
+      .find((key) => key.toUpperCase() === "PATH") || "Path"
+  );
 }

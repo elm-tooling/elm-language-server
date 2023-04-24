@@ -15,6 +15,9 @@ export default async function run(): Promise<void> {
 
   const options = AppState.getOptions();
 
+  // @ts-expect-error Custom flag for cross-spawn
+  process.chdir.disabled = true;
+
   const { elmModulePath, reviewElmJson, appHash } = await Builder.build(
     options,
   );

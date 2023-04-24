@@ -284,6 +284,8 @@ export class DiagnosticsProvider {
 
   private triggerDiagnostics(delay = 200): void {
     const sendPendingDiagnostics = (): void => {
+      this.elmReviewDiagnostics.startDiagnostics();
+
       const orderedFiles = this.pendingDiagnostics.getOrderedFiles();
 
       if (this.pendingRequest) {
