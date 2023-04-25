@@ -1,17 +1,27 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { workerData, parentPort } from "worker_threads";
 import path from "path";
+import { ElmReviewFile } from "elm-review/lib/state";
+import { ElmReviewApp } from "elm-review/lib/runner";
 
-export default async function run(): Promise<void> {
+async function run(): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   const pathToElmReview = workerData.pathToElmReview as string;
 
-  const Builder = await import(pathToElmReview + "/lib/build");
-  const Runner = await import(pathToElmReview + "/lib/runner");
-  const AppState = await import(pathToElmReview + "/lib/state");
-  const OsHelpers = await import(pathToElmReview + "/lib/os-helpers");
-  const { startReview } = await import(pathToElmReview + "/lib/run-review");
+  const Builder = (await import(
+    pathToElmReview + "/lib/build"
+  )) as typeof import("elm-review/lib/build");
+  const Runner = (await import(
+    pathToElmReview + "/lib/runner"
+  )) as typeof import("elm-review/lib/runner");
+  const AppState = (await import(
+    pathToElmReview + "/lib/state"
+  )) as typeof import("elm-review/lib/state");
+  const OsHelpers = (await import(
+    pathToElmReview + "/lib/os-helpers"
+  )) as typeof import("elm-review/lib/os-helpers");
+  const { startReview } = (await import(
+    pathToElmReview + "/lib/run-review"
+  )) as typeof import("elm-review/lib/run-review");
 
   const options = AppState.getOptions();
 
@@ -53,7 +63,8 @@ export default async function run(): Promise<void> {
         // NOTE: Mutates the file cache
         elmFile.source = updatedFile.source;
         elmFile.ast = null;
-        app.ports.collectFile.send(elmFile);
+
+        void collectFile(app, elmFile);
       }
     }
 
@@ -87,7 +98,7 @@ export default async function run(): Promise<void> {
         AppState.filesWereUpdated([elmFile]);
       }
 
-      app.ports.collectFile.send(elmFile);
+      void collectFile(app, elmFile);
     }
 
     if (message === "fileDeleted") {
@@ -100,11 +111,48 @@ export default async function run(): Promise<void> {
     }
 
     if (message === "requestReview") {
-      Runner.requestReview(options, app);
+      void waitForPendingCollectFiles(() => Runner.requestReview(options, app));
     }
   });
 
   startReview(options, app);
+}
+
+const pendingCollectFiles = new Map<string, Promise<unknown>>();
+async function collectFile(
+  app: ElmReviewApp,
+  elmFile: ElmReviewFile,
+): Promise<void> {
+  const existing = pendingCollectFiles.get(elmFile.path);
+
+  if (existing) {
+    await existing;
+  }
+
+  const promise = new Promise((resolve) => {
+    const acknowledgeFileReceipt = (file: ElmReviewFile): void => {
+      if (file.path === elmFile.path) {
+        app.ports.acknowledgeFileReceipt.unsubscribe(acknowledgeFileReceipt);
+        resolve(null);
+      }
+    };
+
+    app.ports.acknowledgeFileReceipt.subscribe(acknowledgeFileReceipt);
+    app.ports.collectFile.send(elmFile);
+  });
+
+  pendingCollectFiles.set(elmFile.path, promise);
+  await promise;
+  pendingCollectFiles.delete(elmFile.path);
+}
+
+async function waitForPendingCollectFiles(
+  requestor: () => void,
+): Promise<void> {
+  while (pendingCollectFiles.size > 0) {
+    await Promise.all(pendingCollectFiles.values());
+  }
+  requestor();
 }
 
 void run();

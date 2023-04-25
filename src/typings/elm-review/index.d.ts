@@ -29,6 +29,13 @@ declare module "elm-review/lib/runner" {
       collectFile: {
         send(file: ElmReviewFile): void;
       };
+      removeFile: {
+        send(file: string): void;
+      };
+      acknowledgeFileReceipt: {
+        subscribe(callback: (file: ElmReviewFile) => void): void;
+        unsubscribe(callback: (file: ElmReviewFile) => void): void;
+      };
     };
   };
 

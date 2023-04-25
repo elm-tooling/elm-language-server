@@ -405,7 +405,6 @@ export class DiagnosticsProvider {
 
             next.immediate(() => {
               this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
-              this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
               this.updateDiagnostics(
                 uri,
                 DiagnosticKind.Syntactic,
@@ -436,6 +435,10 @@ export class DiagnosticsProvider {
 
                 if (!this.pendingDiagnostics.has(uri)) {
                   this.pendingCompilerDiagnostics.delete(uri);
+                }
+
+                if (this.hasSyntacticOrSemanticErrors()) {
+                  this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
                 }
 
                 if (this.pendingCompilerDiagnostics.size === 0) {
@@ -522,6 +525,12 @@ export class DiagnosticsProvider {
 
   private async triggerElmReviewDiagnostics(): Promise<void> {
     // Get elm-review diagnostics if there are no errors
+    if (!this.hasSyntacticOrSemanticErrors()) {
+      await this.getElmReviewDiagnostics();
+    }
+  }
+
+  private hasSyntacticOrSemanticErrors(): boolean {
     let errorCount = 0;
     this.currentDiagnostics.forEach((diagnostics) => {
       errorCount += diagnostics
@@ -529,10 +538,7 @@ export class DiagnosticsProvider {
         .concat(diagnostics.getForKind(DiagnosticKind.Semantic))
         .filter((d) => d.severity === DiagnosticSeverity.Error).length;
     });
-
-    if (errorCount === 0) {
-      await this.getElmReviewDiagnostics();
-    }
+    return errorCount > 0;
   }
 
   private async getElmReviewDiagnostics(): Promise<void> {
