@@ -315,6 +315,7 @@ export class DiagnosticsProvider {
           () => {
             if (request === this.pendingRequest) {
               this.pendingRequest = undefined;
+              this.pendingCompilerDiagnostics.clear();
             }
           },
         ));
