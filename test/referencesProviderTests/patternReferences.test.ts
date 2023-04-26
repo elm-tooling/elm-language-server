@@ -1,6 +1,6 @@
 import { ReferencesProviderTestBase } from "./referencesProviderTestBase";
 
-describe("functionReferences", () => {
+describe("patternReferences", () => {
   const testBase = new ReferencesProviderTestBase();
 
   it(`let destructured patterns should have references`, async () => {
