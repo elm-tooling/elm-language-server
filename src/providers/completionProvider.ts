@@ -1081,7 +1081,7 @@ export class CompletionProvider {
               ...allImportedValues.getVar(possibleImport.value),
               ...allImportedValues.getType(possibleImport.value),
               ...allImportedValues.getConstructor(possibleImport.value),
-            ].filter((imp) => imp.fromModule.name === possibleImport.module)[0],
+            ].some((imp) => imp.fromModule.name === possibleImport.module),
         )
         .sort((a, b) => {
           const aValue = a.value.toLowerCase();
@@ -1164,7 +1164,10 @@ export class CompletionProvider {
         additionalTextEdits: importTextEdit ? [importTextEdit] : undefined,
         labelDescription: possibleImport.module,
       };
-      if (possibleImport.type === "Function") {
+      if (
+        possibleImport.type === "Function" ||
+        possibleImport.type === "Port"
+      ) {
         result.push(this.createFunctionCompletion(completionOptions));
       } else if (possibleImport.type === "TypeAlias") {
         result.push(this.createTypeAliasCompletion(completionOptions));
@@ -1313,6 +1316,7 @@ export class CompletionProvider {
 
         switch (value.type) {
           case "Function":
+          case "Port":
             result.push(this.createFunctionCompletion(completionOptions));
             break;
           case "Type":

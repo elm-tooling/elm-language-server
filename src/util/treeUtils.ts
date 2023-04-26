@@ -337,7 +337,7 @@ export class TreeUtils {
       node.parent.parent.parent.previousNamedSibling.lastNamedChild
     ) {
       const functionParameterNodes = TreeUtils.findAllNamedChildrenOfType(
-        ["pattern", "lower_pattern"],
+        ["pattern", "lower_pattern", "record_pattern"],
         node.parent.parent,
       );
       if (functionParameterNodes) {

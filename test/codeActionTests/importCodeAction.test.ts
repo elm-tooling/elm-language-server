@@ -112,4 +112,20 @@ bar = ""
 `;
     await testCodeAction(source, [{ title: `Add all missing imports` }]);
   });
+
+  test("add import of port", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func = foo
+      --^
+
+--@ App.elm
+port module App exposing (foo)
+
+port foo : String -> Cmd msg
+`;
+    await testCodeAction(source, [{ title: `Import 'foo' from module "App"` }]);
+  });
 });
