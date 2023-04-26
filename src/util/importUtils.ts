@@ -65,9 +65,9 @@ export class ImportUtils {
   public static getPossibleImportsOfTree(tree: ISourceFile): IPossibleImport[] {
     const exposedValues: IPossibleImport[] = [];
 
-    tree.exposing?.forEach((exposed) => {
-      const module = tree.moduleName;
-      if (module) {
+    const module = tree.moduleName;
+    if (module) {
+      tree.exposing?.forEach((exposed) => {
         exposedValues.push({
           module,
           value: exposed.name,
@@ -92,8 +92,8 @@ export class ImportUtils {
             }
           }
         });
-      }
-    });
+      });
+    }
 
     return exposedValues;
   }

@@ -694,13 +694,17 @@ testFunc msg =
   it("There should be auto import completions from other modules", async () => {
     const source = `
 --@ OtherModule.elm
-module OtherModule exposing (testFunction, TestType)
+module OtherModule exposing (testFunction, TestType, testInPort, testOutPort)
 
 testFunction : String
 testFunction =
   ""
 
 type alias TestType = {prop : String}
+
+port testOutPort : String -> Cmd msg
+
+port testInPort : (String -> msg) -> Sub msg
 
 --@ Test.elm
 module Test exposing (..)
@@ -718,6 +722,27 @@ testFunc =
           TextEdit.insert(
             Position.create(1, 0),
             "import OtherModule exposing (testFunction)\n",
+          ),
+        ],
+      },
+
+      {
+        label: "testInPort",
+        detail: "Auto import from module 'OtherModule'",
+        additionalTextEdits: [
+          TextEdit.insert(
+            Position.create(1, 0),
+            "import OtherModule exposing (testInPort)\n",
+          ),
+        ],
+      },
+      {
+        label: "testOutPort",
+        detail: "Auto import from module 'OtherModule'",
+        additionalTextEdits: [
+          TextEdit.insert(
+            Position.create(1, 0),
+            "import OtherModule exposing (testOutPort)\n",
           ),
         ],
       },
@@ -1177,12 +1202,14 @@ test = Module.{-caret-}
   it("Non imported qualified modules should have value completions with auto imports", async () => {
     const source = `
 --@ Module.elm
-module Module exposing (..)
+port module Module exposing (..)
 testFunc = ""
 
 type Msg = Msg1 | Msg2
 
 type alias Model = { field : String }
+
+port testPort : String -> Cmd msg
 
 --@ Test.elm
 module Test exposing (..)
@@ -1223,6 +1250,13 @@ test = div [] [ Module.{-caret-} ]
         },
         {
           label: "testFunc",
+          detail: "Auto import module 'Module'",
+          additionalTextEdits: [
+            TextEdit.insert(Position.create(1, 0), "import Module\n"),
+          ],
+        },
+        {
+          label: "testPort",
           detail: "Auto import module 'Module'",
           additionalTextEdits: [
             TextEdit.insert(Position.create(1, 0), "import Module\n"),
@@ -1988,5 +2022,28 @@ view model =
       ["model.prop1", "model.prop2"],
       "partialMatch",
     );
+  });
+
+  it("Completions for record fields after a record pattern", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Foo = { prop : String }
+
+type alias Model =
+  { prop1: String
+  , prop2: Int
+  }
+
+view : Foo -> Model -> String
+view { prop } model =
+    let
+        x = model.p{-caret-}
+    in
+    ""
+`;
+
+    await testCompletions(source, ["prop1", "prop2"], "exactMatch");
   });
 });
