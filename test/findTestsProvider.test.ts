@@ -78,7 +78,7 @@ module Fuzz exposing (int)
 
 type Fuzzer a = F a
 
-int Fuzzer Int
+int : Fuzzer Int
 int = F 13
 `;
 
@@ -121,7 +121,7 @@ import Test exposing (..)
 
 topSuite : Test
 topSuite =
-    describe "top suite" [ test "a test" <| \_ -> Expect.equal False False ]
+    describe "top suite" [ test "a test" <| \\_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, [
@@ -147,9 +147,9 @@ import Test exposing (..)
 topSuite : Test
 topSuite =
     describe "top suite"
-    [ test "first" <| \_ -> Expect.equal True True
+    [ test "first" <| \\_ -> Expect.equal True True
     , describe "nested"
-        [ test "second" <| \_ -> Expect.equal False False
+        [ test "second" <| \\_ -> Expect.equal False False
         ]
     ]
 `;
@@ -193,7 +193,7 @@ import Test exposing (..)
 
 someThingElse = True
 
-topSuite = describe "top suite" [ test "a test" <| \_ -> Expect.equal False False ]
+topSuite = describe "top suite" [ test "a test" <| \\_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, [
@@ -225,7 +225,7 @@ topSuite =
         foo =
             doit bar
     in
-    describe "top suite" [ test "a test" <| \_ -> Expect.equal False False ]
+    describe "top suite" [ test "a test" <| \\_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, [
@@ -254,7 +254,7 @@ topSuite =
             a =
                 doit 13
           in
-          describe "deeper suite" [ test "a test" <| \_ -> Expect.equal False False ]
+          describe "deeper suite" [ test "a test" <| \\_ -> Expect.equal False False ]
         ]
 `;
 
@@ -284,7 +284,7 @@ module MyModule exposing (..)
 
 import Test
 
-topSuite = Test.describe "top suite" [ Test.test "a test" <| \_ -> Expect.equal False False ]
+topSuite = Test.describe "top suite" [ Test.test "a test" <| \\_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, [
@@ -306,7 +306,7 @@ module MyModule exposing (..)
 
 import Test as T
 
-topSuite = T.describe "top suite" [ T.test "a test" <| \_ -> Expect.equal False False ]
+topSuite = T.describe "top suite" [ T.test "a test" <| \\_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, [
@@ -328,7 +328,7 @@ module MyModule exposing (..)
 
 import Test exposing (..)
 
-topSuite = describe ("top suite" ++ "13") [ test "a test" <| \_ -> Expect.equal False False ]
+topSuite = describe ("top suite" ++ "13") [ test "a test" <| \\_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, []);
@@ -343,7 +343,7 @@ import Expect
 import Test exposing (..)
 import Fuzz exposing (..)
 
-top = fuzz int "top fuzz" <| \_ -> Expect.equal True True
+top = fuzz int "top fuzz" <| \\_ -> Expect.equal True True
 `;
 
     await testFindTests(source, [
@@ -368,7 +368,7 @@ topSuite = describe """top suite
 over
 "multiple"
 lines
-""" [ test "a test" <| \_ -> Expect.equal False False ]
+""" [ test "a test" <| \\_ -> Expect.equal False False ]
 `;
 
     await testFindTests(source, [
