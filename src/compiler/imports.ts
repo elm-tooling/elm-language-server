@@ -67,6 +67,10 @@ export class Imports {
     return this.modules.get(name);
   }
 
+  public getModules(): IImport[] {
+    return [...this.modules.values()];
+  }
+
   public forEach(callbackfn: (value: IImport) => void): void {
     this.vars.forEach(callbackfn);
     this.types.forEach(callbackfn);

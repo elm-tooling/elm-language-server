@@ -72,6 +72,10 @@ export interface TypeChecker {
     sourceFile: ISourceFile,
   ) => DefinitionResult;
   getAllImports: (sourceFile: ISourceFile) => Imports;
+  getImportingModules: (
+    sourceFile: ISourceFile,
+    directImportOnly?: boolean,
+  ) => ISourceFile[];
   getQualifierForName: (
     sourceFile: ISourceFile,
     module: string,
@@ -101,6 +105,7 @@ export interface TypeChecker {
 export function createTypeChecker(program: IProgram): TypeChecker {
   const forest = program.getForest();
   const imports = new Map<string, Imports>();
+  let importModuleGraph: Map<string, ISourceFile[]>;
 
   const diagnostics = new DiagnosticsCollection();
   const suggestionDiagnostics = new DiagnosticsCollection();
@@ -119,6 +124,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     findDefinition,
     findDefinitionShallow,
     getAllImports,
+    getImportingModules,
     getQualifierForName,
     typeToString,
     getDiagnostics,
@@ -336,6 +342,49 @@ export function createTypeChecker(program: IProgram): TypeChecker {
 
     imports.set(sourceFile.uri, allImports);
     return allImports;
+  }
+
+  function getImportingModules(
+    sourceFile: ISourceFile,
+    directImportOnly?: boolean,
+  ): ISourceFile[] {
+    if (!importModuleGraph) {
+      importModuleGraph = new Map<string, ISourceFile[]>();
+
+      forest.treeMap.forEach((sourceFile) => {
+        if (sourceFile.writeable) {
+          getAllImports(sourceFile)
+            .getModules()
+            .forEach((module) => {
+              const existingGraph = importModuleGraph.get(
+                module.fromModule.uri,
+              );
+
+              if (existingGraph) {
+                existingGraph.push(sourceFile);
+              } else {
+                importModuleGraph.set(module.fromModule.uri, [sourceFile]);
+              }
+            });
+        }
+      });
+    }
+
+    if (directImportOnly) {
+      return importModuleGraph.get(sourceFile.uri) ?? [];
+    }
+
+    const getAllDescendantImports = (source: ISourceFile): ISourceFile[] => {
+      const imports = importModuleGraph.get(source.uri) ?? [];
+
+      imports.slice(0).forEach((directImport) => {
+        imports.push(...getAllDescendantImports(directImport));
+      });
+
+      return imports;
+    };
+
+    return getAllDescendantImports(sourceFile);
   }
 
   function findImport(

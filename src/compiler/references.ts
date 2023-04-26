@@ -17,15 +17,21 @@ export class References {
     const checker = program.getTypeChecker();
 
     if (definitionNode) {
-      const refSourceTree = forest.getByUri(definitionNode.node.tree.uri);
+      const definitionSourceFile = forest.getByUri(
+        definitionNode.node.tree.uri,
+      );
 
-      if (refSourceTree) {
+      if (definitionSourceFile) {
         const imports: { [uri: string]: Imports } = {};
         forest.treeMap.forEach((sourceFile) => {
-          imports[sourceFile.uri] = checker.getAllImports(sourceFile);
+          if (sourceFile.writeable) {
+            imports[sourceFile.uri] = checker.getAllImports(sourceFile);
+          }
         });
 
-        const moduleNameNode = TreeUtils.getModuleNameNode(refSourceTree.tree);
+        const moduleNameNode = TreeUtils.getModuleNameNode(
+          definitionSourceFile.tree,
+        );
         switch (definitionNode.type) {
           case "Function":
             {
@@ -34,7 +40,7 @@ export class References {
                   definitionNode.node.parent,
                 )?.childForFieldName("name");
 
-                if (annotationNameNode && refSourceTree.writeable) {
+                if (annotationNameNode && definitionSourceFile.writeable) {
                   references.push({
                     node: annotationNameNode,
                     uri: definitionNode.node.tree.uri,
@@ -51,7 +57,7 @@ export class References {
                   : undefined);
               if (functionNameNode) {
                 const functionName = functionNameNode.text;
-                if (refSourceTree.writeable) {
+                if (definitionSourceFile.writeable) {
                   references.push({
                     node: functionNameNode,
                     uri: definitionNode.node.tree.uri,
@@ -65,11 +71,11 @@ export class References {
                 const localFunctions = letParent
                   ? this.findFunctionCalls(letParent, functionName)
                   : this.findFunctionCalls(
-                      refSourceTree.tree.rootNode,
+                      definitionSourceFile.tree.rootNode,
                       functionName,
                     );
 
-                if (localFunctions && refSourceTree.writeable) {
+                if (localFunctions && definitionSourceFile.writeable) {
                   references.push(
                     ...localFunctions.map((node) => {
                       return { node, uri: definitionNode.node.tree.uri };
@@ -78,12 +84,12 @@ export class References {
                 }
 
                 const isExposedFunction = TreeUtils.isExposedFunctionOrPort(
-                  refSourceTree.tree,
+                  definitionSourceFile.tree,
                   functionName,
                 );
                 if (isExposedFunction && !letParent) {
                   const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
-                    refSourceTree.tree,
+                    definitionSourceFile.tree,
                   );
                   if (moduleDeclarationNode) {
                     const exposedNode = TreeUtils.findExposedFunctionNode(
@@ -91,7 +97,7 @@ export class References {
                       functionName,
                     );
 
-                    if (exposedNode && refSourceTree.writeable) {
+                    if (exposedNode && definitionSourceFile.writeable) {
                       references.push({
                         node: exposedNode,
                         uri: definitionNode.node.tree.uri,
@@ -181,7 +187,7 @@ export class References {
                 );
               if (portNameNode) {
                 const portName = portNameNode.text;
-                if (refSourceTree.writeable) {
+                if (definitionSourceFile.writeable) {
                   references.push({
                     node: portNameNode,
                     uri: definitionNode.node.tree.uri,
@@ -189,11 +195,11 @@ export class References {
                 }
 
                 const localCallsToPort = this.findFunctionCalls(
-                  refSourceTree.tree.rootNode,
+                  definitionSourceFile.tree.rootNode,
                   portName,
                 );
 
-                if (localCallsToPort && refSourceTree.writeable) {
+                if (localCallsToPort && definitionSourceFile.writeable) {
                   references.push(
                     ...localCallsToPort.map((node) => {
                       return { node, uri: definitionNode.node.tree.uri };
@@ -202,12 +208,12 @@ export class References {
                 }
 
                 const isExposedPort = TreeUtils.isExposedFunctionOrPort(
-                  refSourceTree.tree,
+                  definitionSourceFile.tree,
                   portName,
                 );
                 if (isExposedPort) {
                   const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
-                    refSourceTree.tree,
+                    definitionSourceFile.tree,
                   );
                   if (moduleDeclarationNode) {
                     const exposedNode = TreeUtils.findExposedFunctionNode(
@@ -215,7 +221,7 @@ export class References {
                       portName,
                     );
 
-                    if (exposedNode && refSourceTree.writeable) {
+                    if (exposedNode && definitionSourceFile.writeable) {
                       references.push({
                         node: exposedNode,
                         uri: definitionNode.node.tree.uri,
@@ -307,7 +313,7 @@ export class References {
 
               if (typeOrTypeAliasNameNode) {
                 const typeOrTypeAliasName = typeOrTypeAliasNameNode.text;
-                if (refSourceTree.writeable) {
+                if (definitionSourceFile.writeable) {
                   references.push({
                     node: typeOrTypeAliasNameNode,
                     uri: definitionNode.node.tree.uri,
@@ -315,10 +321,10 @@ export class References {
                 }
 
                 const localFunctions = TreeUtils.findTypeOrTypeAliasCalls(
-                  refSourceTree.tree,
+                  definitionSourceFile.tree,
                   typeOrTypeAliasName,
                 );
-                if (localFunctions && refSourceTree.writeable) {
+                if (localFunctions && definitionSourceFile.writeable) {
                   references.push(
                     ...localFunctions.map((node) => {
                       return { node, uri: definitionNode.node.tree.uri };
@@ -327,12 +333,12 @@ export class References {
                 }
 
                 const isExposed = TreeUtils.isExposedTypeOrTypeAlias(
-                  refSourceTree.tree,
+                  definitionSourceFile.tree,
                   typeOrTypeAliasName,
                 );
                 if (isExposed) {
                   const moduleDeclarationNode = TreeUtils.findModuleDeclaration(
-                    refSourceTree.tree,
+                    definitionSourceFile.tree,
                   );
                   if (moduleDeclarationNode) {
                     const exposedNode =
@@ -341,7 +347,7 @@ export class References {
                         typeOrTypeAliasName,
                       );
 
-                    if (exposedNode && refSourceTree.writeable) {
+                    if (exposedNode && definitionSourceFile.writeable) {
                       references.push({
                         node: exposedNode,
                         uri: definitionNode.node.tree.uri,
@@ -424,7 +430,7 @@ export class References {
 
           case "Module":
             if (moduleNameNode) {
-              if (refSourceTree.writeable) {
+              if (definitionSourceFile.writeable) {
                 references.push({
                   node: moduleNameNode,
                   uri: definitionNode.node.tree.uri,
@@ -470,7 +476,7 @@ export class References {
             break;
 
           case "FunctionParameter":
-            if (refSourceTree.writeable) {
+            if (definitionSourceFile.writeable) {
               references.push({
                 node: definitionNode.node,
                 uri: definitionNode.node.tree.uri,
@@ -505,7 +511,7 @@ export class References {
             break;
 
           case "CasePattern":
-            if (refSourceTree.writeable) {
+            if (definitionSourceFile.writeable) {
               references.push({
                 node: definitionNode.node,
                 uri: definitionNode.node.tree.uri,
@@ -537,7 +543,7 @@ export class References {
             break;
 
           case "AnonymousFunctionParameter":
-            if (refSourceTree.writeable) {
+            if (definitionSourceFile.writeable) {
               references.push({
                 node: definitionNode.node,
                 uri: definitionNode.node.tree.uri,
@@ -568,14 +574,14 @@ export class References {
           case "UnionConstructor":
             if (definitionNode.node.firstChild && moduleNameNode) {
               const nameNode = definitionNode.node.firstChild;
-              if (refSourceTree.writeable) {
+              if (definitionSourceFile.writeable) {
                 references.push({
                   node: nameNode,
                   uri: definitionNode.node.tree.uri,
                 });
                 const unionConstructorCalls =
                   TreeUtils.findUnionConstructorCalls(
-                    refSourceTree.tree,
+                    definitionSourceFile.tree,
                     nameNode.text,
                   );
 
@@ -650,35 +656,23 @@ export class References {
                   ...this.getFieldReferences(
                     fieldName.text,
                     definitionNode,
-                    refSourceTree,
+                    definitionSourceFile,
                     program,
                   ),
                 );
 
-                for (const uri in imports) {
-                  if (uri === definitionNode.node.tree.uri) {
-                    continue;
-                  }
-
-                  const needsToBeChecked = forest
-                    .getByUri(uri)
-                    ?.resolvedModules?.get(moduleNameNode?.text ?? "");
-
-                  if (needsToBeChecked) {
-                    const treeToCheck = forest.getByUri(uri);
-
-                    if (treeToCheck && treeToCheck.writeable) {
-                      references.push(
-                        ...this.getFieldReferences(
-                          fieldName.text,
-                          definitionNode,
-                          treeToCheck,
-                          program,
-                        ),
-                      );
-                    }
-                  }
-                }
+                checker
+                  .getImportingModules(definitionSourceFile)
+                  .forEach((sourceFileToCheck) =>
+                    references.push(
+                      ...this.getFieldReferences(
+                        fieldName.text,
+                        definitionNode,
+                        sourceFileToCheck,
+                        program,
+                      ),
+                    ),
+                  );
               }
             }
             break;
