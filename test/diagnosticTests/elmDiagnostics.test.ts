@@ -1462,7 +1462,8 @@ f {} =
     });
   });
 
-  it.skip("should not have an error for a generic type alias used in different branches", async () => {
+  // https://github.com/elm-tooling/elm-language-server/issues/689
+  it("should not have an error for a generic type alias used in different branches", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)
@@ -1483,6 +1484,69 @@ type alias Data data =
 type DataType
   = FloatData (Data Float)
   | IntData (Data Int)
+`;
+    await testTypeInference(basicsSources + source, []);
+  });
+
+  // https://github.com/elm-tooling/elm-language-server/issues/678
+  it.skip("should not have an error for a generic type alias record", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type Example a = Example { a | foo : Float }
+
+example : Example {}
+example = Example { foo = 0 }
+`;
+    await testTypeInference(basicsSources + source, []);
+  });
+
+  // https://github.com/elm-tooling/elm-language-server/issues/634
+  it.skip("should not enforce type variables contraints for aliases", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias A appendable =
+    appendable
+
+a : A Int
+a =
+    1
+`;
+    await testTypeInference(basicsSources + source, []);
+  });
+
+  // https://github.com/elm-tooling/elm-language-server/issues/494
+  it("should work with type alias of function with type variable", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type Config data
+    = Config (RequiredConfig data)
+
+type alias RequiredConfig data =
+    Data data -> String
+
+type alias Data data =
+    { data
+        | windowWidth : Int
+        , windowHeight : Int
+    }
+
+-- PUBLIC CONFIG
+
+type alias PublicConfig =
+    Config {}
+
+type alias PublicRequiredConfig =
+    RequiredConfig {}
+
+publicConfig : PublicRequiredConfig -> PublicConfig
+publicConfig =
+    Config
 `;
     await testTypeInference(basicsSources + source, []);
   });

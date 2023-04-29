@@ -23,6 +23,7 @@ import {
 } from "../src/cancellation";
 import { randomBytes } from "crypto";
 import { createProgramHost } from "./utils/sourceTreeParser";
+import { PerformanceTimer } from "../src/compiler/typeExpression";
 
 container.register("Connection", {
   useValue: {
@@ -67,6 +68,11 @@ export async function runPerformanceTests(uri: string): Promise<void> {
   const times: { [name: string]: number } = {};
   function addTime(name: string, time: number): void {
     times[name] = (times[name] ?? 0) + time;
+  }
+
+  function addPerfTime(name: string, time: PerformanceTimer): void {
+    times[name] = (times[name] ?? 0) + time.total;
+    time.reset();
   }
 
   const numTimes = 10;

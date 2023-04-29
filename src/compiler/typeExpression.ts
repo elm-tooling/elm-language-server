@@ -37,6 +37,28 @@ import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable";
 import { IProgram } from "./program";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
 
+export class PerformanceTimer {
+  public total = 0;
+
+  public track<T>(func: () => T, track = true): T {
+    if (!track) {
+      return func();
+    }
+
+    const start = performance.now();
+
+    try {
+      return func();
+    } finally {
+      this.total += performance.now() - start;
+    }
+  }
+
+  public reset(): void {
+    this.total = 0;
+  }
+}
+
 export class TypeExpression {
   // All the type variables we've seen
   private varsByExpression: SyntaxNodeMap<Expression, TVar> = new SyntaxNodeMap<
@@ -72,21 +94,21 @@ export class TypeExpression {
 
       TypeReplacement.freeze(inferenceResult.type);
 
-      return {
-        ...inferenceResult,
-        type: TypeReplacement.freshenVars(inferenceResult.type),
-      };
+      return inferenceResult;
     };
 
-    if (!program.getForest().getByUri(e.tree.uri)?.writeable) {
-      return program
-        .getTypeCache()
-        .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter);
-    } else {
-      return program
-        .getTypeCache()
-        .getOrSet("PROJECT_TYPE_AND_TYPE_ALIAS", e, setter);
-    }
+    const result = !program.getForest().getByUri(e.tree.uri)?.writeable
+      ? program
+          .getTypeCache()
+          .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter)
+      : program
+          .getTypeCache()
+          .getOrSet("PROJECT_TYPE_AND_TYPE_ALIAS", e, setter);
+
+    return {
+      ...result,
+      type: TypeReplacement.freshenVars(result.type),
+    };
   }
 
   public static typeAliasDeclarationInference(
@@ -105,21 +127,21 @@ export class TypeExpression {
 
       TypeReplacement.freeze(inferenceResult.type);
 
-      return {
-        ...inferenceResult,
-        type: TypeReplacement.freshenVars(inferenceResult.type),
-      };
+      return inferenceResult;
     };
 
-    if (!program.getForest().getByUri(e.tree.uri)?.writeable) {
-      return program
-        .getTypeCache()
-        .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter);
-    } else {
-      return program
-        .getTypeCache()
-        .getOrSet("PROJECT_TYPE_AND_TYPE_ALIAS", e, setter);
-    }
+    const result = !program.getForest().getByUri(e.tree.uri)?.writeable
+      ? program
+          .getTypeCache()
+          .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter)
+      : program
+          .getTypeCache()
+          .getOrSet("PROJECT_TYPE_AND_TYPE_ALIAS", e, setter);
+
+    return {
+      ...result,
+      type: TypeReplacement.freshenVars(result.type),
+    };
   }
 
   public static typeAnnotationInference(
@@ -158,16 +180,27 @@ export class TypeExpression {
     e: EUnionVariant,
     program: IProgram,
   ): InferenceResult {
-    const inferenceResult = new TypeExpression(
-      e,
-      program,
-      /* rigidVars */ false,
-    ).inferUnionConstructor(e);
-    TypeReplacement.freeze(inferenceResult.type);
+    const setter = (): InferenceResult => {
+      const inferenceResult = new TypeExpression(
+        e,
+        program,
+        /* rigidVars */ false,
+      ).inferUnionConstructor(e);
+
+      TypeReplacement.freeze(inferenceResult.type);
+
+      program.getTypeCache().trackUnionVariant(e);
+
+      return inferenceResult;
+    };
+
+    const result = !program.getForest().getByUri(e.tree.uri)?.writeable
+      ? program.getTypeCache().getOrSet("PACKAGE_UNION_VARIANT", e, setter)
+      : program.getTypeCache().getOrSet("PROJECT_UNION_VARIANT", e, setter);
 
     return {
-      ...inferenceResult,
-      type: TypeReplacement.freshenVars(inferenceResult.type),
+      ...result,
+      type: TypeReplacement.freshenVars(result.type),
     };
   }
 

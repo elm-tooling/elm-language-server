@@ -2412,7 +2412,7 @@ export class InferenceScope {
       return;
     }
 
-    // Assign k to be of type v
+    // Assign typeVar to be of type
     const assign = (typeVar: TVar, type: Type): void => {
       if (anyTypeVar(type, (tVar) => tVar === typeVar)) {
         throw Error("InfiniteTypeException");
