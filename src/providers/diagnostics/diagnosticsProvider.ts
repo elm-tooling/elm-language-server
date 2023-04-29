@@ -5,7 +5,6 @@ import {
   Diagnostic as LspDiagnostic,
   DiagnosticSeverity,
   FileChangeType,
-  DidChangeTextDocumentParams,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
@@ -26,7 +25,6 @@ import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics";
 import { ISourceFile } from "../../compiler/forest";
 import { ElmReviewDiagnostics } from "./elmReviewDiagnostics";
-import { IElmAnalyseJsonService } from "./elmAnalyseJsonService";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -100,11 +98,10 @@ export class DiagnosticsProvider {
 
   private pendingRequest: DiagnosticsRequest | undefined;
   private pendingDiagnostics: PendingDiagnostics;
-  private diagnosticsDelayer: Delayer<any>;
+  private pendingCompilerDiagnostics: Set<string>;
+  private diagnosticsDelayer: Delayer<unknown>;
   private diagnosticsOperation: MultistepOperation;
   private changeSeq = 0;
-
-  private elmAnalyseJsonService: IElmAnalyseJsonService;
 
   constructor() {
     this.clientSettings = container.resolve("ClientSettings");
@@ -121,14 +118,11 @@ export class DiagnosticsProvider {
 
     this.workspaces = container.resolve("ElmWorkspaces");
 
-    this.elmAnalyseJsonService = container.resolve<IElmAnalyseJsonService>(
-      "ElmAnalyseJsonService",
-    );
-
     const astProvider = container.resolve(ASTProvider);
 
     this.currentDiagnostics = new Map<string, FileDiagnostics>();
     this.pendingDiagnostics = new PendingDiagnostics();
+    this.pendingCompilerDiagnostics = new Set<string>();
     this.diagnosticsDelayer = new Delayer(300);
 
     const clientInitiatedDiagnostics =
@@ -148,15 +142,7 @@ export class DiagnosticsProvider {
         return;
       }
 
-      void this.getElmMakeDiagnostics(sourceFile).then((hasElmMakeErrors) => {
-        if (hasElmMakeErrors) {
-          this.currentDiagnostics.forEach((_, uri) => {
-            this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
-          });
-        } else {
-          void this.getElmReviewDiagnostics(sourceFile);
-        }
-      });
+      void this.getElmMakeDiagnostics(sourceFile);
 
       // If we aren't doing them on change, we need to trigger them here
       if (disableDiagnosticsOnChange) {
@@ -218,39 +204,30 @@ export class DiagnosticsProvider {
       this.requestAllDiagnostics();
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    astProvider.onTreeChange(({ sourceFile, declaration }) => {
+    astProvider.onTreeChange(({ sourceFile }) => {
       if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
         this.requestDiagnostics(sourceFile.uri);
       }
     });
 
-    this.documentEvents.on("change", (params: DidChangeTextDocumentParams) => {
+    this.documentEvents.on("change", () => {
       this.change();
-
-      this.updateDiagnostics(
-        params.textDocument.uri,
-        DiagnosticKind.ElmReview,
-        [],
-      );
 
       // We need to cancel the request as soon as possible
       if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
-        if (this.pendingRequest) {
+        if (this.pendingRequest && !this.pendingRequest.isCancelled) {
           this.pendingRequest.cancel();
-          this.pendingRequest = undefined;
         }
       }
     });
   }
 
   public interruptDiagnostics<T>(f: () => T): T {
-    if (!this.pendingRequest) {
+    if (!this.pendingRequest || this.pendingRequest.isCancelled) {
       return f();
     }
 
     this.pendingRequest.cancel();
-    this.pendingRequest = undefined;
     const result = f();
 
     this.triggerDiagnostics();
@@ -284,6 +261,7 @@ export class DiagnosticsProvider {
 
   private requestDiagnostics(uri: string): void {
     this.pendingDiagnostics.set(uri, Date.now());
+    this.pendingCompilerDiagnostics.add(uri);
     this.triggerDiagnostics();
   }
 
@@ -296,14 +274,18 @@ export class DiagnosticsProvider {
       program.getForest().treeMap.forEach(({ uri, writeable }) => {
         if (writeable) {
           this.pendingDiagnostics.set(uri, Date.now());
+          this.pendingCompilerDiagnostics.add(uri);
         }
       });
     });
 
     this.triggerDiagnostics();
   }
+
   private triggerDiagnostics(delay = 200): void {
     const sendPendingDiagnostics = (): void => {
+      this.elmReviewDiagnostics.startDiagnostics();
+
       const orderedFiles = this.pendingDiagnostics.getOrderedFiles();
 
       if (this.pendingRequest) {
@@ -333,6 +315,7 @@ export class DiagnosticsProvider {
           () => {
             if (request === this.pendingRequest) {
               this.pendingRequest = undefined;
+              this.pendingCompilerDiagnostics.clear();
             }
           },
         ));
@@ -385,6 +368,7 @@ export class DiagnosticsProvider {
     cancellationToken: CancellationToken,
   ): Promise<void> {
     const followMs = Math.min(delay, 200);
+
     const serverCancellationToken = new ServerCancellationToken(
       cancellationToken,
     );
@@ -449,6 +433,18 @@ export class DiagnosticsProvider {
                   DiagnosticKind.Semantic,
                   diagnostics.map(convertFromCompilerDiagnostic),
                 );
+
+                if (!this.pendingDiagnostics.has(uri)) {
+                  this.pendingCompilerDiagnostics.delete(uri);
+                }
+
+                if (this.hasSyntacticOrSemanticErrors()) {
+                  this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
+                }
+
+                if (this.pendingCompilerDiagnostics.size === 0) {
+                  void this.triggerElmReviewDiagnostics();
+                }
 
                 next.immediate(() => {
                   this.updateDiagnostics(
@@ -528,11 +524,27 @@ export class DiagnosticsProvider {
     );
   }
 
-  private async getElmReviewDiagnostics(
-    sourceFile: ISourceFile,
-  ): Promise<void> {
+  private async triggerElmReviewDiagnostics(): Promise<void> {
+    // Get elm-review diagnostics if there are no errors
+    if (!this.hasSyntacticOrSemanticErrors()) {
+      await this.getElmReviewDiagnostics();
+    }
+  }
+
+  private hasSyntacticOrSemanticErrors(): boolean {
+    let errorCount = 0;
+    this.currentDiagnostics.forEach((diagnostics) => {
+      errorCount += diagnostics
+        .getForKind(DiagnosticKind.Syntactic)
+        .concat(diagnostics.getForKind(DiagnosticKind.Semantic))
+        .filter((d) => d.severity === DiagnosticSeverity.Error).length;
+    });
+    return errorCount > 0;
+  }
+
+  private async getElmReviewDiagnostics(): Promise<void> {
     const elmReviewDiagnostics =
-      await this.elmReviewDiagnostics.createDiagnostics(sourceFile);
+      await this.elmReviewDiagnostics.createDiagnostics();
 
     // remove old elm-review diagnostics
     this.resetDiagnostics(elmReviewDiagnostics, DiagnosticKind.ElmReview);
