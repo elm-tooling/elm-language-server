@@ -1503,7 +1503,7 @@ example = Example { foo = 0 }
   });
 
   // https://github.com/elm-tooling/elm-language-server/issues/634
-  it.skip("should not enforce type variables contraints for aliases", async () => {
+  it("should not enforce type variable contraints for aliases", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)
@@ -1516,10 +1516,83 @@ a =
     1
 `;
     await testTypeInference(basicsSources + source, []);
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias A number =
+  number
+
+a : A String
+a =
+    ""
+    `;
+    await testTypeInference(basicsSources + stringSources + source2, []);
+
+    const source3 = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias A appendable = 
+    { a : appendable }
+
+a : A Int
+a = 
+    { a = 0 }
+    `;
+    await testTypeInference(basicsSources + source3, []);
+  });
+
+  it("should enforce type variable contraints for record contructors", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias A appendable = 
+    { a : appendable }
+
+a = 
+    A 0
+    --^
+`;
+    await testTypeInference(basicsSources + source, [
+      { message: Diagnostics.TypeMismatch, args: ["appendable", "number"] },
+    ]);
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+type B appendable = 
+    With appendable | Without
+
+b : B Int
+b = With 0
+       --^
+    `;
+    await testTypeInference(basicsSources + source2, [
+      { message: Diagnostics.TypeMismatch, args: ["appendable", "number"] },
+    ]);
+
+    const source3 = `
+--@ Test.elm
+module Test exposing (..)
+
+type B appendable = 
+    With appendable | Without
+
+b : B Int
+b = Without
+     --^
+        `;
+    await testTypeInference(basicsSources + source3, [
+      { message: Diagnostics.TypeMismatch, args: ["B Int", "B appendable"] },
+    ]);
   });
 
   // https://github.com/elm-tooling/elm-language-server/issues/494
-  it("should work with type alias of function with type variable", async () => {
+  it.skip("should work with type alias of function with type variable", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)

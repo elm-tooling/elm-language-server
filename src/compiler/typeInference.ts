@@ -337,8 +337,11 @@ function getParentPatternDeclaration(
   return parentPattern.pattern ? parentPattern : undefined;
 }
 
-export function getTypeclassName(type: TVar): string | undefined {
-  if (type.name.length < 6) {
+type TypeClass = "number" | "appendable" | "comparable" | "compappend";
+
+export function getTypeclassName(type: TVar): TypeClass | undefined {
+  // Alias typeclasses aren't respected: https://github.com/elm/compiler/issues/2225
+  if (type.name.length < 6 || type.alias) {
     return;
   } else if (type.name.startsWith("number")) {
     return "number";
@@ -2321,19 +2324,20 @@ export class InferenceScope {
     type: Type | undefined,
     typeVar: TVar,
   ): boolean {
-    const allAssignableTo = (types: Type[], typeClass: string): boolean => {
+    const allAssignableTo = (types: Type[], typeClass: TypeClass): boolean => {
       return types.every((t) => this.assignable(t, TVar(typeClass)));
     };
 
-    if (typeVar.name.startsWith("number")) {
+    const typeVarClass = getTypeclassName(typeVar);
+    if (typeVarClass === "number") {
       return (
         type?.nodeType === "Union" && (typeIsFloat(type) || typeIsInt(type))
       );
-    } else if (typeVar.name.startsWith("appendable")) {
+    } else if (typeVarClass === "appendable") {
       return (
         type?.nodeType === "Union" && (typeIsString(type) || typeIsList(type))
       );
-    } else if (typeVar.name.startsWith("comparable")) {
+    } else if (typeVarClass === "comparable") {
       if (type?.nodeType === "Tuple") {
         return allAssignableTo(type.types, "comparable");
       } else if (type?.nodeType === "Union") {
@@ -2349,7 +2353,7 @@ export class InferenceScope {
       } else {
         return false;
       }
-    } else if (typeVar.name.startsWith("compappend")) {
+    } else if (typeVarClass === "compappend") {
       return (
         type?.nodeType === "Union" &&
         (typeIsString(type) ||
@@ -2363,8 +2367,8 @@ export class InferenceScope {
   }
 
   private typeclassesCompatible(
-    name1: string,
-    name2?: string,
+    name1: TypeClass,
+    name2?: TypeClass,
     unconstrainedAllowed = true,
   ): boolean {
     if (!name2) {
@@ -2395,8 +2399,8 @@ export class InferenceScope {
   }
 
   private typeclassesConstrainToCompappend(
-    tc1?: string,
-    tc2?: string,
+    tc1?: TypeClass,
+    tc2?: TypeClass,
   ): boolean {
     if (tc1 === "comparable") {
       return tc2 === "appendable" || tc2 === "compappend";
