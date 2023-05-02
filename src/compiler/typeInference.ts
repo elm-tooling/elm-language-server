@@ -927,16 +927,17 @@ export class InferenceScope {
 
   private inferList(expr: EListExpr): Type {
     const exprTypes = expr.exprList.map((e) => this.infer(e));
+    const elementType = TVar("a");
 
-    for (let i = 1; i < expr.exprList.length; i++) {
-      if (this.isAssignable(expr.exprList[i], exprTypes[i], exprTypes[0])) {
-        this.expressionTypes.set(expr.exprList[i], exprTypes[0]);
+    for (let i = 0; i < expr.exprList.length; i++) {
+      if (this.isAssignable(expr.exprList[i], exprTypes[i], elementType)) {
+        this.expressionTypes.set(expr.exprList[i], elementType);
       } else {
         break;
       }
     }
 
-    return TList(exprTypes[0] ?? TVar("a"));
+    return TList(elementType);
   }
 
   private inferIfElse(ifElseExpr: EIfElseExpr): Type {
@@ -2161,13 +2162,9 @@ export class InferenceScope {
           case "MutableRecord":
             {
               result =
-                (ty2?.nodeType === "Record" &&
-                  this.mutableRecordAssignable(ty1, ty2)) ||
-                (ty2?.nodeType === "MutableRecord" &&
-                  this.mutableRecordAssignable(
-                    ty1,
-                    mutableRecordAsRecord(ty2),
-                  ));
+                (ty2?.nodeType === "Record" ||
+                  ty2?.nodeType === "MutableRecord") &&
+                this.mutableRecordAssignable(ty1, ty2);
             }
             break;
           case "Unit":
@@ -2192,13 +2189,25 @@ export class InferenceScope {
 
   private mutableRecordAssignable(
     type1: TMutableRecord,
-    type2: TRecord,
+    type2: TRecord | TMutableRecord,
   ): boolean {
-    if (!this.recordAssignable(mutableRecordAsRecord(type1), type2)) {
+    if (
+      !this.recordAssignable(
+        mutableRecordAsRecord(type1),
+        type2.nodeType === "MutableRecord"
+          ? mutableRecordAsRecord(type2)
+          : type2,
+      )
+    ) {
       return false;
     }
 
     type1.fields = { ...type1.fields, ...type2.fields };
+
+    if (type2.nodeType === "MutableRecord") {
+      type2.fields = { ...type2.fields, ...type1.fields };
+    }
+
     return true;
   }
 
