@@ -4,14 +4,16 @@ import { getVarNames } from "../src/compiler/typeInference";
 import { TreeUtils } from "../src/util/treeUtils";
 import { getTargetPositionFromSource } from "./utils/sourceParser";
 import { SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
+import { listSources } from "./diagnosticTests/sources";
 
 const basicsSources = `
 --@ Basics.elm
-module Basics exposing ((+), (|>), (==), Int, Float, Bool(..), (>>))
+module Basics exposing ((+), (/), (|>), (==), Int, Float, Bool(..), (>>))
 
 infix left  0 (|>) = apR
 infix non   4 (==) = eq
 infix left  6 (+)  = add
+infix left  7 (/)  = fdiv
 infix right 9 (>>) = composeR
 
 type Int = Int
@@ -35,6 +37,10 @@ eq =
 composeR : (a -> b) -> (b -> c) -> (a -> c)
 composeR f g x =
   g (f x)
+
+fdiv : Float -> Float -> Float
+fdiv =
+  Elm.Kernel.Basics.fdiv
 
 --@ String.elm
 module String exposing (String)
@@ -711,5 +717,50 @@ bug =
         expect(varName).toMatch(/^[a-z]{1}[0-9]+$/);
       }
     }
+  });
+
+  // https://github.com/elm-tooling/elm-language-server/issues/620
+  test("records applied to lists of functions", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func r =
+--^
+    List.map ((|>) r) [ \\{ foo } -> foo, \\{ bar } -> bar ]
+`;
+    await testTypeInference(
+      basicsSources + listSources + source,
+      "{ a | foo : b, bar : b } -> List b",
+    );
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+func r =
+--^
+    List.map ((|>) r) [ \\{ foo } -> foo, \\{ bar } -> bar, \\{ baz } -> baz ]
+`;
+    await testTypeInference(
+      basicsSources + listSources + source2,
+      "{ a | foo : b, bar : b, baz : b } -> List b",
+    );
+
+    const source3 = `
+--@ Test.elm
+module Test exposing (..)
+
+number i =
+--^
+    List.map ((|>) i)
+        [ (+) 1
+        , (/) 2
+        ]
+`;
+    await testTypeInference(
+      basicsSources + listSources + source3,
+      "Float -> List Float",
+    );
   });
 });

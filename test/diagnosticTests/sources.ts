@@ -1908,7 +1908,7 @@ isChar char =
 
 export const listSources = `
 --@ List.elm
-module List exposing ((::), reverse, foldl)
+module List exposing ((::), reverse, foldl, foldr, map)
 
 import Basics exposing (..)
 import Elm.Kernel.List
@@ -1933,4 +1933,46 @@ foldl func acc list =
 
     x :: xs ->
       foldl func (func x acc) xs
+
+
+map : (a -> b) -> List a -> List b
+map f xs =
+  foldr (\\x acc -> cons (f x) acc) [] xs
+
+
+foldr : (a -> b -> b) -> b -> List a -> b
+foldr fn acc ls =
+    foldrHelper fn acc 0 ls
+
+
+foldrHelper : (a -> b -> b) -> b -> Int -> List a -> b
+foldrHelper fn acc ctr ls =
+    case ls of
+        [] ->
+            acc
+
+        a :: r1 ->
+            case r1 of
+                [] ->
+                    fn a acc
+
+                b :: r2 ->
+                    case r2 of
+                        [] ->
+                            fn a (fn b acc)
+
+                        c :: r3 ->
+                            case r3 of
+                                [] ->
+                                    fn a (fn b (fn c acc))
+
+                                d :: r4 ->
+                                    let
+                                        res =
+                                            if ctr > 500 then
+                                                foldl fn acc (reverse r4)
+                                            else
+                                                foldrHelper fn acc (ctr + 1) r4
+                                    in
+                                        fn a (fn b (fn c (fn d res)))
 `;
