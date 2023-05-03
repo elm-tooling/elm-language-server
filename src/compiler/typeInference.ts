@@ -2212,10 +2212,23 @@ export class InferenceScope {
   }
 
   private recordAssignable(type1: TRecord, type2: TRecord): boolean {
-    const result = this.calculateRecordDiff(type1, type2).isEmpty;
+    const diff = this.calculateRecordDiff(type1, type2);
+    const result = diff.isEmpty;
     if (result) {
       if (!type1.baseType && type2.baseType?.nodeType === "Var") {
-        this.trackReplacement(type1, type2.baseType);
+        const type2Fields = Object.keys(type2.fields);
+        const replaceType = TRecord(
+          Object.fromEntries(
+            Object.entries(type1.fields).filter(
+              ([k]) => !type2Fields.includes(k),
+            ),
+          ),
+          type1.baseType,
+          type1.alias,
+          type1.fieldReferences,
+        );
+
+        this.trackReplacement(replaceType, type2.baseType);
       }
       if (!type2.baseType && type1.baseType?.nodeType === "Var") {
         this.trackReplacement(type1.baseType, type2);
