@@ -2212,26 +2212,37 @@ export class InferenceScope {
   }
 
   private recordAssignable(type1: TRecord, type2: TRecord): boolean {
-    const diff = this.calculateRecordDiff(type1, type2);
-    const result = diff.isEmpty;
+    const result = this.calculateRecordDiff(type1, type2).isEmpty;
     if (result) {
-      if (!type1.baseType && type2.baseType?.nodeType === "Var") {
-        const type2Fields = Object.keys(type2.fields);
-        const replaceType = TRecord(
+      const getReplacementRecordDiff = (
+        record: TRecord,
+        recordWithBaseType: TRecord,
+      ): TRecord => {
+        const baseTypeFields = Object.keys(recordWithBaseType.fields);
+        return TRecord(
           Object.fromEntries(
-            Object.entries(type1.fields).filter(
-              ([k]) => !type2Fields.includes(k),
+            Object.entries(record.fields).filter(
+              ([k]) => !baseTypeFields.includes(k),
             ),
           ),
-          type1.baseType,
-          type1.alias,
-          type1.fieldReferences,
+          record.baseType,
+          record.alias,
+          record.fieldReferences,
         );
+      };
 
-        this.trackReplacement(replaceType, type2.baseType);
+      if (!type1.baseType && type2.baseType?.nodeType === "Var") {
+        this.trackReplacement(
+          getReplacementRecordDiff(type1, type2),
+          type2.baseType,
+        );
       }
+
       if (!type2.baseType && type1.baseType?.nodeType === "Var") {
-        this.trackReplacement(type1.baseType, type2);
+        this.trackReplacement(
+          type1.baseType,
+          getReplacementRecordDiff(type2, type1),
+        );
       }
 
       type1.fieldReferences.addAll(type2.fieldReferences);

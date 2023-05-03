@@ -1603,7 +1603,7 @@ b = Without
   });
 
   // https://github.com/elm-tooling/elm-language-server/issues/494
-  it.skip("should work with type alias of function with type variable", async () => {
+  it("should work with type alias of function with type variable", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)
@@ -1632,7 +1632,7 @@ publicConfig : PublicRequiredConfig -> PublicConfig
 publicConfig =
     Config
 `;
-    await testTypeInference(basicsSources + source, []);
+    await testTypeInference(basicsSources + stringSources + source, []);
   });
 
   it("should not have an error when converting a number to Float or Int", async () => {
