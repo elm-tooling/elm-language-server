@@ -1489,7 +1489,7 @@ type DataType
   });
 
   // https://github.com/elm-tooling/elm-language-server/issues/678
-  it.skip("should not have an error for a generic type alias record", async () => {
+  it("should not have an error for a generic type record", async () => {
     const source = `
 --@ Test.elm
 module Test exposing (..)
@@ -1500,6 +1500,17 @@ example : Example {}
 example = Example { foo = 0 }
 `;
     await testTypeInference(basicsSources + source, []);
+
+    const source2 = `
+--@ Test.elm
+module Test exposing (..)
+
+type Example a = Example { a | foo : Float }
+
+example : Example { bar : Int }
+example = Example { foo = 0, bar = 1 }
+    `;
+    await testTypeInference(basicsSources + source2, []);
   });
 
   // https://github.com/elm-tooling/elm-language-server/issues/634
