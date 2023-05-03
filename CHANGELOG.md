@@ -1,5 +1,18 @@
 # Change Log
 
+## 2.7.0
+
+- Suggest auto import completions and code actions for module aliases
+- Add auto import completions for ports
+- Show module aliases in hover and completions type strings
+- Improve sorting of completions for exposed values
+- Fix for field references when the module is not imported
+- Fix the extract function code action incorrectly computing parameters
+- Fix union constructor type inference when there are comments between the arguments
+- Fix some type inference bugs related to extensible records
+- Support node 18
+- Update dependencies
+
 ## 2.6.0
 
 - Start using completion item label description for module name
