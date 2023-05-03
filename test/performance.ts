@@ -70,10 +70,10 @@ export async function runPerformanceTests(uri: string): Promise<void> {
     times[name] = (times[name] ?? 0) + time;
   }
 
-  function addPerfTime(name: string, time: PerformanceTimer): void {
-    times[name] = (times[name] ?? 0) + time.total;
-    time.reset();
-  }
+  // function addPerfTime(name: string, time: PerformanceTimer): void {
+  //   times[name] = (times[name] ?? 0) + time.total;
+  //   time.reset();
+  // }
 
   const numTimes = 10;
 
