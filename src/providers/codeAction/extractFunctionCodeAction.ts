@@ -22,6 +22,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
 
     if (
       node.type.includes("expr") &&
+      node.type !== "type_expression" &&
       node.startPosition.column === params.range.start.character &&
       node.startPosition.row === params.range.start.line &&
       node.endPosition.column === params.range.end.character &&

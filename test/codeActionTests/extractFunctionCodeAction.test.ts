@@ -19,7 +19,7 @@ foo val str =
 
                 Nothing ->
                     field2 + val2
-                               --^
+                              --^
 
         Nothing ->
             str + val2
@@ -73,7 +73,7 @@ foo val str =
           --^
                 prop1 + prop2 + val + field2)
             field1
-                --^
+               --^
 
         Nothing ->
             str + val2
@@ -128,7 +128,7 @@ foo val str =
           --^
                 prop1 + prop2 + val + field2)
             field1
-                --^
+               --^
 
         Nothing ->
             str + val2
@@ -186,7 +186,7 @@ foo val =
   --^
         + val2 
         + Foo.val2
-                --^
+               --^
   
 `;
 
@@ -237,7 +237,7 @@ foo val str =
 
                 Nothing ->
                     field2 + val2
-                               --^
+                              --^
 
         Nothing ->
             str + val2
@@ -301,7 +301,7 @@ foo val str =
 
                 Nothing ->
                     field2 + val2
-                               --^
+                              --^
 
         Nothing ->
             str + val2
@@ -361,7 +361,7 @@ foo val str =
 
                 Nothing ->
                     field2 + val2
-                               --^
+                              --^
 
         Nothing ->
             str + val2

@@ -601,6 +601,35 @@ export class TreeUtils {
     }
   }
 
+  public static getDescendantForPosition(
+    node: SyntaxNode,
+    position: Position,
+  ): SyntaxNode {
+    const previousCharColumn =
+      position.character === 0 ? 0 : position.character - 1;
+    const charBeforeCursor = node.text
+      .split("\n")
+      [position.line].substring(previousCharColumn, position.character);
+
+    if (!functionNameRegex.test(charBeforeCursor)) {
+      return node.descendantForPosition({
+        column: position.character,
+        row: position.line,
+      });
+    } else {
+      return node.descendantForPosition(
+        {
+          column: previousCharColumn,
+          row: position.line,
+        },
+        {
+          column: position.character,
+          row: position.line,
+        },
+      );
+    }
+  }
+
   public static getNamedDescendantForRange(
     sourceFile: ISourceFile,
     range: Range,
@@ -612,6 +641,29 @@ export class TreeUtils {
       });
     } else {
       return sourceFile.tree.rootNode.namedDescendantForPosition(
+        {
+          column: range.start.character,
+          row: range.start.line,
+        },
+        {
+          column: range.end.character,
+          row: range.end.line,
+        },
+      );
+    }
+  }
+
+  public static getDescendantForRange(
+    sourceFile: ISourceFile,
+    range: Range,
+  ): SyntaxNode {
+    if (positionEquals(range.start, range.end)) {
+      return this.getDescendantForPosition(sourceFile.tree.rootNode, {
+        character: range.start.character,
+        line: range.start.line,
+      });
+    } else {
+      return sourceFile.tree.rootNode.descendantForPosition(
         {
           column: range.start.character,
           row: range.start.line,
