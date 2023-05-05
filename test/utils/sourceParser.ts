@@ -194,23 +194,31 @@ export function getTargetPositionFromSource(
   let startPosition: Position | undefined;
   let endPosition: Position | undefined;
 
+  const parseLine = (s: string, line: number, startCharOffset = 0): void => {
+    const invokeCharacter = s.slice(startCharOffset).search(/--(\^)/);
+
+    if (invokeCharacter >= 0) {
+      const character = startCharOffset + invokeCharacter + 2;
+      const lineIndex = line - 1;
+
+      if (!startPosition) {
+        startPosition = {
+          line: lineIndex,
+          character,
+        };
+
+        parseLine(s, line, character);
+      } else if (!endPosition) {
+        endPosition = {
+          line: startPosition.line === lineIndex ? lineIndex : lineIndex - 1,
+          character: character + 1,
+        };
+      }
+    }
+  };
   for (const fileName in sources) {
     sources[fileName].split("\n").forEach((s, line) => {
-      const invokeCharacter = s.search(/--(\^)/);
-
-      if (invokeCharacter >= 0) {
-        if (!startPosition) {
-          startPosition = {
-            line: line - 1,
-            character: invokeCharacter + 2,
-          };
-        } else if (!endPosition) {
-          endPosition = {
-            line: line - 2,
-            character: invokeCharacter + 2,
-          };
-        }
-      }
+      parseLine(s, line);
     });
   }
 

@@ -3,6 +3,7 @@ import "./makeDeclarationFromUsageCodeAction";
 import "./makeExternalDeclarationFromUsageCodeAction";
 import "./addTypeAnnotationCodeAction";
 import "./extractFunctionCodeAction";
+import "./extractTypeAliasCodeAction";
 import "./exposeUnexposeCodeAction";
 import "./moveFunctionCodeAction";
 import "./installPackageCodeAction";

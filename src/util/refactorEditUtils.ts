@@ -16,6 +16,21 @@ export class RefactorEditUtils {
 
     return this.findLineNumberAfterCurrentFunction(nodeAtPosition.parent);
   }
+
+  public static findLineNumberBeforeCurrentFunction(
+    nodeAtPosition: SyntaxNode,
+  ): number | undefined {
+    if (!nodeAtPosition.parent) {
+      return undefined;
+    }
+
+    if (nodeAtPosition.parent?.type === "file") {
+      return nodeAtPosition.startPosition.row - 1;
+    }
+
+    return this.findLineNumberBeforeCurrentFunction(nodeAtPosition.parent);
+  }
+
   public static unexposedValueInModule(
     tree: Tree,
     valueName: string,
@@ -96,6 +111,20 @@ export class RefactorEditUtils {
         }${spaces}${valueName} ${argList} =\n${bodySpaces}${content}\n`,
       );
     }
+  }
+
+  public static createTypeAlias(
+    insertLineNumber: number,
+    aliasName: string,
+    typeString: string,
+    typeVariables: string[],
+  ): TextEdit {
+    const typeVariablesString =
+      typeVariables.length > 0 ? ` ${typeVariables.join(" ")}` : "";
+    return TextEdit.insert(
+      Position.create(insertLineNumber, 0),
+      `\ntype alias ${aliasName}${typeVariablesString} = ${typeString}\n\n`,
+    );
   }
 
   private static argListFromArity(arity: number): string {
