@@ -40,7 +40,7 @@ This is the language server implementation for the Elm programming language.
 
 Note for VSCode users: The [plugin](https://github.com/elm-tooling/elm-language-client-vscode) contains the language-server. No installation necessary.
 
-The server can be installed via `npm` (or from source). Please make sure to use **node 16**.
+The server can be installed via `npm` (or from source).
 
 ```sh
 npm install -g @elm-tooling/elm-language-server
