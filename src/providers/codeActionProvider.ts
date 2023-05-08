@@ -36,6 +36,7 @@ import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 import { ICodeActionParams } from "./paramsExtensions";
 import { ElmPackageCache } from "../compiler/elmPackageCache";
 import { comparePosition } from "../positionUtil";
+import { createNodeFileSystemHost } from "../node";
 
 interface IPreferredAction {
   priority: number;
@@ -134,8 +135,9 @@ export class CodeActionProvider {
       void new ElmPackageCache(
         async (path) =>
           JSON.parse(
-            await promisify(readFile)(path, { encoding: "utf-8" }),
+            await promisify(readFile)(path.fsPath, { encoding: "utf-8" }),
           ) as ElmJson,
+        createNodeFileSystemHost(this.connection),
       ).loadAllPackageModules();
     }, 5000);
   }

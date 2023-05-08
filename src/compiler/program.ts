@@ -1,18 +1,12 @@
-import fs from "fs";
-import globby from "globby";
-import os from "os";
 import { container } from "tsyringe";
-import util from "util";
 import { Connection } from "vscode-languageserver";
-import { URI } from "vscode-uri";
+import { URI, Utils } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import { ICancellationToken } from "../cancellation";
 import { ElmPackageCache, IElmPackageCache } from "./elmPackageCache";
 import { Forest, IForest, ISourceFile } from "./forest";
 import * as utils from "./utils/elmUtils";
-import { IVersion } from "./utils/elmUtils";
-import * as path from "../util/path";
-import { normalizeUri } from "../util/path";
+import { IVersion, findElmHome } from "./utils/elmUtils";
 import {
   IPossibleImportsCache,
   PossibleImportsCache,
@@ -20,22 +14,18 @@ import {
 import { Settings } from "../util/settings";
 import { Diagnostic } from "./diagnostics";
 import { TypeCache } from "./typeCache";
-import {
-  createTypeChecker,
-  DefinitionResult,
-  TypeChecker,
-} from "./typeChecker";
-import chokidar from "chokidar";
+import { createTypeChecker, TypeChecker } from "./typeChecker";
 import { CommandManager } from "../commandManager";
-
-const readFile = util.promisify(fs.readFile);
+import { IFileSystemHost } from "../types";
+import { createNodeFileSystemHost } from "../node";
 
 interface IElmFile {
-  path: string;
+  path: URI;
   maintainerAndPackageName?: string;
   project: ElmProject;
   isTestFile: boolean;
   isDependency: boolean;
+  tree?: Tree;
 }
 
 export type ElmJson = IElmApplicationJson | IElmPackageJson;
@@ -79,7 +69,8 @@ interface IElmPackageJson {
 }
 
 export interface IProgram {
-  init(progressCallback: (percent: number) => void): void;
+  init(progressCallback?: (percent: number) => void): Promise<void>;
+  isInitialized: boolean;
   hasDocument(uri: URI): boolean;
   isInSourceDirectory(uri: string): boolean;
   getSourceDirectoryOfFile(uri: string): string | undefined;
@@ -136,11 +127,7 @@ interface IElmPackage extends IElmProject {
   isDependency: boolean;
 }
 
-export interface IProgramHost {
-  readFile(uri: string): Promise<string>;
-  readDirectory(uri: string): Promise<string[]>;
-  watchFile(uri: string, callback: () => void): void;
-}
+export type IProgramHost = IFileSystemHost;
 
 export class Program implements IProgram {
   private parser: Parser;
@@ -157,6 +144,9 @@ export class Program implements IProgram {
   private resolvedPackageCache = new Map<string, IElmPackage>();
   private host: IProgramHost;
   private filesWatching = new Set<string>();
+  private _isInitialized = false;
+  private _initializePromise: Promise<void> | undefined;
+  private _initializeProgressCallback: ((percent: number) => void) | undefined;
 
   constructor(private rootPath: URI, programHost?: IProgramHost) {
     this.settings = container.resolve("Settings");
@@ -169,17 +159,32 @@ export class Program implements IProgram {
     this.typeCache = new TypeCache();
     this.possibleImportsCache = new PossibleImportsCache();
     this.diagnosticsCache = new Map<string, Diagnostic[]>();
-    this.host = programHost ?? createNodeProgramHost();
+    this.host = programHost ?? createNodeFileSystemHost(this.connection);
   }
 
   public async init(
-    progressCallback: (percent: number) => void,
+    progressCallback?: (percent: number) => void,
   ): Promise<void> {
-    await this.initWorkspace(progressCallback);
+    if (this._isInitialized) {
+      return;
+    }
+
+    if (this._initializePromise) {
+      this._initializeProgressCallback ??= progressCallback;
+      return this._initializePromise;
+    }
+
+    this._initializePromise = this.initWorkspace();
+    await this._initializePromise;
+    this._isInitialized = true;
+  }
+
+  public get isInitialized(): boolean {
+    return this._isInitialized;
   }
 
   public hasDocument(uri: URI): boolean {
-    return !!this.forest.getTree(uri.toString());
+    return !!this.forest?.getTree(uri.toString());
   }
 
   public isInSourceDirectory(uri: string): boolean {
@@ -187,7 +192,11 @@ export class Program implements IProgram {
   }
 
   public getSourceDirectoryOfFile(uri: string): string | undefined {
-    uri = normalizeUri(uri);
+    if (!this.rootProject) {
+      return undefined;
+    }
+
+    uri = URI.parse(uri).toString();
     return [
       ...this.rootProject.sourceDirectories,
       ...this.rootProject.testDirectories,
@@ -211,6 +220,8 @@ export class Program implements IProgram {
 
     if (moduleUri) {
       return this.getSourceFile(moduleUri);
+    } else {
+      return undefined;
     }
   }
 
@@ -317,73 +328,98 @@ export class Program implements IProgram {
     );
   }
 
-  private async initWorkspace(
-    progressCallback: (percent: number) => void,
-  ): Promise<void> {
+  private async initWorkspace(): Promise<void> {
+    const isVirtualFileSystem = this.rootPath.scheme !== "file";
     const clientSettings = await this.settings.getClientSettings();
-    let progress = 0;
+
     let elmVersion;
-    try {
-      elmVersion = utils.getElmVersion(
-        clientSettings,
-        this.rootPath,
-        this.connection,
+    if (isVirtualFileSystem) {
+      this.connection.console.warn(
+        `Using elm 0.19.1 because it is a virtual file system`,
       );
-    } catch (error) {
-      if (error instanceof Error && error.stack) {
-        this.connection.console.warn(
-          `Could not figure out elm version, this will impact how good the server works. \n ${error.stack}`,
+      elmVersion = "0.19.1";
+    } else {
+      try {
+        elmVersion = utils.getElmVersion(
+          clientSettings,
+          this.rootPath,
+          this.connection,
         );
+      } catch (error) {
+        if (error instanceof Error && error.stack) {
+          this.connection.console.warn(
+            `Could not figure out elm version, this will impact how good the server works. \n ${error.stack}`,
+          );
+        }
+
+        if (!elmVersion) {
+          this.connection.console.warn(`Using elm 0.19.1 as a default`);
+          elmVersion = "0.19.1";
+        }
       }
     }
 
-    const pathToElmJson = path.join(this.rootPath.fsPath, "elm.json");
-    this.connection.console.info(`Reading elm.json from ${pathToElmJson}`);
+    const pathToElmJson = Utils.joinPath(this.rootPath, "elm.json");
+    this.connection.console.info(
+      `Reading elm.json from ${pathToElmJson.toString()}`,
+    );
 
-    if (!this.filesWatching.has(pathToElmJson)) {
+    if (!this.filesWatching.has(pathToElmJson.toString())) {
       this.host.watchFile(pathToElmJson, () => {
         void this.connection.window
           .createWorkDoneProgress()
           .then((progress) => {
             progress.begin("Restarting Elm Language Server", 0);
-
-            this.initWorkspace((percent: number) => {
+            this._initializeProgressCallback = (percent: number): void => {
               progress.report(percent, `${percent.toFixed(0)}%`);
-            })
+            };
+
+            this.initWorkspace()
               .then(() => progress.done())
               .catch(() => {
                 //
               });
           });
       });
-      this.filesWatching.add(pathToElmJson);
+      this.filesWatching.add(pathToElmJson.toString());
     }
 
     try {
-      const elmHome = this.findElmHome();
-      ElmPackageCache.packagesRoot = `${elmHome}/${elmVersion}/${this.packageOrPackagesFolder(
-        elmVersion,
-      )}/`;
-
-      // Run `elm make` to download dependencies
-      try {
-        utils.execCmdSync(
-          clientSettings.elmPath,
-          "elm",
-          { cmdArguments: ["make"] },
-          this.rootPath.fsPath,
-          this.connection,
+      if (isVirtualFileSystem) {
+        ElmPackageCache.packagesRoot = URI.parse("elm-virtual-file://package/");
+      } else {
+        const elmHome = findElmHome();
+        ElmPackageCache.packagesRoot = URI.file(
+          `${elmHome}/${elmVersion}/${this.packageOrPackagesFolder(
+            elmVersion,
+          )}/`,
         );
-      } catch (error) {
-        // On application projects, this will give a NO INPUT error message, but will still download the dependencies
+
+        // Run `elm make` to download dependencies
+        try {
+          utils.execCmdSync(
+            clientSettings.elmPath,
+            "elm",
+            { cmdArguments: ["make"] },
+            this.rootPath.fsPath,
+            this.connection,
+          );
+        } catch (error) {
+          // On application projects, this will give a NO INPUT error message, but will still download the dependencies
+        }
       }
 
       try {
-        this.elmPackageCache = new ElmPackageCache(this.loadElmJson.bind(this));
+        this.elmPackageCache = new ElmPackageCache(
+          this.loadElmJson.bind(this),
+          this.host,
+        );
       } catch (error) {
         if (error instanceof Error && error.stack) {
           this.connection.window.showErrorMessage(
-            `Failed constructing ElmPackageCache for ${pathToElmJson}:\n${error.stack}`,
+            `Failed constructing ElmPackageCache for ${pathToElmJson.toString()}:\n${
+              error.stack
+            }`,
           );
         }
 
@@ -399,9 +435,22 @@ export class Program implements IProgram {
       this.rootProject = await this.loadRootProject(pathToElmJson);
       this.forest = new Forest(this.rootProject);
 
-      const elmFilePaths = await this.findElmFilesInProject(this.rootProject);
+      // Stage 1 is finding all elm files in the project
+      // Stage 2 is parsing all elm files in the project
+      const PROGRESS_STAGES = 2;
+      const totalProgress = { percent: 0 };
+      const stageProgressCallback = (percent: number): void => {
+        this._initializeProgressCallback?.(
+          (totalProgress.percent += percent / PROGRESS_STAGES),
+        );
+      };
+
+      const elmFilePaths = await this.findElmFilesInProject(
+        this.rootProject,
+        stageProgressCallback,
+      );
       this.connection.console.info(
-        `Found ${elmFilePaths.length.toString()} files to add to the project`,
+        `Found ${elmFilePaths.length} files to add to the project`,
       );
 
       if (elmFilePaths.every((a) => a.project !== this.rootProject)) {
@@ -411,13 +460,14 @@ export class Program implements IProgram {
       }
 
       const promiseList: Promise<void>[] = [];
-      const PARSE_STAGES = 3;
+      const PARSE_STAGES = 2;
       const progressDelta = 100 / (elmFilePaths.length * PARSE_STAGES);
       for (const filePath of elmFilePaths) {
-        progressCallback((progress += progressDelta));
+        stageProgressCallback(progressDelta);
         promiseList.push(
-          this.readAndAddToForest(filePath, () => {
-            progressCallback((progress += progressDelta));
+          this.readAndAddToForest(filePath).then((result) => {
+            stageProgressCallback(progressDelta);
+            return result;
           }),
         );
       }
@@ -428,25 +478,27 @@ export class Program implements IProgram {
       CommandManager.initHandlers(this.connection);
 
       this.connection.console.info(
-        `Done parsing all files for ${pathToElmJson}`,
+        `Done parsing all files for ${pathToElmJson.toString()}`,
       );
     } catch (error) {
       if (error instanceof Error && error.stack) {
         this.connection.console.error(
-          `Error parsing files for ${pathToElmJson}:\n${error.stack}`,
+          `Error parsing files for ${pathToElmJson.toString()}:\n${
+            error.stack
+          }`,
         );
       }
     }
 
     if (this.forest === null) {
       this.connection.window.showWarningMessage(
-        `Extension will not work at all: workspace initialization failed for ${pathToElmJson}` +
+        `Extension will not work at all: workspace initialization failed for ${pathToElmJson.toString()}` +
           "For more information, check your extension logs (VSCode: F1 > Output, dropdown on the right, 'Elm (project name)')",
       );
     }
   }
 
-  private async loadRootProject(elmJsonPath: string): Promise<ElmProject> {
+  private async loadRootProject(elmJsonPath: URI): Promise<ElmProject> {
     const elmJson = await this.loadElmJson(elmJsonPath);
 
     if (elmJson.type === "application") {
@@ -463,9 +515,9 @@ export class Program implements IProgram {
         type: "application",
         uri: this.rootPath.toString(),
         sourceDirectories: elmJson["source-directories"].map((folder) =>
-          path.resolve(this.rootPath.fsPath, folder),
+          Utils.resolvePath(this.rootPath, folder).toString(),
         ),
-        testDirectories: [path.join(this.rootPath.fsPath, "tests")],
+        testDirectories: [Utils.joinPath(this.rootPath, "tests").toString()],
         dependencies: await this.loadDependencyMap(
           elmJson.dependencies.direct,
           allDependencies,
@@ -499,8 +551,8 @@ export class Program implements IProgram {
       return {
         type: "package",
         uri: this.rootPath.toString(),
-        sourceDirectories: [path.join(this.rootPath.fsPath, "src")],
-        testDirectories: [path.join(this.rootPath.fsPath, "tests")],
+        sourceDirectories: [Utils.joinPath(this.rootPath, "src").toString()],
+        testDirectories: [Utils.joinPath(this.rootPath, "tests").toString()],
         dependencies: await this.loadDependencyMap(
           elmJson.dependencies,
           solvedVersions,
@@ -543,17 +595,24 @@ export class Program implements IProgram {
       packageName.length,
     );
 
-    const pathToPackageWithVersion = `${ElmPackageCache.packagesRoot}${maintainer}/${name}/${version.string}`;
+    const pathToPackageWithVersion = Utils.joinPath(
+      ElmPackageCache.packagesRoot,
+      `${maintainer}/${name}/${version.string}`,
+    );
 
-    const elmJsonPath = path.join(pathToPackageWithVersion, "elm.json");
+    const elmJsonPath = Utils.joinPath(pathToPackageWithVersion, "elm.json");
     const elmJson = await this.loadElmJson(elmJsonPath);
 
     if (elmJson.type === "package") {
       const resolvedPackage = {
         type: "package",
-        uri: URI.file(pathToPackageWithVersion).toString(),
-        sourceDirectories: [path.join(pathToPackageWithVersion, "src")],
-        testDirectories: [path.join(pathToPackageWithVersion, "tests")],
+        uri: pathToPackageWithVersion.toString(),
+        sourceDirectories: [
+          Utils.joinPath(pathToPackageWithVersion, "src").toString(),
+        ],
+        testDirectories: [
+          Utils.joinPath(pathToPackageWithVersion, "tests").toString(),
+        ],
         dependencies: await this.loadDependencyMap(
           elmJson.dependencies,
           packageVersions,
@@ -596,7 +655,7 @@ export class Program implements IProgram {
       [
         ...project.sourceDirectories,
         ...(project === this.rootProject ? project.testDirectories : []),
-      ].map((sourceDir) => [normalizeUri(sourceDir), project]),
+      ].map((sourceDir) => [URI.parse(sourceDir).toString(), project]),
     );
 
     project.dependencies.forEach((dep) =>
@@ -618,12 +677,21 @@ export class Program implements IProgram {
 
   private async findElmFilesInProject(
     project: ElmProject,
+    progressCallback: (progress: number) => void,
   ): Promise<IElmFile[]> {
     const elmFilePathPromises: Promise<IElmFile[]>[] = [];
 
-    this.getSourceDirectories(project).forEach((project, sourceDir) => {
+    const sourceDirectories = this.getSourceDirectories(project);
+
+    const progressDelta = 100 / sourceDirectories.size;
+    sourceDirectories.forEach((project, sourceDir) => {
       elmFilePathPromises.push(
-        this.findElmFilesInProjectWorker(sourceDir, project),
+        this.findElmFilesInProjectWorker(URI.parse(sourceDir), project).then(
+          (data) => {
+            progressCallback(progressDelta);
+            return data;
+          },
+        ),
       );
     });
 
@@ -631,7 +699,7 @@ export class Program implements IProgram {
   }
 
   private async findElmFilesInProjectWorker(
-    sourceDir: string,
+    sourceDir: URI,
     project: ElmProject,
   ): Promise<IElmFile[]> {
     const elmFiles: IElmFile[] = [];
@@ -642,36 +710,70 @@ export class Program implements IProgram {
     const isDependency =
       project.type === "package" ? project.isDependency : false;
 
-    this.connection.console.info(`Glob ${sourceDir}/**/*.elm`);
+    this.connection.console.info(`Glob ${sourceDir.toString()}/**/*.elm`);
 
-    (await this.host.readDirectory(sourceDir)).forEach((matchingPath) => {
-      matchingPath = normalizeUri(matchingPath);
+    // If it is a package and it is a virtual directory, then we can't find elm files using glob
+    // We need to use the exposed modules and then for each file follow the imports to find internal modules
+    if (project.type === "package" && sourceDir.scheme === "elm-virtual-file") {
+      const promises = Array.from(project.exposedModules.values()).map(
+        async (moduleName) => {
+          const modulePath = Utils.joinPath(
+            sourceDir,
+            moduleName.split(".").join("/") + ".elm",
+          );
 
-      const moduleName = utils.getModuleName(matchingPath, sourceDir);
+          try {
+            const fileContent = await this.host.readFile(modulePath);
+            const tree: Tree = this.parser.parse(fileContent);
 
-      const isTestFile =
-        this.getSourceDirectoryOfFile(matchingPath)?.endsWith("tests") ?? false;
+            project.moduleToUriMap.set(moduleName, modulePath.toString());
 
-      if (isTestFile) {
-        project.testModuleToUriMap.set(
-          moduleName,
-          URI.file(matchingPath).toString(),
+            elmFiles.push({
+              maintainerAndPackageName: project.maintainerAndPackageName,
+              path: modulePath,
+              project,
+              isTestFile: false,
+              isDependency: true,
+              tree,
+            });
+          } catch (e) {
+            // The module might be in another source directory
+          }
+        },
+      );
+
+      await Promise.all(promises);
+    } else {
+      (
+        await this.host.readDirectory(sourceDir, /* include */ "**/*.elm")
+      ).forEach((elmFilePath) => {
+        const moduleName = utils.getModuleName(
+          elmFilePath.toString(),
+          sourceDir.toString(),
         );
-      } else {
-        project.moduleToUriMap.set(
-          moduleName,
-          URI.file(matchingPath).toString(),
-        );
-      }
 
-      elmFiles.push({
-        maintainerAndPackageName,
-        path: matchingPath,
-        project,
-        isTestFile,
-        isDependency,
+        const isTestFile =
+          project.type === "application" &&
+          (this.getSourceDirectoryOfFile(elmFilePath.toString())?.endsWith(
+            "tests",
+          ) ??
+            false);
+
+        if (isTestFile) {
+          project.testModuleToUriMap.set(moduleName, elmFilePath.toString());
+        } else {
+          project.moduleToUriMap.set(moduleName, elmFilePath.toString());
+        }
+
+        elmFiles.push({
+          maintainerAndPackageName,
+          path: elmFilePath,
+          project,
+          isTestFile,
+          isDependency,
+        });
       });
-    });
+    }
 
     return elmFiles;
   }
@@ -680,31 +782,14 @@ export class Program implements IProgram {
     return elmVersion === "0.19.0" ? "package" : "packages";
   }
 
-  private findElmHome(): string {
-    const elmHomeVar = process.env.ELM_HOME;
-
-    if (elmHomeVar) {
-      return elmHomeVar;
-    }
-
-    return utils.isWindows
-      ? `${os.homedir()}/AppData/Roaming/elm`
-      : `${os.homedir()}/.elm`;
-  }
-
-  private async readAndAddToForest(
-    filePath: IElmFile,
-    callback: () => void,
-  ): Promise<void> {
+  private async readAndAddToForest(filePath: IElmFile): Promise<void> {
     try {
       this.connection.console.info(`Adding ${filePath.path.toString()}`);
-      const fileContent: string = await this.host.readFile(
-        filePath.path.toString(),
-      );
+      const fileContent: string = await this.host.readFile(filePath.path);
 
       const tree: Tree = this.parser.parse(fileContent);
       this.forest.setTree(
-        URI.file(filePath.path).toString(),
+        filePath.path.toString(),
         filePath.project === this.rootProject,
         true,
         tree,
@@ -713,7 +798,6 @@ export class Program implements IProgram {
         filePath.project,
         filePath.maintainerAndPackageName,
       );
-      callback();
     } catch (error) {
       if (error instanceof Error && error.stack) {
         this.connection.console.error(error.stack);
@@ -743,24 +827,7 @@ export class Program implements IProgram {
     }
   }
 
-  private async loadElmJson(elmJsonPath: string): Promise<ElmJson> {
+  private async loadElmJson(elmJsonPath: URI): Promise<ElmJson> {
     return JSON.parse(await this.host.readFile(elmJsonPath)) as ElmJson;
   }
-}
-
-export function createNodeProgramHost(): IProgramHost {
-  return {
-    readFile: (uri): Promise<string> =>
-      readFile(uri, {
-        encoding: "utf-8",
-      }),
-    readDirectory: (uri: string): Promise<string[]> =>
-      // Cleanup the path on windows, as globby does not like backslashes
-      globby(`${uri.replace(/\\/g, "/")}/**/*.elm`, {
-        suppressErrors: true,
-      }),
-    watchFile: (uri: string, callback: () => void): void => {
-      chokidar.watch(uri).on("change", callback);
-    },
-  };
 }

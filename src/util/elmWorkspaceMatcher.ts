@@ -27,10 +27,15 @@ export class ElmWorkspaceMatcher<ParamType> {
     handler: (
       param: ParamType & IParams,
       token?: CancellationToken,
-    ) => ResultType,
-  ): (param: ParamType, token?: CancellationToken) => ResultType {
-    return (param: ParamType, token?: CancellationToken): ResultType => {
+    ) => ResultType | Promise<ResultType>,
+  ): (param: ParamType, token?: CancellationToken) => Promise<ResultType> {
+    return async (
+      param: ParamType,
+      token?: CancellationToken,
+    ): Promise<ResultType> => {
+      await this.waitForInitialization();
       const program = this.getProgramFor(param);
+
       return handler(
         {
           ...param,
@@ -48,10 +53,15 @@ export class ElmWorkspaceMatcher<ParamType> {
       program: IProgram,
       sourceFile: ISourceFile,
       token?: CancellationToken,
-    ) => ResultType,
-  ): (param: ParamType, token?: CancellationToken) => ResultType {
-    return (param: ParamType, token?: CancellationToken): ResultType => {
+    ) => ResultType | Promise<ResultType>,
+  ): (param: ParamType, token?: CancellationToken) => Promise<ResultType> {
+    return async (
+      param: ParamType,
+      token?: CancellationToken,
+    ): Promise<ResultType> => {
+      await this.waitForInitialization();
       const program = this.getProgramFor(param);
+
       return handler(
         param,
         program,
@@ -80,5 +90,22 @@ export class ElmWorkspaceMatcher<ParamType> {
     const uri = this.getUriFor(param).toString();
 
     return program.getForest().getByUri(uri)!;
+  }
+
+  private async waitForInitialization(): Promise<void> {
+    const uninitialized = this.elmWorkspaces.filter((ws) => !ws.isInitialized);
+
+    if (uninitialized.length === 0) {
+      return Promise.resolve();
+    }
+
+    // Ensure that the programs are initialized
+    // We really should only need to wait until the root projects source directories are loaded, not the entire program
+    // Ideally we would not have to initialize everything up front and the program could load lazliy
+    // The problem is most of the program API is synchronous, but our readFile (what we to initialize) is async
+    // Either we need to make the program API async or we need to make the readFile sync
+    // A readFile sync would return an empty string if we need to load the file asychronously (not from a real file system), then we the file is loaded a change would be triggered with the actual contents
+    // On the other hand, an async program API might work, but it is a lot to refactor and I'm not sure of the performance implications
+    await Promise.all(uninitialized.map((ws) => ws.init()));
   }
 }

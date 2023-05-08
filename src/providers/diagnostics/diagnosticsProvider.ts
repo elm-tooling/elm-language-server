@@ -148,15 +148,19 @@ export class DiagnosticsProvider {
         return;
       }
 
-      void this.getElmMakeDiagnostics(sourceFile).then((hasElmMakeErrors) => {
-        if (hasElmMakeErrors) {
-          this.currentDiagnostics.forEach((_, uri) => {
-            this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
-          });
-        } else {
-          void this.getElmReviewDiagnostics(sourceFile);
-        }
-      });
+      if (program.getRootPath().scheme === "file") {
+        void this.getElmMakeDiagnostics(sourceFile).then((hasElmMakeErrors) => {
+          if (hasElmMakeErrors) {
+            this.currentDiagnostics.forEach((_, uri) => {
+              this.updateDiagnostics(uri, DiagnosticKind.ElmReview, []);
+            });
+          } else {
+            void this.getElmReviewDiagnostics(sourceFile);
+          }
+        });
+      } else {
+        this.requestDiagnostics(sourceFile.uri);
+      }
 
       // If we aren't doing them on change, we need to trigger them here
       if (disableDiagnosticsOnChange) {
@@ -257,6 +261,19 @@ export class DiagnosticsProvider {
     return result;
   }
 
+  public async interruptDiagnosticsAsync<T>(f: () => Promise<T>): Promise<T> {
+    if (!this.pendingRequest) {
+      return f();
+    }
+
+    this.pendingRequest.cancel();
+    this.pendingRequest = undefined;
+    const result = await f();
+
+    this.triggerDiagnostics();
+    return result;
+  }
+
   public getCurrentDiagnostics(
     uri: string,
     kind?: DiagnosticKind,
@@ -319,7 +336,7 @@ export class DiagnosticsProvider {
       }
 
       // Add all open files to request
-      const openFiles = this.events.getManagedUris();
+      const openFiles = this.events.getOpenUris();
       openFiles.forEach((file) => {
         if (!orderedFiles.includes(file)) {
           orderedFiles.push(file);
