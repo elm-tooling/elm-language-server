@@ -6,6 +6,7 @@ import { IElmPackageCache } from "../elmPackageCache";
 import { IClientSettings } from "../../util/settings";
 import { ElmProject } from "../program";
 import { NonEmptyArray } from "../../util/utils";
+import os from "os";
 
 export const isWindows = process.platform === "win32";
 
@@ -456,4 +457,16 @@ export function isCoreProject(project: ElmProject): boolean {
     project.type === "package" &&
     project.maintainerAndPackageName === "elm/core"
   );
+}
+
+export function findElmHome(): string {
+  const elmHomeVar = process.env.ELM_HOME;
+
+  if (elmHomeVar) {
+    return elmHomeVar;
+  }
+
+  return isWindows
+    ? `${os.homedir()}/AppData/Roaming/elm`
+    : `${os.homedir()}/.elm`;
 }

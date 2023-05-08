@@ -27,6 +27,9 @@ export interface ISourceFile {
   exposing?: IExposing;
   symbolLinks?: SyntaxNodeMap<SyntaxNode, SymbolMap>;
   nonShadowableNames?: Set<string>; // Top level function names
+
+  // This is resolved while getting semantic diagnostics and defines whether we have loaded all import files
+  resolvedImports?: boolean;
 }
 
 export interface IForest {

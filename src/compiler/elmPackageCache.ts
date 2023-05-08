@@ -1,12 +1,8 @@
-import { readdir } from "fs";
 import * as utils from "./utils/elmUtils";
-import { ElmJson } from "./program";
-import { promisify } from "util";
+import { ElmJson, IProgramHost } from "./program";
 import { IConstraint, IVersion } from "./utils/elmUtils";
 import { MultiMap } from "../util/multiMap";
-import * as path from "../util/path";
-
-const readDir = promisify(readdir);
+import { URI, Utils } from "vscode-uri";
 
 export interface IPackage {
   dependencies: Map<string, IConstraint>;
@@ -30,12 +26,15 @@ export class ElmPackageCache implements IElmPackageCache {
   >();
   private static moduleToPackages = new MultiMap<string, string>();
 
-  private static _packagesRoot: string;
+  private static _packagesRoot: URI;
+  private static allPackagesFromWebsite: {
+    [packageNameAndMaintainer: string]: string[];
+  };
 
-  public static set packagesRoot(newPackagesRoot: string) {
+  public static set packagesRoot(newPackagesRoot: URI) {
     // If we somehow got a different packages root (they changed elm versions and restarted the server)
     // Clear all caches
-    if (this._packagesRoot !== newPackagesRoot) {
+    if (this._packagesRoot?.toString() !== newPackagesRoot.toString()) {
       this.versionsCache.clear();
       this.dependenciesCache.clear();
       this.moduleToPackages.clear();
@@ -43,11 +42,14 @@ export class ElmPackageCache implements IElmPackageCache {
     }
   }
 
-  public static get packagesRoot(): string {
+  public static get packagesRoot(): URI {
     return this._packagesRoot;
   }
 
-  constructor(private loadElmJson: (elmJsonPath: string) => Promise<ElmJson>) {}
+  constructor(
+    private loadElmJson: (elmJsonPath: URI) => Promise<ElmJson>,
+    private host: IProgramHost,
+  ) {}
 
   public async getVersions(packageName: string): Promise<IVersion[]> {
     const cached = ElmPackageCache.versionsCache.get(packageName);
@@ -56,7 +58,10 @@ export class ElmPackageCache implements IElmPackageCache {
       return cached;
     }
 
-    const versions = await this.getVersionsFromFileSystem(packageName);
+    const versions =
+      ElmPackageCache.packagesRoot.scheme === "file"
+        ? await this.getVersionsFromFileSystem(packageName)
+        : await this.getVersionsFromWebsite(packageName);
 
     ElmPackageCache.versionsCache.set(packageName, versions);
 
@@ -74,10 +79,7 @@ export class ElmPackageCache implements IElmPackageCache {
       return cached;
     }
 
-    const dependencies = await this.getDependenciesFromFileSystem(
-      packageName,
-      version,
-    );
+    const dependencies = await this.getDependenciesWorker(packageName, version);
 
     ElmPackageCache.dependenciesCache.set(cacheKey, dependencies);
 
@@ -90,23 +92,43 @@ export class ElmPackageCache implements IElmPackageCache {
       return;
     }
 
+    // Don't load if we're not using a file system
+    if (
+      !ElmPackageCache._packagesRoot ||
+      ElmPackageCache._packagesRoot.scheme !== "file"
+    ) {
+      return;
+    }
+
     try {
-      const maintainers = await readDir(ElmPackageCache._packagesRoot, "utf8");
+      const maintainers = await this.host.readDirectory(
+        ElmPackageCache._packagesRoot,
+        undefined,
+        /* depth */ 1,
+      );
 
       for (const maintainer of maintainers) {
         try {
-          const packages = await readDir(
-            path.join(ElmPackageCache._packagesRoot, maintainer),
+          const maintainerName = Utils.basename(maintainer);
+          const packages = await this.host.readDirectory(
+            Utils.joinPath(ElmPackageCache._packagesRoot, maintainerName),
+            undefined,
+            /* depth */ 1,
           );
 
-          for (const packageName of packages) {
+          for (const packagePath of packages) {
             try {
-              const packageAndMaintainer = `${maintainer}/${packageName}`;
+              const packageAndMaintainer = `${maintainerName}/${Utils.basename(
+                packagePath,
+              )}`;
               const versions = await this.getVersions(packageAndMaintainer);
 
               const latestVersion = versions[versions.length - 1];
 
-              const elmJsonPath = `${ElmPackageCache._packagesRoot}${packageAndMaintainer}/${latestVersion.string}/elm.json`;
+              const elmJsonPath = Utils.joinPath(
+                ElmPackageCache._packagesRoot,
+                `${packageAndMaintainer}/${latestVersion.string}/elm.json`,
+              );
               const elmJson = await this.loadElmJson(elmJsonPath);
 
               if (elmJson.type === "package") {
@@ -147,13 +169,20 @@ export class ElmPackageCache implements IElmPackageCache {
       packageName.length,
     );
 
-    const pathToPackage = `${ElmPackageCache._packagesRoot}${maintainer}/${name}/`;
-    const folders = await readDir(pathToPackage, "utf8");
+    const pathToPackage = Utils.joinPath(
+      ElmPackageCache._packagesRoot,
+      `${maintainer}/${name}/`,
+    );
+    const folders = await this.host.readDirectory(
+      pathToPackage,
+      undefined,
+      /* depth */ 1,
+    );
 
     const allVersions: IVersion[] = [];
 
-    for (const folderName of folders) {
-      const version = utils.parseVersion(folderName);
+    for (const folder of folders) {
+      const version = utils.parseVersion(Utils.basename(folder));
 
       if (
         Number.isInteger(version.major) &&
@@ -167,11 +196,36 @@ export class ElmPackageCache implements IElmPackageCache {
     return allVersions;
   }
 
-  private async getDependenciesFromFileSystem(
+  private async getVersionsFromWebsite(
+    packageName: string,
+  ): Promise<IVersion[]> {
+    const maintainer = packageName.substring(0, packageName.indexOf("/"));
+    const name = packageName.substring(
+      packageName.indexOf("/") + 1,
+      packageName.length,
+    );
+
+    if (!ElmPackageCache.allPackagesFromWebsite) {
+      ElmPackageCache.allPackagesFromWebsite = JSON.parse(
+        await this.host.readFile(
+          URI.parse("https://package.elm-lang.org/all-packages/"),
+        ),
+      ) as { [packageNameAndMaintainer: string]: string[] };
+    }
+
+    return ElmPackageCache.allPackagesFromWebsite[`${maintainer}/${name}`].map(
+      (version) => utils.parseVersion(version),
+    );
+  }
+
+  private async getDependenciesWorker(
     packageName: string,
     version: IVersion,
   ): Promise<Map<string, IConstraint>> {
-    const elmJsonPath = `${ElmPackageCache._packagesRoot}${packageName}/${version.string}/elm.json`;
+    const elmJsonPath = Utils.joinPath(
+      ElmPackageCache._packagesRoot,
+      `${packageName}/${version.string}/elm.json`,
+    );
     const elmJson = await this.loadElmJson(elmJsonPath);
 
     return this.parseDependencies(elmJson);

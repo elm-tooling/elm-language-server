@@ -34,10 +34,12 @@ export class FileEventsHandler {
     this.connection = container.resolve<Connection>("Connection");
     this.astProvider = container.resolve(ASTProvider);
 
-    this.connection.workspace.onDidCreateFiles((params: CreateFilesParams) => {
+    const onDidCreateFile = async (
+      params: CreateFilesParams,
+    ): Promise<void> => {
       const edit: WorkspaceEdit = { changes: {} };
       for (const { uri } of params.files) {
-        const changes = new ElmWorkspaceMatcher(({ uri }: FileCreate) =>
+        const changes = await new ElmWorkspaceMatcher(({ uri }: FileCreate) =>
           URI.parse(uri),
         ).handle(this.onDidCreateFile.bind(this))({
           uri,
@@ -48,37 +50,45 @@ export class FileEventsHandler {
         }
       }
 
-      void this.connection.workspace.applyEdit(edit);
+      await this.connection.workspace.applyEdit(edit);
+    };
+
+    this.connection.workspace.onDidCreateFiles((params: CreateFilesParams) => {
+      void onDidCreateFile(params);
     });
 
-    this.connection.workspace.onWillRenameFiles((params: RenameFilesParams) => {
-      const edit: WorkspaceEdit = { changes: {} };
-      for (const { oldUri, newUri } of params.files) {
-        const workspaceEdit = new ElmWorkspaceMatcher(
-          ({ oldUri }: FileRename) => URI.parse(oldUri),
-        ).handle(this.onWillRenameFile.bind(this))({
-          oldUri,
-          newUri,
-        });
+    this.connection.workspace.onWillRenameFiles(
+      async (params: RenameFilesParams) => {
+        const edit: WorkspaceEdit = { changes: {} };
+        for (const { oldUri, newUri } of params.files) {
+          const workspaceEdit = await new ElmWorkspaceMatcher(
+            ({ oldUri }: FileRename) => URI.parse(oldUri),
+          ).handle(this.onWillRenameFile.bind(this))({
+            oldUri,
+            newUri,
+          });
 
-        if (workspaceEdit) {
-          this.mergeWorkspaceEdit(edit, workspaceEdit);
+          if (workspaceEdit) {
+            this.mergeWorkspaceEdit(edit, workspaceEdit);
+          }
         }
-      }
-      return edit;
-    });
+        return edit;
+      },
+    );
 
-    this.connection.workspace.onWillDeleteFiles((params: DeleteFilesParams) => {
-      for (const { uri } of params.files) {
-        new ElmWorkspaceMatcher(({ uri }: FileDelete) => URI.parse(uri)).handle(
-          this.onWillDeleteFile.bind(this),
-        )({
-          uri,
-        });
-      }
+    this.connection.workspace.onWillDeleteFiles(
+      async (params: DeleteFilesParams) => {
+        for (const { uri } of params.files) {
+          await new ElmWorkspaceMatcher(({ uri }: FileDelete) =>
+            URI.parse(uri),
+          ).handle(this.onWillDeleteFile.bind(this))({
+            uri,
+          });
+        }
 
-      return null;
-    });
+        return null;
+      },
+    );
   }
 
   private onDidCreateFile({

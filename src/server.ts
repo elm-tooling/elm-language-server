@@ -1,20 +1,13 @@
-import globby from "globby";
 import path from "path";
 import { container } from "tsyringe";
 import {
   Connection,
   InitializeParams,
   InitializeResult,
-  WorkDoneProgressReporter,
 } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
 import { CapabilityCalculator } from "./capabilityCalculator";
-import {
-  Program,
-  IProgram,
-  createNodeProgramHost,
-  IProgramHost,
-} from "./compiler/program";
+import { Program, IProgram, IProgramHost } from "./compiler/program";
 import {
   CodeActionProvider,
   CodeLensProvider,
@@ -38,6 +31,9 @@ import { Settings } from "./util/settings";
 import { TextDocumentEvents } from "./util/textDocumentEvents";
 import { FindTestsProvider } from "./providers/findTestsProvider";
 import { ElmReviewDiagnostics } from "./providers/diagnostics/elmReviewDiagnostics";
+import { findElmJsonFiles } from "./node";
+import { VirtualFileProvider } from "./providers/virtualFileProvider";
+import { IFileSystemHost } from "./types";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -51,25 +47,35 @@ export class Server implements ILanguageServer {
   public initSuccessfull = false;
 
   constructor(
-    params: InitializeParams,
-    private progress: WorkDoneProgressReporter,
+    private params: InitializeParams,
+    fileSystemHost: IFileSystemHost,
   ) {
     this.connection = container.resolve("Connection");
+    const initializationOptions = params.initializationOptions as {
+      elmJsonFiles?: string[];
+    };
 
-    const uri = this.getWorkspaceUri(params);
+    const uri = this.getWorkspaceUri(this.params);
 
     if (uri) {
-      // Cleanup the path on windows, as globby does not like backslashes
-      const globUri = uri.fsPath.replace(/\\/g, "/").replace(/\/$/, "");
-      const elmJsonGlob = `${globUri}/**/elm.json`;
+      const isVirtualFileSystem = uri.scheme !== "file";
 
-      const elmJsons = globby.sync(
-        [elmJsonGlob, "!**/node_modules/**", "!**/elm-stuff/**"],
-        { suppressErrors: true },
-      );
+      if (isVirtualFileSystem && !initializationOptions.elmJsonFiles) {
+        this.connection.window.showErrorMessage(
+          "Virtual file system is not supported.",
+        );
+        this.connection.console.info("Virtual file system is not supported");
+        return;
+      }
+
+      const elmJsons =
+        initializationOptions.elmJsonFiles ?? findElmJsonFiles(uri);
+
       if (elmJsons.length > 0) {
         this.connection.console.info(
-          `Found ${elmJsons.length} elm.json files for workspace ${globUri}`,
+          `Found ${
+            elmJsons.length
+          } elm.json files for workspace ${uri.toString()}`,
         );
         const listOfElmJsonFolders = elmJsons.map((a) =>
           this.getElmJsonFolder(a),
@@ -77,24 +83,24 @@ export class Server implements ILanguageServer {
         const topLevelElmJsons: Map<string, URI> =
           this.findTopLevelFolders(listOfElmJsonFolders);
         this.connection.console.info(
-          `Found ${topLevelElmJsons.size} unique elmWorkspaces for workspace ${globUri}`,
+          `Found ${
+            topLevelElmJsons.size
+          } unique elmWorkspaces for workspace ${uri.toString()}`,
         );
 
         const textDocuments = container.resolve(TextDocumentEvents);
 
-        const nodeProgramHost = createNodeProgramHost();
-
-        // First try to read from text documents buffer, then fallback to disk
         const programHost: IProgramHost = {
-          ...nodeProgramHost,
-          readFile: (uri) => {
-            const textDocument = textDocuments.get(URI.file(uri).toString());
+          ...fileSystemHost,
+          readFile: async (uri) => {
+            const textDocument = textDocuments.get(uri.toString());
 
             if (textDocument) {
-              return Promise.resolve(textDocument.getText());
+              return textDocument.getText();
             }
 
-            return nodeProgramHost.readFile(uri);
+            const result = await fileSystemHost.readFile(uri);
+            return result;
           },
         };
 
@@ -127,9 +133,10 @@ export class Server implements ILanguageServer {
   }
 
   public async init(): Promise<void> {
-    this.progress.begin("Initializing workspace", 0);
+    const progress = await this.connection.window.createWorkDoneProgress();
+    progress.begin("Initializing workspace", 0, "Indexing");
     if (!this.initSuccessfull) {
-      this.progress.done();
+      progress.done();
       return;
     }
     const elmWorkspaces = container.resolve<IProgram[]>("ElmWorkspaces");
@@ -145,11 +152,11 @@ export class Server implements ILanguageServer {
             const avgIndexed =
               all.reduce((sum, { indexedPercent }) => sum + indexedPercent, 0) /
               all.length;
-            this.progress.report(Math.round(avgIndexed), "Indexing");
+            progress.report(avgIndexed, "Indexing");
           }),
         ),
     );
-    this.progress.done();
+    progress.done();
   }
 
   public async registerInitializedProviders(): Promise<void> {
@@ -200,10 +207,11 @@ export class Server implements ILanguageServer {
     new LinkedEditingRangesProvider();
 
     new FindTestsProvider();
+    new VirtualFileProvider();
   }
 
   private getElmJsonFolder(uri: string): URI {
-    return Utils.dirname(URI.file(uri));
+    return Utils.dirname(URI.parse(uri));
   }
 
   private findTopLevelFolders(listOfElmJsonFolders: URI[]): Map<string, URI> {
@@ -226,7 +234,9 @@ export class Server implements ILanguageServer {
   }
 
   private getWorkspaceUri(params: InitializeParams): URI | null {
-    if (params.rootUri) {
+    if (params.workspaceFolders && params.workspaceFolders.length > 0) {
+      return URI.parse(params.workspaceFolders[0].uri);
+    } else if (params.rootUri) {
       return URI.parse(params.rootUri);
     } else if (params.rootPath) {
       return URI.file(params.rootPath);
