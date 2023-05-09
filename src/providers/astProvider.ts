@@ -73,6 +73,17 @@ export class ASTProvider {
     // Source file could be undefined here
     const sourceFile = <ISourceFile | undefined>params.sourceFile;
 
+    const newText =
+      this.documentEvents.get(document.uri)?.getText() ??
+      readFileSync(URI.parse(document.uri).fsPath, "utf8");
+
+    if (
+      sourceFile &&
+      (sourceFile.tree.rootNode.text === newText || !sourceFile.writeable)
+    ) {
+      return;
+    }
+
     let tree = sourceFile?.tree;
 
     let hasContentChanges = false;
@@ -110,10 +121,6 @@ export class ASTProvider {
     }
 
     const oldNodes = tree?.rootNode.namedChildren ?? [];
-
-    const newText =
-      this.documentEvents.get(document.uri)?.getText() ??
-      readFileSync(URI.parse(document.uri).fsPath, "utf8");
 
     const newTree = this.parser.parse(
       newText,
@@ -181,10 +188,11 @@ export class ASTProvider {
       const sourceFile = forest.setTree(
         pendingRenameUri ?? document.uri,
         true,
-        true,
         tree,
         isTestFile,
         isDependency,
+        params.sourceFile?.project,
+        params.sourceFile?.maintainerAndPackageName,
       );
 
       // The program now needs to be synchronized

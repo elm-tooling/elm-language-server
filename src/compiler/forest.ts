@@ -9,7 +9,6 @@ import { ElmProject } from "./program";
 export interface ISourceFile {
   uri: string;
   writeable: boolean;
-  referenced: boolean;
   maintainerAndPackageName?: string;
   tree: Tree;
   project: ElmProject; // The project this source file is associated with
@@ -39,7 +38,6 @@ export interface IForest {
   setTree(
     uri: string,
     writeable: boolean,
-    referenced: boolean,
     tree: Tree,
     isTestFile: boolean,
     isDependency: boolean,
@@ -67,7 +65,6 @@ export class Forest implements IForest {
   public setTree(
     uri: string,
     writeable: boolean,
-    referenced: boolean,
     tree: Tree,
     isTestFile: boolean,
     isDependency: boolean,
@@ -78,7 +75,6 @@ export class Forest implements IForest {
 
     const sourceFile: ISourceFile = {
       maintainerAndPackageName,
-      referenced,
       tree,
       uri,
       writeable,

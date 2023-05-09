@@ -1,7 +1,7 @@
 import execa, { ExecaSyncReturnValue } from "execa";
 import * as path from "../../util/path";
 import { Connection, CompletionItemKind } from "vscode-languageserver";
-import { URI } from "vscode-uri";
+import { URI, Utils } from "vscode-uri";
 import { IElmPackageCache } from "../elmPackageCache";
 import { IClientSettings } from "../../util/settings";
 import { ElmProject } from "../program";
@@ -427,6 +427,18 @@ export function constraintIntersect(
 
 export function getModuleName(uri: string, sourceDir: string): string {
   return path.relative(sourceDir, uri).replace(".elm", "").split("/").join(".");
+}
+
+export function getModuleUri(
+  moduleName: string,
+  sourceDir: URI,
+  project: ElmProject,
+): URI {
+  if (isKernelProject(project) && nameIsKernel(moduleName)) {
+    return Utils.joinPath(sourceDir, moduleName.split(".").join("/") + ".js");
+  }
+
+  return Utils.joinPath(sourceDir, moduleName.split(".").join("/") + ".elm");
 }
 
 export function flattenExposedModules(
