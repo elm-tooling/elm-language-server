@@ -473,8 +473,6 @@ export class Program implements IProgram {
       }
       await Promise.all(promiseList);
 
-      this.findExposedModulesOfDependencies(this.rootProject);
-
       CommandManager.initHandlers(this.connection);
 
       this.connection.console.info(
@@ -695,7 +693,61 @@ export class Program implements IProgram {
       );
     });
 
-    return (await Promise.all(elmFilePathPromises)).flatMap((a) => a);
+    const elmFiles = (await Promise.all(elmFilePathPromises)).flatMap((a) => a);
+    this.findExposedModulesOfDependencies(project);
+
+    // If we have a tree, then it means it is a package that we need to check for internal dependencies
+    const unresolvedFiles = elmFiles.filter((elmFile) => elmFile.tree);
+    while (unresolvedFiles.length > 0) {
+      const elmFile = unresolvedFiles.shift();
+
+      if (!elmFile || !elmFile.tree) {
+        this.connection.console.error(
+          "Unexpected error occurred while resolving internal dependencies",
+        );
+        continue;
+      }
+
+      const promies = elmFile.tree.rootNode.children
+        .filter((a) => a.type === "import_clause")
+        .map((imp) => imp.childForFieldName("moduleName"))
+        .map(async (moduleNode) => {
+          if (!moduleNode) {
+            return;
+          }
+
+          const moduleName = moduleNode.text;
+
+          // Only package projects can have unresolved internal dependencies
+          const project = elmFile.project;
+          if (
+            project.type === "package" &&
+            !project.moduleToUriMap.has(moduleName)
+          ) {
+            // We need to try for each source directory, but only 1 will work
+            for (const sourceDir of project.sourceDirectories) {
+              const elmFile = await this.tryAddModule(
+                moduleName,
+                URI.parse(sourceDir),
+                project,
+              );
+
+              if (elmFile) {
+                elmFiles.push(elmFile);
+
+                // Kernel files won't have a tree and don't need further processing
+                if (elmFile.tree) {
+                  unresolvedFiles.push(elmFile);
+                }
+              }
+            }
+          }
+        });
+
+      await Promise.all(promies);
+    }
+
+    return elmFiles;
   }
 
   private async findElmFilesInProjectWorker(
@@ -712,32 +764,19 @@ export class Program implements IProgram {
 
     this.connection.console.info(`Glob ${sourceDir.toString()}/**/*.elm`);
 
-    // If it is a package and it is a virtual directory, then we can't find elm files using glob
+    // If it is a virtual package then we can't find elm files using glob
     // We need to use the exposed modules and then for each file follow the imports to find internal modules
+    // We do this in the findElmFilesInProject after we have loaded all the initial files
     if (project.type === "package" && sourceDir.scheme === "elm-virtual-file") {
       const promises = Array.from(project.exposedModules.values()).map(
         async (moduleName) => {
-          const modulePath = Utils.joinPath(
+          const elmFile = await this.tryAddModule(
+            moduleName,
             sourceDir,
-            moduleName.split(".").join("/") + ".elm",
+            project,
           );
-
-          try {
-            const fileContent = await this.host.readFile(modulePath);
-            const tree: Tree = this.parser.parse(fileContent);
-
-            project.moduleToUriMap.set(moduleName, modulePath.toString());
-
-            elmFiles.push({
-              maintainerAndPackageName: project.maintainerAndPackageName,
-              path: modulePath,
-              project,
-              isTestFile: false,
-              isDependency: true,
-              tree,
-            });
-          } catch (e) {
-            // The module might be in another source directory
+          if (elmFile) {
+            elmFiles.push(elmFile);
           }
         },
       );
@@ -778,25 +817,52 @@ export class Program implements IProgram {
     return elmFiles;
   }
 
+  private async tryAddModule(
+    moduleName: string,
+    sourceDir: URI,
+    project: IElmPackage,
+  ): Promise<IElmFile | undefined> {
+    const modulePath = utils.getModuleUri(moduleName, sourceDir, project);
+
+    try {
+      const fileContent = await this.host.readFile(modulePath);
+
+      project.moduleToUriMap.set(moduleName, modulePath.toString());
+
+      const isKernel = modulePath.toString().endsWith(".js");
+
+      return {
+        maintainerAndPackageName: project.maintainerAndPackageName,
+        path: modulePath,
+        project,
+        isTestFile: false,
+        isDependency: true,
+        tree: isKernel ? undefined : this.parser.parse(fileContent),
+      };
+    } catch (e) {
+      // The module might be in another source directory
+    }
+  }
+
   private packageOrPackagesFolder(elmVersion: string | undefined): string {
     return elmVersion === "0.19.0" ? "package" : "packages";
   }
 
-  private async readAndAddToForest(filePath: IElmFile): Promise<void> {
+  private async readAndAddToForest(elmFile: IElmFile): Promise<void> {
     try {
-      this.connection.console.info(`Adding ${filePath.path.toString()}`);
-      const fileContent: string = await this.host.readFile(filePath.path);
+      this.connection.console.info(`Adding ${elmFile.path.toString()}`);
 
-      const tree: Tree = this.parser.parse(fileContent);
+      const tree =
+        elmFile.tree ??
+        this.parser.parse(await this.host.readFile(elmFile.path));
       this.forest.setTree(
-        filePath.path.toString(),
-        filePath.project === this.rootProject,
-        true,
+        elmFile.path.toString(),
+        elmFile.project === this.rootProject,
         tree,
-        filePath.isTestFile,
-        filePath.isDependency,
-        filePath.project,
-        filePath.maintainerAndPackageName,
+        elmFile.isTestFile,
+        elmFile.isDependency,
+        elmFile.project,
+        elmFile.maintainerAndPackageName,
       );
     } catch (error) {
       if (error instanceof Error && error.stack) {

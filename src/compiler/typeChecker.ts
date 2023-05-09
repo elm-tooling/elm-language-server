@@ -1056,13 +1056,9 @@ export function createTypeChecker(program: IProgram): TypeChecker {
 
     if (moduleNameNode) {
       const moduleName = moduleNameNode.text;
-      if (
-        !program.getSourceFileOfImportableModule(
-          getSourceFileOfNode(importClause),
-          moduleName,
-        )
-      ) {
-        const project = getSourceFileOfNode(importClause).project;
+      const sourceFile = getSourceFileOfNode(importClause);
+      if (!program.getSourceFileOfImportableModule(sourceFile, moduleName)) {
+        const project = sourceFile.project;
         if (
           !nameIsKernel(moduleName) ||
           !isKernelProject(project) ||
@@ -1114,12 +1110,12 @@ export function createTypeChecker(program: IProgram): TypeChecker {
   }
 
   function getSourceFileOfNode(node: SyntaxNode): ISourceFile {
-    const treeContainer = forest.getByUri(node.tree.uri);
+    const sourceFile = forest.getByUri(node.tree.uri);
 
-    if (!treeContainer) {
-      throw new Error(`Can't find treeContainer by uri "${node.tree.uri}"`);
+    if (!sourceFile) {
+      throw new Error(`Can't find sourceFile by uri "${node.tree.uri}"`);
     } else {
-      return treeContainer;
+      return sourceFile;
     }
   }
 }
