@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { startLanguageServer } from "./node";
 
 // Show version for `-v` or `--version` arguments
