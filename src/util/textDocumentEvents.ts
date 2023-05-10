@@ -15,7 +15,6 @@ import { IDocumentEvents } from "./documentEvents";
 export class TextDocumentEvents extends EventEmitter {
   // a single store of documents shared by all workspaces
   private _documents: { [uri: string]: TextDocument } = {};
-  private _openDocuments = new Set<string>();
   private _configuration: TextDocumentsConfiguration<TextDocument> =
     TextDocument;
 
@@ -32,7 +31,6 @@ export class TextDocumentEvents extends EventEmitter {
         td.text,
       );
       this._documents[params.textDocument.uri] = document;
-      this._openDocuments.add(params.textDocument.uri);
       this.emit("open", Object.freeze({ document, ...params }));
     });
 
@@ -69,7 +67,7 @@ export class TextDocumentEvents extends EventEmitter {
     events.on("close", (params: DidCloseTextDocumentParams) => {
       const document = this._documents[params.textDocument.uri];
       if (document) {
-        this._openDocuments.delete(params.textDocument.uri);
+        delete this._documents[params.textDocument.uri];
         this.emit("close", Object.freeze({ document, ...params }));
       }
     });
@@ -87,6 +85,6 @@ export class TextDocumentEvents extends EventEmitter {
   }
 
   public getOpenUris(): string[] {
-    return Array.from(this._openDocuments.values());
+    return Object.keys(this._documents);
   }
 }
