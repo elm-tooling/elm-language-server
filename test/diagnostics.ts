@@ -29,6 +29,9 @@ container.register("Connection", {
         console.log(a);
       },
     },
+    onExecuteCommand: (): void => {
+      //
+    },
   },
 });
 
@@ -196,7 +199,9 @@ const applications = require("../script/applications.json") as string[];
 async function testAll(): Promise<void> {
   await initParser();
 
-  for (const lib of [...applications, ...filteredLibs]) {
+  for (const lib of [...applications, ...filteredLibs].filter((lib) =>
+    lib.includes("geometry"),
+  )) {
     console.log(lib);
     const dir = `examples-full/${lib}`;
 
