@@ -6,7 +6,7 @@ import { Program, IProgram, IProgramHost } from "../../src/compiler/program";
 import * as path from "../../src/util/path";
 import { Utils } from "../../src/util/utils";
 import { promisify } from "util";
-import { readFile } from "fs";
+import { readFile, readdir } from "fs";
 import globby from "globby";
 
 export const baseUri = path.join(__dirname, "../sources/");
@@ -100,14 +100,14 @@ export function createProgramHost(): IProgramHost {
       promisify(readFile)(uri.fsPath, {
         encoding: "utf-8",
       }),
-    readDirectory: async (uri: URI): Promise<URI[]> => {
+    readDirectory: async (uri: URI, include, depth): Promise<URI[]> => {
       // Cleanup the path on windows, as globby does not like backslashes
-      const result = await globby(
-        `${uri.fsPath.replace(/\\/g, "/")}/**/*.elm`,
-        {
-          suppressErrors: true,
-        },
-      );
+      const result =
+        depth === 1
+          ? await promisify(readdir)(uri.fsPath)
+          : await globby(`${uri.fsPath.replace(/\\/g, "/")}/${include}`, {
+              suppressErrors: true,
+            });
       return result.map((file) => URI.file(file));
     },
     watchFile: (): void => {
