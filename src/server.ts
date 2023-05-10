@@ -45,6 +45,7 @@ export interface ILanguageServer {
 export class Server implements ILanguageServer {
   private connection: Connection;
   public initSuccessfull = false;
+  private isVirtualFileSystem = false;
 
   constructor(
     private params: InitializeParams,
@@ -58,9 +59,9 @@ export class Server implements ILanguageServer {
     const uri = this.getWorkspaceUri(this.params);
 
     if (uri) {
-      const isVirtualFileSystem = uri.scheme !== "file";
+      this.isVirtualFileSystem = uri.scheme !== "file";
 
-      if (isVirtualFileSystem && !initializationOptions.elmJsonFiles) {
+      if (this.isVirtualFileSystem && !initializationOptions.elmJsonFiles) {
         this.connection.window.showErrorMessage(
           "Virtual file system is not supported.",
         );
@@ -175,9 +176,11 @@ export class Server implements ILanguageServer {
     });
 
     // these register calls rely on settings having been setup
-    container.register(DocumentFormattingProvider, {
-      useValue: new DocumentFormattingProvider(),
-    });
+    if (!this.isVirtualFileSystem) {
+      container.register(DocumentFormattingProvider, {
+        useValue: new DocumentFormattingProvider(),
+      });
+    }
 
     container.register(ElmMakeDiagnostics, {
       useValue: new ElmMakeDiagnostics(),
