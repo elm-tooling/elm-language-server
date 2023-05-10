@@ -30,7 +30,7 @@ export class FileEventsHandler {
   private connection: Connection;
   private astProvider: ASTProvider;
 
-  constructor() {
+  constructor(didCreateFile?: (uri: string) => void) {
     this.connection = container.resolve<Connection>("Connection");
     this.astProvider = container.resolve(ASTProvider);
 
@@ -51,6 +51,13 @@ export class FileEventsHandler {
       }
 
       await this.connection.workspace.applyEdit(edit);
+
+      // Used for testing
+      if (didCreateFile) {
+        for (const { uri } of params.files) {
+          didCreateFile(uri);
+        }
+      }
     };
 
     this.connection.workspace.onDidCreateFiles((params: CreateFilesParams) => {
@@ -173,14 +180,14 @@ export class FileEventsHandler {
     uri: string,
     program: IProgram,
   ): string | undefined {
-    const sourceDir = program.getSourceDirectoryOfFile(URI.parse(uri).fsPath);
+    const sourceDir = program.getSourceDirectoryOfFile(uri);
 
     // The file is not in a source dir (shouldn't happen)
     if (!sourceDir) {
       return;
     }
 
-    return getModuleName(uri, URI.file(sourceDir).toString());
+    return getModuleName(uri, sourceDir);
   }
 
   private mergeWorkspaceEdit(

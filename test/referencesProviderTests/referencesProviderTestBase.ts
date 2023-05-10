@@ -1,5 +1,5 @@
 import path from "path";
-import { URI } from "vscode-uri";
+import { URI, Utils } from "vscode-uri";
 import { ReferenceResult, ReferencesProvider } from "../../src/providers";
 import { IReferenceParams } from "../../src/providers/paramsExtensions";
 import { TreeUtils } from "../../src/util/treeUtils";
@@ -29,17 +29,16 @@ export class ReferencesProviderTestBase {
       throw new Error("Getting references from source failed");
     }
 
-    const testUri = URI.file(
-      path.join(srcUri, referenceTest.invokeFile),
-    ).toString();
+    const testUri = Utils.joinPath(srcUri, referenceTest.invokeFile).toString();
 
     const program = await this.treeParser.getProgram(referenceTest.sources);
     const sourceFile = program.getForest().getByUri(testUri);
 
     if (!sourceFile) throw new Error("Getting tree failed");
 
-    const invokeUri = URI.file(
-      path.join(srcUri, referenceTest.invokeFile),
+    const invokeUri = Utils.joinPath(
+      srcUri,
+      referenceTest.invokeFile,
     ).toString();
 
     const references =
@@ -74,9 +73,7 @@ export class ReferencesProviderTestBase {
     expect(references.length).toEqual(referenceTest.references.length);
 
     referenceTest.references.forEach(({ referencePosition, referenceFile }) => {
-      const referenceUri = URI.file(
-        path.join(srcUri, referenceFile),
-      ).toString();
+      const referenceUri = Utils.joinPath(srcUri, referenceFile).toString();
 
       const rootNode = program.getSourceFile(referenceUri)!.tree.rootNode;
       let nodeAtPosition = TreeUtils.getNamedDescendantForPosition(

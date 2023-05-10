@@ -1,6 +1,6 @@
 import { container } from "tsyringe";
 import { CodeAction } from "vscode-languageserver";
-import { URI } from "vscode-uri";
+import { URI, Utils as UriUtils } from "vscode-uri";
 import { IProgram } from "../../src/compiler/program";
 import {
   CodeActionProvider,
@@ -21,6 +21,7 @@ import {
   applyEditsToSource,
   stripCommentLines,
   srcUri,
+  createProgramHost,
 } from "../utils/sourceTreeParser";
 import { diff } from "jest-diff";
 import path from "path";
@@ -66,6 +67,10 @@ type Order = LT | EQ | GT
 `;
 
 class MockCodeActionsProvider extends CodeActionProvider {
+  constructor() {
+    super(createProgramHost());
+  }
+
   public handleCodeAction(params: ICodeActionParams): CodeAction[] | undefined {
     return this.onCodeAction(params);
   }
@@ -91,7 +96,7 @@ export async function testCodeAction(
     throw new Error("Getting sources failed");
   }
 
-  const testUri = URI.file(path.join(srcUri, "Test.elm")).toString();
+  const testUri = UriUtils.joinPath(srcUri, "Test.elm").toString();
 
   result.sources["Test.elm"] = stripCommentLines(result.sources["Test.elm"]);
 
@@ -161,7 +166,7 @@ export async function testCodeAction(
         .changes!;
 
     Object.entries(expectedSources).forEach(([uri, source]) => {
-      const edits = changesToApply[URI.file(path.join(srcUri, uri)).toString()];
+      const edits = changesToApply[UriUtils.joinPath(srcUri, uri).toString()];
       if (edits) {
         expect(
           trimTrailingWhitespace(

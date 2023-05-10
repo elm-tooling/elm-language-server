@@ -48,7 +48,7 @@ export class Server implements ILanguageServer {
 
   constructor(
     private params: InitializeParams,
-    fileSystemHost: IFileSystemHost,
+    private fileSystemHost: IFileSystemHost,
   ) {
     this.connection = container.resolve("Connection");
     const initializationOptions = params.initializationOptions as {
@@ -191,7 +191,7 @@ export class Server implements ILanguageServer {
       useValue: new ElmLsDiagnostics(),
     });
 
-    new CodeActionProvider();
+    new CodeActionProvider(this.fileSystemHost);
 
     new FoldingRangeProvider();
     new CompletionProvider();

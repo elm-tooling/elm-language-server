@@ -1,17 +1,17 @@
-import { readFile } from "fs";
-import globby from "globby";
 import { container } from "tsyringe";
-import { promisify } from "util";
 import { TextEdit } from "vscode-languageserver-textdocument";
-import { URI } from "vscode-uri";
+import { URI, Utils as UriUtils } from "vscode-uri";
 import Parser from "web-tree-sitter";
 import { Program, IProgram, IProgramHost } from "../../src/compiler/program";
 import * as path from "../../src/util/path";
 import { Utils } from "../../src/util/utils";
+import { promisify } from "util";
+import { readFile } from "fs";
+import globby from "globby";
 
 export const baseUri = path.join(__dirname, "../sources/");
-export const srcUri = path.join(baseUri, "src");
-export const testsUri = path.join(baseUri, "tests");
+export const srcUri = URI.file(path.join(baseUri, "src"));
+export const testsUri = URI.file(path.join(baseUri, "tests"));
 
 export class SourceTreeParser {
   private parser?: Parser;
@@ -31,8 +31,8 @@ export class SourceTreeParser {
   }
 
   public async getProgram(sources: { [K: string]: string }): Promise<IProgram> {
-    const readFile = (uri: string): string => {
-      if (uri.endsWith("elm.json")) {
+    const readFile = (uri: URI): string => {
+      if (uri.toString().endsWith("elm.json")) {
         return `
         {
           "type": "application",
@@ -53,8 +53,8 @@ export class SourceTreeParser {
       }
 
       return (
-        sources[path.relative(srcUri, uri)] ??
-        testSources[path.relative(testsUri, uri)]
+        sources[path.relative(srcUri.toString(), uri.toString())] ??
+        testSources[path.relative(testsUri.toString(), uri.toString())]
       );
     };
 
@@ -68,17 +68,19 @@ export class SourceTreeParser {
     }
 
     const program = new Program(URI.file(baseUri), {
-      readFile: (uri: string): Promise<string> =>
-        Promise.resolve(readFile(uri)),
-      readDirectory: (uri: string): Promise<string[]> => {
-        return Promise.resolve(
-          path.normalizeUri(uri) === path.normalizeUri(srcUri)
-            ? Object.keys(sources).map((sourceUri) => path.join(uri, sourceUri))
-            : path.normalizeUri(uri) === path.normalizeUri(testsUri)
-            ? Object.keys(testSources).map((testUri) => path.join(uri, testUri))
+      readFile: (uri: URI): Promise<string> => Promise.resolve(readFile(uri)),
+      readDirectory: (uri: URI): Promise<URI[]> =>
+        Promise.resolve(
+          uri.toString() === srcUri.toString()
+            ? Object.keys(sources).map((sourceUri) =>
+                UriUtils.joinPath(uri, sourceUri),
+              )
+            : uri.toString() === testsUri.toString()
+            ? Object.keys(testSources).map((testUri) =>
+                UriUtils.joinPath(uri, testUri),
+              )
             : [],
-        );
-      },
+        ),
       watchFile: (): void => {
         return;
       },
@@ -94,15 +96,20 @@ export class SourceTreeParser {
 
 export function createProgramHost(): IProgramHost {
   return {
-    readFile: (uri): Promise<string> =>
-      promisify(readFile)(uri, {
+    readFile: (uri: URI): Promise<string> =>
+      promisify(readFile)(uri.fsPath, {
         encoding: "utf-8",
       }),
-    readDirectory: (uri: string): Promise<string[]> =>
+    readDirectory: async (uri: URI): Promise<URI[]> => {
       // Cleanup the path on windows, as globby does not like backslashes
-      globby(`${uri.replace(/\\/g, "/")}/**/*.elm`, {
-        suppressErrors: true,
-      }),
+      const result = await globby(
+        `${uri.fsPath.replace(/\\/g, "/")}/**/*.elm`,
+        {
+          suppressErrors: true,
+        },
+      );
+      return result.map((file) => URI.file(file));
+    },
     watchFile: (): void => {
       return;
     },
