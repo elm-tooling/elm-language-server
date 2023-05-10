@@ -1,6 +1,6 @@
 import path from "path";
 import { Location } from "vscode-languageserver";
-import { URI } from "vscode-uri";
+import { URI, Utils } from "vscode-uri";
 import { DefinitionProvider, DefinitionResult } from "../../src/providers";
 import { ITextDocumentPositionParams } from "../../src/providers/paramsExtensions";
 import { TreeUtils } from "../../src/util/treeUtils";
@@ -27,8 +27,9 @@ export class DefinitionProviderTestBase {
     await this.treeParser.init();
 
     const determinedTestType = getInvokeAndTargetPositionFromSource(source);
-    const invokeUri = URI.file(
-      path.join(srcUri, determinedTestType.invokeFile),
+    const invokeUri = Utils.joinPath(
+      srcUri,
+      determinedTestType.invokeFile,
     ).toString();
 
     const program = await this.treeParser.getProgram(
@@ -71,8 +72,9 @@ export class DefinitionProviderTestBase {
           );
 
           if (determinedTestType.targetPosition) {
-            const targetUri = URI.file(
-              path.join(srcUri, determinedTestType.targetFile),
+            const targetUri = Utils.joinPath(
+              srcUri,
+              determinedTestType.targetFile,
             ).toString();
 
             const rootNode = program.getSourceFile(targetUri)!.tree.rootNode;

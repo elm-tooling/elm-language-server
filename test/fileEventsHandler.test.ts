@@ -1,5 +1,4 @@
 import { mockDeep } from "jest-mock-extended";
-import * as path from "../src/util/path";
 import { container } from "tsyringe";
 import {
   CancellationTokenSource,
@@ -15,7 +14,7 @@ import {
   WorkspaceEdit,
 } from "vscode-languageserver";
 import { TextEdit } from "vscode-languageserver-textdocument";
-import { URI } from "vscode-uri";
+import { Utils } from "vscode-uri";
 import { IProgram } from "../src/compiler/program";
 import { FileEventsHandler } from "../src/providers/handlers/fileEventsHandler";
 import { getSourceFiles } from "./utils/sourceParser";
@@ -37,11 +36,21 @@ describe("fileEventsHandler", () => {
   >;
   let appliedWorkspaceEdit: WorkspaceEdit;
 
+  let resolveCreateFiles: () => void;
+  let createFilesPromise: Promise<void>;
+
+  function onDidCreateFile(): void {
+    resolveCreateFiles();
+  }
+
   container.register("Connection", {
     useValue: mockDeep<Connection>({
       workspace: {
         onDidCreateFiles: (handler) => {
           createFilesHandler = handler;
+          createFilesPromise = new Promise((resolve) => {
+            resolveCreateFiles = resolve;
+          });
           return { dispose: () => {} };
         },
         onWillRenameFiles: (handler) => {
@@ -67,7 +76,7 @@ describe("fileEventsHandler", () => {
 
   async function createProgram(source: string): Promise<IProgram> {
     await treeParser.init();
-    new FileEventsHandler();
+    new FileEventsHandler(onDidCreateFile);
 
     const program = await treeParser.getProgram(getSourceFiles(source));
     const workspaces = container.resolve<IProgram[]>("ElmWorkspaces");
@@ -103,13 +112,14 @@ describe("fileEventsHandler", () => {
   }
 
   function uri(uri: string, src = srcUri): string {
-    return URI.file(path.join(src, uri)).toString();
+    return Utils.joinPath(src, uri).toString();
   }
 
   it("handles file create event", async () => {
     await createProgram("");
     const newPath = uri("New/Module.elm");
     createFilesHandler({ files: [{ uri: newPath }] });
+    await createFilesPromise;
 
     const edit = appliedWorkspaceEdit;
 
@@ -137,6 +147,7 @@ describe("fileEventsHandler", () => {
     const newPath = uri("New/Module.elm");
     const newPath2 = uri("New/Another/Module.elm");
     createFilesHandler({ files: [{ uri: newPath }, { uri: newPath2 }] });
+    await createFilesPromise;
 
     const edit = appliedWorkspaceEdit;
 
@@ -180,7 +191,7 @@ module Test exposing (..)
 
 func = ""
 		`;
-    const program = await createProgram(source);
+    await createProgram(source);
     const oldPath = uri("Test.elm");
     const newPath = uri("Moved/Module.elm");
     const result = renameFilesHandler(
@@ -217,13 +228,13 @@ module Other.TestC exposing (..)
 
 func = ""
 		`;
-    const program = await createProgram(source);
+    await createProgram(source);
     const oldPath = uri("Folder");
     const newPath = uri("Moved");
     const testAPath = uri("Folder/TestA.elm");
     const testBPath = uri("Folder/TestB.elm");
     const testCPath = uri("Other/TestC.elm");
-    const result = renameFilesHandler(
+    const result = await renameFilesHandler(
       { files: [{ oldUri: oldPath, newUri: newPath }] },
       token,
     );
@@ -274,7 +285,10 @@ func = ""
     const deleteUri = uri("Test.elm");
 
     expect(program.getSourceFile(deleteUri)).not.toBeUndefined();
-    const result = deleteFilesHandler({ files: [{ uri: deleteUri }] }, token);
+    const result = await deleteFilesHandler(
+      { files: [{ uri: deleteUri }] },
+      token,
+    );
 
     expect(result).toBeNull();
     expect(program.getSourceFile(deleteUri)).toBeUndefined();

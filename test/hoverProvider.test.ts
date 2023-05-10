@@ -1,6 +1,6 @@
 import path from "path";
 import { MarkupContent } from "vscode-languageserver";
-import { URI } from "vscode-uri";
+import { URI, Utils } from "vscode-uri";
 import { HoverProvider, HoverResult } from "../src/providers";
 import { ITextDocumentPositionParams } from "../src/providers/paramsExtensions";
 import { getInvokePositionFromSource } from "./utils/sourceParser";
@@ -26,8 +26,9 @@ describe("HoverProvider", () => {
       throw new Error("Getting position failed");
     }
 
-    const testUri = URI.file(
-      path.join(invokeFile.startsWith("tests") ? baseUri : srcUri, invokeFile),
+    const testUri = Utils.joinPath(
+      invokeFile.startsWith("tests") ? URI.file(baseUri) : srcUri,
+      invokeFile,
     ).toString();
 
     const program = await treeParser.getProgram(sources);

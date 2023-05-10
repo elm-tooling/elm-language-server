@@ -1,4 +1,4 @@
-import { URI } from "vscode-uri";
+import { Utils as UriUtils } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
 import { convertFromCompilerDiagnostic } from "../../src/providers";
 import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics";
@@ -48,7 +48,7 @@ describe("test elm diagnostics", () => {
       throw new Error("Getting sources failed");
     }
 
-    const testUri = URI.file(path.join(srcUri, "Test.elm")).toString();
+    const testUri = UriUtils.joinPath(srcUri, "Test.elm").toString();
 
     const program = await treeParser.getProgram(result.sources);
     const sourceFile = program.getForest().getByUri(testUri);

@@ -77,7 +77,7 @@ export class ElmWorkspaceMatcher<ParamType> {
       // first look for a program where the file has been parsed to a tree
       this.elmWorkspaces.find((ws) => ws.hasDocument(uri)) ||
       // fallback: find a program where the file is in the source-directories
-      this.elmWorkspaces.find((ws) => ws.isInSourceDirectory(uri.fsPath));
+      this.elmWorkspaces.find((ws) => ws.isInSourceDirectory(uri.toString()));
 
     if (!program) {
       throw new NoWorkspaceContainsError(this.getUriFor(param));

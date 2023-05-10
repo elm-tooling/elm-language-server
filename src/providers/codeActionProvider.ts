@@ -14,7 +14,7 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { ElmJson, IProgram } from "../compiler/program";
+import { ElmJson, IProgram, IProgramHost } from "../compiler/program";
 import { ISourceFile } from "../compiler/forest";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { MultiMap } from "../util/multiMap";
@@ -36,7 +36,6 @@ import { MoveRefactoringHandler } from "./handlers/moveRefactoringHandler";
 import { ICodeActionParams } from "./paramsExtensions";
 import { ElmPackageCache } from "../compiler/elmPackageCache";
 import { comparePosition } from "../positionUtil";
-import { createNodeFileSystemHost } from "../node";
 
 interface IPreferredAction {
   priority: number;
@@ -98,7 +97,7 @@ export class CodeActionProvider {
 
   private static preferredActions = new Map<string, IPreferredAction>();
 
-  constructor() {
+  constructor(host: IProgramHost) {
     this.settings = container.resolve("Settings");
     this.elmMake = container.resolve(ElmMakeDiagnostics);
     this.connection = container.resolve<Connection>("Connection");
@@ -137,7 +136,7 @@ export class CodeActionProvider {
           JSON.parse(
             await promisify(readFile)(path.fsPath, { encoding: "utf-8" }),
           ) as ElmJson,
-        createNodeFileSystemHost(this.connection),
+        host,
       ).loadAllPackageModules();
     }, 5000);
   }

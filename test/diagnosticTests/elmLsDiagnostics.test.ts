@@ -3,7 +3,7 @@ import {
   DiagnosticTag,
   Range,
 } from "vscode-languageserver";
-import { URI } from "vscode-uri";
+import { Utils as UriUtils } from "vscode-uri";
 import { IDiagnostic } from "../../src/providers/diagnostics/diagnosticsProvider";
 import { ElmLsDiagnostics } from "../../src/providers/diagnostics/elmLsDiagnostics";
 import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics";
@@ -11,7 +11,6 @@ import { Utils } from "../../src/util/utils";
 import { getSourceFiles } from "../utils/sourceParser";
 import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";
 import { diff } from "jest-diff";
-import path from "path";
 import { describe, expect } from "@jest/globals";
 import { fail } from "assert";
 
@@ -20,7 +19,7 @@ describe("ElmLsDiagnostics", () => {
   const treeParser = new SourceTreeParser();
 
   const debug = process.argv.find((arg) => arg === "--debug");
-  const uri = URI.file(path.join(srcUri, "Main.elm")).toString();
+  const uri = UriUtils.joinPath(srcUri, "Main.elm").toString();
 
   async function testDiagnostics(
     source: string,
@@ -35,7 +34,7 @@ describe("ElmLsDiagnostics", () => {
 
     let diagnostics: Array<IDiagnostic> = [];
     for (const fileName in sources) {
-      const filePath = URI.file(path.join(srcUri, fileName)).toString();
+      const filePath = UriUtils.joinPath(srcUri, fileName).toString();
       const sourceFile = program.getSourceFile(filePath);
 
       if (!sourceFile) {

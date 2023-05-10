@@ -15,7 +15,6 @@ import { IDiagnostic } from "./diagnosticsProvider";
 import { Range } from "vscode-languageserver-textdocument";
 import execa = require("execa");
 import { existsSync } from "fs";
-import * as path from "path";
 
 export type IElmReviewDiagnostic = IDiagnostic & {
   data: {

@@ -1,5 +1,4 @@
-import path from "path";
-import { URI } from "vscode-uri";
+import { Utils } from "vscode-uri";
 import { getVarNames } from "../src/compiler/typeInference";
 import { TreeUtils } from "../src/util/treeUtils";
 import { getTargetPositionFromSource } from "./utils/sourceParser";
@@ -64,7 +63,7 @@ describe("test type inference", () => {
       throw new Error("Getting source and target position failed");
     }
 
-    const testUri = URI.file(path.join(srcUri, "Test.elm")).toString();
+    const testUri = Utils.joinPath(srcUri, "Test.elm").toString();
 
     const program = await treeParser.getProgram(result.sources);
     const sourceFile = program.getSourceFile(testUri);

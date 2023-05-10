@@ -1,6 +1,6 @@
 import { getSourceFiles } from "./utils/sourceParser";
 import { SourceTreeParser, testsUri } from "./utils/sourceTreeParser";
-import { URI } from "vscode-uri";
+import { Utils } from "vscode-uri";
 import {
   findAllTestSuites,
   stringLiteralToLabel,
@@ -85,7 +85,7 @@ int = F 13
 describe("FindTestsProvider", () => {
   const treeParser = new SourceTreeParser();
 
-  const testModuleUri = URI.file(testsUri + "/MyModule.elm").toString();
+  const testModuleUri = Utils.joinPath(testsUri, "MyModule.elm").toString();
 
   async function testFindTests(source: string, expected: TestSuite[]) {
     await treeParser.init();

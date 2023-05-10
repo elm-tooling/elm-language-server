@@ -6,7 +6,7 @@ import {
   Position,
   TextEdit,
 } from "vscode-languageserver";
-import { URI } from "vscode-uri";
+import { URI, Utils } from "vscode-uri";
 import { CompletionProvider, CompletionResult } from "../src/providers";
 import { ICompletionParams } from "../src/providers/paramsExtensions";
 import { getCaretPositionFromSource } from "./utils/sourceParser";
@@ -54,11 +54,9 @@ describe("CompletionProvider", () => {
       throw new Error("Getting position failed");
     }
 
-    const testUri = URI.file(
-      path.join(
-        fileWithCaret.startsWith("tests") ? baseUri : srcUri,
-        fileWithCaret,
-      ),
+    const testUri = Utils.joinPath(
+      fileWithCaret.startsWith("tests") ? URI.file(baseUri) : srcUri,
+      fileWithCaret,
     ).toString();
 
     const program = await treeParser.getProgram(newSources);
