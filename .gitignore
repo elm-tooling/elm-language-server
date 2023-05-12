@@ -1,6 +1,6 @@
 out
 node_modules
 .vscode-test
-tsconfig.tsbuildinfo
+*.tsbuildinfo
 coverage
 elm-stuff
