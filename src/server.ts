@@ -33,7 +33,7 @@ import { FindTestsProvider } from "./providers/findTestsProvider";
 import { ElmReviewDiagnostics } from "./providers/diagnostics/elmReviewDiagnostics";
 import { findElmJsonFiles } from "./node";
 import { VirtualFileProvider } from "./providers/virtualFileProvider";
-import { IFileSystemHost } from "./types";
+import { IFileSystemHost, InitializationOptions } from "./types";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -50,11 +50,9 @@ export class Server implements ILanguageServer {
   constructor(
     private params: InitializeParams,
     private fileSystemHost: IFileSystemHost,
+    initializationOptions: InitializationOptions,
   ) {
     this.connection = container.resolve("Connection");
-    const initializationOptions = params.initializationOptions as {
-      elmJsonFiles?: string[];
-    };
 
     const uri = this.getWorkspaceUri(this.params);
 
