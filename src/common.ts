@@ -16,9 +16,9 @@ import {
 } from "./providers/diagnostics/elmAnalyseJsonService";
 import { ILanguageServer } from "./server";
 import { DocumentEvents } from "./util/documentEvents";
-import { IClientSettings, Settings } from "./util/settings";
+import { Settings } from "./util/settings";
 import { TextDocumentEvents } from "./util/textDocumentEvents";
-import { IFileSystemHost } from "./types";
+import { IFileSystemHost, InitializationOptions } from "./types";
 import { URI, Utils } from "vscode-uri";
 
 export function startCommonServer(
@@ -45,7 +45,18 @@ export function startCommonServer(
 
   connection.onInitialize(
     async (params: InitializeParams): Promise<InitializeResult> => {
-      await Parser.init();
+      const initializationOptions =
+        <InitializationOptions>params.initializationOptions ?? {};
+
+      const options: object | undefined =
+        initializationOptions.treeSitterWasmUri
+          ? {
+              locateFile(): string | undefined {
+                return initializationOptions.treeSitterWasmUri;
+              },
+            }
+          : undefined;
+      await Parser.init(options);
       const absolute = Path.join(__dirname, "tree-sitter-elm.wasm");
       const pathToWasm = Path.relative(process.cwd(), absolute);
       connection.console.info(
@@ -69,16 +80,13 @@ export function startCommonServer(
         useValue: new CapabilityCalculator(params.capabilities),
       });
 
-      const initializationOptions: IClientSettings =
-        params.initializationOptions ?? {};
-
       container.register("Settings", {
         useValue: new Settings(initializationOptions, params.capabilities),
       });
 
       const { Server } = await import("./server");
 
-      server = new Server(params, fileSystemHost);
+      server = new Server(params, fileSystemHost, initializationOptions);
 
       initSuccessfull = server.initSuccessfull.valueOf();
 
