@@ -15,6 +15,7 @@ import {
   ReferenceParams,
   RenameParams,
   SelectionRangeParams,
+  TextDocumentContentChangeEvent,
   TextDocumentPositionParams,
 } from "vscode-languageserver";
 import { IParams } from "../util/elmWorkspaceMatcher";
@@ -37,3 +38,7 @@ export type ICreateFileParams = FileCreate & IParams;
 export type IRenameFileParams = FileRename & IParams;
 export type IDeleteFileParams = FileDelete & IParams;
 export type ILinkedEditingRangeParams = LinkedEditingRangeParams & IParams;
+export type IFileChangeParams = {
+  uri: string;
+  contentChanges?: TextDocumentContentChangeEvent[];
+} & IParams;

@@ -175,15 +175,6 @@ export class DiagnosticsProvider {
     this.events.on("open", handleSaveOrOpen);
     this.events.on("save", handleSaveOrOpen);
 
-    this.connection.onDidChangeWatchedFiles((event) => {
-      const newDeleteEvents = event.changes
-        .filter((a) => a.type === FileChangeType.Deleted)
-        .map((a) => a.uri);
-      newDeleteEvents.forEach((uri) => {
-        this.deleteDiagnostics(uri);
-      });
-    });
-
     if (clientInitiatedDiagnostics) {
       this.connection.onRequest(
         GetDiagnosticsRequest,
@@ -227,6 +218,10 @@ export class DiagnosticsProvider {
       if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
         this.requestDiagnostics(sourceFile.uri);
       }
+    });
+
+    astProvider.onTreeDelete(({ uri }) => {
+      this.deleteDiagnostics(uri);
     });
 
     this.documentEvents.on("change", (params: DidChangeTextDocumentParams) => {

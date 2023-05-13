@@ -3,10 +3,10 @@ import { container } from "tsyringe";
 import {
   DidChangeTextDocumentParams,
   DidOpenTextDocumentParams,
-  VersionedTextDocumentIdentifier,
   Event,
   Emitter,
   Connection,
+  FileChangeType,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import Parser, { Edit, Point, SyntaxNode } from "web-tree-sitter";
@@ -15,10 +15,7 @@ import { Position, Range } from "vscode-languageserver-textdocument";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 import { TreeUtils } from "../util/treeUtils";
 import { ISourceFile } from "../compiler/forest";
-import {
-  IDidChangeTextDocumentParams,
-  IDidOpenTextDocumentParams,
-} from "./paramsExtensions";
+import { IFileChangeParams } from "./paramsExtensions";
 import { Utils } from "../util/utils";
 
 export class ASTProvider {
@@ -35,6 +32,9 @@ export class ASTProvider {
     declaration?: SyntaxNode;
   }> = this.treeChangeEvent.event;
 
+  private treeDeleteEvent = new Emitter<{ uri: string }>();
+  readonly onTreeDelete: Event<{ uri: string }> = this.treeDeleteEvent.event;
+
   private pendingRenames = new Map<string, string>();
 
   constructor() {
@@ -42,40 +42,56 @@ export class ASTProvider {
     this.connection = container.resolve("Connection");
     this.documentEvents = container.resolve(TextDocumentEvents);
 
-    this.documentEvents.on(
-      "change",
-      new ElmWorkspaceMatcher((params: DidChangeTextDocumentParams) =>
-        URI.parse(params.textDocument.uri),
-      ).handle(this.handleChangeTextDocument.bind(this)),
-    );
+    const handleChange = new ElmWorkspaceMatcher((params: { uri: string }) =>
+      URI.parse(params.uri),
+    ).handle(this.handleChangeTextDocument.bind(this));
 
-    this.documentEvents.on(
-      "open",
-      new ElmWorkspaceMatcher((params: DidOpenTextDocumentParams) =>
-        URI.parse(params.textDocument.uri),
-      ).handle(this.handleChangeTextDocument.bind(this)),
-    );
+    this.documentEvents.on("change", (params: DidChangeTextDocumentParams) => {
+      void handleChange(params.textDocument);
+    });
+
+    this.documentEvents.on("open", (params: DidOpenTextDocumentParams) => {
+      void handleChange(params.textDocument);
+    });
+
+    this.connection.onDidChangeWatchedFiles((params) => {
+      params.changes.forEach((change) => {
+        if (
+          change.type === FileChangeType.Changed ||
+          change.type === FileChangeType.Created
+        ) {
+          void handleChange(change);
+        }
+
+        if (change.type === FileChangeType.Deleted) {
+          void new ElmWorkspaceMatcher((params: { uri: string }) =>
+            URI.parse(params.uri),
+          ).handle((params) => {
+            const forest = params.program.getForest(false);
+            forest.removeTree(params.uri);
+            this.treeDeleteEvent.fire({ uri: params.uri });
+          })(change);
+        }
+      });
+    });
   }
 
   public addPendingRename(oldUri: string, newUri: string): void {
     this.pendingRenames.set(oldUri, newUri);
   }
 
-  protected handleChangeTextDocument = (
-    params: IDidChangeTextDocumentParams | IDidOpenTextDocumentParams,
-  ): void => {
+  protected handleChangeTextDocument = (params: IFileChangeParams): void => {
     this.connection.console.info(
-      `Changed text document, going to parse it. ${params.textDocument.uri}`,
+      `Changed text document, going to parse it. ${params.uri}`,
     );
     const forest = params.program.getForest(false); // Don't synchronize the forest, we are only looking at the tree
-    const document: VersionedTextDocumentIdentifier = params.textDocument;
 
     // Source file could be undefined here
     const sourceFile = <ISourceFile | undefined>params.sourceFile;
 
     const newText =
-      this.documentEvents.get(document.uri)?.getText() ??
-      readFileSync(URI.parse(document.uri).fsPath, "utf8");
+      this.documentEvents.get(params.uri)?.getText() ??
+      readFileSync(URI.parse(params.uri).fsPath, "utf8");
 
     if (
       sourceFile &&
@@ -87,7 +103,7 @@ export class ASTProvider {
     let tree = sourceFile?.tree;
 
     let hasContentChanges = false;
-    if ("contentChanges" in params) {
+    if ("contentChanges" in params && params.contentChanges) {
       hasContentChanges = true;
       for (const change of params.contentChanges) {
         if ("range" in change) {
@@ -112,12 +128,12 @@ export class ASTProvider {
       }
     }
 
-    const pendingRenameUri = this.pendingRenames.get(document.uri);
-    this.pendingRenames.delete(document.uri);
+    const pendingRenameUri = this.pendingRenames.get(params.uri);
+    this.pendingRenames.delete(params.uri);
 
     // Remove the old tree
     if (pendingRenameUri) {
-      forest.removeTree(document.uri);
+      forest.removeTree(params.uri);
     }
 
     const oldNodes = tree?.rootNode.namedChildren ?? [];
@@ -178,7 +194,7 @@ export class ASTProvider {
       const isTestFile = params.sourceFile
         ? params.sourceFile.isTestFile
         : params.program
-            .getSourceDirectoryOfFile(document.uri)
+            .getSourceDirectoryOfFile(params.uri)
             ?.endsWith("tests") ?? false;
 
       const isDependency = params.sourceFile
@@ -186,7 +202,7 @@ export class ASTProvider {
         : false;
 
       const sourceFile = forest.setTree(
-        pendingRenameUri ?? document.uri,
+        pendingRenameUri ?? params.uri,
         true,
         tree,
         isTestFile,
