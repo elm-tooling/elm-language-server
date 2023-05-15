@@ -33,6 +33,7 @@ import { FindTestsProvider } from "./providers/findTestsProvider";
 import { ElmReviewDiagnostics } from "./providers/diagnostics/elmReviewDiagnostics";
 import { VirtualFileProvider } from "./providers/virtualFileProvider";
 import { IFileSystemHost, InitializationOptions } from "./types";
+import * as installPackageCodeAction from "./providers/codeAction/installPackageCodeAction";
 
 export interface ILanguageServer {
   readonly capabilities: InitializeResult;
@@ -223,6 +224,8 @@ export class Server implements ILanguageServer {
 
     new FindTestsProvider();
     new VirtualFileProvider();
+
+    installPackageCodeAction.register(this.fileSystemHost);
   }
 
   private getElmJsonFolder(uri: URI): URI {
