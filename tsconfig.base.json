@@ -12,6 +12,12 @@
     "baseUrl": ".",
     "typeRoots": ["./src/typings", "./node_modules/@types"]
   },
-  "exclude": ["node_modules"],
+  "exclude": [
+    "node_modules",
+    "src/browser",
+    "src/index.browser.ts",
+    "src/node",
+    "src/index.ts"
+  ],
   "include": ["src"]
 }
