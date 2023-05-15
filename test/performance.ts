@@ -19,11 +19,10 @@ import {
   getCancellationFilePath,
   FileBasedCancellationTokenSource,
   getCancellationFolderPath,
-  ThrottledCancellationToken,
-} from "../src/cancellation";
+} from "../src/cancellation.node";
 import { randomBytes } from "crypto";
-import { createProgramHost } from "./utils/sourceTreeParser";
-import { PerformanceTimer } from "../src/compiler/typeExpression";
+import { createNodeFileSystemHost } from "../src/node";
+import { ThrottledCancellationToken } from "../src/cancellation";
 
 container.register("Connection", {
   useValue: {
@@ -78,7 +77,10 @@ export async function runPerformanceTests(uri: string): Promise<void> {
   const numTimes = 10;
 
   for (let i = 0; i < numTimes; i++) {
-    const program = new Program(pathUri, createProgramHost());
+    const program = new Program(
+      pathUri,
+      createNodeFileSystemHost(container.resolve("Connection")),
+    );
     await program.init(() => {
       //
     });

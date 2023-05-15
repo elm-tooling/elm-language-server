@@ -8,6 +8,8 @@ import {
   IElmAnalyseJsonService,
   IElmAnalyseJson,
 } from "../src/providers/diagnostics/elmAnalyseJsonService";
+import { ElmMakeDiagnostics, ElmReviewDiagnostics } from "../src/providers";
+import { createNodeFileSystemHost } from "../src/node";
 
 container.register("Connection", { useValue: mockDeep<Connection>() });
 container.register("ElmWorkspaces", { useValue: [] });
@@ -26,3 +28,14 @@ container.registerSingleton<IElmAnalyseJsonService>(
     }
   },
 );
+container.register(ElmMakeDiagnostics, {
+  useValue: new ElmMakeDiagnostics(
+    createNodeFileSystemHost(container.resolve("Connection")),
+  ),
+});
+
+container.register(ElmReviewDiagnostics, {
+  useValue: new ElmReviewDiagnostics(
+    createNodeFileSystemHost(container.resolve("Connection")),
+  ),
+});

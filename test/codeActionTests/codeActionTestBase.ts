@@ -21,11 +21,10 @@ import {
   applyEditsToSource,
   stripCommentLines,
   srcUri,
-  createProgramHost,
 } from "../utils/sourceTreeParser";
 import { diff } from "jest-diff";
-import path from "path";
 import { expect } from "@jest/globals";
+import { createNodeFileSystemHost } from "../../src/node";
 
 function codeActionEquals(a: CodeAction, b: CodeAction): boolean {
   return a.title === b.title;
@@ -68,7 +67,7 @@ type Order = LT | EQ | GT
 
 class MockCodeActionsProvider extends CodeActionProvider {
   constructor() {
-    super(createProgramHost());
+    super(createNodeFileSystemHost(container.resolve("Connection")));
   }
 
   public handleCodeAction(params: ICodeActionParams): CodeAction[] | undefined {

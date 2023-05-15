@@ -2,12 +2,9 @@ import { container } from "tsyringe";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI, Utils as UriUtils } from "vscode-uri";
 import Parser from "web-tree-sitter";
-import { Program, IProgram, IProgramHost } from "../../src/compiler/program";
+import { Program, IProgram } from "../../src/compiler/program";
 import * as path from "../../src/util/path";
 import { Utils } from "../../src/util/utils";
-import { promisify } from "util";
-import { readFile, readdir } from "fs";
-import globby from "globby";
 
 export const baseUri = path.join(__dirname, "../sources/");
 export const srcUri = URI.file(path.join(baseUri, "src"));
@@ -69,6 +66,7 @@ export class SourceTreeParser {
 
     const program = new Program(URI.file(baseUri), {
       readFile: (uri: URI): Promise<string> => Promise.resolve(readFile(uri)),
+      readFileSync: (uri: URI): string => readFile(uri),
       readDirectory: (uri: URI): Promise<URI[]> =>
         Promise.resolve(
           uri.toString() === srcUri.toString()
@@ -81,9 +79,11 @@ export class SourceTreeParser {
               )
             : [],
         ),
+      fileExists: (uri: URI): boolean => false,
       watchFile: (): void => {
         return;
       },
+      getElmPackagesRoot: (): URI => URI.file("/"),
     });
 
     await program.init(() => {
@@ -92,28 +92,6 @@ export class SourceTreeParser {
 
     return program;
   }
-}
-
-export function createProgramHost(): IProgramHost {
-  return {
-    readFile: (uri: URI): Promise<string> =>
-      promisify(readFile)(uri.fsPath, {
-        encoding: "utf-8",
-      }),
-    readDirectory: async (uri: URI, include, depth): Promise<URI[]> => {
-      // Cleanup the path on windows, as globby does not like backslashes
-      const result =
-        depth === 1
-          ? await promisify(readdir)(uri.fsPath)
-          : await globby(`${uri.fsPath.replace(/\\/g, "/")}/${include}`, {
-              suppressErrors: true,
-            });
-      return result.map((file) => URI.file(file));
-    },
-    watchFile: (): void => {
-      return;
-    },
-  };
 }
 
 export function applyEditsToSource(source: string, edits: TextEdit[]): string {
