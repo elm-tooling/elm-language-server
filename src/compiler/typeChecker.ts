@@ -27,12 +27,10 @@ import { bindTreeContainer, ISymbol } from "./binder";
 import { Sequence } from "../util/sequence";
 import { Utils } from "../util/utils";
 import { TypeExpression } from "./typeExpression";
-import { ICancellationToken } from "../cancellation";
+import type { ICancellationToken } from "../cancellation";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
 import { isKernelProject, nameIsKernel } from "./utils/elmUtils";
-import { existsSync } from "fs";
 import * as path from "../util/path";
-import { URI } from "vscode-uri";
 
 export let bindTime = 0;
 export function resetBindTime(): void {
@@ -1059,12 +1057,13 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       const sourceFile = getSourceFileOfNode(importClause);
       if (!program.getSourceFileOfImportableModule(sourceFile, moduleName)) {
         const project = sourceFile.project;
+
         if (
           !nameIsKernel(moduleName) ||
           !isKernelProject(project) ||
-          !existsSync(
+          !program.getSourceFile(
             path.join(
-              URI.parse(project.uri).fsPath,
+              project.uri,
               "src",
               moduleName.split(".").join("/") + ".js",
             ),

@@ -2,11 +2,11 @@ import { container } from "tsyringe";
 import { Connection } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
-import { ICancellationToken } from "../cancellation";
+import type { ICancellationToken } from "../cancellation";
 import { ElmPackageCache, IElmPackageCache } from "./elmPackageCache";
 import { Forest, IForest, ISourceFile } from "./forest";
 import * as utils from "./utils/elmUtils";
-import { IVersion, findElmHome } from "./utils/elmUtils";
+import { IVersion } from "./utils/elmUtils";
 import {
   IPossibleImportsCache,
   PossibleImportsCache,
@@ -17,7 +17,6 @@ import { TypeCache } from "./typeCache";
 import { createTypeChecker, TypeChecker } from "./typeChecker";
 import { CommandManager } from "../commandManager";
 import { IFileSystemHost } from "../types";
-import { createNodeFileSystemHost } from "../node";
 
 interface IElmFile {
   path: URI;
@@ -148,7 +147,7 @@ export class Program implements IProgram {
   private _initializePromise: Promise<void> | undefined;
   private _initializeProgressCallback: ((percent: number) => void) | undefined;
 
-  constructor(private rootPath: URI, programHost?: IProgramHost) {
+  constructor(private rootPath: URI, programHost: IProgramHost) {
     this.settings = container.resolve("Settings");
     this.connection = container.resolve("Connection");
     this.parser = container.resolve("Parser");
@@ -159,7 +158,7 @@ export class Program implements IProgram {
     this.typeCache = new TypeCache();
     this.possibleImportsCache = new PossibleImportsCache();
     this.diagnosticsCache = new Map<string, Diagnostic[]>();
-    this.host = programHost ?? createNodeFileSystemHost(this.connection);
+    this.host = programHost;
   }
 
   public async init(
@@ -204,7 +203,25 @@ export class Program implements IProgram {
   }
 
   public getSourceFile(uri: string): ISourceFile | undefined {
-    return this.getForest().getByUri(uri);
+    const sourceFile = this.getForest().getByUri(uri);
+
+    if (sourceFile) {
+      return sourceFile;
+    }
+
+    if (this.host.fileExists(URI.parse(uri))) {
+      return this.getForest().setTree(
+        uri,
+        false,
+        uri.endsWith(".elm")
+          ? this.parser.parse(this.host.readFileSync(URI.parse(uri)))
+          : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            undefined!,
+        false,
+        false,
+        undefined,
+      );
+    }
   }
 
   public getSourceFileOfImportableModule(
@@ -329,35 +346,7 @@ export class Program implements IProgram {
   }
 
   private async initWorkspace(): Promise<void> {
-    const isVirtualFileSystem = this.rootPath.scheme !== "file";
     const clientSettings = await this.settings.getClientSettings();
-
-    let elmVersion;
-    if (isVirtualFileSystem) {
-      this.connection.console.warn(
-        `Using elm 0.19.1 because it is a virtual file system`,
-      );
-      elmVersion = "0.19.1";
-    } else {
-      try {
-        elmVersion = utils.getElmVersion(
-          clientSettings,
-          this.rootPath,
-          this.connection,
-        );
-      } catch (error) {
-        if (error instanceof Error && error.stack) {
-          this.connection.console.warn(
-            `Could not figure out elm version, this will impact how good the server works. \n ${error.stack}`,
-          );
-        }
-
-        if (!elmVersion) {
-          this.connection.console.warn(`Using elm 0.19.1 as a default`);
-          elmVersion = "0.19.1";
-        }
-      }
-    }
 
     const pathToElmJson = Utils.joinPath(this.rootPath, "elm.json");
     this.connection.console.info(
@@ -385,29 +374,10 @@ export class Program implements IProgram {
     }
 
     try {
-      if (isVirtualFileSystem) {
-        ElmPackageCache.packagesRoot = URI.parse("elm-virtual-file://package/");
-      } else {
-        const elmHome = findElmHome();
-        ElmPackageCache.packagesRoot = URI.file(
-          `${elmHome}/${elmVersion}/${this.packageOrPackagesFolder(
-            elmVersion,
-          )}/`,
-        );
-
-        // Run `elm make` to download dependencies
-        try {
-          utils.execCmdSync(
-            clientSettings.elmPath,
-            "elm",
-            { cmdArguments: ["make"] },
-            this.rootPath.fsPath,
-            this.connection,
-          );
-        } catch (error) {
-          // On application projects, this will give a NO INPUT error message, but will still download the dependencies
-        }
-      }
+      ElmPackageCache.packagesRoot = this.host.getElmPackagesRoot(
+        this.rootPath,
+        clientSettings,
+      );
 
       try {
         this.elmPackageCache = new ElmPackageCache(
@@ -844,19 +814,19 @@ export class Program implements IProgram {
     }
   }
 
-  private packageOrPackagesFolder(elmVersion: string | undefined): string {
-    return elmVersion === "0.19.0" ? "package" : "packages";
-  }
-
   private async readAndAddToForest(elmFile: IElmFile): Promise<void> {
     try {
-      this.connection.console.info(`Adding ${elmFile.path.toString()}`);
+      const uri = elmFile.path.toString();
+      this.connection.console.info(`Adding ${uri}`);
 
       const tree =
         elmFile.tree ??
-        this.parser.parse(await this.host.readFile(elmFile.path));
+        (uri.endsWith(".elm")
+          ? this.parser.parse(await this.host.readFile(elmFile.path))
+          : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            undefined!);
       this.forest.setTree(
-        elmFile.path.toString(),
+        uri,
         elmFile.project === this.rootProject,
         tree,
         elmFile.isTestFile,

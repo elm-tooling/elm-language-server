@@ -74,7 +74,7 @@ export type TestSuite = {
   position: { line: number; character: number };
 };
 
-export const ReadFileRequest = new RequestType<string, string, void>(
+export const ReadFileRequest = new RequestType<string, number[], void>(
   "elm/readFile",
 );
 

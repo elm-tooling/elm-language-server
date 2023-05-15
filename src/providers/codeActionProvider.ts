@@ -1,6 +1,4 @@
-import { readFile } from "fs";
 import { container } from "tsyringe";
-import { promisify } from "util";
 import {
   CodeAction,
   CodeActionKind,
@@ -132,10 +130,7 @@ export class CodeActionProvider {
 
     setTimeout(() => {
       void new ElmPackageCache(
-        async (path) =>
-          JSON.parse(
-            await promisify(readFile)(path.fsPath, { encoding: "utf-8" }),
-          ) as ElmJson,
+        async (uri) => JSON.parse(await host.readFile(uri)) as ElmJson,
         host,
       ).loadAllPackageModules();
     }, 5000);

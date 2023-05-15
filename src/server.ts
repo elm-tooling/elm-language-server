@@ -31,7 +31,6 @@ import { Settings } from "./util/settings";
 import { TextDocumentEvents } from "./util/textDocumentEvents";
 import { FindTestsProvider } from "./providers/findTestsProvider";
 import { ElmReviewDiagnostics } from "./providers/diagnostics/elmReviewDiagnostics";
-import { findElmJsonFiles } from "./node";
 import { VirtualFileProvider } from "./providers/virtualFileProvider";
 import { IFileSystemHost, InitializationOptions } from "./types";
 
@@ -59,16 +58,31 @@ export class Server implements ILanguageServer {
     if (uri) {
       this.isVirtualFileSystem = uri.scheme !== "file";
 
-      if (this.isVirtualFileSystem && !initializationOptions.elmJsonFiles) {
+      if (
+        !fileSystemHost.readDirectorySync &&
+        !initializationOptions.elmJsonFiles
+      ) {
         this.connection.window.showErrorMessage(
           "Virtual file system is not supported.",
         );
-        this.connection.console.info("Virtual file system is not supported");
+        this.connection.console.error("Virtual file system is not supported");
         return;
       }
 
       const elmJsons =
-        initializationOptions.elmJsonFiles ?? findElmJsonFiles(uri);
+        initializationOptions.elmJsonFiles?.map((uri) => URI.parse(uri)) ??
+        fileSystemHost.readDirectorySync?.(
+          uri,
+          ["**/elm.json"],
+          ["**/node_modules/**", "**/elm-stuff/**"],
+        );
+
+      if (!elmJsons) {
+        this.connection.window.showErrorMessage(
+          "Unable to find elm json files.",
+        );
+        return;
+      }
 
       if (elmJsons.length > 0) {
         this.connection.console.info(
@@ -169,28 +183,28 @@ export class Server implements ILanguageServer {
       useValue: clientSettings,
     });
 
-    container.register(DiagnosticsProvider, {
-      useValue: new DiagnosticsProvider(),
-    });
-
     // these register calls rely on settings having been setup
-    if (!this.isVirtualFileSystem) {
-      container.register(DocumentFormattingProvider, {
-        useValue: new DocumentFormattingProvider(),
-      });
-    }
-
     container.register(ElmMakeDiagnostics, {
-      useValue: new ElmMakeDiagnostics(),
+      useValue: new ElmMakeDiagnostics(this.fileSystemHost),
     });
 
     container.register(ElmReviewDiagnostics, {
-      useValue: new ElmReviewDiagnostics(),
+      useValue: new ElmReviewDiagnostics(this.fileSystemHost),
     });
 
     container.register(ElmLsDiagnostics, {
       useValue: new ElmLsDiagnostics(),
     });
+
+    container.register(DiagnosticsProvider, {
+      useValue: new DiagnosticsProvider(),
+    });
+
+    if (!this.isVirtualFileSystem) {
+      container.register(DocumentFormattingProvider, {
+        useValue: new DocumentFormattingProvider(this.fileSystemHost),
+      });
+    }
 
     new CodeActionProvider(this.fileSystemHost);
 
@@ -211,8 +225,8 @@ export class Server implements ILanguageServer {
     new VirtualFileProvider();
   }
 
-  private getElmJsonFolder(uri: string): URI {
-    return Utils.dirname(URI.parse(uri));
+  private getElmJsonFolder(uri: URI): URI {
+    return Utils.dirname(uri);
   }
 
   private findTopLevelFolders(listOfElmJsonFolders: URI[]): Map<string, URI> {

@@ -4,10 +4,10 @@ import {
   Connection,
   Diagnostic as LspDiagnostic,
   DiagnosticSeverity,
-  FileChangeType,
   DidChangeTextDocumentParams,
+  DidSaveTextDocumentParams,
+  DidOpenTextDocumentParams,
 } from "vscode-languageserver";
-import { TextDocument } from "vscode-languageserver-textdocument";
 import { URI } from "vscode-uri";
 import { ServerCancellationToken } from "../../cancellation";
 import { IProgram } from "../../compiler/program";
@@ -26,7 +26,6 @@ import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics";
 import { ISourceFile } from "../../compiler/forest";
 import { ElmReviewDiagnostics } from "./elmReviewDiagnostics";
-import { IElmAnalyseJsonService } from "./elmAnalyseJsonService";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -104,8 +103,6 @@ export class DiagnosticsProvider {
   private diagnosticsOperation: MultistepOperation;
   private changeSeq = 0;
 
-  private elmAnalyseJsonService: IElmAnalyseJsonService;
-
   constructor() {
     this.clientSettings = container.resolve("ClientSettings");
 
@@ -121,10 +118,6 @@ export class DiagnosticsProvider {
 
     this.workspaces = container.resolve("ElmWorkspaces");
 
-    this.elmAnalyseJsonService = container.resolve<IElmAnalyseJsonService>(
-      "ElmAnalyseJsonService",
-    );
-
     const astProvider = container.resolve(ASTProvider);
 
     this.currentDiagnostics = new Map<string, FileDiagnostics>();
@@ -138,11 +131,13 @@ export class DiagnosticsProvider {
     const disableDiagnosticsOnChange =
       this.clientSettings.onlyUpdateDiagnosticsOnSave;
 
-    const handleSaveOrOpen = (d: { document: TextDocument }): void => {
+    const handleSaveOrOpen = (
+      d: DidSaveTextDocumentParams | DidOpenTextDocumentParams,
+    ): void => {
       const program = this.elmWorkspaceMatcher.getProgramFor(
-        URI.parse(d.document.uri),
+        URI.parse(d.textDocument.uri),
       );
-      const sourceFile = program.getSourceFile(d.document.uri);
+      const sourceFile = program.getSourceFile(d.textDocument.uri);
 
       if (!sourceFile) {
         return;
@@ -172,8 +167,8 @@ export class DiagnosticsProvider {
       }
     };
 
-    this.events.on("open", handleSaveOrOpen);
-    this.events.on("save", handleSaveOrOpen);
+    this.events.onDidOpen(handleSaveOrOpen);
+    this.events.onDidSave(handleSaveOrOpen);
 
     if (clientInitiatedDiagnostics) {
       this.connection.onRequest(
@@ -224,7 +219,7 @@ export class DiagnosticsProvider {
       this.deleteDiagnostics(uri);
     });
 
-    this.documentEvents.on("change", (params: DidChangeTextDocumentParams) => {
+    this.documentEvents.onDidChange((params: DidChangeTextDocumentParams) => {
       this.change();
 
       this.updateDiagnostics(

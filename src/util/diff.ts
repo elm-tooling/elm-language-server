@@ -1,14 +1,11 @@
 import diff from "fast-diff";
-import { Connection, Range, TextEdit } from "vscode-languageserver";
+import { Range, TextEdit } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { execCmdSync } from "../compiler/utils/elmUtils";
+import { IFileSystemHost } from "../types";
 // Given two strings (`before`, `after`), return a list of all substrings
 // that appear in `after` but not in `before`, and the positions of each
 // of the substrings within `after`.
-function getTextRangeChanges(
-  before: string,
-  after: string,
-): Promise<TextEdit[]> {
+function getTextRangeChanges(before: string, after: string): TextEdit[] {
   const newRanges: TextEdit[] = [];
   let lineNumber = 0;
   let column = 0;
@@ -54,27 +51,30 @@ function getTextRangeChanges(
       });
     }
   });
-  return Promise.resolve(newRanges);
+  return newRanges;
 }
 
 export function formatText(
   elmWorkspaceRootPath: URI,
   elmFormatPath: string,
   text: string,
-  connection: Connection,
-): Promise<TextEdit[]> {
+  host: IFileSystemHost,
+): TextEdit[] {
   const options = {
     cmdArguments: ["--stdin", "--elm-version", "0.19", "--yes"],
     notFoundText: "Install elm-format via 'npm install -g elm-format'.",
   };
 
-  const format = execCmdSync(
-    elmFormatPath,
-    "elm-format",
-    options,
-    elmWorkspaceRootPath.fsPath,
-    connection,
-    text,
-  );
-  return getTextRangeChanges(text, format.stdout);
+  if (host.execCmdSync) {
+    const format = host.execCmdSync(
+      elmFormatPath,
+      "elm-format",
+      options,
+      elmWorkspaceRootPath.fsPath,
+      text,
+    );
+    return getTextRangeChanges(text, format.stdout);
+  } else {
+    return [];
+  }
 }

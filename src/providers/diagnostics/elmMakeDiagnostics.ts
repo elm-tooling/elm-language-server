@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
-import { randomBytes } from "crypto";
 import * as path from "path";
 import { container } from "tsyringe";
 import {
@@ -11,17 +10,17 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { ISourceFile } from "../../compiler/forest";
-import * as utils from "../../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
 import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
-import execa = require("execa");
 import { IProgram } from "../../compiler/program";
+import { IFileSystemHost } from "../../types";
+import type { ExecaReturnValue } from "execa";
 
 const ELM_MAKE = "Elm";
 export const NAMING_ERROR = "NAMING ERROR";
-const RANDOM_ID = randomBytes(16).toString("hex");
+const RANDOM_ID = Date.now().toString();
 export const CODE_ACTION_ELM_MAKE = `elmLS.elmMakeFixer-${RANDOM_ID}`;
 
 export interface IElmCompilerError {
@@ -63,11 +62,15 @@ export class ElmMakeDiagnostics {
   private settings: Settings;
   private connection: Connection;
 
-  constructor() {
+  constructor(private host: IFileSystemHost) {
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<Connection>("Connection");
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
   }
+
+  public canRun = (sourceFile: ISourceFile): boolean => {
+    return URI.parse(sourceFile.uri).fsPath === "file" && !!this.host.execCmd;
+  };
 
   public createDiagnostics = async (
     sourceFile: ISourceFile,
@@ -289,16 +292,15 @@ export class ElmMakeDiagnostics {
     //   tests and the user hasn’t got elm-test installed.
     const results = await Promise.allSettled([
       entrypointsForSure.length > 0 && !onlyRunElmTest
-        ? utils.execCmd(
+        ? this.host.execCmd?.(
             [settings.elmPath, argsElm(entrypointsForSure)],
             [["elm", argsElm(entrypointsForSure)]],
             { notFoundText: elmNotFound },
             workspaceRootPath,
-            this.connection,
           )
         : undefined,
       testFilesForSure.length === 0 && possiblyTestFiles.length > 0
-        ? utils.execCmd(
+        ? this.host.execCmd?.(
             [settings.elmTestPath, argsElmTest(possiblyTestFiles)],
             // These files _could_ be tests, but since there’s no `tests/` folder we can’t
             // know if we should expect the user to have elm-test installed. If they don’t,
@@ -315,11 +317,10 @@ export class ElmMakeDiagnostics {
                     elmNotFound,
             },
             workspaceRootPath,
-            this.connection,
           )
         : undefined,
       testFilesForSure.length > 0
-        ? utils.execCmd(
+        ? this.host.execCmd?.(
             [
               settings.elmTestPath,
               argsElmTest(testFilesForSure.concat(possiblyTestFiles)),
@@ -333,7 +334,6 @@ export class ElmMakeDiagnostics {
             ],
             { notFoundText: elmTestNotFound },
             workspaceRootPath,
-            this.connection,
           )
         : undefined,
     ]);
@@ -349,7 +349,7 @@ export class ElmMakeDiagnostics {
       if (typeof error === "string") {
         continue;
       } else {
-        const execaError = error as execa.ExecaReturnValue<string>;
+        const execaError = error as ExecaReturnValue<string>;
         execaError.stderr.split("\n").forEach((line: string) => {
           let errorObject: unknown;
           try {

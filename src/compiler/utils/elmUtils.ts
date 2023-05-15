@@ -1,108 +1,8 @@
-import execa, { ExecaSyncReturnValue } from "execa";
 import * as path from "../../util/path";
-import { Connection, CompletionItemKind } from "vscode-languageserver";
+import { CompletionItemKind } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
 import { IElmPackageCache } from "../elmPackageCache";
-import { IClientSettings } from "../../util/settings";
 import { ElmProject } from "../program";
-import { NonEmptyArray } from "../../util/utils";
-import os from "os";
-
-export const isWindows = process.platform === "win32";
-
-/** Options for execCmdSync */
-export interface IExecCmdSyncOptions {
-  /** Any arguments */
-  cmdArguments?: string[];
-  /** Text to add when command is not found (maybe helping how to install) */
-  notFoundText?: string;
-}
-
-/** Executes a command. Shows an error message if the command isn't found */
-export function execCmdSync(
-  cmdFromUser: string,
-  cmdStatic: string,
-  options: IExecCmdSyncOptions = {},
-  cwd: string,
-  connection: Connection,
-  input?: string,
-): ExecaSyncReturnValue<string> {
-  const cmd = cmdFromUser === "" ? cmdStatic : cmdFromUser;
-  const preferLocal = cmdFromUser === "";
-
-  const cmdArguments = options ? options.cmdArguments : [];
-
-  try {
-    return execa.sync(cmd, cmdArguments, {
-      cwd,
-      input,
-      preferLocal,
-      stripFinalNewline: false,
-    });
-  } catch (error: any) {
-    connection.console.warn(JSON.stringify(error));
-    if (error.code === "ENOENT") {
-      connection.window.showErrorMessage(
-        options.notFoundText
-          ? options.notFoundText + ` I'm looking for '${cmd}' at '${cwd}'`
-          : `Cannot find executable with name '${cmd}'`,
-      );
-      throw "Executable not found";
-    } else {
-      throw error;
-    }
-  }
-}
-
-/** Options for execCmd */
-export interface IExecCmdOptions {
-  /** Text to add when command is not found (maybe helping how to install)
-   * Unlike the sync version, it’s required here (since `cmdStatic` has fallbacks).
-   */
-  notFoundText: string;
-}
-
-export async function execCmd(
-  cmdFromUser: [string, string[]],
-  cmdStatic: NonEmptyArray<[string, string[]]>,
-  options: IExecCmdOptions,
-  cwd: string,
-  connection: Connection,
-  input?: string,
-): Promise<ExecaSyncReturnValue<string>> {
-  const [cmd, args] = cmdFromUser[0] === "" ? cmdStatic[0] : cmdFromUser;
-  const preferLocal = cmdFromUser[0] === "";
-
-  try {
-    return await execa(cmd, args, {
-      cwd,
-      input,
-      preferLocal,
-      stripFinalNewline: false,
-    });
-  } catch (error: any) {
-    const notFound = error.code === "ENOENT";
-    if (notFound && cmdStatic.length > 1) {
-      return execCmd(
-        cmdFromUser,
-        cmdStatic.slice(1) as NonEmptyArray<[string, string[]]>,
-        options,
-        cwd,
-        connection,
-        input,
-      );
-    }
-    connection.console.warn(JSON.stringify(error));
-    if (notFound) {
-      connection.window.showErrorMessage(
-        options.notFoundText + ` I'm looking for commands at '${cwd}'`,
-      );
-      throw "Executable not found";
-    } else {
-      throw error;
-    }
-  }
-}
 
 // Special type that has no core mock https://github.com/elm/compiler/blob/51e20357137ebc9c3f6136cf0a3fe21c24027f39/compiler/src/Canonicalize/Environment/Foreign.hs#L62
 export function getEmptyTypes(): {
@@ -125,32 +25,6 @@ export function getEmptyTypes(): {
       symbolKind: CompletionItemKind.Enum,
     },
   ];
-}
-
-export function getElmVersion(
-  settings: IClientSettings,
-  elmWorkspaceFolder: URI,
-  connection: Connection,
-): string {
-  const options = {
-    cmdArguments: ["--version"],
-    notFoundText:
-      "Elm binary not found, did you install and setup the path to your binary?",
-  };
-
-  const result = execCmdSync(
-    settings.elmPath,
-    "elm",
-    options,
-    elmWorkspaceFolder.fsPath,
-    connection,
-  );
-
-  const version = result.stdout.trim();
-
-  connection.console.info(`Elm version ${version} detected.`);
-
-  return version;
 }
 
 type SolverResult =
@@ -469,16 +343,4 @@ export function isCoreProject(project: ElmProject): boolean {
     project.type === "package" &&
     project.maintainerAndPackageName === "elm/core"
   );
-}
-
-export function findElmHome(): string {
-  const elmHomeVar = process.env.ELM_HOME;
-
-  if (elmHomeVar) {
-    return elmHomeVar;
-  }
-
-  return isWindows
-    ? `${os.homedir()}/AppData/Roaming/elm`
-    : `${os.homedir()}/.elm`;
 }

@@ -45,7 +45,7 @@ import { Utils } from "../util/utils";
 import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable";
 import { TypeChecker } from "./typeChecker";
 import { performance } from "perf_hooks";
-import { ICancellationToken } from "../cancellation";
+import type { ICancellationToken } from "../cancellation";
 import {
   Diagnostic,
   Diagnostics,

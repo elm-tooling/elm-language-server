@@ -32,7 +32,7 @@ import {
   IElmAnalyseJsonService,
 } from "./elmAnalyseJsonService";
 import { Diagnostics } from "../../compiler/diagnostics";
-import { ServerCancellationToken } from "../../cancellation";
+import type { ServerCancellationToken } from "../../cancellation";
 
 export class ElmLsDiagnostics {
   private language: Language;

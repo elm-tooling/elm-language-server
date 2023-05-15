@@ -11,6 +11,7 @@ import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Settings } from "../util/settings";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 import { IDocumentFormattingParams } from "./paramsExtensions";
+import { IFileSystemHost } from "../types";
 
 type DocumentFormattingResult = Promise<TextEdit[] | undefined>;
 
@@ -21,18 +22,21 @@ export class DocumentFormattingProvider {
   private settings: Settings;
   private diagnostics: DiagnosticsProvider;
 
-  constructor() {
+  constructor(private host: IFileSystemHost) {
     this.settings = container.resolve<Settings>("Settings");
     this.connection = container.resolve<Connection>("Connection");
     this.events = container.resolve<TextDocumentEvents>(TextDocumentEvents);
     this.diagnostics = container.resolve(DiagnosticsProvider);
-    this.connection.onDocumentFormatting(
-      this.diagnostics.interruptDiagnostics(() =>
-        new ElmWorkspaceMatcher((params: DocumentFormattingParams) =>
-          URI.parse(params.textDocument.uri),
-        ).handle(this.handleFormattingRequest),
-      ),
-    );
+
+    if (host.execCmdSync) {
+      this.connection.onDocumentFormatting(
+        this.diagnostics.interruptDiagnostics(() =>
+          new ElmWorkspaceMatcher((params: DocumentFormattingParams) =>
+            URI.parse(params.textDocument.uri),
+          ).handle(this.handleFormattingRequest),
+        ),
+      );
+    }
   }
 
   protected handleFormattingRequest = async (
@@ -51,7 +55,7 @@ export class DocumentFormattingProvider {
         params.program.getRootPath(),
         settings.elmFormatPath,
         text.getText(),
-        this.connection,
+        this.host,
       );
     } catch (error) {
       this.connection.console.warn(JSON.stringify(error));

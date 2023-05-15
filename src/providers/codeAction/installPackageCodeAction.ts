@@ -1,10 +1,9 @@
-import { ExecaSyncReturnValue } from "execa";
+import type { ExecaSyncReturnValue } from "execa";
 import { container } from "tsyringe";
 import { CodeAction, Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { CommandManager } from "../../commandManager";
 import { ElmPackageCache } from "../../compiler/elmPackageCache";
-import { execCmdSync } from "../../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
 import { TreeUtils } from "../../util/treeUtils";

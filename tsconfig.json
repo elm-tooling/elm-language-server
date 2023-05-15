@@ -11,13 +11,13 @@
     "outDir": "out",
     "rootDir": "src",
     "strict": true,
-    "lib": ["es2020"],
+    "lib": ["es2020", "WebWorker"],
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "composite": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "typeRoots": [ "./src/typings", "./node_modules/@types"],
+    "typeRoots": ["./src/typings", "./node_modules/@types"]
   },
   "include": ["src"],
   "exclude": ["node_modules", ".vscode-test", "**/*.test.ts"]

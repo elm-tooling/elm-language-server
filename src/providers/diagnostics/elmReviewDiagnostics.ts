@@ -8,13 +8,12 @@ import {
 } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
 import { ISourceFile } from "../../compiler/forest";
-import * as utils from "../../compiler/utils/elmUtils";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
 import { Settings } from "../../util/settings";
 import { IDiagnostic } from "./diagnosticsProvider";
 import { Range } from "vscode-languageserver-textdocument";
-import execa = require("execa");
-import { existsSync } from "fs";
+import { IFileSystemHost } from "../../types";
+import type { ExecaReturnValue } from "execa";
 
 export type IElmReviewDiagnostic = IDiagnostic & {
   data: {
@@ -86,10 +85,16 @@ export class ElmReviewDiagnostics {
   private settings: Settings;
   private connection: Connection;
 
-  constructor() {
+  constructor(private host: IFileSystemHost) {
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<Connection>("Connection");
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
+  }
+
+  public canRun(sourceFile: ISourceFile): boolean {
+    return (
+      URI.parse(sourceFile.uri).scheme === "file" && !!this.host.execCmdSync
+    );
   }
 
   public createDiagnostics = async (
@@ -114,9 +119,8 @@ export class ElmReviewDiagnostics {
 
     if (
       settings.elmReviewDiagnostics === "off" ||
-      !existsSync(
-        Utils.joinPath(workspaceRootPath, "review", "src", "ReviewConfig.elm")
-          .fsPath,
+      !this.host.fileExists(
+        Utils.joinPath(workspaceRootPath, "review", "src", "ReviewConfig.elm"),
       )
     ) {
       return fileErrors;
@@ -138,19 +142,18 @@ export class ElmReviewDiagnostics {
 
     try {
       // Do nothing on success, but return that there were no errors
-      utils.execCmdSync(
+      this.host.execCmdSync?.(
         elmReviewCommand,
         "elm-review",
         options,
         workspaceRootPath.fsPath,
-        this.connection,
       );
       return fileErrors;
     } catch (error) {
       if (typeof error === "string") {
         return fileErrors;
       } else {
-        const execaError = error as execa.ExecaReturnValue<string>;
+        const execaError = error as ExecaReturnValue<string>;
         let errorObject: unknown;
         try {
           errorObject = JSON.parse(execaError.stdout);

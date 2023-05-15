@@ -57,23 +57,17 @@ export function startCommonServer(
             }
           : undefined;
       await Parser.init(options);
-      const absolute = Path.join(__dirname, "tree-sitter-elm.wasm");
-      const pathToWasm = Path.relative(process.cwd(), absolute);
+      const pathToWasm =
+        initializationOptions.treeSitterElmWasmUri ??
+        Path.relative(
+          process.cwd(),
+          Path.join(__dirname, "tree-sitter-elm.wasm"),
+        );
       connection.console.info(
         `Loading Elm tree-sitter syntax from ${pathToWasm}`,
       );
       const language = await Parser.Language.load(pathToWasm);
       const parser = container.resolve<Parser>("Parser");
-      // const logger: Parser.Logger = (
-      //   message: string,
-      //   params: { [param: string]: string },
-      //   isLexMessage: "lex" | "parse",
-      // ) => {
-      //   let type = isLexMessage ? "lex" : "parse";
-      //   if (type === "lex") type += "  ";
-      //   connection.console.info(`${type} ${message}`);
-      // };
-      // parser.setLogger(logger);
       parser.setLanguage(language);
 
       container.register(CapabilityCalculator, {
@@ -114,13 +108,6 @@ export function startCommonServer(
 
   // Listen on the connection
   connection.listen();
-
-  // Don't die on unhandled Promise rejections
-  process.on("unhandledRejection", (reason, p) => {
-    connection.console.error(
-      `Unhandled Rejection at: Promise ${p} reason:, ${reason}`,
-    );
-  });
 }
 
 const elmPackageRoot = URI.parse("https://raw.githubusercontent.com");
@@ -131,6 +118,8 @@ export function convertToFileSystemUri(uri: URI): URI {
 
   return uri;
 }
+
+export const virtualPackagesRoot = URI.parse("elm-virtual-file://package/");
 
 export function isVirtualPackageFile(uri: URI): boolean {
   return uri.scheme === "elm-virtual-file" && uri.authority === "package";

@@ -1,10 +1,11 @@
-import { EventEmitter } from "events";
 import { container } from "tsyringe";
 import {
   DidChangeTextDocumentParams,
   DidCloseTextDocumentParams,
   DidOpenTextDocumentParams,
   DidSaveTextDocumentParams,
+  Emitter,
+  Event,
   TextDocumentsConfiguration,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -12,17 +13,25 @@ import { IDocumentEvents } from "./documentEvents";
 
 // This is loosely based on https://github.com/Microsoft/vscode-languageserver-node/blob/73180893ca/server/src/main.ts#L124
 // With some simplifications and the ability to support multiple listeners
-export class TextDocumentEvents extends EventEmitter {
+export class TextDocumentEvents {
   // a single store of documents shared by all workspaces
   private _documents: { [uri: string]: TextDocument } = {};
   private _configuration: TextDocumentsConfiguration<TextDocument> =
     TextDocument;
 
-  constructor() {
-    super();
-    const events = container.resolve<IDocumentEvents>("DocumentEvents");
+  private _onDidChange: Emitter<DidChangeTextDocumentParams>;
+  private _onDidOpen: Emitter<DidOpenTextDocumentParams>;
+  private _onDidClose: Emitter<DidCloseTextDocumentParams>;
+  private _onDidSave: Emitter<DidSaveTextDocumentParams>;
 
-    events.on("open", (params: DidOpenTextDocumentParams) => {
+  constructor() {
+    const events = container.resolve<IDocumentEvents>("DocumentEvents");
+    this._onDidChange = new Emitter<DidChangeTextDocumentParams>();
+    this._onDidOpen = new Emitter<DidOpenTextDocumentParams>();
+    this._onDidClose = new Emitter<DidCloseTextDocumentParams>();
+    this._onDidSave = new Emitter<DidSaveTextDocumentParams>();
+
+    events.onDidOpen((params: DidOpenTextDocumentParams) => {
       const td = params.textDocument;
       const document = this._configuration.create(
         td.uri,
@@ -31,10 +40,10 @@ export class TextDocumentEvents extends EventEmitter {
         td.text,
       );
       this._documents[params.textDocument.uri] = document;
-      this.emit("open", Object.freeze({ document, ...params }));
+      this._onDidOpen.fire(params);
     });
 
-    events.on("change", (params: DidChangeTextDocumentParams) => {
+    events.onDidChange((params: DidChangeTextDocumentParams) => {
       const td = params.textDocument;
       const changes = params.contentChanges;
       if (changes.length === 0) {
@@ -54,23 +63,39 @@ export class TextDocumentEvents extends EventEmitter {
 
       this._documents[td.uri] = document;
 
-      this.emit("change", Object.freeze({ document, ...params }));
+      this._onDidChange.fire(params);
     });
 
-    events.on("save", (params: DidSaveTextDocumentParams) => {
+    events.onDidSave((params: DidSaveTextDocumentParams) => {
       const document = this._documents[params.textDocument.uri];
       if (document) {
-        this.emit("save", Object.freeze({ document, ...params }));
+        this._onDidSave.fire(params);
       }
     });
 
-    events.on("close", (params: DidCloseTextDocumentParams) => {
+    events.onDidClose((params: DidCloseTextDocumentParams) => {
       const document = this._documents[params.textDocument.uri];
       if (document) {
         delete this._documents[params.textDocument.uri];
-        this.emit("close", Object.freeze({ document, ...params }));
+        this._onDidClose.fire(params);
       }
     });
+  }
+
+  public get onDidChange(): Event<DidChangeTextDocumentParams> {
+    return this._onDidChange.event;
+  }
+
+  public get onDidOpen(): Event<DidOpenTextDocumentParams> {
+    return this._onDidOpen.event;
+  }
+
+  public get onDidClose(): Event<DidCloseTextDocumentParams> {
+    return this._onDidClose.event;
+  }
+
+  public get onDidSave(): Event<DidSaveTextDocumentParams> {
+    return this._onDidSave.event;
   }
 
   /**

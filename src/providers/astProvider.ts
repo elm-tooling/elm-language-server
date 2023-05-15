@@ -1,4 +1,3 @@
-import { readFileSync } from "fs";
 import { container } from "tsyringe";
 import {
   DidChangeTextDocumentParams,
@@ -46,11 +45,11 @@ export class ASTProvider {
       URI.parse(params.uri),
     ).handle(this.handleChangeTextDocument.bind(this));
 
-    this.documentEvents.on("change", (params: DidChangeTextDocumentParams) => {
+    this.documentEvents.onDidChange((params: DidChangeTextDocumentParams) => {
       void handleChange(params.textDocument);
     });
 
-    this.documentEvents.on("open", (params: DidOpenTextDocumentParams) => {
+    this.documentEvents.onDidOpen((params: DidOpenTextDocumentParams) => {
       void handleChange(params.textDocument);
     });
 
@@ -89,9 +88,7 @@ export class ASTProvider {
     // Source file could be undefined here
     const sourceFile = <ISourceFile | undefined>params.sourceFile;
 
-    const newText =
-      this.documentEvents.get(params.uri)?.getText() ??
-      readFileSync(URI.parse(params.uri).fsPath, "utf8");
+    const newText = this.documentEvents.get(params.uri)?.getText() ?? "";
 
     if (
       sourceFile &&
