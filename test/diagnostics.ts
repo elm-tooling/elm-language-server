@@ -9,8 +9,7 @@ import { spawnSync } from "child_process";
 import { readFileSync } from "fs";
 import { Diagnostic } from "../src/compiler/diagnostics";
 import { performance } from "perf_hooks";
-import { createProgramHost } from "./utils/sourceTreeParser";
-import { createNodeFileSystemHost } from "../src/node";
+import { createNodeFileSystemHost } from "../src/node/fileSystem";
 
 container.register("Connection", {
   useValue: {

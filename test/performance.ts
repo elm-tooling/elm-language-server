@@ -21,8 +21,8 @@ import {
   getCancellationFolderPath,
 } from "../src/node/cancellation";
 import { randomBytes } from "crypto";
-import { createNodeFileSystemHost } from "../src/node";
 import { ThrottledCancellationToken } from "../src/common/cancellation";
+import { createNodeFileSystemHost } from "../src/node/fileSystem";
 
 container.register("Connection", {
   useValue: {
