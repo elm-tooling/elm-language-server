@@ -69,7 +69,7 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
     const start = performance.now();
     let diagnostics: Diagnostic[] = [];
     for (const sourceFile of program.getForest().treeMap.values()) {
-      if (!sourceFile.writeable) {
+      if (!sourceFile.writeable || !sourceFile.tree) {
         continue;
       }
 

@@ -859,6 +859,7 @@ export class Program implements IProgram {
             project.testModuleToUriMap.set(module, uri);
           }
         });
+        this.findExposedModulesOfDependencies(dep);
       });
     }
   }

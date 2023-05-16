@@ -71,7 +71,10 @@ export class Forest implements IForest {
     project: ElmProject = this.rootProject,
     maintainerAndPackageName?: string,
   ): ISourceFile {
-    tree.uri = uri;
+    // Kernel sources do not have trees
+    if (tree) {
+      tree.uri = uri;
+    }
 
     const sourceFile: ISourceFile = {
       maintainerAndPackageName,
