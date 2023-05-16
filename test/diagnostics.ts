@@ -36,7 +36,7 @@ container.register("Connection", {
 });
 
 container.register("Settings", {
-  useValue: new Settings({} as any, {}),
+  useValue: new Settings({} as never, {}),
 });
 
 async function initParser(): Promise<void> {
@@ -106,6 +106,7 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
     program.getForest().treeMap.forEach((sourceFile) => {
       sourceFile.tree.delete();
     });
+    program.dispose();
     program = undefined!;
   } catch (e) {
     console.log(e);

@@ -2,6 +2,7 @@ import path from "path";
 import { container } from "tsyringe";
 import {
   Connection,
+  Disposable,
   InitializeParams,
   InitializeResult,
 } from "vscode-languageserver";
@@ -35,7 +36,7 @@ import { VirtualFileProvider } from "./providers/virtualFileProvider";
 import { IFileSystemHost, InitializationOptions } from "./types";
 import * as installPackageCodeAction from "./providers/codeAction/installPackageCodeAction";
 
-export interface ILanguageServer {
+export interface ILanguageServer extends Disposable {
   readonly capabilities: InitializeResult;
   init(): Promise<void>;
   registerInitializedProviders(): void;
@@ -46,6 +47,8 @@ export class Server implements ILanguageServer {
   private connection: Connection;
   public initSuccessfull = false;
   private isVirtualFileSystem = false;
+
+  private disposables: Disposable[] = [];
 
   constructor(
     private params: InitializeParams,
@@ -226,6 +229,13 @@ export class Server implements ILanguageServer {
     new VirtualFileProvider();
 
     installPackageCodeAction.register(this.fileSystemHost);
+  }
+
+  public dispose(): void {
+    container.resolve(DiagnosticsProvider).dispose();
+    container
+      .resolve<IProgram[]>("ElmWorkspaces")
+      .forEach((program) => program.dispose());
   }
 
   private getElmJsonFolder(uri: URI): URI {

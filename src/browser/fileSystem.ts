@@ -1,4 +1,4 @@
-import { Connection } from "vscode-languageserver/browser";
+import { Connection, Disposable } from "vscode-languageserver/browser";
 import { IFileSystemHost } from "../common/types";
 import { ReadDirectoryRequest, ReadFileRequest } from "../common/protocol";
 import {
@@ -46,8 +46,10 @@ export function createWebFileSystemHost(
       return result.map((path) => URI.parse(path));
     },
     fileExists: (): boolean => false,
-    watchFile: (): void => {
-      //
+    watchFile: (): Disposable => {
+      return Disposable.create(() => {
+        //
+      });
     },
     getElmPackagesRoot: () => virtualPackagesRoot,
   };

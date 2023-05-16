@@ -1,5 +1,5 @@
 import { container } from "tsyringe";
-import { Connection } from "vscode-languageserver";
+import { Connection, Disposable } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import type { ICancellationToken } from "../common/cancellation";
@@ -67,7 +67,7 @@ interface IElmPackageJson {
   };
 }
 
-export interface IProgram {
+export interface IProgram extends Disposable {
   init(progressCallback?: (percent: number) => void): Promise<void>;
   isInitialized: boolean;
   hasDocument(uri: URI): boolean;
@@ -146,6 +146,8 @@ export class Program implements IProgram {
   private _isInitialized = false;
   private _initializePromise: Promise<void> | undefined;
   private _initializeProgressCallback: ((percent: number) => void) | undefined;
+
+  private disposables: Disposable[] = [];
 
   constructor(private rootPath: URI, programHost: IProgramHost) {
     this.settings = container.resolve("Settings");
@@ -345,6 +347,10 @@ export class Program implements IProgram {
     );
   }
 
+  public dispose(): void {
+    this.disposables.forEach((disposable) => disposable.dispose());
+  }
+
   private async initWorkspace(): Promise<void> {
     const clientSettings = await this.settings.getClientSettings();
 
@@ -354,22 +360,24 @@ export class Program implements IProgram {
     );
 
     if (!this.filesWatching.has(pathToElmJson.toString())) {
-      this.host.watchFile(pathToElmJson, () => {
-        void this.connection.window
-          .createWorkDoneProgress()
-          .then((progress) => {
-            progress.begin("Restarting Elm Language Server", 0);
-            this._initializeProgressCallback = (percent: number): void => {
-              progress.report(percent, `${percent.toFixed(0)}%`);
-            };
+      this.disposables.push(
+        this.host.watchFile(pathToElmJson, () => {
+          void this.connection.window
+            .createWorkDoneProgress()
+            .then((progress) => {
+              progress.begin("Restarting Elm Language Server", 0);
+              this._initializeProgressCallback = (percent: number): void => {
+                progress.report(percent, `${percent.toFixed(0)}%`);
+              };
 
-            this.initWorkspace()
-              .then(() => progress.done())
-              .catch(() => {
-                //
-              });
-          });
-      });
+              this.initWorkspace()
+                .then(() => progress.done())
+                .catch(() => {
+                  //
+                });
+            });
+        }),
+      );
       this.filesWatching.add(pathToElmJson.toString());
     }
 

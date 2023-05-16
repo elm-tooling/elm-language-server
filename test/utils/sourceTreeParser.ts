@@ -5,6 +5,7 @@ import Parser from "web-tree-sitter";
 import { Program, IProgram } from "../../src/compiler/program";
 import * as path from "../../src/common/util/path";
 import { Utils } from "../../src/common/util/utils";
+import { Disposable } from "vscode-languageserver";
 
 export const baseUri = path.join(__dirname, "../sources/");
 export const srcUri = URI.file(path.join(baseUri, "src"));
@@ -80,8 +81,10 @@ export class SourceTreeParser {
             : [],
         ),
       fileExists: (uri: URI): boolean => false,
-      watchFile: (): void => {
-        return;
+      watchFile: (): Disposable => {
+        return Disposable.create(() => {
+          //
+        });
       },
       getElmPackagesRoot: (): URI => URI.file("/"),
     });

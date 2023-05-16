@@ -45,7 +45,7 @@ container.register("Connection", {
   },
 });
 container.register("Settings", {
-  useValue: new Settings({} as any, {}),
+  useValue: new Settings({} as never, {}),
 });
 
 async function initParser(): Promise<void> {
@@ -74,7 +74,7 @@ export async function runPerformanceTests(uri: string): Promise<void> {
   //   time.reset();
   // }
 
-  const numTimes = 10;
+  const numTimes = 1;
 
   for (let i = 0; i < numTimes; i++) {
     const program = new Program(
@@ -99,6 +99,8 @@ export async function runPerformanceTests(uri: string): Promise<void> {
         program.getTypeChecker().getDiagnostics(sourceFile, token);
       }
     });
+
+    program.dispose();
 
     addTime("BINDING   :", bindTime);
     addTime("INFER     :", inferTime);

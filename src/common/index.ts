@@ -106,6 +106,10 @@ export function startCommonServer(
     }
   });
 
+  connection.onExit(() => {
+    server.dispose();
+  });
+
   // Listen on the connection
   connection.listen();
 }

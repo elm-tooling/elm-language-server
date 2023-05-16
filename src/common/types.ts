@@ -2,6 +2,7 @@ import { URI } from "vscode-uri";
 import { IClientSettings } from "./util/settings";
 import { NonEmptyArray } from "./util/utils";
 import type { ExecaSyncReturnValue } from "execa";
+import { Disposable } from "vscode-languageserver";
 
 export interface IFileSystemHost {
   readFile(uri: URI): Promise<string>;
@@ -14,7 +15,7 @@ export interface IFileSystemHost {
     depth?: number,
   ): URI[];
   fileExists(uri: URI): boolean;
-  watchFile(uri: URI, callback: () => void): void;
+  watchFile(uri: URI, callback: () => void): Disposable;
   getElmPackagesRoot(rootPath: URI, clientSettings: IClientSettings): URI;
   execCmdSync?(
     cmdFromUser: string,

@@ -11,6 +11,7 @@ import { URI, Utils } from "vscode-uri";
 import { xhr, XHRResponse, getErrorStatusDescription } from "request-light";
 import { ReadDirectoryRequest, ReadFileRequest } from "../common/protocol";
 import { Connection } from "vscode-languageserver/node";
+import { Disposable } from "vscode-languageserver";
 import {
   convertToFileSystemUri,
   readFileWithCachedVirtualPackageFile,
@@ -109,11 +110,19 @@ export function createNodeFileSystemHost(
     },
     fileExists: (uri): boolean =>
       uri.scheme === "file" && fs.existsSync(uri.fsPath),
-    watchFile: (uri, callback): void => {
+    watchFile: (uri, callback): Disposable => {
       const realUri = convertToFileSystemUri(uri);
       if (realUri.scheme === "file") {
-        chokidar.watch(realUri.fsPath).on("change", callback);
+        const watcher = chokidar.watch(realUri.fsPath);
+        watcher.on("change", callback);
+        return Disposable.create(() => {
+          void watcher.close();
+        });
       }
+
+      return Disposable.create(() => {
+        //
+      });
     },
     getElmPackagesRoot: (rootPath, clientSettings): URI => {
       const isVirtualFileSystem = rootPath.scheme !== "file";

@@ -7,6 +7,7 @@ import {
   DidChangeTextDocumentParams,
   DidSaveTextDocumentParams,
   DidOpenTextDocumentParams,
+  Disposable,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { ServerCancellationToken } from "../../cancellation";
@@ -85,7 +86,7 @@ class PendingDiagnostics extends Map<string, number> {
 }
 
 @injectable()
-export class DiagnosticsProvider {
+export class DiagnosticsProvider implements Disposable {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
   private elmReviewDiagnostics: ElmReviewDiagnostics;
   private elmLsDiagnostics: ElmLsDiagnostics;
@@ -102,6 +103,8 @@ export class DiagnosticsProvider {
   private diagnosticsDelayer: Delayer<any>;
   private diagnosticsOperation: MultistepOperation;
   private changeSeq = 0;
+
+  private disposables: Disposable[] = [];
 
   constructor() {
     this.clientSettings = container.resolve("ClientSettings");
@@ -167,75 +170,85 @@ export class DiagnosticsProvider {
       }
     };
 
-    this.events.onDidOpen(handleSaveOrOpen);
-    this.events.onDidSave(handleSaveOrOpen);
+    this.disposables.push(this.events.onDidOpen(handleSaveOrOpen));
+    this.disposables.push(this.events.onDidSave(handleSaveOrOpen));
 
     if (clientInitiatedDiagnostics) {
-      this.connection.onRequest(
-        GetDiagnosticsRequest,
-        (params, cancellationToken) =>
-          this.getDiagnostics(params.files, params.delay, cancellationToken),
+      this.disposables.push(
+        this.connection.onRequest(
+          GetDiagnosticsRequest,
+          (params, cancellationToken) =>
+            this.getDiagnostics(params.files, params.delay, cancellationToken),
+        ),
       );
     }
 
-    this.connection.onDidChangeConfiguration((params) => {
-      this.clientSettings = <IClientSettings>params.settings;
+    this.disposables.push(
+      this.connection.onDidChangeConfiguration((params) => {
+        this.clientSettings = <IClientSettings>params.settings;
 
-      if (this.clientSettings.disableElmLSDiagnostics) {
-        this.currentDiagnostics.forEach((_, uri) =>
-          this.updateDiagnostics(uri, DiagnosticKind.ElmLS, []),
-        );
-      } else {
-        this.workspaces.forEach((program) => {
-          if (!program.getForest(false)) {
-            return;
-          }
-
-          program.getForest().treeMap.forEach((sourceFile) => {
-            if (sourceFile.writeable) {
-              this.updateDiagnostics(
-                sourceFile.uri,
-                DiagnosticKind.ElmLS,
-                this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
-              );
+        if (this.clientSettings.disableElmLSDiagnostics) {
+          this.currentDiagnostics.forEach((_, uri) =>
+            this.updateDiagnostics(uri, DiagnosticKind.ElmLS, []),
+          );
+        } else {
+          this.workspaces.forEach((program) => {
+            if (!program.getForest(false)) {
+              return;
             }
+
+            program.getForest().treeMap.forEach((sourceFile) => {
+              if (sourceFile.writeable) {
+                this.updateDiagnostics(
+                  sourceFile.uri,
+                  DiagnosticKind.ElmLS,
+                  this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
+                );
+              }
+            });
           });
-        });
-      }
-    });
+        }
+      }),
+    );
 
     if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
       this.requestAllDiagnostics();
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    astProvider.onTreeChange(({ sourceFile, declaration }) => {
-      if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
-        this.requestDiagnostics(sourceFile.uri);
-      }
-    });
-
-    astProvider.onTreeDelete(({ uri }) => {
-      this.deleteDiagnostics(uri);
-    });
-
-    this.documentEvents.onDidChange((params: DidChangeTextDocumentParams) => {
-      this.change();
-
-      this.updateDiagnostics(
-        params.textDocument.uri,
-        DiagnosticKind.ElmReview,
-        [],
-      );
-
-      // We need to cancel the request as soon as possible
-      if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
-        if (this.pendingRequest) {
-          this.pendingRequest.cancel();
-          this.pendingRequest = undefined;
+    this.disposables.push(
+      astProvider.onTreeChange(({ sourceFile }) => {
+        if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
+          this.requestDiagnostics(sourceFile.uri);
         }
-      }
-    });
+      }),
+    );
+
+    this.disposables.push(
+      astProvider.onTreeDelete(({ uri }) => {
+        this.deleteDiagnostics(uri);
+      }),
+    );
+
+    this.disposables.push(
+      this.documentEvents.onDidChange((params: DidChangeTextDocumentParams) => {
+        this.change();
+
+        this.updateDiagnostics(
+          params.textDocument.uri,
+          DiagnosticKind.ElmReview,
+          [],
+        );
+
+        // We need to cancel the request as soon as possible
+        if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
+          if (this.pendingRequest) {
+            this.pendingRequest.cancel();
+            this.pendingRequest = undefined;
+          }
+        }
+      }),
+    );
   }
 
   public interruptDiagnostics<T>(f: () => T): T {
@@ -287,6 +300,10 @@ export class DiagnosticsProvider {
       DiagnosticKind.ElmLS,
       this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
     );
+  }
+
+  public dispose(): void {
+    this.disposables.forEach((d) => d.dispose());
   }
 
   private requestDiagnostics(uri: string): void {
