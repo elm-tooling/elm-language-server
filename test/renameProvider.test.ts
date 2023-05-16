@@ -1,10 +1,10 @@
 import { WorkspaceEdit, Range, Position } from "vscode-languageserver";
 import { Utils } from "vscode-uri";
-import { RenameProvider } from "../src/providers";
+import { RenameProvider } from "../src/common/providers";
 import {
   IPrepareRenameParams,
   IRenameParams,
-} from "../src/providers/paramsExtensions";
+} from "../src/common/providers/paramsExtensions";
 import {
   getSourceFiles,
   getTargetPositionFromSource,

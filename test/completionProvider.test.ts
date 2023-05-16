@@ -6,8 +6,8 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import { CompletionProvider, CompletionResult } from "../src/providers";
-import { ICompletionParams } from "../src/providers/paramsExtensions";
+import { CompletionProvider, CompletionResult } from "../src/common/providers";
+import { ICompletionParams } from "../src/common/providers/paramsExtensions";
 import { getCaretPositionFromSource } from "./utils/sourceParser";
 import { baseUri, SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
 

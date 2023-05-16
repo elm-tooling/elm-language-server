@@ -1,8 +1,10 @@
-import path from "path";
 import { Location } from "vscode-languageserver";
-import { URI, Utils } from "vscode-uri";
-import { DefinitionProvider, DefinitionResult } from "../../src/providers";
-import { ITextDocumentPositionParams } from "../../src/providers/paramsExtensions";
+import { Utils } from "vscode-uri";
+import {
+  DefinitionProvider,
+  DefinitionResult,
+} from "../../src/common/providers";
+import { ITextDocumentPositionParams } from "../../src/common/providers/paramsExtensions";
 import { TreeUtils } from "../../src/common/util/treeUtils";
 import { getInvokeAndTargetPositionFromSource } from "../utils/sourceParser";
 import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";

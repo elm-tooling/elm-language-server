@@ -7,14 +7,17 @@ import { DocumentEvents } from "../src/common/util/documentEvents";
 import {
   IElmAnalyseJsonService,
   IElmAnalyseJson,
-} from "../src/providers/diagnostics/elmAnalyseJsonService";
-import { ElmMakeDiagnostics, ElmReviewDiagnostics } from "../src/providers";
-import { createNodeFileSystemHost } from "../src/node";
+} from "../src/common/providers/diagnostics/elmAnalyseJsonService";
+import {
+  ElmMakeDiagnostics,
+  ElmReviewDiagnostics,
+} from "../src/common/providers";
+import { createTestNodeFileSystemHost } from "./utils/sourceTreeParser";
 
 container.register("Connection", { useValue: mockDeep<Connection>() });
 container.register("ElmWorkspaces", { useValue: [] });
 container.register("Settings", {
-  useValue: new Settings({} as any, {}),
+  useValue: new Settings({} as never, {}),
 });
 container.register("ClientSettings", {
   useValue: {},
@@ -29,13 +32,9 @@ container.registerSingleton<IElmAnalyseJsonService>(
   },
 );
 container.register(ElmMakeDiagnostics, {
-  useValue: new ElmMakeDiagnostics(
-    createNodeFileSystemHost(container.resolve("Connection")),
-  ),
+  useValue: new ElmMakeDiagnostics(createTestNodeFileSystemHost()),
 });
 
 container.register(ElmReviewDiagnostics, {
-  useValue: new ElmReviewDiagnostics(
-    createNodeFileSystemHost(container.resolve("Connection")),
-  ),
+  useValue: new ElmReviewDiagnostics(createTestNodeFileSystemHost()),
 });

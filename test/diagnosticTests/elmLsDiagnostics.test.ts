@@ -4,9 +4,9 @@ import {
   Range,
 } from "vscode-languageserver";
 import { Utils as UriUtils } from "vscode-uri";
-import { IDiagnostic } from "../../src/providers/diagnostics/diagnosticsProvider";
-import { ElmLsDiagnostics } from "../../src/providers/diagnostics/elmLsDiagnostics";
-import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics";
+import { IDiagnostic } from "../../src/common/providers/diagnostics/diagnosticsProvider";
+import { ElmLsDiagnostics } from "../../src/common/providers/diagnostics/elmLsDiagnostics";
+import { diagnosticsEquals } from "../../src/common/providers/diagnostics/fileDiagnostics";
 import { Utils } from "../../src/common/util/utils";
 import { getSourceFiles } from "../utils/sourceParser";
 import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";

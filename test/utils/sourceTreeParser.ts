@@ -6,6 +6,8 @@ import { Program, IProgram } from "../../src/compiler/program";
 import * as path from "../../src/common/util/path";
 import { Utils } from "../../src/common/util/utils";
 import { Disposable } from "vscode-languageserver";
+import { createNodeFileSystemHost } from "../../src/node/fileSystem";
+import { IFileSystemHost } from "../../src/common/types";
 
 export const baseUri = path.join(__dirname, "../sources/");
 export const srcUri = URI.file(path.join(baseUri, "src"));
@@ -80,7 +82,7 @@ export class SourceTreeParser {
               )
             : [],
         ),
-      fileExists: (uri: URI): boolean => false,
+      fileExists: (): boolean => false,
       watchFile: (): Disposable => {
         return Disposable.create(() => {
           //
@@ -140,4 +142,14 @@ export function trimTrailingWhitespace(source: string): string {
     .split("\n")
     .map((line) => line.trimEnd())
     .join("\n");
+}
+
+export function createTestNodeFileSystemHost(): IFileSystemHost {
+  return {
+    ...createNodeFileSystemHost(container.resolve("Connection")),
+    watchFile: () =>
+      Disposable.create(() => {
+        //
+      }),
+  };
 }

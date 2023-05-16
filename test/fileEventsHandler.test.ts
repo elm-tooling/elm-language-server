@@ -16,7 +16,7 @@ import {
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { Utils } from "vscode-uri";
 import { IProgram } from "../src/compiler/program";
-import { FileEventsHandler } from "../src/providers/handlers/fileEventsHandler";
+import { FileEventsHandler } from "../src/common/providers/handlers/fileEventsHandler";
 import { getSourceFiles } from "./utils/sourceParser";
 import { SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
 

@@ -9,7 +9,7 @@ import { spawnSync } from "child_process";
 import { readFileSync } from "fs";
 import { Diagnostic } from "../src/compiler/diagnostics";
 import { performance } from "perf_hooks";
-import { createNodeFileSystemHost } from "../src/node/fileSystem";
+import { createTestNodeFileSystemHost } from "./utils/sourceTreeParser";
 
 container.register("Connection", {
   useValue: {
@@ -57,10 +57,7 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
   const pathUri = URI.file(uri);
 
   try {
-    let program = new Program(
-      pathUri,
-      createNodeFileSystemHost(container.resolve("Connection")),
-    );
+    let program = new Program(pathUri, createTestNodeFileSystemHost());
     await program.init(() => {
       //
     });

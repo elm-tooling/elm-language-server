@@ -22,7 +22,7 @@ import {
 } from "../src/node/cancellation";
 import { randomBytes } from "crypto";
 import { ThrottledCancellationToken } from "../src/common/cancellation";
-import { createNodeFileSystemHost } from "../src/node/fileSystem";
+import { createTestNodeFileSystemHost } from "./utils/sourceTreeParser";
 
 container.register("Connection", {
   useValue: {
@@ -77,10 +77,7 @@ export async function runPerformanceTests(uri: string): Promise<void> {
   const numTimes = 1;
 
   for (let i = 0; i < numTimes; i++) {
-    const program = new Program(
-      pathUri,
-      createNodeFileSystemHost(container.resolve("Connection")),
-    );
+    const program = new Program(pathUri, createTestNodeFileSystemHost());
     await program.init(() => {
       //
     });

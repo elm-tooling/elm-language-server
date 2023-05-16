@@ -1,7 +1,9 @@
-import path from "path";
-import { URI, Utils } from "vscode-uri";
-import { ReferenceResult, ReferencesProvider } from "../../src/providers";
-import { IReferenceParams } from "../../src/providers/paramsExtensions";
+import { Utils } from "vscode-uri";
+import {
+  ReferenceResult,
+  ReferencesProvider,
+} from "../../src/common/providers";
+import { IReferenceParams } from "../../src/common/providers/paramsExtensions";
 import { TreeUtils } from "../../src/common/util/treeUtils";
 import { getReferencesTestFromSource } from "../utils/sourceParser";
 import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";

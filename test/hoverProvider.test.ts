@@ -1,8 +1,8 @@
 import path from "path";
 import { MarkupContent } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import { HoverProvider, HoverResult } from "../src/providers";
-import { ITextDocumentPositionParams } from "../src/providers/paramsExtensions";
+import { HoverProvider, HoverResult } from "../src/common/providers";
+import { ITextDocumentPositionParams } from "../src/common/providers/paramsExtensions";
 import { getInvokePositionFromSource } from "./utils/sourceParser";
 import { baseUri, SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
 

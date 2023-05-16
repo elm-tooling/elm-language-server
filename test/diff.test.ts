@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { URI } from "vscode-uri";
 import { formatText } from "../src/common/util/diff";
 import { container } from "tsyringe";
-import { createNodeFileSystemHost } from "../src/node";
+import { createTestNodeFileSystemHost } from "./utils/sourceTreeParser";
 
 describe("test formatting", () => {
   const pathUri = URI.file(__dirname);
@@ -60,7 +60,7 @@ main =
         , update = update
         }
       `,
-      createNodeFileSystemHost(container.resolve("Connection")),
+      createTestNodeFileSystemHost(),
     );
 
     expect(result).toMatchSnapshot();

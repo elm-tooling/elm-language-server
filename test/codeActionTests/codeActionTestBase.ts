@@ -1,15 +1,15 @@
 import { container } from "tsyringe";
 import { CodeAction } from "vscode-languageserver";
-import { URI, Utils as UriUtils } from "vscode-uri";
+import { Utils as UriUtils } from "vscode-uri";
 import { IProgram } from "../../src/compiler/program";
 import {
   CodeActionProvider,
   convertFromCompilerDiagnostic,
   convertToCompilerDiagnostic,
   DiagnosticsProvider,
-} from "../../src/providers";
-import { ElmLsDiagnostics } from "../../src/providers/diagnostics/elmLsDiagnostics";
-import { ICodeActionParams } from "../../src/providers/paramsExtensions";
+} from "../../src/common/providers";
+import { ElmLsDiagnostics } from "../../src/common/providers/diagnostics/elmLsDiagnostics";
+import { ICodeActionParams } from "../../src/common/providers/paramsExtensions";
 import { Utils } from "../../src/common/util/utils";
 import {
   getTargetPositionFromSource,
@@ -21,10 +21,10 @@ import {
   applyEditsToSource,
   stripCommentLines,
   srcUri,
+  createTestNodeFileSystemHost,
 } from "../utils/sourceTreeParser";
 import { diff } from "jest-diff";
 import { expect } from "@jest/globals";
-import { createNodeFileSystemHost } from "../../src/node";
 
 function codeActionEquals(a: CodeAction, b: CodeAction): boolean {
   return a.title === b.title;
@@ -67,7 +67,7 @@ type Order = LT | EQ | GT
 
 class MockCodeActionsProvider extends CodeActionProvider {
   constructor() {
-    super(createNodeFileSystemHost(container.resolve("Connection")));
+    super(createTestNodeFileSystemHost());
   }
 
   public handleCodeAction(params: ICodeActionParams): CodeAction[] | undefined {

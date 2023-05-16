@@ -4,9 +4,9 @@ import {
   CodeActionProvider,
   ICodeAction,
   IRefactorCodeAction,
-} from "../../src/providers/codeActionProvider";
+} from "../../src/common/providers/codeActionProvider";
 import Parser from "web-tree-sitter";
-import { createNodeFileSystemHost } from "../../src/node";
+import { createTestNodeFileSystemHost } from "../utils/sourceTreeParser";
 
 container.register<Parser>("Parser", {
   useValue: mockDeep<Parser>(
@@ -26,7 +26,7 @@ container.register<Parser>("Parser", {
 
 class MockCodeActionsProvider extends CodeActionProvider {
   constructor() {
-    super(createNodeFileSystemHost(container.resolve("Connection")));
+    super(createTestNodeFileSystemHost());
   }
 
   public isPreferredFix(
