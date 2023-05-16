@@ -10,7 +10,7 @@ import {
 } from "../../src/providers";
 import { ElmLsDiagnostics } from "../../src/providers/diagnostics/elmLsDiagnostics";
 import { ICodeActionParams } from "../../src/providers/paramsExtensions";
-import { Utils } from "../../src/util/utils";
+import { Utils } from "../../src/common/util/utils";
 import {
   getTargetPositionFromSource,
   getSourceFiles,

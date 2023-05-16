@@ -12,17 +12,17 @@ import { bindTime, resetBindTime } from "../src/compiler/typeChecker";
 import { inferTime, resetInferTime } from "../src/compiler/typeInference";
 import * as path from "path";
 import { argv } from "process";
-import { Settings } from "../src/util/settings";
+import { Settings } from "../src/common/util/settings";
 import Parser from "web-tree-sitter";
 import { replaceTime, resetReplaceTime } from "../src/compiler/typeReplacement";
 import {
   getCancellationFilePath,
   FileBasedCancellationTokenSource,
   getCancellationFolderPath,
-} from "../src/cancellation.node";
+} from "../src/node/cancellation";
 import { randomBytes } from "crypto";
 import { createNodeFileSystemHost } from "../src/node";
-import { ThrottledCancellationToken } from "../src/cancellation";
+import { ThrottledCancellationToken } from "../src/common/cancellation";
 
 container.register("Connection", {
   useValue: {

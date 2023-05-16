@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "../util/treeUtils";
+import { TreeUtils } from "../common/util/treeUtils";
 import { References } from "./references";
 import {
   BinaryExprTree,
@@ -40,12 +40,12 @@ import {
 import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
 import { TypeExpression } from "./typeExpression";
 import { IProgram } from "./program";
-import { Sequence } from "../util/sequence";
-import { Utils } from "../util/utils";
+import { Sequence } from "../common/util/sequence";
+import { Utils } from "../common/util/utils";
 import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable";
 import { TypeChecker } from "./typeChecker";
 import { performance } from "perf_hooks";
-import type { ICancellationToken } from "../cancellation";
+import type { ICancellationToken } from "../common/cancellation";
 import {
   Diagnostic,
   Diagnostics,

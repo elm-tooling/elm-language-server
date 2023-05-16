@@ -1,6 +1,6 @@
 import { SyntaxNode } from "web-tree-sitter";
-import { MultiMap } from "../util/multiMap";
-import { TreeUtils } from "../util/treeUtils";
+import { MultiMap } from "../common/util/multiMap";
+import { TreeUtils } from "../common/util/treeUtils";
 import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
 import { InferenceResult } from "./typeInference";
 

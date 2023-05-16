@@ -3,7 +3,7 @@ import { container } from "tsyringe";
 import { URI } from "vscode-uri";
 import { Program } from "../src/compiler/program";
 import * as path from "path";
-import { Settings } from "../src/util/settings";
+import { Settings } from "../src/common/util/settings";
 import Parser from "web-tree-sitter";
 import { spawnSync } from "child_process";
 import { readFileSync } from "fs";

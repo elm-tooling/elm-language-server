@@ -1,6 +1,6 @@
 import { SyntaxNode, Tree } from "web-tree-sitter";
 import { Imports } from "./imports";
-import { TreeUtils } from "../util/treeUtils";
+import { TreeUtils } from "../common/util/treeUtils";
 import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
 import { IExposing, SymbolMap } from "./binder";
 import { Diagnostic } from "./diagnostics";

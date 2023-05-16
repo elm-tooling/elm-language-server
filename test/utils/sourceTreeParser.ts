@@ -3,8 +3,8 @@ import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI, Utils as UriUtils } from "vscode-uri";
 import Parser from "web-tree-sitter";
 import { Program, IProgram } from "../../src/compiler/program";
-import * as path from "../../src/util/path";
-import { Utils } from "../../src/util/utils";
+import * as path from "../../src/common/util/path";
+import { Utils } from "../../src/common/util/utils";
 
 export const baseUri = path.join(__dirname, "../sources/");
 export const srcUri = URI.file(path.join(baseUri, "src"));

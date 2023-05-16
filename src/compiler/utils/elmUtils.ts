@@ -1,4 +1,4 @@
-import * as path from "../../util/path";
+import * as path from "../../common/util/path";
 import { CompletionItemKind } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
 import { IElmPackageCache } from "../elmPackageCache";

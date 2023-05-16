@@ -1,6 +1,6 @@
 import { SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "../util/treeUtils";
-import { Utils } from "../util/utils";
+import { TreeUtils } from "../common/util/treeUtils";
+import { Utils } from "../common/util/utils";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
 import { ISourceFile } from "./forest";
 import { IProgram } from "./program";

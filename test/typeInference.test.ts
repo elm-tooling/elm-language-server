@@ -1,6 +1,6 @@
 import { Utils } from "vscode-uri";
 import { getVarNames } from "../src/compiler/typeInference";
-import { TreeUtils } from "../src/util/treeUtils";
+import { TreeUtils } from "../src/common/util/treeUtils";
 import { getTargetPositionFromSource } from "./utils/sourceParser";
 import { SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
 import { listSources } from "./diagnosticTests/sources";

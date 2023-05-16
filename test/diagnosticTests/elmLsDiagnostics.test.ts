@@ -7,7 +7,7 @@ import { Utils as UriUtils } from "vscode-uri";
 import { IDiagnostic } from "../../src/providers/diagnostics/diagnosticsProvider";
 import { ElmLsDiagnostics } from "../../src/providers/diagnostics/elmLsDiagnostics";
 import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics";
-import { Utils } from "../../src/util/utils";
+import { Utils } from "../../src/common/util/utils";
 import { getSourceFiles } from "../utils/sourceParser";
 import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";
 import { diff } from "jest-diff";

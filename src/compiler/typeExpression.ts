@@ -29,10 +29,10 @@ import {
   mapTypeAliasDeclaration,
   mapTypeAnnotation,
 } from "./utils/expressionTree";
-import { TreeUtils } from "../util/treeUtils";
+import { TreeUtils } from "../common/util/treeUtils";
 import { TypeReplacement } from "./typeReplacement";
 import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
-import { Utils } from "../util/utils";
+import { Utils } from "../common/util/utils";
 import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable";
 import { IProgram } from "./program";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";

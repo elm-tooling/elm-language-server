@@ -2,8 +2,8 @@ import "reflect-metadata";
 import { container } from "tsyringe";
 import { Connection } from "vscode-languageserver";
 import { mockDeep } from "jest-mock-extended";
-import { Settings } from "../src/util/settings";
-import { DocumentEvents } from "../src/util/documentEvents";
+import { Settings } from "../src/common/util/settings";
+import { DocumentEvents } from "../src/common/util/documentEvents";
 import {
   IElmAnalyseJsonService,
   IElmAnalyseJson,

@@ -5,9 +5,9 @@ import {
   Range,
 } from "vscode-languageserver";
 import { SyntaxNode } from "web-tree-sitter";
-import { PositionUtil } from "../positionUtil";
-import { DiagnosticSource } from "../providers/diagnostics/diagnosticSource";
-import { getSpaces } from "../util/refactorEditUtils";
+import { PositionUtil } from "../common/positionUtil";
+import { DiagnosticSource } from "../common/providers/diagnostics/diagnosticSource";
+import { getSpaces } from "../common/util/refactorEditUtils";
 
 export interface Diagnostic {
   code: string;

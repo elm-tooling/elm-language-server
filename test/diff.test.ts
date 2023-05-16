@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { URI } from "vscode-uri";
-import { formatText } from "../src/util/diff";
+import { formatText } from "../src/common/util/diff";
 import { container } from "tsyringe";
 import { createNodeFileSystemHost } from "../src/node";
 

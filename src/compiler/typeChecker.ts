@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "../util/treeUtils";
+import { TreeUtils } from "../common/util/treeUtils";
 import {
   Expression,
   EValueDeclaration,
@@ -24,13 +24,13 @@ import { IImport, Imports } from "./imports";
 import { TypeRenderer } from "./typeRenderer";
 import { performance } from "perf_hooks";
 import { bindTreeContainer, ISymbol } from "./binder";
-import { Sequence } from "../util/sequence";
-import { Utils } from "../util/utils";
+import { Sequence } from "../common/util/sequence";
+import { Utils } from "../common/util/utils";
 import { TypeExpression } from "./typeExpression";
-import type { ICancellationToken } from "../cancellation";
+import type { ICancellationToken } from "../common/cancellation";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
 import { isKernelProject, nameIsKernel } from "./utils/elmUtils";
-import * as path from "../util/path";
+import * as path from "../common/util/path";
 
 export let bindTime = 0;
 export function resetBindTime(): void {

@@ -5,8 +5,8 @@ import {
   ProposedFeatures,
   createConnection,
 } from "vscode-languageserver/browser";
-import { IFileSystemHost } from "../types";
-import { ReadDirectoryRequest, ReadFileRequest } from "../protocol";
+import { IFileSystemHost } from "../common/types";
+import { ReadDirectoryRequest, ReadFileRequest } from "../common/protocol";
 import {
   convertToFileSystemUri,
   readFileWithCachedVirtualPackageFile,
@@ -15,6 +15,8 @@ import {
 } from "../common";
 import { URI } from "vscode-uri";
 import { XHRResponse, getErrorStatusDescription, xhr } from "request-light";
+
+startLanguageServer();
 
 export function startLanguageServer(): void {
   const messageReader = new BrowserMessageReader(self);

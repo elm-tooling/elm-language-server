@@ -7,10 +7,10 @@ import {
   IExecCmdOptions,
   IExecCmdSyncOptions,
   IFileSystemHost,
-} from "../types";
+} from "../common/types";
 import { URI, Utils } from "vscode-uri";
 import { xhr, XHRResponse, getErrorStatusDescription } from "request-light";
-import { ReadDirectoryRequest, ReadFileRequest } from "../protocol";
+import { ReadDirectoryRequest, ReadFileRequest } from "../common/protocol";
 import {
   Connection,
   ProposedFeatures,
@@ -22,16 +22,25 @@ import {
   readFileWithCachedVirtualPackageFile,
   virtualPackagesRoot,
 } from "../common";
-import { getCancellationStrategyFromArgv } from "../cancellation.node";
+import { getCancellationStrategyFromArgv } from "./cancellation";
 import os from "os";
 import execa, { ExecaSyncReturnValue } from "execa";
-import { NonEmptyArray } from "../util/utils";
-import { IClientSettings } from "../util/settings";
+import { NonEmptyArray } from "../common/util/utils";
+import { IClientSettings } from "../common/util/settings";
 
 const readFile = util.promisify(fs.readFile);
 const readDir = util.promisify(fs.readdir);
 const writeFile = util.promisify(fs.writeFile);
 const mkdir = util.promisify(fs.mkdir);
+
+// Show version for `-v` or `--version` arguments
+if (process.argv[2] === "-v" || process.argv[2] === "--version") {
+  // require is used to avoid loading package if not necessary (~30ms time difference)
+  process.stdout.write(`${require("pjson").version}\n`);
+  process.exit(0);
+}
+
+startLanguageServer();
 
 export function startLanguageServer(): void {
   // default argument `--stdio`

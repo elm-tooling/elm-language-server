@@ -1,8 +1,8 @@
 import { ISourceFile } from "./forest";
 import { SyntaxNode } from "web-tree-sitter";
-import { MultiMap } from "../util/multiMap";
-import { NodeType, TreeUtils } from "../util/treeUtils";
-import { Utils } from "../util/utils";
+import { MultiMap } from "../common/util/multiMap";
+import { NodeType, TreeUtils } from "../common/util/treeUtils";
+import { Utils } from "../common/util/utils";
 import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
 import { Diagnostics, error } from "./diagnostics";
 import { Imports } from "./imports";

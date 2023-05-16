@@ -1,8 +1,8 @@
 import { IProgram } from "./program";
 import { ISourceFile } from "./forest";
 import { SyntaxNode, Tree } from "web-tree-sitter";
-import { TreeUtils } from "../util/treeUtils";
-import { Utils } from "../util/utils";
+import { TreeUtils } from "../common/util/treeUtils";
+import { Utils } from "../common/util/utils";
 import { Imports } from "./imports";
 import { ISymbol } from "./binder";
 

@@ -2,14 +2,14 @@ import { Utils as UriUtils } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
 import { convertFromCompilerDiagnostic } from "../../src/providers";
 import { diagnosticsEquals } from "../../src/providers/diagnostics/fileDiagnostics";
-import { TreeUtils } from "../../src/util/treeUtils";
+import { TreeUtils } from "../../src/common/util/treeUtils";
 import {
   Diagnostic,
   Diagnostics,
   error,
   IDiagnosticMessage,
 } from "../../src/compiler/diagnostics";
-import { Utils } from "../../src/util/utils";
+import { Utils } from "../../src/common/util/utils";
 import {
   getSourceFiles,
   getTargetPositionFromSource,

@@ -1,7 +1,7 @@
 import { SyntaxNode } from "web-tree-sitter";
 import { OperatorAssociativity } from "../operatorPrecedence";
-import { TreeUtils } from "../../util/treeUtils";
-import { Utils } from "../../util/utils";
+import { TreeUtils } from "../../common/util/treeUtils";
+import { Utils } from "../../common/util/utils";
 import { IProgram } from "../program";
 import { performance } from "perf_hooks";
 import { Diagnostic } from "../diagnostics";

@@ -2,7 +2,7 @@ import { container } from "tsyringe";
 import { Connection } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
-import type { ICancellationToken } from "../cancellation";
+import type { ICancellationToken } from "../common/cancellation";
 import { ElmPackageCache, IElmPackageCache } from "./elmPackageCache";
 import { Forest, IForest, ISourceFile } from "./forest";
 import * as utils from "./utils/elmUtils";
@@ -10,13 +10,13 @@ import { IVersion } from "./utils/elmUtils";
 import {
   IPossibleImportsCache,
   PossibleImportsCache,
-} from "../util/possibleImportsCache";
-import { Settings } from "../util/settings";
+} from "../common/util/possibleImportsCache";
+import { Settings } from "../common/util/settings";
 import { Diagnostic } from "./diagnostics";
 import { TypeCache } from "./typeCache";
 import { createTypeChecker, TypeChecker } from "./typeChecker";
-import { CommandManager } from "../commandManager";
-import { IFileSystemHost } from "../types";
+import { CommandManager } from "../common/commandManager";
+import { IFileSystemHost } from "../common/types";
 
 interface IElmFile {
   path: URI;

@@ -1,8 +1,8 @@
 import Parser, { SyntaxNode } from "web-tree-sitter";
 import { IForest, ISourceFile } from "./forest";
-import { TreeUtils } from "../util/treeUtils";
+import { TreeUtils } from "../common/util/treeUtils";
 import { container } from "tsyringe";
-import { MultiMap } from "../util/multiMap";
+import { MultiMap } from "../common/util/multiMap";
 import { performance } from "perf_hooks";
 import { isCoreProject } from "./utils/elmUtils";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";

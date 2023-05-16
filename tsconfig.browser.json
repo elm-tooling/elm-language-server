@@ -3,5 +3,5 @@
   "compilerOptions": {
     "lib": ["es6", "ES2020", "WebWorker"]
   },
-  "include": ["src", "src/browser", "src/index.browser.ts"]
+  "include": ["src/common", "src/compiler", "src/browser"]
 }
