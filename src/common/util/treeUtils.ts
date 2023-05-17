@@ -418,9 +418,11 @@ export class TreeUtils {
       );
     }
 
-    const recordTypeTree = program.getSourceFile(recordType?.tree.uri ?? "");
+    const recordTypeSourceFile = recordType
+      ? program.getSourceFile(recordType.tree.uri)
+      : undefined;
 
-    if (recordType && recordTypeTree) {
+    if (recordType && recordTypeSourceFile) {
       const fieldTypes = TreeUtils.descendantsOfType(recordType, "field_type");
       const fieldNode = fieldTypes.find((a) => {
         return (
@@ -444,7 +446,7 @@ export class TreeUtils {
           if (typeNode.length > 0) {
             const typeAliasNode = program
               .getTypeChecker()
-              .findDefinition(typeNode[0], recordTypeTree).symbol;
+              .findDefinition(typeNode[0], recordTypeSourceFile).symbol;
 
             if (typeAliasNode) {
               return typeAliasNode.node;

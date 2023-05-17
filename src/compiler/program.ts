@@ -212,25 +212,7 @@ export class Program implements IProgram {
   }
 
   public getSourceFile(uri: string): ISourceFile | undefined {
-    const sourceFile = this.getForest().getByUri(uri);
-
-    if (sourceFile) {
-      return sourceFile;
-    }
-
-    if (this.host.fileExists(URI.parse(uri))) {
-      return this.getForest().setSourceFile(
-        uri,
-        false,
-        uri.endsWith(".elm")
-          ? this.parser.parse(this.host.readFileSync(URI.parse(uri)))
-          : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            undefined!,
-        false,
-        false,
-        undefined,
-      );
-    }
+    return this.getForest().getByUri(uri);
   }
 
   public getSourceFiles(): readonly ISourceFile[] {
