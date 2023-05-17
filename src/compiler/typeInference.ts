@@ -566,7 +566,7 @@ export class InferenceScope {
 
     const start = performance.now();
     try {
-      if (!program.getForest().getByUri(uri)?.writeable) {
+      if (!program.getSourceFile(uri)?.writeable) {
         return program
           .getTypeCache()
           .getOrSet("PACKAGE_VALUE_DECLARATION", declaration, setter);

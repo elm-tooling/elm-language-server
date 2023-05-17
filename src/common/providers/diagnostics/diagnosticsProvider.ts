@@ -197,7 +197,7 @@ export class DiagnosticsProvider implements Disposable {
               return;
             }
 
-            program.getForest().treeMap.forEach((sourceFile) => {
+            program.getSourceFiles().forEach((sourceFile) => {
               if (sourceFile.writeable) {
                 this.updateDiagnostics(
                   sourceFile.uri,
@@ -317,7 +317,7 @@ export class DiagnosticsProvider implements Disposable {
         return;
       }
 
-      program.getForest().treeMap.forEach(({ uri, writeable }) => {
+      program.getSourceFiles().forEach(({ uri, writeable }) => {
         if (writeable) {
           this.pendingDiagnostics.set(uri, Date.now());
         }
@@ -437,7 +437,7 @@ export class DiagnosticsProvider implements Disposable {
               URI.parse(uri),
             );
 
-            const sourceFile = program.getForest().getByUri(uri);
+            const sourceFile = program.getSourceFile(uri);
 
             if (!sourceFile) {
               goNext();

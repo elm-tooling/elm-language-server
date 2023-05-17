@@ -58,7 +58,8 @@ export class FindTestsProvider {
 // export for testing
 export function findAllTestSuites(program: IProgram): TestSuite[] {
   const typeChecker = program.getTypeChecker();
-  return Array.from(program.getForest(true).treeMap.values())
+  return program
+    .getSourceFiles()
     .filter((sourceFile) => sourceFile.isTestFile)
     .map((sourceFile) => {
       const topSuites = TreeUtils.findAllTopLevelFunctionDeclarations(

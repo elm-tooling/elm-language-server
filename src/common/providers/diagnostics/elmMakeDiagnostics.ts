@@ -198,9 +198,7 @@ export class ElmMakeDiagnostics {
 
     const sourceFilePath = fileToRelativePath(sourceFile);
 
-    const treeMap = program.getForest().treeMap;
-
-    const forestFiles: Array<ISourceFile> = Array.from(treeMap.values());
+    const forestFiles = program.getSourceFiles();
 
     const allFiles = forestFiles.some((file) => file.uri === sourceFile.uri)
       ? forestFiles
@@ -224,12 +222,12 @@ export class ElmMakeDiagnostics {
     });
 
     const urisReferencedByEntrypoints = this.getUrisReferencedByEntrypoints(
-      treeMap,
+      program,
       entrypointsForSure,
     );
 
     const urisReferencedByTestsForSure = this.getUrisReferencedByEntrypoints(
-      treeMap,
+      program,
       testFilesForSure,
     );
 
@@ -457,7 +455,7 @@ export class ElmMakeDiagnostics {
   }
 
   private getUrisReferencedByEntrypoints(
-    treeMap: Map<string, ISourceFile>,
+    program: IProgram,
     entrypoints: ISourceFile[],
   ): Set<string> {
     const stack: ISourceFile[] = entrypoints.slice();
@@ -467,7 +465,7 @@ export class ElmMakeDiagnostics {
       const file = stack[i];
       if (file.resolvedModules !== undefined) {
         for (const uri of file.resolvedModules.values()) {
-          const nextFile = treeMap.get(uri);
+          const nextFile = program.getSourceFile(uri);
           if (
             nextFile !== undefined &&
             !nextFile.isDependency &&

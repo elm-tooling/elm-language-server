@@ -64,7 +64,7 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
 
     const start = performance.now();
     let diagnostics: Diagnostic[] = [];
-    for (const sourceFile of program.getForest().treeMap.values()) {
+    for (const sourceFile of program.getSourceFiles()) {
       if (!sourceFile.writeable || !sourceFile.tree) {
         continue;
       }
@@ -100,7 +100,7 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
       // process.exitCode = 1;
     }
 
-    program.getForest().treeMap.forEach((sourceFile) => {
+    program.getSourceFiles().forEach((sourceFile) => {
       sourceFile.tree.delete();
     });
     program.dispose();

@@ -418,9 +418,7 @@ export class TreeUtils {
       );
     }
 
-    const recordTypeTree = program
-      .getForest()
-      .getByUri(recordType?.tree.uri ?? "");
+    const recordTypeTree = program.getSourceFile(recordType?.tree.uri ?? "");
 
     if (recordType && recordTypeTree) {
       const fieldTypes = TreeUtils.descendantsOfType(recordType, "field_type");
@@ -494,9 +492,9 @@ export class TreeUtils {
           ).symbol;
 
         if (definitionNode) {
-          const definitionTree = program
-            .getForest()
-            .getByUri(definitionNode.node.tree.uri);
+          const definitionTree = program.getSourceFile(
+            definitionNode.node.tree.uri,
+          );
 
           let aliasNode;
           if (

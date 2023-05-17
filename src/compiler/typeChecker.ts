@@ -101,7 +101,6 @@ export interface TypeChecker {
 }
 
 export function createTypeChecker(program: IProgram): TypeChecker {
-  const forest = program.getForest();
   const imports = new Map<string, Imports>();
   let importModuleGraph: Map<string, ISourceFile[]>;
 
@@ -112,7 +111,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
   const checkedNodes = new Set<number>();
 
   const start = performance.now();
-  forest.treeMap.forEach((sourceFile) => {
+  program.getSourceFiles().forEach((sourceFile) => {
     bindTreeContainer(sourceFile);
   });
   bindTime = performance.now() - start;
@@ -333,7 +332,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       return cached;
     }
 
-    const allImports = Imports.getImports(sourceFile, forest);
+    const allImports = Imports.getImports(sourceFile, program);
     allImports.getDiagnostics().forEach((diagnostic) => {
       diagnostics.add(diagnostic);
     });
@@ -349,7 +348,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     if (!importModuleGraph) {
       importModuleGraph = new Map<string, ISourceFile[]>();
 
-      forest.treeMap.forEach((sourceFile) => {
+      program.getSourceFiles().forEach((sourceFile) => {
         if (sourceFile.writeable) {
           getAllImports(sourceFile)
             .getModules()
@@ -1055,24 +1054,13 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     if (moduleNameNode) {
       const moduleName = moduleNameNode.text;
       const sourceFile = getSourceFileOfNode(importClause);
-      if (!program.getSourceFileOfImportableModule(sourceFile, moduleName)) {
-        const project = sourceFile.project;
-
-        if (
-          !nameIsKernel(moduleName) ||
-          !isKernelProject(project) ||
-          !program.getSourceFile(
-            path.join(
-              project.uri,
-              "src",
-              moduleName.split(".").join("/") + ".js",
-            ),
-          )
-        ) {
-          diagnostics.add(
-            error(moduleNameNode, Diagnostics.ImportMissing, moduleName),
-          );
-        }
+      if (
+        !program.getSourceFileOfImportableModule(sourceFile, moduleName) &&
+        !program.getKernelSourceFileOfImportableModule(sourceFile, moduleName)
+      ) {
+        diagnostics.add(
+          error(moduleNameNode, Diagnostics.ImportMissing, moduleName),
+        );
       }
     }
   }
@@ -1109,7 +1097,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
   }
 
   function getSourceFileOfNode(node: SyntaxNode): ISourceFile {
-    const sourceFile = forest.getByUri(node.tree.uri);
+    const sourceFile = program.getSourceFile(node.tree.uri);
 
     if (!sourceFile) {
       throw new Error(`Can't find sourceFile by uri "${node.tree.uri}"`);

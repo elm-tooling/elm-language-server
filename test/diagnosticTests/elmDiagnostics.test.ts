@@ -51,7 +51,7 @@ describe("test elm diagnostics", () => {
     const testUri = UriUtils.joinPath(srcUri, "Test.elm").toString();
 
     const program = await treeParser.getProgram(result.sources);
-    const sourceFile = program.getForest().getByUri(testUri);
+    const sourceFile = program.getSourceFile(testUri);
 
     if (!sourceFile) throw new Error("Getting tree failed");
 
@@ -67,7 +67,7 @@ describe("test elm diagnostics", () => {
       "Dict",
       "Char",
     ];
-    program.getForest().treeMap.forEach((sourceFile) => {
+    program.getSourceFiles().forEach((sourceFile) => {
       if (!coreModules.find((module) => sourceFile.uri.includes(module))) {
         diagnostics.push(...program.getSyntacticDiagnostics(sourceFile));
         diagnostics.push(...program.getSemanticDiagnostics(sourceFile));

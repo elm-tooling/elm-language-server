@@ -776,7 +776,7 @@ export function findDefinition(
     return { diagnostics: [] };
   }
 
-  const sourceFile = program.getForest().getByUri(e.tree.uri);
+  const sourceFile = program.getSourceFile(e.tree.uri);
 
   if (!sourceFile) {
     return { diagnostics: [] };

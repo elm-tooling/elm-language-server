@@ -1056,9 +1056,8 @@ export class CompletionProvider {
     uri: string,
     filterText: string,
   ): IPossibleImport[] {
-    const forest = program.getForest();
     const possibleImportsCache = program.getPossibleImportsCache();
-    const sourceFile = forest.getByUri(uri);
+    const sourceFile = program.getSourceFile(uri);
 
     if (sourceFile) {
       const checker = program.getTypeChecker();

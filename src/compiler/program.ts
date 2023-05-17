@@ -4,7 +4,7 @@ import { URI, Utils } from "vscode-uri";
 import Parser, { Tree } from "web-tree-sitter";
 import type { ICancellationToken } from "../common/cancellation";
 import { ElmPackageCache, IElmPackageCache } from "./elmPackageCache";
-import { Forest, IForest, ISourceFile } from "./forest";
+import { Forest, IForest, IKernelSourceFile, ISourceFile } from "./forest";
 import * as utils from "./utils/elmUtils";
 import { IVersion } from "./utils/elmUtils";
 import {
@@ -24,7 +24,9 @@ interface IElmFile {
   project: ElmProject;
   isTestFile: boolean;
   isDependency: boolean;
+  isKernel: boolean;
   tree?: Tree;
+  moduleName?: string;
 }
 
 export type ElmJson = IElmApplicationJson | IElmPackageJson;
@@ -74,10 +76,15 @@ export interface IProgram extends Disposable {
   isInSourceDirectory(uri: string): boolean;
   getSourceDirectoryOfFile(uri: string): string | undefined;
   getSourceFile(uri: string): ISourceFile | undefined;
+  getSourceFiles(): readonly ISourceFile[];
   getSourceFileOfImportableModule(
     sourceFile: ISourceFile,
     importableModuleName: string,
   ): ISourceFile | undefined;
+  getKernelSourceFileOfImportableModule(
+    sourceFile: ISourceFile,
+    importableModuleName: string,
+  ): IKernelSourceFile | undefined;
   getForest(synchronize?: boolean): IForest;
   getRootPath(): URI;
   getTypeCache(): TypeCache;
@@ -212,7 +219,7 @@ export class Program implements IProgram {
     }
 
     if (this.host.fileExists(URI.parse(uri))) {
-      return this.getForest().setTree(
+      return this.getForest().setSourceFile(
         uri,
         false,
         uri.endsWith(".elm")
@@ -224,6 +231,10 @@ export class Program implements IProgram {
         undefined,
       );
     }
+  }
+
+  public getSourceFiles(): readonly ISourceFile[] {
+    return Array.from(this.getForest().sourceFiles.values());
   }
 
   public getSourceFileOfImportableModule(
@@ -241,6 +252,50 @@ export class Program implements IProgram {
       return this.getSourceFile(moduleUri);
     } else {
       return undefined;
+    }
+  }
+
+  private checkedKernelFiles = new Set<string>();
+  public getKernelSourceFileOfImportableModule(
+    sourceFile: ISourceFile,
+    importableModuleName: string,
+  ): IKernelSourceFile | undefined {
+    if (
+      utils.nameIsKernel(importableModuleName) &&
+      utils.isKernelProject(sourceFile.project)
+    ) {
+      const moduleUri =
+        sourceFile.project.moduleToUriMap.get(importableModuleName) ??
+        utils
+          .getModuleUri(
+            importableModuleName,
+            Utils.joinPath(URI.parse(sourceFile.project.uri), "src"),
+            sourceFile.project,
+          )
+          .toString();
+
+      const kernelSourceFile = this.getForest().getKernelSourceFile(moduleUri);
+
+      if (kernelSourceFile) {
+        return kernelSourceFile;
+      }
+
+      if (!this.checkedKernelFiles.has(moduleUri)) {
+        this.checkedKernelFiles.add(moduleUri);
+        if (this.host.fileExists(URI.parse(moduleUri))) {
+          sourceFile.project.moduleToUriMap.set(
+            importableModuleName,
+            moduleUri,
+          );
+
+          return this.getForest().setKernelSourceFile(
+            moduleUri,
+            sourceFile.project,
+            sourceFile.maintainerAndPackageName ?? "",
+            importableModuleName,
+          );
+        }
+      }
     }
   }
 
@@ -788,6 +843,7 @@ export class Program implements IProgram {
           project,
           isTestFile,
           isDependency,
+          isKernel: false,
         });
       });
     }
@@ -816,6 +872,8 @@ export class Program implements IProgram {
         isTestFile: false,
         isDependency: true,
         tree: isKernel ? undefined : this.parser.parse(fileContent),
+        isKernel,
+        moduleName,
       };
     } catch (e) {
       // The module might be in another source directory
@@ -827,21 +885,27 @@ export class Program implements IProgram {
       const uri = elmFile.path.toString();
       this.connection.console.info(`Adding ${uri}`);
 
-      const tree =
-        elmFile.tree ??
-        (uri.endsWith(".elm")
-          ? this.parser.parse(await this.host.readFile(elmFile.path))
-          : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            undefined!);
-      this.forest.setTree(
-        uri,
-        elmFile.project === this.rootProject,
-        tree,
-        elmFile.isTestFile,
-        elmFile.isDependency,
-        elmFile.project,
-        elmFile.maintainerAndPackageName,
-      );
+      if (elmFile.isKernel) {
+        this.forest.setKernelSourceFile(
+          uri,
+          elmFile.project,
+          elmFile.maintainerAndPackageName ?? "",
+          elmFile.moduleName ?? "",
+        );
+      } else {
+        const tree =
+          elmFile.tree ??
+          this.parser.parse(await this.host.readFile(elmFile.path));
+        this.forest.setSourceFile(
+          uri,
+          elmFile.project === this.rootProject,
+          tree,
+          elmFile.isTestFile,
+          elmFile.isDependency,
+          elmFile.project,
+          elmFile.maintainerAndPackageName,
+        );
+      }
     } catch (error) {
       if (error instanceof Error && error.stack) {
         this.connection.console.error(error.stack);

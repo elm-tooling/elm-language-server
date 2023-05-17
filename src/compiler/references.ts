@@ -13,17 +13,16 @@ export class References {
   ): { node: SyntaxNode; uri: string }[] {
     const references: { node: SyntaxNode; uri: string }[] = [];
 
-    const forest = program.getForest();
     const checker = program.getTypeChecker();
 
     if (definitionNode) {
-      const definitionSourceFile = forest.getByUri(
+      const definitionSourceFile = program.getSourceFile(
         definitionNode.node.tree.uri,
       );
 
       if (definitionSourceFile) {
         const imports: { [uri: string]: Imports } = {};
-        forest.treeMap.forEach((sourceFile) => {
+        program.getSourceFiles().forEach((sourceFile) => {
           if (sourceFile.writeable) {
             imports[sourceFile.uri] = checker.getAllImports(sourceFile);
           }
@@ -113,7 +112,7 @@ export class References {
                         continue;
                       }
 
-                      const otherSourceFile = forest.getByUri(uri);
+                      const otherSourceFile = program.getSourceFile(uri);
 
                       if (!otherSourceFile) {
                         continue;
@@ -237,7 +236,7 @@ export class References {
                         continue;
                       }
 
-                      const otherSourceFile = forest.getByUri(uri);
+                      const otherSourceFile = program.getSourceFile(uri);
 
                       if (!otherSourceFile) {
                         continue;
@@ -362,7 +361,7 @@ export class References {
                         continue;
                       }
 
-                      const otherSourceFile = forest.getByUri(uri);
+                      const otherSourceFile = program.getSourceFile(uri);
 
                       if (!otherSourceFile) {
                         continue;
@@ -442,7 +441,7 @@ export class References {
                   continue;
                 }
 
-                const sourceFileToCheck = forest.getByUri(uri);
+                const sourceFileToCheck = program.getSourceFile(uri);
 
                 if (!sourceFileToCheck || !sourceFileToCheck.writeable) {
                   continue;
@@ -756,8 +755,7 @@ export class References {
 
     if (functionNameNode) {
       const infixRef = program
-        .getForest()
-        .getByUri(node.tree.uri)
+        .getSourceFile(node.tree.uri)
         ?.symbolLinks?.get(node.tree.rootNode)
         ?.get(
           functionNameNode.text,

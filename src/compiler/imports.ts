@@ -1,5 +1,5 @@
 import Parser, { SyntaxNode } from "web-tree-sitter";
-import { IForest, ISourceFile } from "./forest";
+import { ISourceFile } from "./forest";
 import { TreeUtils } from "../common/util/treeUtils";
 import { container } from "tsyringe";
 import { MultiMap } from "../common/util/multiMap";
@@ -7,6 +7,7 @@ import { performance } from "perf_hooks";
 import { isCoreProject } from "./utils/elmUtils";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
 import { ISymbol } from "./binder";
+import { IProgram } from "./program";
 
 export let importsTime = 0;
 export function resetImportsTime(): void {
@@ -88,7 +89,10 @@ export class Imports {
 
   private static cachedVirtualImports: SyntaxNode[];
 
-  public static getImports(sourceFile: ISourceFile, forest: IForest): Imports {
+  public static getImports(
+    sourceFile: ISourceFile,
+    program: IProgram,
+  ): Imports {
     const start = performance.now();
     const result = new Imports();
 
@@ -106,7 +110,7 @@ export class Imports {
           return;
         }
 
-        const foundModule = forest.getByUri(uri);
+        const foundModule = program.getSourceFile(uri);
         if (foundModule) {
           const fromModule = {
             name: moduleName,

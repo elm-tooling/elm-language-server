@@ -10,10 +10,10 @@ import { SymbolInformationTranslator } from "../util/symbolTranslator";
 
 export class WorkspaceSymbolProvider {
   private readonly connection: Connection;
-  private readonly elmWorkspaces: IProgram[];
+  private readonly programs: IProgram[];
 
   constructor() {
-    this.elmWorkspaces = container.resolve<IProgram[]>("ElmWorkspaces");
+    this.programs = container.resolve<IProgram[]>("ElmWorkspaces");
     this.connection = container.resolve<Connection>("Connection");
     this.connection.onWorkspaceSymbol(this.workspaceSymbolRequest);
   }
@@ -27,9 +27,9 @@ export class WorkspaceSymbolProvider {
       SymbolInformation[]
     >();
 
-    this.elmWorkspaces.forEach((program) => {
-      program.getForest().treeMap.forEach((tree) => {
-        if (!tree.writeable) {
+    this.programs.forEach((program) => {
+      program.getSourceFiles().forEach((sourceFile) => {
+        if (!sourceFile.writeable) {
           return;
         }
         const traverse: (node: SyntaxNode) => void = (
@@ -38,12 +38,12 @@ export class WorkspaceSymbolProvider {
           if (this.isPatternInSymbol(param.query, node.text)) {
             const symbolInformation =
               SymbolInformationTranslator.translateNodeToSymbolInformation(
-                tree.uri,
+                sourceFile.uri,
                 node,
               );
             if (symbolInformation) {
-              const current = symbolInformationMap.get(tree.uri) || [];
-              symbolInformationMap.set(tree.uri, [
+              const current = symbolInformationMap.get(sourceFile.uri) || [];
+              symbolInformationMap.set(sourceFile.uri, [
                 ...current,
                 symbolInformation,
               ]);
@@ -56,8 +56,8 @@ export class WorkspaceSymbolProvider {
         };
 
         // skip URIs already traversed in a previous Elm workspace
-        if (tree && !symbolInformationMap.get(tree.uri)) {
-          traverse(tree.tree.rootNode);
+        if (sourceFile && !symbolInformationMap.get(sourceFile.uri)) {
+          traverse(sourceFile.tree.rootNode);
         }
       });
     });

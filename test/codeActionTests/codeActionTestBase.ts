@@ -100,7 +100,7 @@ export async function testCodeAction(
   result.sources["Test.elm"] = stripCommentLines(result.sources["Test.elm"]);
 
   const program = await treeParser.getProgram(result.sources);
-  const sourceFile = program.getForest().getByUri(testUri);
+  const sourceFile = program.getSourceFile(testUri);
 
   if (!sourceFile) throw new Error("Getting tree failed");
 

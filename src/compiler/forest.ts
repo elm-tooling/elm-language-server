@@ -31,26 +31,41 @@ export interface ISourceFile {
   resolvedImports?: boolean;
 }
 
+export interface IKernelSourceFile {
+  uri: string;
+  maintainerAndPackageName: string;
+  project: ElmProject;
+  moduleName: string;
+}
+
 export interface IForest {
-  treeMap: Map<string, ISourceFile>;
+  readonly sourceFiles: Map<string, ISourceFile>;
   getTree(uri: string): Tree | undefined;
   getByUri(uri: string): ISourceFile | undefined;
-  setTree(
+  setSourceFile(
     uri: string,
     writeable: boolean,
     tree: Tree,
     isTestFile: boolean,
     isDependency: boolean,
     project?: ElmProject,
-    packageName?: string,
+    maintainerAndPackageName?: string,
   ): ISourceFile;
   removeTree(uri: string): void;
   synchronize(): void;
   invalidateResolvedModules(): void;
+  setKernelSourceFile(
+    uri: string,
+    project: ElmProject,
+    maintainerAndPackageName: string,
+    moduleName: string,
+  ): IKernelSourceFile;
+  getKernelSourceFile(uri: string): IKernelSourceFile | undefined;
 }
 
 export class Forest implements IForest {
-  public treeMap: Map<string, ISourceFile> = new Map<string, ISourceFile>();
+  public sourceFiles = new Map<string, ISourceFile>();
+  private kernelSourceFiles = new Map<string, IKernelSourceFile>();
 
   constructor(private rootProject: ElmProject) {}
 
@@ -59,10 +74,10 @@ export class Forest implements IForest {
   }
 
   public getByUri(uri: string): ISourceFile | undefined {
-    return this.treeMap.get(uri);
+    return this.sourceFiles.get(uri);
   }
 
-  public setTree(
+  public setSourceFile(
     uri: string,
     writeable: boolean,
     tree: Tree,
@@ -88,17 +103,21 @@ export class Forest implements IForest {
       bindDiagnostics: [],
     };
 
-    this.treeMap.set(uri, sourceFile);
+    this.sourceFiles.set(uri, sourceFile);
 
     return sourceFile;
   }
 
   public removeTree(uri: string): void {
-    this.treeMap.delete(uri);
+    this.sourceFiles.delete(uri);
   }
 
   public synchronize(): void {
-    this.treeMap.forEach((sourceFile) => {
+    this.sourceFiles.forEach((sourceFile) => {
+      if (!sourceFile.tree) {
+        return;
+      }
+
       // Resolve import modules
       if (!sourceFile.resolvedModules) {
         sourceFile.resolvedModules = this.resolveModules(sourceFile);
@@ -122,9 +141,29 @@ export class Forest implements IForest {
   }
 
   public invalidateResolvedModules(): void {
-    this.treeMap.forEach((sourceFile) => {
+    this.sourceFiles.forEach((sourceFile) => {
       sourceFile.resolvedModules = undefined;
     });
+  }
+
+  public setKernelSourceFile(
+    uri: string,
+    project: ElmProject,
+    maintainerAndPackageName: string,
+    moduleName: string,
+  ): IKernelSourceFile {
+    const sourceFile = {
+      uri,
+      project,
+      maintainerAndPackageName,
+      moduleName,
+    };
+    this.kernelSourceFiles.set(uri, sourceFile);
+    return sourceFile;
+  }
+
+  public getKernelSourceFile(uri: string): IKernelSourceFile | undefined {
+    return this.kernelSourceFiles.get(uri);
   }
 
   private resolveModules(sourceFile: ISourceFile): Map<string, string> {

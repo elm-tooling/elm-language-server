@@ -37,9 +37,8 @@ export class MoveRefactoringHandler {
   private handleGetMoveDestinationsRequest(
     params: IMoveParams,
   ): IMoveDestinationsResponse {
-    const forest = params.program.getForest();
-
-    const destinations: IMoveDestination[] = Array.from(forest.treeMap.values())
+    const destinations: IMoveDestination[] = params.program
+      .getSourceFiles()
       .filter((tree) => tree.writeable && tree.uri !== params.sourceUri)
       .map((tree) => {
         let uri = URI.parse(tree.uri).fsPath;
@@ -65,9 +64,10 @@ export class MoveRefactoringHandler {
       return;
     }
 
-    const forest = params.program.getForest();
-    const tree = forest.getTree(params.sourceUri);
-    const destinationTree = forest.getTree(params.destination.uri);
+    const tree = params.program.getSourceFile(params.sourceUri)?.tree;
+    const destinationTree = params.program.getSourceFile(
+      params.destination.uri,
+    )?.tree;
 
     if (tree && destinationTree) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
@@ -188,7 +188,7 @@ export class MoveRefactoringHandler {
             changes[refUri] = [];
           }
 
-          const refTree = forest.getTree(refUri);
+          const refTree = params.program.getSourceFile(refUri)?.tree;
 
           if (refTree && params.destination?.name) {
             const removeImportEdit = RefactorEditUtils.removeValueFromImport(
@@ -255,7 +255,7 @@ export class MoveRefactoringHandler {
             .filter((ref) => ref.uri === refUri)
             .some((ref) => !ref.fullyQualified);
 
-          const refTree = forest.getTree(refUri);
+          const refTree = params.program.getSourceFile(refUri)?.tree;
 
           if (refTree) {
             const importEdit = RefactorEditUtils.addImport(

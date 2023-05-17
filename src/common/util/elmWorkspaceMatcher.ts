@@ -89,7 +89,7 @@ export class ElmWorkspaceMatcher<ParamType> {
   public getSourceFileFor(param: ParamType, program: IProgram): ISourceFile {
     const uri = this.getUriFor(param).toString();
 
-    return program.getForest().getByUri(uri)!;
+    return program.getSourceFile(uri)!;
   }
 
   private async waitForInitialization(): Promise<void> {

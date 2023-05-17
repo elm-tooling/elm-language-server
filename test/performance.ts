@@ -91,7 +91,7 @@ export async function runPerformanceTests(uri: string): Promise<void> {
 
     const token = new ThrottledCancellationToken(cancellationToken.token);
 
-    program.getForest().treeMap.forEach((sourceFile) => {
+    program.getSourceFiles().forEach((sourceFile) => {
       if (sourceFile.tree) {
         program.getTypeChecker().getDiagnostics(sourceFile, token);
       }

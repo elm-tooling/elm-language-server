@@ -119,7 +119,7 @@ export class FileEventsHandler {
   }: IRenameFileParams): WorkspaceEdit | undefined {
     // Handle folder rename
     if (!sourceFile) {
-      return Array.from(program.getForest().treeMap.values())
+      return Array.from(program.getSourceFiles().values())
         .filter(({ uri }) => uri.startsWith(`${oldUri}/`))
         .map((sourceFile) =>
           this.onWillRenameFile({

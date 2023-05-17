@@ -37,7 +37,7 @@ export class DefinitionProviderTestBase {
     const program = await this.treeParser.getProgram(
       determinedTestType.sources,
     );
-    const sourceFile = program.getForest().getByUri(invokeUri);
+    const sourceFile = program.getSourceFile(invokeUri);
 
     if (!sourceFile) throw new Error("Getting tree failed");
 

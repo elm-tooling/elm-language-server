@@ -198,7 +198,7 @@ export class ASTProvider {
         ? params.sourceFile.isDependency
         : false;
 
-      const sourceFile = forest.setTree(
+      const sourceFile = forest.setSourceFile(
         pendingRenameUri ?? params.uri,
         true,
         tree,

@@ -34,7 +34,7 @@ export class ReferencesProviderTestBase {
     const testUri = Utils.joinPath(srcUri, referenceTest.invokeFile).toString();
 
     const program = await this.treeParser.getProgram(referenceTest.sources);
-    const sourceFile = program.getForest().getByUri(testUri);
+    const sourceFile = program.getSourceFile(testUri);
 
     if (!sourceFile) throw new Error("Getting tree failed");
 

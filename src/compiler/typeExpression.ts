@@ -97,7 +97,7 @@ export class TypeExpression {
       return inferenceResult;
     };
 
-    const result = !program.getForest().getByUri(e.tree.uri)?.writeable
+    const result = !program.getSourceFile(e.tree.uri)?.writeable
       ? program
           .getTypeCache()
           .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter)
@@ -130,7 +130,7 @@ export class TypeExpression {
       return inferenceResult;
     };
 
-    const result = !program.getForest().getByUri(e.tree.uri)?.writeable
+    const result = !program.getSourceFile(e.tree.uri)?.writeable
       ? program
           .getTypeCache()
           .getOrSet("PACKAGE_TYPE_AND_TYPE_ALIAS", e, setter)
@@ -165,7 +165,7 @@ export class TypeExpression {
       return { ...inferenceResult, type };
     };
 
-    const result = !program.getForest().getByUri(e.tree.uri)?.writeable
+    const result = !program.getSourceFile(e.tree.uri)?.writeable
       ? program.getTypeCache().getOrSet("PACKAGE_TYPE_ANNOTATION", e, setter)
       : program.getTypeCache().getOrSet("PROJECT_TYPE_ANNOTATION", e, setter);
 
@@ -194,7 +194,7 @@ export class TypeExpression {
       return inferenceResult;
     };
 
-    const result = !program.getForest().getByUri(e.tree.uri)?.writeable
+    const result = !program.getSourceFile(e.tree.uri)?.writeable
       ? program.getTypeCache().getOrSet("PACKAGE_UNION_VARIANT", e, setter)
       : program.getTypeCache().getOrSet("PROJECT_UNION_VARIANT", e, setter);
 
@@ -550,8 +550,7 @@ export class TypeExpression {
     );
 
     return TUnion(
-      this.program.getForest().getByUri(typeDeclaration.tree.uri)?.moduleName ??
-        "",
+      this.program.getSourceFile(typeDeclaration.tree.uri)?.moduleName ?? "",
       typeDeclaration.name,
       params,
     );
