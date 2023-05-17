@@ -23,28 +23,35 @@ import {
 import { NoWorkspaceContainsError } from "../util/noWorkspaceContainsError";
 import { TreeUtils } from "../util/treeUtils";
 import { Utils } from "../util/utils";
+import { URI } from "vscode-uri";
 
 export class FindTestsProvider {
   constructor() {
     const connection = container.resolve<Connection>("Connection");
-    connection.onRequest(FindTestsRequest, (params: IFindTestsParams) => {
+    connection.onRequest(FindTestsRequest, async (params: IFindTestsParams) => {
+      const projectFolderUri = URI.parse(params.projectFolder);
       connection.console.info(
-        `Finding tests is requested ${params.projectFolder.toString()}`,
+        `Finding tests is requested ${projectFolderUri.toString()}`,
       );
       try {
-        const elmWorkspaces: Program[] = container.resolve("ElmWorkspaces");
+        const elmWorkspaces = container.resolve<Program[]>("ElmWorkspaces");
+        await Promise.all(
+          elmWorkspaces
+            .filter((ws) => !ws.isInitialized)
+            .map((ws) => ws.init()),
+        );
         const program = elmWorkspaces.find(
           (program) =>
-            program.getRootPath().toString() == params.projectFolder.toString(),
+            program.getRootPath().toString() == projectFolderUri.toString(),
         );
         if (!program) {
-          throw new NoWorkspaceContainsError(params.projectFolder);
+          throw new NoWorkspaceContainsError(projectFolderUri);
         }
         const suites = findAllTestSuites(program);
         connection.console.info(
           `Found ${
             suites.length
-          } top test suites in ${params.projectFolder.toString()}`,
+          } top test suites in ${projectFolderUri.toString()}`,
         );
         return <IFindTestsResponse>{ suites };
       } catch (error) {

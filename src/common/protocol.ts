@@ -60,7 +60,7 @@ export const FindTestsRequest = new RequestType<
 >("elm/findTests");
 
 export interface IFindTestsParams {
-  projectFolder: URI;
+  projectFolder: string;
 }
 
 export interface IFindTestsResponse {
