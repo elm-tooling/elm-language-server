@@ -38,7 +38,8 @@ export type ICreateFileParams = FileCreate & IParams;
 export type IRenameFileParams = FileRename & IParams;
 export type IDeleteFileParams = FileDelete & IParams;
 export type ILinkedEditingRangeParams = LinkedEditingRangeParams & IParams;
-export type IFileChangeParams = {
+export type FileChangeParams = {
   uri: string;
   contentChanges?: TextDocumentContentChangeEvent[];
-} & IParams;
+};
+export type IFileChangeParams = FileChangeParams & IParams;

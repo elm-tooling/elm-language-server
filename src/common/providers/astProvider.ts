@@ -14,7 +14,7 @@ import { Position, Range } from "vscode-languageserver-textdocument";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 import { TreeUtils } from "../util/treeUtils";
 import { ISourceFile } from "../../compiler/forest";
-import { IFileChangeParams } from "./paramsExtensions";
+import { FileChangeParams, IFileChangeParams } from "./paramsExtensions";
 import { Utils } from "../util/utils";
 
 export class ASTProvider {
@@ -41,16 +41,21 @@ export class ASTProvider {
     this.connection = container.resolve("Connection");
     this.documentEvents = container.resolve(TextDocumentEvents);
 
-    const handleChange = new ElmWorkspaceMatcher((params: { uri: string }) =>
+    const handleChange = new ElmWorkspaceMatcher((params: FileChangeParams) =>
       URI.parse(params.uri),
     ).handle(this.handleChangeTextDocument.bind(this));
 
     this.documentEvents.onDidChange((params: DidChangeTextDocumentParams) => {
-      void handleChange(params.textDocument);
+      void handleChange({
+        uri: params.textDocument.uri,
+        contentChanges: params.contentChanges,
+      });
     });
 
     this.documentEvents.onDidOpen((params: DidOpenTextDocumentParams) => {
-      void handleChange(params.textDocument);
+      void handleChange({
+        uri: params.textDocument.uri,
+      });
     });
 
     this.connection.onDidChangeWatchedFiles((params) => {
