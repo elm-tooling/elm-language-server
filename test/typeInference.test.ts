@@ -771,8 +771,8 @@ module Test exposing (..)
 func a =
 --^
     case a of 
-		() ->
-			1
+        () ->
+            1
 `;
     await testTypeInference(basicsSources + source, "() -> number");
   });
@@ -785,11 +785,11 @@ module Test exposing (..)
 func a =
 --^
     case a of 
-		'x' ->
-			1
+        'x' ->
+            1
 
-		_ -> 
-			3
+        _ -> 
+            3
 `;
     await testTypeInference(basicsSources + source, "Char -> number");
   });
@@ -802,11 +802,11 @@ module Test exposing (..)
 func a =
 --^
     case a of 
-		"x" ->
-			1
+        "x" ->
+            1
 
-		_ -> 
-			3
+        _ -> 
+            3
 `;
     await testTypeInference(basicsSources + source, "String -> number");
   });
@@ -819,11 +819,11 @@ module Test exposing (..)
 func a =
 --^
     case a of 
-		1 ->
-			1
+        1 ->
+            1
 
-		_ -> 
-			3
+        _ -> 
+            3
 `;
     await testTypeInference(basicsSources + source, "Int -> number");
   });
