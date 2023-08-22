@@ -1793,22 +1793,22 @@ export class InferenceScope {
         this.isAssignable(pattern, ty, TUnit, undefined, true);
         break;
       case "StringConstant":
-		if (isParameter) {
-		  this.diagnostics.push(error(pattern, Diagnostics.PartialPattern));
-		}
-		this.isAssignable(pattern, ty, TString(), undefined, true);
-		break;
+        if (isParameter) {
+          this.diagnostics.push(error(pattern, Diagnostics.PartialPattern));
+        }
+        this.isAssignable(pattern, ty, TString(), undefined, true);
+        break;
       case "NumberConstant":
-		if (isParameter) {
-		  this.diagnostics.push(error(pattern, Diagnostics.PartialPattern));
-		}
-		this.isAssignable(pattern, ty, TInt(), undefined, true);
-		break;
+        if (isParameter) {
+          this.diagnostics.push(error(pattern, Diagnostics.PartialPattern));
+        }
+        this.isAssignable(pattern, ty, TInt(), undefined, true);
+        break;
       case "CharConstantExpr":
         if (isParameter) {
           this.diagnostics.push(error(pattern, Diagnostics.PartialPattern));
         }
-		this.isAssignable(pattern, ty, TChar(), undefined, true);
+        this.isAssignable(pattern, ty, TChar(), undefined, true);
         break;
       default:
         throw new Error("Unexpected pattern type: " + pattern.nodeType);
