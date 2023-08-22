@@ -494,7 +494,7 @@ func a =
 `;
     await testTypeInference(
       basicsSources + source,
-      "( { a | d : (), e : b }, c ) -> number",
+      "( { a | d : (), e : Char }, String ) -> number",
     );
   });
 
@@ -761,5 +761,70 @@ number i =
       basicsSources + listSources + source3,
       "Float -> List Float",
     );
+  });
+
+  test("case statement () constant binding", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func a =
+--^
+    case a of 
+		() ->
+			1
+`;
+    await testTypeInference(basicsSources + source, "() -> number");
+  });
+
+  test("case statement Char constant binding", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func a =
+--^
+    case a of 
+		'x' ->
+			1
+
+		_ -> 
+			3
+`;
+    await testTypeInference(basicsSources + source, "Char -> number");
+  });
+
+  test("case statement String constant binding", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func a =
+--^
+    case a of 
+		"x" ->
+			1
+
+		_ -> 
+			3
+`;
+    await testTypeInference(basicsSources + source, "String -> number");
+  });
+
+  test("case statement Int constant binding", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+func a =
+--^
+    case a of 
+		1 ->
+			1
+
+		_ -> 
+			3
+`;
+    await testTypeInference(basicsSources + source, "Int -> number");
   });
 });
