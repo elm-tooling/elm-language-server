@@ -29,8 +29,6 @@ import { Utils } from "../common/util/utils";
 import { TypeExpression } from "./typeExpression";
 import type { ICancellationToken } from "../common/cancellation";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
-import { isKernelProject, nameIsKernel } from "./utils/elmUtils";
-import * as path from "../common/util/path";
 
 export let bindTime = 0;
 export function resetBindTime(): void {
