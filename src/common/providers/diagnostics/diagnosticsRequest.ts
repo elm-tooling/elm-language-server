@@ -33,7 +33,7 @@ export class DiagnosticsRequest {
       this.done = true;
       onDone();
     } else {
-      requestor(files, 0, this.token.token).finally(() => {
+      void requestor(files, 0, this.token.token).finally(() => {
         if (this.done) {
           return;
         }

@@ -225,6 +225,7 @@ const typeIsInt = (t: TUnion): boolean =>
   t.module === TInt().module && t.name === TInt().name;
 const typeIsFloat = (t: TUnion): boolean =>
   t.module === TFloat().module && t.name === TFloat().name;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const typeIsBool = (t: TUnion): boolean =>
   t.module === TBool().module && t.name === TBool().name;
 const typeIsString = (t: TUnion): boolean =>

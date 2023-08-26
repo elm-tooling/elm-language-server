@@ -1,5 +1,4 @@
 import { CodeActionParams, RequestType } from "vscode-languageserver";
-import { URI } from "vscode-uri";
 import { IParams } from "./util/elmWorkspaceMatcher";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace

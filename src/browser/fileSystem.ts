@@ -196,17 +196,6 @@ enum FileType {
   SymbolicLink = 64,
 }
 
-const enum FileChangeType {
-  UPDATED,
-  ADDED,
-  DELETED,
-}
-
-interface IFileChange {
-  readonly type: FileChangeType;
-  readonly resource: URI;
-}
-
 type IndexedDBFileSystemEntry =
   | {
       path: string;

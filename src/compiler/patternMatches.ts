@@ -589,10 +589,6 @@ function replicate<T>(value: T, length: number): T[] {
   return Array.from(Array(length)).map(() => value);
 }
 
-function foldl<A, B>(func: (b: B, a: A) => B, start: B, array: A[]): B {
-  return array.reduce(func, start);
-}
-
 function foldr<A, B>(func: (a: A, b: B) => B, start: B, array: A[]): B {
   return array.reduceRight((prev, cur) => func(cur, prev), start);
 }
