@@ -1,7 +1,10 @@
 export class Sequence<T> {
   private mappers: ((value: T) => unknown)[] = [];
 
-  constructor(private first: T, private getter: (value: T) => T | undefined) {}
+  constructor(
+    private first: T,
+    private getter: (value: T) => T | undefined,
+  ) {}
 
   private iterator = function* <T>(
     first: T,

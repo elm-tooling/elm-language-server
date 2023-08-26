@@ -65,9 +65,8 @@ export class MoveRefactoringHandler {
     }
 
     const tree = params.program.getSourceFile(params.sourceUri)?.tree;
-    const destinationTree = params.program.getSourceFile(
-      params.destination.uri,
-    )?.tree;
+    const destinationTree = params.program.getSourceFile(params.destination.uri)
+      ?.tree;
 
     if (tree && destinationTree) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
