@@ -1,5 +1,20 @@
 # Change Log
 
+## 2.7.1
+
+- Add a code action for extracting a type alias
+- Update packages ranking
+- Support virtual file systems (for running in the browser)
+- Handle when watched files are changed
+- Register install package code action dynamically
+- Improve how kernel modules are tracked
+- Ensure that workspaces are initialized before findTests request
+- Fix bug that causes a bad source file
+- Fix regression that broke incremental tree parsing
+- Start disposing resources on server exit
+- Tree sitter parser improvements due to update
+- Update dependencies
+
 ## 2.7.0
 
 - Suggest auto import completions and code actions for module aliases
