@@ -98,7 +98,10 @@ export class IndexedDB {
   private database: IDBDatabase | null = null;
   private readonly pendingTransactions: IDBTransaction[] = [];
 
-  constructor(database: IDBDatabase, private readonly name: string) {
+  constructor(
+    database: IDBDatabase,
+    private readonly name: string,
+  ) {
     this.database = database;
   }
 

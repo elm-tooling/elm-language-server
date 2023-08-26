@@ -679,13 +679,14 @@ export function createTypeChecker(program: IProgram): TypeChecker {
         nodeAtPosition,
         (node) => node.parent ?? undefined,
       )
-        .map((node) =>
-          sourceFile.symbolLinks
-            ?.get(node)
-            ?.get(
-              nodeAtPositionText,
-              (s) => s.node.type !== "infix_declaration",
-            ),
+        .map(
+          (node) =>
+            sourceFile.symbolLinks
+              ?.get(node)
+              ?.get(
+                nodeAtPositionText,
+                (s) => s.node.type !== "infix_declaration",
+              ),
         )
         .find(Utils.notUndefined);
 

@@ -156,7 +156,10 @@ export class Program implements IProgram {
 
   private disposables: Disposable[] = [];
 
-  constructor(private rootPath: URI, programHost: IProgramHost) {
+  constructor(
+    private rootPath: URI,
+    programHost: IProgramHost,
+  ) {
     this.settings = container.resolve("Settings");
     this.connection = container.resolve("Connection");
     this.parser = container.resolve("Parser");

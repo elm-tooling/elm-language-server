@@ -78,7 +78,10 @@ const list: Union = {
 const nil: Pattern = Ctor(list, nilName, []);
 
 export class PatternMatches {
-  constructor(private program: IProgram, private sourceFile: ISourceFile) {}
+  constructor(
+    private program: IProgram,
+    private sourceFile: ISourceFile,
+  ) {}
 
   public static check(
     region: SyntaxNode,
