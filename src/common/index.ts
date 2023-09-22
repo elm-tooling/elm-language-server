@@ -20,6 +20,7 @@ import { Settings } from "./util/settings";
 import { TextDocumentEvents } from "./util/textDocumentEvents";
 import { IFileSystemHost, InitializationOptions } from "./types";
 import { URI, Utils } from "vscode-uri";
+import { outDir } from "../directories";
 
 export function startCommonServer(
   connection: Connection,
@@ -59,10 +60,7 @@ export function startCommonServer(
       await Parser.init(options);
       const pathToWasm =
         initializationOptions.treeSitterElmWasmUri ??
-        Path.relative(
-          process.cwd(),
-          Path.join(__dirname, "tree-sitter-elm.wasm"),
-        );
+        Path.relative(process.cwd(), Path.join(outDir, "tree-sitter-elm.wasm"));
       connection.console.info(
         `Loading Elm tree-sitter syntax from ${pathToWasm}`,
       );

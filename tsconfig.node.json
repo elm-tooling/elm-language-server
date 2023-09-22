@@ -1,4 +1,4 @@
 {
   "extends": "./tsconfig.base.json",
-  "include": ["src/common", "src/compiler", "src/node"]
+  "include": ["src/common", "src/compiler", "src/node", "src/directories.ts"]
 }
