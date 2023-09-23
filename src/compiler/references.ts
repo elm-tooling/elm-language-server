@@ -322,8 +322,9 @@ export class References {
                 const localFunctions = TreeUtils.findTypeOrTypeAliasCalls(
                   definitionSourceFile.tree,
                   typeOrTypeAliasName,
+                  definitionNode.type,
                 );
-                if (localFunctions && definitionSourceFile.writeable) {
+                if (definitionSourceFile.writeable) {
                   references.push(
                     ...localFunctions.map((node) => {
                       return { node, uri: definitionNode.node.tree.uri };
@@ -404,20 +405,19 @@ export class References {
                           }
                         }
 
-                        const typeOrTypeAliasCalls = found.flatMap(
-                          (imp) =>
-                            TreeUtils.findTypeOrTypeAliasCalls(
-                              otherSourceFile.tree,
-                              imp.name,
-                            ) ?? [],
+                        const typeOrTypeAliasCalls = found.flatMap((imp) =>
+                          TreeUtils.findTypeOrTypeAliasCalls(
+                            otherSourceFile.tree,
+                            imp.name,
+                            definitionNode.type,
+                          ),
                         );
-                        if (typeOrTypeAliasCalls.length > 0) {
-                          references.push(
-                            ...typeOrTypeAliasCalls.map((node) => {
-                              return { node, uri };
-                            }),
-                          );
-                        }
+
+                        references.push(
+                          ...typeOrTypeAliasCalls.map((node) => {
+                            return { node, uri };
+                          }),
+                        );
                       }
                     }
                   }

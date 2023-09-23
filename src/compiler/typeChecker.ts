@@ -556,10 +556,8 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       // A type can only be used as a type
       // A union variant can only be used as a constructor or as a pattern
       // A type alias can be used as both a type and a constructor
-      const isTypeUsage =
-        TreeUtils.findParentOfType("type_ref", upperCaseQid) ||
-        upperCaseQid.parent?.type === "exposed_type";
-      const isConstructorUsage = upperCaseQid.parent?.type === "value_expr";
+      const isTypeUsage = TreeUtils.isTypeUsage(upperCaseQid);
+      const isConstructorUsage = TreeUtils.isConstructorUsage(upperCaseQid);
 
       const localSymbols =
         rootSymbols
