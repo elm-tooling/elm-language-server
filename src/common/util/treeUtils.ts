@@ -246,26 +246,6 @@ export class TreeUtils {
     return result.length === 0 ? undefined : result;
   }
 
-  public static findAllTypeOrTypeAliasCalls(
-    tree: Tree,
-  ): SyntaxNode[] | undefined {
-    const result: SyntaxNode[] = [];
-    const typeRefs = TreeUtils.descendantsOfType(tree.rootNode, "type_ref");
-    if (typeRefs.length > 0) {
-      typeRefs.forEach((a) => {
-        if (
-          a.firstChild &&
-          a.firstChild.type === "upper_case_qid" &&
-          a.firstChild.firstChild
-        ) {
-          result.push(a.firstChild);
-        }
-      });
-    }
-
-    return result.length === 0 ? undefined : result;
-  }
-
   public static getFunctionNameNodeFromDefinition(
     node: SyntaxNode,
   ): SyntaxNode | undefined {
@@ -287,18 +267,37 @@ export class TreeUtils {
     return node.childForFieldName("name") ?? undefined;
   }
 
+  public static isTypeUsage(upperCaseQid: SyntaxNode): boolean {
+    return (
+      !!TreeUtils.findParentOfType("type_ref", upperCaseQid) ||
+      upperCaseQid.parent?.type === "exposed_type"
+    );
+  }
+
+  public static isConstructorUsage(upperCaseQid: SyntaxNode): boolean {
+    return upperCaseQid.parent?.type === "value_expr";
+  }
+
   public static findTypeOrTypeAliasCalls(
     tree: Tree,
     typeOrTypeAliasName: string,
-  ): SyntaxNode[] | undefined {
-    const typeOrTypeAliasNodes = this.findAllTypeOrTypeAliasCalls(tree);
-    if (typeOrTypeAliasNodes) {
-      const result: SyntaxNode[] = typeOrTypeAliasNodes.filter((a) => {
-        return a.text === typeOrTypeAliasName;
-      });
+    nodeType: NodeType,
+  ): SyntaxNode[] {
+    const upperCaseQids = TreeUtils.descendantsOfType(
+      tree.rootNode,
+      "upper_case_qid",
+    );
 
-      return result.length === 0 ? undefined : result;
-    }
+    const supportsTypeUsage = nodeType === "Type" || nodeType === "TypeAlias";
+    const supportsConstructorUsage = nodeType === "TypeAlias";
+
+    return upperCaseQids.filter((a) => {
+      return (
+        a.text === typeOrTypeAliasName &&
+        ((supportsTypeUsage && TreeUtils.isTypeUsage(a)) ||
+          (supportsConstructorUsage && TreeUtils.isConstructorUsage(a)))
+      );
+    });
   }
 
   public static findAllTypeDeclarations(tree: Tree): SyntaxNode[] | undefined {

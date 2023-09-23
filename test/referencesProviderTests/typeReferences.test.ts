@@ -179,4 +179,93 @@ test =
 `;
     await testBase.testReferences(source);
   });
+
+  // https://github.com/elm-tooling/elm-language-server/issues/972
+  it(`type alias used as constructor`, async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias MyRecord =
+            --^
+    { score : Int
+    }
+
+
+decodeStuff : MyRecord
+              --X
+decodeStuff =
+    MyRecord 0
+    --X
+`;
+    await testBase.testReferences(source);
+  });
+
+  it(`type alias used as constructor in another file`, async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias MyRecord =
+            --^
+    { score : Int
+    }
+
+
+--@ Foo.elm
+module Foo exposing (..)
+
+import Test exposing (MyRecord)
+                      --X
+
+decodeStuff : MyRecord
+              --X
+decodeStuff =
+    MyRecord 0
+    --X
+`;
+    await testBase.testReferences(source);
+  });
+
+  it(`type used not used as constructor`, async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type MyRecord =
+      --^
+    MyRecord Int
+
+
+decodeStuff : MyRecord
+              --X
+decodeStuff =
+    MyRecord 0
+`;
+    await testBase.testReferences(source);
+  });
+
+  it(`type is not used as constructor in another file`, async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type MyRecord =
+      --^
+    MyRecord Int
+
+
+--@ Foo.elm
+module Foo exposing (..)
+
+import Test exposing (MyRecord(..))
+                      --X
+
+decodeStuff : MyRecord
+               --X
+decodeStuff =
+    MyRecord 0
+`;
+    await testBase.testReferences(source);
+  });
 });
