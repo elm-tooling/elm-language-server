@@ -212,7 +212,7 @@ export class DiagnosticsProvider implements Disposable {
     );
 
     if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
-      this.requestAllDiagnostics();
+      void this.requestAllDiagnostics();
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -311,8 +311,9 @@ export class DiagnosticsProvider implements Disposable {
     this.triggerDiagnostics();
   }
 
-  private requestAllDiagnostics(): void {
-    this.workspaces.forEach((program) => {
+  private async requestAllDiagnostics(): Promise<void> {
+    for (const program of this.workspaces) {
+      await program.init();
       if (!program.getForest(false)) {
         return;
       }
@@ -322,10 +323,11 @@ export class DiagnosticsProvider implements Disposable {
           this.pendingDiagnostics.set(uri, Date.now());
         }
       });
-    });
+    }
 
     this.triggerDiagnostics();
   }
+
   private triggerDiagnostics(delay = 200): void {
     const sendPendingDiagnostics = (): void => {
       const orderedFiles = this.pendingDiagnostics.getOrderedFiles();
