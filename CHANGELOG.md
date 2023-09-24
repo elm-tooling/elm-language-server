@@ -1,5 +1,16 @@
 # Change Log
 
+## 2.7.3
+
+- Fix type alias references when used as a record constructor
+- Ensure initial diagnostics are sent
+- Fix case statement constant binding inference
+- Update dependencies
+
+## 2.7.2
+
+Skipped
+
 ## 2.7.1
 
 - Add a code action for extracting a type alias
