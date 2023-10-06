@@ -167,8 +167,11 @@ export class TreeUtils {
           return true;
         }
       }
+      const typeNameDoubleDot = `${typeName}(..)`;
       const descendants = TreeUtils.descendantsOfType(module, "exposed_type");
-      return descendants.some((desc) => desc.text.startsWith(typeName));
+      return descendants.some(
+        (desc) => desc.text === typeName || desc.text === typeNameDoubleDot,
+      );
     }
     return false;
   }
