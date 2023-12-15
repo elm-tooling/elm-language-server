@@ -107,25 +107,28 @@ export class ASTProvider {
     let hasContentChanges = false;
     if ("contentChanges" in params && params.contentChanges) {
       hasContentChanges = true;
+      let currentText = tree?.rootNode.text;
       for (const change of params.contentChanges) {
-        if ("range" in change) {
-          tree?.edit(this.getEditFromChange(change, tree.rootNode.text));
-        } else {
-          const currentText = tree?.rootNode.text;
-          if (currentText) {
-            const regex = new RegExp(/\r\n|\r|\n/);
-            const lines = currentText.split(regex);
-            const range = {
-              start: { line: 0, character: 0 },
-              end: { line: lines.length, character: 0 },
-            };
-            tree?.edit(
-              this.getEditFromChange(
-                { text: change.text, range: range },
-                currentText,
-              ),
-            );
-          }
+        if (currentText && "range" in change) {
+          tree?.edit(this.getEditFromChange(change, currentText));
+          currentText = this.applyChangeToDocument(change, currentText);
+        } else if (currentText){
+          const regex = new RegExp(/\r\n|\r|\n/);
+          const lines = currentText.split(regex);
+          const range = {
+            start: { line: 0, character: 0 },
+            end: { line: lines.length, character: 0 },
+          };
+          tree?.edit(
+            this.getEditFromChange(
+              { text: change.text, range: range },
+              currentText,
+            ),
+          );
+          currentText = this.applyChangeToDocument(
+            { text: change.text, range: range },
+            currentText
+          );
         }
       }
     }
@@ -225,6 +228,18 @@ export class ASTProvider {
         }
       });
     }
+  };
+
+  private applyChangeToDocument(
+    change: { text: string; range: Range },
+    text: string,
+  ): string {
+    const [startIndex, endIndex] = Utils.getIndicesFromRange(
+      change.range,
+      text,
+    );
+
+    return text.substring(0, startIndex) + change.text + text.substring(endIndex);
   };
 
   private getEditFromChange(
