@@ -28,7 +28,6 @@ jobs:
           npm ci
           npm run compile
           npm run lint
-          npm install -g elm-format
           npm test
         env:
           CI: true

@@ -17,7 +17,6 @@ jobs:
           node-version: 16
       - run: npm ci
       - run: npm run compile
-      - run: npm install -g elm-format
       - run: npm test
 
   publish-npm:
