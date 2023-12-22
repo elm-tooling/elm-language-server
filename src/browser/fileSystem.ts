@@ -168,8 +168,8 @@ async function getIndexedDbFileSystemProvider(): Promise<IIndexedDBFileSystemPro
         result instanceof Uint8Array
           ? result
           : typeof result === "string"
-          ? new TextEncoder().encode(result)
-          : undefined;
+            ? new TextEncoder().encode(result)
+            : undefined;
       if (buffer === undefined) {
         throw Error(
           `IndexedDB entry at "${resource.path}" in unexpected format`,

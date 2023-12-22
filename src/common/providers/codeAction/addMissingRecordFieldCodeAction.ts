@@ -70,8 +70,8 @@ function getEdits(
       nodeParent.type === "field_access_expr"
         ? nodeParent?.childForFieldName("target")
         : nodeParent.type === "field"
-        ? nodeParent.parent
-        : nodeAtPosition;
+          ? nodeParent.parent
+          : nodeAtPosition;
 
     // Adjust for parenthesis expr. Will need to change when we handle it better in inference
     if (target?.type === "parenthesized_expr") {

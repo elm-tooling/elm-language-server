@@ -619,10 +619,12 @@ export class InferenceScope {
       binding.bindingType === "Annotated"
         ? (<Annotated>binding).type
         : binding.bindingType === "Unannotated"
-        ? binding.count === 0
-          ? bodyType
-          : uncurryFunction(TFunction((<Unannotated>binding).params, bodyType))
-        : bodyType;
+          ? binding.count === 0
+            ? bodyType
+            : uncurryFunction(
+                TFunction((<Unannotated>binding).params, bodyType),
+              )
+          : bodyType;
 
     return this.toTopLevelResult(type, replaceExpressionTypes);
   }

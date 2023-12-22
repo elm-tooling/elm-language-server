@@ -414,8 +414,8 @@ export class TypeExpression {
     const baseType = baseTypeDefinition
       ? this.getTypeVar(baseTypeDefinition)
       : record.baseType
-      ? TVar(record.baseType.text)
-      : undefined;
+        ? TVar(record.baseType.text)
+        : undefined;
 
     const type = TRecord(fieldTypes, baseType, undefined, fieldRefs);
 
@@ -512,8 +512,8 @@ export class TypeExpression {
     const params = declaredType?.alias
       ? declaredType.alias.parameters
       : declaredType?.nodeType === "Union"
-      ? declaredType.params
-      : [];
+        ? declaredType.params
+        : [];
 
     if (declaredType.nodeType !== "Unknown" && params.length !== args.length) {
       this.diagnostics.push(
