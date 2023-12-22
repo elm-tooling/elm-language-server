@@ -34,8 +34,19 @@ jobs:
       - name: Coveralls GitHub Action
         uses: coverallsapp/github-action@v2.2.3
         with:
+          parallel: true
           github-token: ${{ secrets.github_token }}
       - name: run and print version
         run: |
           npm link
           elm-language-server --version
+
+  finish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close parallel build
+        uses: coverallsapp/github-action@v2.2.3
+        with:
+          parallel-finished: true
+          github-token: ${{ secrets.github_token }}
