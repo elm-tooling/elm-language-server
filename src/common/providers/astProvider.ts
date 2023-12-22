@@ -10,7 +10,11 @@ import {
 import { URI } from "vscode-uri";
 import Parser, { Edit, Point, SyntaxNode } from "web-tree-sitter";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { Position, Range } from "vscode-languageserver-textdocument";
+import {
+  Position,
+  Range,
+  TextDocumentContentChangeEvent,
+} from "vscode-languageserver-textdocument";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 import { TreeUtils } from "../util/treeUtils";
 import { ISourceFile } from "../../compiler/forest";
@@ -107,29 +111,9 @@ export class ASTProvider {
     let hasContentChanges = false;
     if ("contentChanges" in params && params.contentChanges) {
       hasContentChanges = true;
-      let currentText = tree?.rootNode.text;
-      for (const change of params.contentChanges) {
-        if (currentText && "range" in change) {
-          tree?.edit(this.getEditFromChange(change, currentText));
-          currentText = this.applyChangeToDocument(change, currentText);
-        } else if (currentText){
-          const regex = new RegExp(/\r\n|\r|\n/);
-          const lines = currentText.split(regex);
-          const range = {
-            start: { line: 0, character: 0 },
-            end: { line: lines.length, character: 0 },
-          };
-          tree?.edit(
-            this.getEditFromChange(
-              { text: change.text, range: range },
-              currentText,
-            ),
-          );
-          currentText = this.applyChangeToDocument(
-            { text: change.text, range: range },
-            currentText
-          );
-        }
+
+      if (tree) {
+        this.applyChangesToTree(tree, params.contentChanges);
       }
     }
 
@@ -230,17 +214,50 @@ export class ASTProvider {
     }
   };
 
-  private applyChangeToDocument(
-    change: { text: string; range: Range },
-    text: string,
-  ): string {
-    const [startIndex, endIndex] = Utils.getIndicesFromRange(
-      change.range,
-      text,
-    );
+  private applyChangesToTree(
+    tree: Parser.Tree,
+    changes: TextDocumentContentChangeEvent[],
+  ): void {
+    let text = tree.rootNode.text;
 
-    return text.substring(0, startIndex) + change.text + text.substring(endIndex);
-  };
+    if (!text) {
+      return;
+    }
+
+    const multipleChanges = changes.length > 1;
+    for (const change of changes) {
+      const changeRecord = this.getChangeWithRange(change, text);
+      const edit = this.getEditFromChange(changeRecord, text);
+
+      tree?.edit(edit);
+
+      // If there are multiple changes, we also need to take care to apply each change to the
+      // rootNode text. Otherwise, the startIndex and endIndex for later changes will be off.
+      if (multipleChanges) {
+        text =
+          text.substring(0, edit.startIndex) +
+          change.text +
+          text.substring(edit.oldEndIndex);
+      }
+    }
+  }
+
+  private getChangeWithRange(
+    change: TextDocumentContentChangeEvent,
+    text: string,
+  ): { text: string; range: Range } {
+    if ("range" in change) {
+      return change;
+    } else {
+      const regex = new RegExp(/\r\n|\r|\n/);
+      const lines = text.split(regex);
+      const range = {
+        start: { line: 0, character: 0 },
+        end: { line: lines.length, character: 0 },
+      };
+      return { text: change.text, range: range };
+    }
+  }
 
   private getEditFromChange(
     change: { text: string; range: Range },
