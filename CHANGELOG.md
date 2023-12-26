@@ -1,5 +1,13 @@
 # Change Log
 
+## 2.8.0
+
+- Fix AST getting out of sync with the document, when the client sends multiple content changes at once. Mostly affecting non vscode clients
+- Fix expose/unexpose detection if a type starts with the same name as another
+- Support newer node versions
+- Update tree-sitter-elm
+- Update dependencies
+
 ## 2.7.3
 
 - Fix type alias references when used as a record constructor
