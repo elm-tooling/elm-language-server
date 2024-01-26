@@ -407,7 +407,9 @@ export class Program implements IProgram {
             .then((progress) => {
               progress.begin("Restarting Elm Language Server", 0);
               this._initializeProgressCallback = (percent: number): void => {
-                progress.report(percent, `${percent.toFixed(0)}%`);
+                // Workaround: Rounding percentage to uint as per LSP spec
+                // https://github.com/microsoft/vscode-languageserver-node/issues/1412
+                progress.report(Math.round(percent), `${percent.toFixed(0)}%`);
               };
 
               this.initWorkspace()

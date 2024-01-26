@@ -169,7 +169,9 @@ export class Server implements ILanguageServer {
             const avgIndexed =
               all.reduce((sum, { indexedPercent }) => sum + indexedPercent, 0) /
               all.length;
-            progress.report(avgIndexed, "Indexing");
+            // Workaround: Rounding percentage to uint as per LSP spec
+            // https://github.com/microsoft/vscode-languageserver-node/issues/1412
+            progress.report(Math.round(avgIndexed), "Indexing");
           }),
         ),
     );
