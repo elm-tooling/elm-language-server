@@ -293,6 +293,12 @@ export class CodeActionProvider {
     // and the fix all code action for that error if there are other diagnostics with
     // the same error code
     (<IDiagnostic[]>params.context.diagnostics).forEach((diagnostic) => {
+      // We have type casted diagnostic to `IDiagnostic`, however the original
+      // type is `Diagnostic`, the `.data` property may be missing in some cases
+      if (!diagnostic.data) {
+        return;
+      }
+
       const registrations =
         CodeActionProvider.errorCodeToRegistrationMap.getAll(
           diagnostic.data.code,
