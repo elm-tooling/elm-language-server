@@ -305,4 +305,95 @@ func = foo + bar
       true,
     );
   });
+
+  it("removing type with single unused value constructor removes entire type", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (func)
+
+type Foo 
+    = Bar
+     --^
+
+func = 1
+`;
+
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (func)
+
+
+
+func = 1
+`;
+
+    await testCodeAction(
+      source,
+      [{ title: "Remove unused value constructor `Bar`" }],
+      expectedSource,
+      true,
+    );
+  });
+
+  it("removing unused value constructor", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (func)
+
+type Foo 
+    = Bar
+    | Baz
+     --^
+
+func = Bar
+`;
+
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (func)
+
+type Foo 
+    = Bar
+
+func = Bar
+`;
+
+    await testCodeAction(
+      source,
+      [{ title: "Remove unused value constructor `Baz`" }],
+      expectedSource,
+      true,
+    );
+  });
+
+  it("removing unused value constructor also removes associated data type", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (func)
+
+type Foo 
+    = Bar
+    | Baz Int
+     --^
+
+func = Bar
+`;
+
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (func)
+
+type Foo 
+    = Bar
+
+func = Bar
+`;
+
+    await testCodeAction(
+      source,
+      [{ title: "Remove unused value constructor `Baz`" }],
+      expectedSource,
+      true,
+    );
+  });
 });
