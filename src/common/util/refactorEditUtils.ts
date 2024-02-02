@@ -476,14 +476,16 @@ export class RefactorEditUtils {
       return this.removeType(unionVariants[0].parent);
     }
 
-    let startPosition = nodeAtPosition.startPosition;
-    let endPosition = nodeAtPosition.endPosition;
-
     const unionVariant = unionVariants?.find(
       (a) =>
         a.text.startsWith(`${nodeAtPosition.text} `) ||
         a.text === nodeAtPosition.text,
     );
+
+    let startPosition =
+      unionVariant?.startPosition ?? nodeAtPosition.startPosition;
+    let endPosition = unionVariant?.endPosition ?? nodeAtPosition.endPosition;
+
     if (unionVariant?.previousSibling?.type == "eq") {
       startPosition = unionVariant.previousSibling?.endPosition;
       if (unionVariant.nextSibling?.type == "|") {
