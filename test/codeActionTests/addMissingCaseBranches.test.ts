@@ -92,4 +92,40 @@ func a b =
       expectedSource,
     );
   });
+
+  it("should add missing cases inside of ()", async () => {
+    const source = `
+    --@ Test.elm
+module Test exposing (..)
+
+func a =
+    (case a of
+    --^
+        1 ->
+            ""
+    )
+        |> Debug.log "test"
+`;
+
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (..)
+
+func a =
+    (case a of
+        1 ->
+            ""
+
+        _ ->
+            Debug.todo "branch '_' not implemented"
+    )
+        |> Debug.log "test"
+`;
+
+    await testCodeAction(
+      source,
+      [{ title: "Add missing case branches" }],
+      expectedSource,
+    );
+  });
 });
