@@ -65,11 +65,16 @@ function getEdits(params: ICodeActionParams, range: Range): TextEdit[] {
       "",
     );
 
+    // case_of_expr might be wrapped in parenthesis, those are included in the case_of_expr's endPosition
+    // So we try to get the last case_of_branch's endPosition if it exists
+    // Otherwise we just fallback to taking the case_of_expr's end position
+    const insertPosition =
+      nodeAtPosition.children.filter((x) => x.type == "case_of_branch").at(-1)
+        ?.endPosition ?? nodeAtPosition.endPosition;
+
     return [
       TextEdit.insert(
-        PositionUtil.FROM_TS_POSITION(
-          nodeAtPosition.endPosition,
-        ).toVSPosition(),
+        PositionUtil.FROM_TS_POSITION(insertPosition).toVSPosition(),
         edit,
       ),
     ];
