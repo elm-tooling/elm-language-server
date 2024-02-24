@@ -101,16 +101,24 @@ export class HintHelper {
       node,
     );
 
-    return this.formatHint(
-      node.text,
-      `Field${
-        typeAlias
-          ? ` on the type alias \`${
-              typeAlias?.childForFieldName("name")?.text ?? ""
-            }\``
-          : ""
-      }`,
-    );
+    const commentText =
+      node.nextSibling?.type === "line_comment"
+        ? this.stripComment(node.nextSibling.text)
+        : null;
+
+    const typeAliasHintText = `Field${
+      typeAlias
+        ? ` on the type alias \`${
+            typeAlias?.childForFieldName("name")?.text ?? ""
+          }\``
+        : ""
+    }`;
+
+    const lines = [];
+    if (commentText) lines.push(commentText);
+    lines.push(typeAliasHintText);
+
+    return this.formatHint(node.text, lines.join("\n\n"));
   }
 
   public static createHintFromDefinitionInCaseBranch(): string | undefined {
@@ -236,6 +244,9 @@ export class HintHelper {
     }
     if (newComment.endsWith("-}")) {
       newComment = newComment.slice(0, -2);
+    }
+    if (newComment.startsWith("-- ")) {
+      newComment = newComment.slice(3);
     }
 
     return newComment.trim();
