@@ -141,4 +141,53 @@ bar = foo
 
     await testHover(source, "foo : AnotherAlias.Foo");
   });
+
+  it("should include type alias field line comment in hover info", async () => {
+    // IMPORTING MODULE
+    const source = `
+--@ Another.elm
+module Another exposing (..)
+
+type alias Foo =
+    { bar: Int -- This is a comment explaining bar
+    , biz: String -- This is a comment explaining biz
+    }
+
+--@ Test.elm
+module Test exposing (..)
+
+import Another exposing (Foo)
+
+
+foo : Foo
+foo = 
+  { bar = 10
+  , biz = "Hello World"
+   --^
+  }
+    `;
+
+    await testHover(
+      source,
+      "\n```elm\nbiz: String\n```\n\n\n---\n\nThis is a comment explaining biz\n\nField on the type alias `Foo`",
+    );
+
+    // IN SAME FILE
+    const source2 = `
+--@ Another.elm
+module Another exposing (..)
+
+type alias Foo =
+    { bar: Int -- This is a comment explaining bar
+     --^
+    , biz: String -- This is a comment explaining biz
+    }
+     
+    `;
+
+    await testHover(
+      source2,
+      "\n```elm\nbar: Int\n```\n\n\n---\n\nThis is a comment explaining bar\n\nField on the type alias `Foo`",
+    );
+  });
 });
