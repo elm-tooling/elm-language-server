@@ -128,4 +128,58 @@ func a =
       expectedSource,
     );
   });
+
+  it("should prefix branch variant if needed", async () => {
+    const source = `
+--@ Foo.elm
+module Foo exposing (..)
+
+type Foo
+    = Bar
+    | Biz
+
+--@ Test.elm
+module Test exposing (..)
+
+import Foo
+
+test : Foo -> ()
+test response =
+    case response of
+    --^
+        Foo.Bar ->
+            ()
+
+    `;
+
+    const expectedSource = `
+--@ Foo.elm
+module Foo exposing (..)
+
+type Foo
+    = Bar
+    | Biz
+
+--@ Test.elm
+module Test exposing (..)
+
+import Foo
+
+test : Foo -> ()
+test response =
+    case response of
+        Foo.Bar ->
+            ()
+
+        Foo.Biz ->
+            Debug.todo "branch 'Foo.Biz' not implemented"
+
+    `;
+
+    await testCodeAction(
+      source,
+      [{ title: "Add missing case branches" }],
+      expectedSource,
+    );
+  });
 });
