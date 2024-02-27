@@ -68,7 +68,9 @@ function getEdits(params: ICodeActionParams, range: Range): TextEdit[] {
 
     const edit = PatternMatches.missing(patterns, params.program).reduce(
       (edit, missing) => {
-        if (prefix) missing = `${prefix}.${missing}`;
+        if (prefix) {
+          missing = `${prefix}.${missing}`;
+        }
 
         return `${edit}\n\n${branchIndent}${missing} ->\n${branchExprIndent}Debug.todo "branch '${missing}' not implemented"`;
       },
