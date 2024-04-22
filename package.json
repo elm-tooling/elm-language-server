@@ -36,7 +36,7 @@
     "@types/jest": "^29.5.11",
     "@types/node": "^20.10.5",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
-    "@typescript-eslint/parser": "^6.15.0",
+    "@typescript-eslint/parser": "^7.7.1",
     "copyfiles": "^2.4.1",
     "doctoc": "^2.2.1",
     "elm-format": "^0.8.7",
