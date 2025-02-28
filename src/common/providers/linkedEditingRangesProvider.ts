@@ -8,9 +8,9 @@ import {
   Range,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { PositionUtil } from "../positionUtil";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
+import { Utils } from "../util/utils";
 import { ILinkedEditingRangeParams } from "./paramsExtensions";
 
 export class LinkedEditingRangesProvider {
@@ -35,29 +35,47 @@ export class LinkedEditingRangesProvider {
       params.position,
     );
 
-    const range: Range = {
-      start: PositionUtil.FROM_TS_POSITION(
-        nodeAtPosition.startPosition,
-      ).toVSPosition(),
-      end: PositionUtil.FROM_TS_POSITION(
-        nodeAtPosition.endPosition,
-      ).toVSPosition(),
-    };
-
+    // When modifying the type annotation, link the value declaration below.
     if (
-      nodeAtPosition.parent?.type === "function_declaration_left" &&
-      TreeUtils.getTypeAnnotation(nodeAtPosition.parent.parent ?? undefined)
+      nodeAtPosition.type === "lower_case_identifier" &&
+      nodeAtPosition.parent?.type === "type_annotation"
     ) {
-      ranges.push(this.addLinesToRange(range, -1));
-      ranges.push(range);
+      const valueDeclaration = TreeUtils.getValueDeclaration(
+        nodeAtPosition.parent,
+      );
+      const valueDeclarationIdentifier =
+        valueDeclaration?.firstChild?.firstChild;
+      if (
+        valueDeclarationIdentifier &&
+        valueDeclarationIdentifier.type === "lower_case_identifier" &&
+        valueDeclarationIdentifier.text === nodeAtPosition.text
+      ) {
+        ranges.push(
+          Utils.rangeFromNode(nodeAtPosition),
+          Utils.rangeFromNode(valueDeclarationIdentifier),
+        );
+      }
     }
 
+    // When modifying the value declaration, link the type annotation above.
     if (
-      nodeAtPosition.parent?.type === "type_annotation" &&
-      nodeAtPosition.type === "lower_case_identifier"
+      nodeAtPosition.parent?.type === "function_declaration_left" &&
+      nodeAtPosition.parent.parent
     ) {
-      ranges.push(range);
-      ranges.push(this.addLinesToRange(range, 1));
+      const typeAnnotation = TreeUtils.getTypeAnnotation(
+        nodeAtPosition.parent.parent,
+      );
+      const typeAnnotationIdentifier = typeAnnotation?.firstChild;
+      if (
+        typeAnnotationIdentifier &&
+        typeAnnotationIdentifier.type === "lower_case_identifier" &&
+        typeAnnotationIdentifier.text === nodeAtPosition.text
+      ) {
+        ranges.push(
+          Utils.rangeFromNode(typeAnnotationIdentifier),
+          Utils.rangeFromNode(nodeAtPosition),
+        );
+      }
     }
 
     if (ranges.length === 0) {

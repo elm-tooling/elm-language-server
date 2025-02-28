@@ -1,4 +1,5 @@
-import { Range, TextEdit } from "vscode-languageserver";
+import { Position, Range, TextEdit } from "vscode-languageserver";
+import { SyntaxNode } from "web-tree-sitter";
 
 export type NonEmptyArray<T> = [T, ...T[]];
 
@@ -77,6 +78,13 @@ export class Utils {
     }
 
     return [startIndex, endIndex];
+  }
+
+  public static rangeFromNode(node: SyntaxNode): Range {
+    return Range.create(
+      Position.create(node.startPosition.row, node.startPosition.column),
+      Position.create(node.endPosition.row, node.endPosition.column),
+    );
   }
 
   public static rotateArray<T>(array: T[], newStartIndex: number): T[] {
