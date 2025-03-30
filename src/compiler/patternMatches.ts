@@ -388,6 +388,7 @@ export class PatternMatches {
 
       case "tuple_pattern": {
         const patterns = pattern.children
+          .filter((val) => val !== null)
           .filter((n) => n.type === "pattern")
           .map((n) => n.childForFieldName("child")!);
 
@@ -417,7 +418,8 @@ export class PatternMatches {
               "type_declaration",
               definition.symbol.node,
             )
-              ?.namedChildren.filter((n) => n.type === "union_variant")
+              ?.namedChildren.filter((val) => val !== null)
+              .filter((n) => n.type === "union_variant")
               .map(nodeToCanCtor) ?? []
           : [];
 
@@ -434,16 +436,20 @@ export class PatternMatches {
         return foldr(
           this.cons.bind(this),
           nil,
-          pattern.namedChildren.filter((n) => n.type === "pattern"),
+          pattern.namedChildren
+            .filter((val) => val !== null)
+            .filter((n) => n.type === "pattern"),
         );
 
       case "cons_pattern": {
-        const patterns = pattern.namedChildren.filter(
-          (n) =>
-            n.type.includes("pattern") ||
-            n.type.includes("constant") ||
-            n.type === "unit_expr",
-        );
+        const patterns = pattern.namedChildren
+          .filter((val) => val !== null)
+          .filter(
+            (n) =>
+              n.type.includes("pattern") ||
+              n.type.includes("constant") ||
+              n.type === "unit_expr",
+          );
         return this.cons(patterns[0], this.simplify(patterns[1]));
       }
 

@@ -136,6 +136,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
     // Get the list of references that won't be visible
     node
       .descendantsOfType(["value_expr", "record_base_identifier"])
+      .filter((val) => val !== null)
       .forEach((val) => {
         if (args.find((arg) => arg.text === val.text)) {
           return;
