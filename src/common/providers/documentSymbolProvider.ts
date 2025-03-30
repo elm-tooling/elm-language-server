@@ -7,7 +7,7 @@ import {
   SymbolInformation,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { Node, Tree } from "web-tree-sitter";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 import { ThrottledCancellationToken } from "../cancellation";
@@ -44,7 +44,7 @@ export class DocumentSymbolProvider {
       ? new ThrottledCancellationToken(token)
       : undefined;
 
-    const traverse: (node: SyntaxNode) => void = (node: SyntaxNode): void => {
+    const traverse: (node: Node) => void = (node: Node): void => {
       cancellationToken?.throwIfCancellationRequested();
 
       const symbolInformation =

@@ -4,7 +4,7 @@ import {
   SymbolInformation,
   WorkspaceSymbolParams,
 } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { IProgram } from "../../compiler/program";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 
@@ -32,9 +32,7 @@ export class WorkspaceSymbolProvider {
         if (!sourceFile.writeable) {
           return;
         }
-        const traverse: (node: SyntaxNode) => void = (
-          node: SyntaxNode,
-        ): void => {
+        const traverse: (node: Node) => void = (node: Node): void => {
           if (this.isPatternInSymbol(param.query, node.text)) {
             const symbolInformation =
               SymbolInformationTranslator.translateNodeToSymbolInformation(

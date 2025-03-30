@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { TreeUtils } from "../common/util/treeUtils";
 import {
   Expression,
@@ -58,13 +58,10 @@ class DiagnosticsCollection extends Map<string, Diagnostic[]> {
 }
 
 export interface TypeChecker {
-  findType: (node: SyntaxNode) => Type;
-  findDefinition: (
-    node: SyntaxNode,
-    sourceFile: ISourceFile,
-  ) => DefinitionResult;
+  findType: (node: Node) => Type;
+  findDefinition: (node: Node, sourceFile: ISourceFile) => DefinitionResult;
   findDefinitionShallow: (
-    node: SyntaxNode,
+    node: Node,
     sourceFile: ISourceFile,
   ) => DefinitionResult;
   getAllImports: (sourceFile: ISourceFile) => Imports;
@@ -94,8 +91,8 @@ export interface TypeChecker {
   findImportModuleNameNodes: (
     moduleNameOrAlias: string,
     sourceFile: ISourceFile,
-  ) => SyntaxNode[];
-  getSymbolsInScope(node: SyntaxNode, sourceFile: ISourceFile): ISymbol[];
+  ) => Node[];
+  getSymbolsInScope(node: Node, sourceFile: ISourceFile): ISymbol[];
 }
 
 export function createTypeChecker(program: IProgram): TypeChecker {
@@ -131,7 +128,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
 
   return typeChecker;
 
-  function findType(node: SyntaxNode): Type {
+  function findType(node: Node): Type {
     try {
       const declaration = mapSyntaxNodeToExpression(
         TreeUtils.findParentOfType("value_declaration", node, true),
@@ -140,7 +137,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       const uri = node.tree.uri;
 
       const findTypeOrParentType = (
-        expr: SyntaxNode | undefined,
+        expr: Node | undefined,
         inferenceResult: InferenceResult,
       ): Type | undefined => {
         const found = expr
@@ -419,7 +416,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
   }
 
   function findDefinition(
-    nodeAtPosition: SyntaxNode,
+    nodeAtPosition: Node,
     sourceFile: ISourceFile,
   ): DefinitionResult {
     const definition = findDefinitionShallow(nodeAtPosition, sourceFile);
@@ -442,7 +439,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
   }
 
   function findDefinitionShallow(
-    nodeAtPosition: SyntaxNode,
+    nodeAtPosition: Node,
     sourceFile: ISourceFile,
   ): DefinitionResult {
     const nodeText = nodeAtPosition.text;
@@ -848,12 +845,12 @@ export function createTypeChecker(program: IProgram): TypeChecker {
         parentType,
       ];
 
-      const callback = (annotation: SyntaxNode | undefined): SyntaxNode[] =>
+      const callback = (annotation: Node | undefined): Node[] =>
         annotation
           ? TreeUtils.descendantsOfType(annotation, "type_variable")
           : [];
 
-      const allTypeVariables: SyntaxNode[] = allAnnotations.flatMap(callback);
+      const allTypeVariables: Node[] = allAnnotations.flatMap(callback);
 
       const firstMatching = allTypeVariables.find((t) => t.text === nodeText);
 
@@ -932,7 +929,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
   function findImportModuleNameNodes(
     moduleNameOrAlias: string,
     sourceFile: ISourceFile,
-  ): SyntaxNode[] {
+  ): Node[] {
     // This will find an import based on module name only, not alias
     const moduleImport = getAllImports(sourceFile)
       .getModule(moduleNameOrAlias)
@@ -957,13 +954,10 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     return moduleOrAliasImports;
   }
 
-  function getSymbolsInScope(
-    node: SyntaxNode,
-    sourceFile: ISourceFile,
-  ): ISymbol[] {
+  function getSymbolsInScope(node: Node, sourceFile: ISourceFile): ISymbol[] {
     const symbols: ISymbol[] = [];
 
-    let targetScope: SyntaxNode | null = node;
+    let targetScope: Node | null = node;
     while (targetScope != null) {
       sourceFile.symbolLinks
         ?.get(targetScope)
@@ -974,7 +968,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     return symbols;
   }
 
-  function checkNode(node: SyntaxNode): void {
+  function checkNode(node: Node): void {
     if (checkedNodes.has(node.id)) {
       return;
     }
@@ -1008,7 +1002,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     checkedNodes.add(node.id);
   }
 
-  function checkValueDeclaration(valueDeclaration: SyntaxNode): void {
+  function checkValueDeclaration(valueDeclaration: Node): void {
     const declaration = mapSyntaxNodeToExpression(
       valueDeclaration,
     ) as EValueDeclaration;
@@ -1045,7 +1039,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     }
   }
 
-  function checkImportClause(importClause: SyntaxNode): void {
+  function checkImportClause(importClause: Node): void {
     const moduleNameNode = importClause.childForFieldName("moduleName");
 
     if (moduleNameNode) {
@@ -1062,14 +1056,14 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     }
   }
 
-  function checkTypeAliasDeclaration(typeAliasDeclaration: SyntaxNode): void {
+  function checkTypeAliasDeclaration(typeAliasDeclaration: Node): void {
     TypeExpression.typeAliasDeclarationInference(
       mapSyntaxNodeToExpression(typeAliasDeclaration) as ETypeAliasDeclaration,
       program,
     ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
   }
 
-  function checkTypeDeclaration(typeDeclaration: SyntaxNode): void {
+  function checkTypeDeclaration(typeDeclaration: Node): void {
     TypeExpression.typeDeclarationInference(
       mapSyntaxNodeToExpression(typeDeclaration) as ETypeDeclaration,
       program,
@@ -1079,21 +1073,21 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     typeDeclaration.children.forEach(checkNode);
   }
 
-  function checkUnionVariant(unionVariant: SyntaxNode): void {
+  function checkUnionVariant(unionVariant: Node): void {
     TypeExpression.unionVariantInference(
       mapSyntaxNodeToExpression(unionVariant) as EUnionVariant,
       program,
     ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
   }
 
-  function checkPortAnnotation(portAnnotation: SyntaxNode): void {
+  function checkPortAnnotation(portAnnotation: Node): void {
     TypeExpression.portAnnotationInference(
       mapSyntaxNodeToExpression(portAnnotation) as EPortAnnotation,
       program,
     ).diagnostics.forEach((diagnostic) => diagnostics.add(diagnostic));
   }
 
-  function getSourceFileOfNode(node: SyntaxNode): ISourceFile {
+  function getSourceFileOfNode(node: Node): ISourceFile {
     const sourceFile = program.getSourceFile(node.tree.uri);
 
     if (!sourceFile) {

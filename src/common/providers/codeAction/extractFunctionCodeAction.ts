@@ -1,5 +1,5 @@
 import { CodeActionKind, Position, TextEdit } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import { TFunction } from "../../../compiler/typeInference";
@@ -87,7 +87,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
       line: rootNode.endPosition.row,
       character: 0,
     };
-    let targetScope: SyntaxNode;
+    let targetScope: Node;
     let addTypeAnnotation = true;
 
     switch (actionName) {
@@ -128,7 +128,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
         break;
     }
 
-    const args: SyntaxNode[] = [];
+    const args: Node[] = [];
 
     const nodeParent = node.parent;
     const imports = checker.getAllImports(params.sourceFile);
@@ -152,7 +152,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
         }
 
         // If we find it in the scope we are extracting, it should not be a arg
-        let scope: SyntaxNode | null = val;
+        let scope: Node | null = val;
         while (scope && scope.id !== nodeParent?.id) {
           if (params.sourceFile.symbolLinks?.get(scope)?.get(val.text)) {
             return;

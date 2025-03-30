@@ -1,6 +1,6 @@
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 
-export class SyntaxNodeSet<K extends SyntaxNode = SyntaxNode> {
+export class SyntaxNodeSet<K extends Node = Node> {
   private map = new Map<number, K>();
 
   constructor(...items: K[]) {

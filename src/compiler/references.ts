@@ -1,6 +1,6 @@
 import { IProgram } from "./program";
 import { ISourceFile } from "./forest";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { Node, Tree } from "web-tree-sitter";
 import { TreeUtils } from "../common/util/treeUtils";
 import { Utils } from "../common/util/utils";
 import { Imports } from "./imports";
@@ -10,8 +10,8 @@ export class References {
   public static find(
     definitionNode: ISymbol | undefined,
     program: IProgram,
-  ): { node: SyntaxNode; uri: string }[] {
-    const references: { node: SyntaxNode; uri: string }[] = [];
+  ): { node: Node; uri: string }[] {
+    const references: { node: Node; uri: string }[] = [];
 
     const checker = program.getTypeChecker();
 
@@ -684,7 +684,7 @@ export class References {
                 true,
               );
 
-              const typeVariableNodes: SyntaxNode[] = [];
+              const typeVariableNodes: Node[] = [];
 
               if (topLevelAnnotation) {
                 const topLevelValueDeclaration =
@@ -747,10 +747,7 @@ export class References {
     return references;
   }
 
-  public static findOperator(
-    node: SyntaxNode,
-    program: IProgram,
-  ): SyntaxNode | undefined {
+  public static findOperator(node: Node, program: IProgram): Node | undefined {
     const functionNameNode = TreeUtils.getFunctionNameNodeFromDefinition(node);
 
     if (functionNameNode) {
@@ -767,9 +764,9 @@ export class References {
   }
 
   private static findFunctionCalls(
-    node: SyntaxNode,
+    node: Node,
     functionName: string,
-  ): SyntaxNode[] | undefined {
+  ): Node[] | undefined {
     const functions = [
       ...this.findAllFunctionCallsAndParameters(node).concat(),
       ...node.descendantsOfType("record_base_identifier"),
@@ -780,9 +777,7 @@ export class References {
     return result.length === 0 ? undefined : result;
   }
 
-  private static findAllFunctionCallsAndParameters(
-    node: SyntaxNode,
-  ): SyntaxNode[] {
+  private static findAllFunctionCallsAndParameters(node: Node): Node[] {
     let functions = TreeUtils.descendantsOfType(node, "value_expr");
     if (functions.length > 0) {
       functions = functions
@@ -794,10 +789,10 @@ export class References {
   }
 
   private static findParameterUsage(
-    node: SyntaxNode,
+    node: Node,
     functionName: string,
-  ): SyntaxNode[] | undefined {
-    const parameters: SyntaxNode[] = [
+  ): Node[] | undefined {
+    const parameters: Node[] = [
       ...this.findAllFunctionCallsAndParameters(node),
       ...this.findAllRecordBaseIdentifiers(node),
     ];
@@ -805,11 +800,11 @@ export class References {
     return result.length === 0 ? undefined : result;
   }
 
-  private static findAllRecordBaseIdentifiers(node: SyntaxNode): SyntaxNode[] {
+  private static findAllRecordBaseIdentifiers(node: Node): Node[] {
     return TreeUtils.descendantsOfType(node, "record_base_identifier");
   }
 
-  private static findFieldUsages(tree: Tree, fieldName: string): SyntaxNode[] {
+  private static findFieldUsages(tree: Tree, fieldName: string): Node[] {
     return tree.rootNode
       .descendantsOfType([
         "field",
@@ -853,8 +848,8 @@ export class References {
     definition: ISymbol,
     sourceFile: ISourceFile,
     program: IProgram,
-  ): { node: SyntaxNode; uri: string }[] {
-    const references: { node: SyntaxNode; uri: string }[] = [];
+  ): { node: Node; uri: string }[] {
+    const references: { node: Node; uri: string }[] = [];
 
     const fieldUsages = References.findFieldUsages(sourceFile.tree, fieldName);
 
