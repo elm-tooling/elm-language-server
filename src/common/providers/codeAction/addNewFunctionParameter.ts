@@ -3,7 +3,7 @@ import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../../compiler/diagnostics";
 import { CodeActionProvider, ICodeAction } from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 
 const errorCodes = [Diagnostics.MissingValue.code];
 const fixId = "add_new_function_parameter";
@@ -40,8 +40,8 @@ function getActions(
 }
 
 function getActionsForValueDeclaration(
-  valueDeclaration: SyntaxNode,
-  nodeAtPosition: SyntaxNode,
+  valueDeclaration: Node,
+  nodeAtPosition: Node,
   params: ICodeActionParams,
 ): CodeAction | undefined {
   const lastFunctionParameter = valueDeclaration?.firstChild?.lastChild;
@@ -76,8 +76,8 @@ function getActionsForValueDeclaration(
 
 function getEditsForSignatureUpdate(
   params: ICodeActionParams,
-  nodeAtPosition: SyntaxNode,
-  valueDeclaration: SyntaxNode,
+  nodeAtPosition: Node,
+  valueDeclaration: Node,
 ): TextEdit[] {
   const typeAnnotation = TreeUtils.getTypeAnnotation(valueDeclaration);
   const lastParameterType =

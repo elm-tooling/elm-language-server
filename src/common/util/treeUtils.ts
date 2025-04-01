@@ -1,5 +1,5 @@
 import { Position } from "vscode-languageserver";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { Node, Tree } from "web-tree-sitter";
 import { ISourceFile } from "../../compiler/forest";
 import { comparePosition, positionEquals } from "../positionUtil";
 import { TRecord, Type } from "../../compiler/typeInference";
@@ -29,21 +29,21 @@ export type NodeType =
 const functionNameRegex = new RegExp("[a-zA-Z0-9_]+");
 
 export class TreeUtils {
-  public static getModuleNameNode(tree: Tree): SyntaxNode | undefined {
-    const moduleDeclaration: SyntaxNode | undefined =
+  public static getModuleNameNode(tree: Tree): Node | undefined {
+    const moduleDeclaration: Node | undefined =
       this.findModuleDeclaration(tree);
     return moduleDeclaration?.childForFieldName("name") ?? undefined;
   }
 
-  public static getModuleNameCommentNode(tree: Tree): SyntaxNode | undefined {
-    const moduleDeclaration: SyntaxNode | undefined =
+  public static getModuleNameCommentNode(tree: Tree): Node | undefined {
+    const moduleDeclaration: Node | undefined =
       this.findModuleDeclaration(tree);
     return moduleDeclaration?.nextNamedSibling?.type === "block_comment"
       ? moduleDeclaration.nextNamedSibling
       : undefined;
   }
 
-  public static getModuleExposingListNodes(tree: Tree): SyntaxNode[] {
+  public static getModuleExposingListNodes(tree: Tree): Node[] {
     const moduleNode = TreeUtils.findModuleDeclaration(tree);
 
     if (moduleNode) {
@@ -57,15 +57,15 @@ export class TreeUtils {
 
   public static findFirstNamedChildOfType(
     type: string,
-    node: SyntaxNode,
-  ): SyntaxNode | undefined {
+    node: Node,
+  ): Node | undefined {
     return node.children.find((child) => child.type === type);
   }
 
   public static findAllNamedChildrenOfType(
     type: string | string[],
-    node: SyntaxNode,
-  ): SyntaxNode[] | undefined {
+    node: Node,
+  ): Node[] | undefined {
     const result = Array.isArray(type)
       ? node.children.filter((child) => type.includes(child.type))
       : node.children.filter((child) => child.type === type);
@@ -74,9 +74,9 @@ export class TreeUtils {
   }
 
   public static findExposedFunctionNode(
-    node: SyntaxNode,
+    node: Node,
     functionName: string,
-  ): SyntaxNode | undefined {
+  ): Node | undefined {
     if (node) {
       const exposingList = this.findFirstNamedChildOfType(
         "exposing_list",
@@ -119,9 +119,9 @@ export class TreeUtils {
   }
 
   public static findExposedTypeOrTypeAliasNode(
-    node: SyntaxNode,
+    node: Node,
     typeName: string,
-  ): SyntaxNode | undefined {
+  ): Node | undefined {
     if (node) {
       const exposingList = this.findFirstNamedChildOfType(
         "exposing_list",
@@ -180,7 +180,7 @@ export class TreeUtils {
     tree: Tree,
     unionConstructorName: string,
     moduleNamePrefix?: string,
-  ): SyntaxNode[] | undefined {
+  ): Node[] | undefined {
     const upperCaseQid = TreeUtils.descendantsOfType(
       tree.rootNode,
       "upper_case_qid",
@@ -202,7 +202,7 @@ export class TreeUtils {
   public static findOperator(
     sourceFile: ISourceFile,
     operatorName: string,
-  ): SyntaxNode | undefined {
+  ): Node | undefined {
     const rootSymbols = sourceFile.symbolLinks?.get(sourceFile.tree.rootNode);
 
     const operatorNode = rootSymbols?.get(operatorName)?.node;
@@ -224,7 +224,7 @@ export class TreeUtils {
   public static findTypeDeclaration(
     tree: Tree,
     typeName: string,
-  ): SyntaxNode | undefined {
+  ): Node | undefined {
     const types = this.findAllTypeDeclarations(tree);
     if (types) {
       return types.find(
@@ -236,13 +236,13 @@ export class TreeUtils {
     }
   }
 
-  public static findModuleDeclaration(tree: Tree): SyntaxNode | undefined {
+  public static findModuleDeclaration(tree: Tree): Node | undefined {
     return tree.rootNode.childForFieldName("moduleDeclaration") ?? undefined;
   }
 
   public static findAllTopLevelFunctionDeclarations(
     tree: Tree,
-  ): SyntaxNode[] | undefined {
+  ): Node[] | undefined {
     const result = tree.rootNode.children.filter(
       (a) => a.type === "value_declaration",
     );
@@ -250,8 +250,8 @@ export class TreeUtils {
   }
 
   public static getFunctionNameNodeFromDefinition(
-    node: SyntaxNode,
-  ): SyntaxNode | undefined {
+    node: Node,
+  ): Node | undefined {
     if (node.type === "lower_case_identifier") {
       return node;
     }
@@ -265,19 +265,19 @@ export class TreeUtils {
   }
 
   public static getTypeOrTypeAliasOrPortNameNodeFromDefinition(
-    node: SyntaxNode,
-  ): SyntaxNode | undefined {
+    node: Node,
+  ): Node | undefined {
     return node.childForFieldName("name") ?? undefined;
   }
 
-  public static isTypeUsage(upperCaseQid: SyntaxNode): boolean {
+  public static isTypeUsage(upperCaseQid: Node): boolean {
     return (
       !!TreeUtils.findParentOfType("type_ref", upperCaseQid) ||
       upperCaseQid.parent?.type === "exposed_type"
     );
   }
 
-  public static isConstructorUsage(upperCaseQid: SyntaxNode): boolean {
+  public static isConstructorUsage(upperCaseQid: Node): boolean {
     return upperCaseQid.parent?.type === "value_expr";
   }
 
@@ -285,7 +285,7 @@ export class TreeUtils {
     tree: Tree,
     typeOrTypeAliasName: string,
     nodeType: NodeType,
-  ): SyntaxNode[] {
+  ): Node[] {
     const upperCaseQids = TreeUtils.descendantsOfType(
       tree.rootNode,
       "upper_case_qid",
@@ -303,7 +303,7 @@ export class TreeUtils {
     });
   }
 
-  public static findAllTypeDeclarations(tree: Tree): SyntaxNode[] | undefined {
+  public static findAllTypeDeclarations(tree: Tree): Node[] | undefined {
     return this.findAllNamedChildrenOfType("type_declaration", tree.rootNode);
   }
 
@@ -313,7 +313,7 @@ export class TreeUtils {
   public static findImportClauseByName(
     tree: Tree,
     moduleName: string,
-  ): SyntaxNode | undefined {
+  ): Node | undefined {
     const allImports = this.findAllImportClauseNodes(tree);
     if (allImports) {
       return allImports.find(
@@ -326,8 +326,8 @@ export class TreeUtils {
   }
 
   public static getTypeOrTypeAliasOfFunctionParameter(
-    node: SyntaxNode | undefined,
-  ): SyntaxNode | undefined {
+    node: Node | undefined,
+  ): Node | undefined {
     if (
       node &&
       node.parent &&
@@ -359,8 +359,8 @@ export class TreeUtils {
   }
 
   public static getReturnTypeOrTypeAliasOfFunctionDefinition(
-    node: SyntaxNode | undefined,
-  ): SyntaxNode | undefined {
+    node: Node | undefined,
+  ): Node | undefined {
     if (node && node.previousNamedSibling?.type === "type_annotation") {
       const typeAnnotationNodes = TreeUtils.descendantsOfType(
         node.previousNamedSibling,
@@ -374,7 +374,7 @@ export class TreeUtils {
   }
 
   public static getRecordTypeOfFunctionRecordParameter(
-    node: SyntaxNode | undefined,
+    node: Node | undefined,
     program: IProgram,
   ): TRecord | undefined {
     const checker = program.getTypeChecker();
@@ -403,10 +403,10 @@ export class TreeUtils {
   }
 
   public static getTypeAliasOfRecordField(
-    node: SyntaxNode | undefined,
+    node: Node | undefined,
     sourceFile: ISourceFile,
     program: IProgram,
-  ): SyntaxNode | undefined {
+  ): Node | undefined {
     const fieldName = node?.parent?.firstNamedChild?.text;
 
     let recordType = TreeUtils.getTypeAliasOfRecord(node, sourceFile, program);
@@ -460,12 +460,12 @@ export class TreeUtils {
   }
 
   public static getTypeAliasOfRecord(
-    node: SyntaxNode | undefined,
+    node: Node | undefined,
     sourceFile: ISourceFile,
     program: IProgram,
-  ): SyntaxNode | undefined {
+  ): Node | undefined {
     if (node?.parent?.parent) {
-      let type: SyntaxNode | undefined | null =
+      let type: Node | undefined | null =
         TreeUtils.findFirstNamedChildOfType(
           "record_base_identifier",
           node.parent.parent,
@@ -543,7 +543,7 @@ export class TreeUtils {
   }
 
   public static getAllFieldsFromTypeAlias(
-    node: SyntaxNode | undefined,
+    node: Node | undefined,
   ): { field: string; type: string }[] | undefined {
     const result: { field: string; type: string }[] = [];
     if (node) {
@@ -567,17 +567,14 @@ export class TreeUtils {
     return result.length === 0 ? undefined : result;
   }
 
-  public static descendantsOfType(
-    node: SyntaxNode,
-    type: string,
-  ): SyntaxNode[] {
+  public static descendantsOfType(node: Node, type: string): Node[] {
     return node.descendantsOfType(type);
   }
 
   public static getNamedDescendantForPosition(
-    node: SyntaxNode,
+    node: Node,
     position: Position,
-  ): SyntaxNode {
+  ): Node {
     const previousCharColumn =
       position.character === 0 ? 0 : position.character - 1;
     const charBeforeCursor = node.text
@@ -603,10 +600,7 @@ export class TreeUtils {
     }
   }
 
-  public static getDescendantForPosition(
-    node: SyntaxNode,
-    position: Position,
-  ): SyntaxNode {
+  public static getDescendantForPosition(node: Node, position: Position): Node {
     const previousCharColumn =
       position.character === 0 ? 0 : position.character - 1;
     const charBeforeCursor = node.text
@@ -635,7 +629,7 @@ export class TreeUtils {
   public static getNamedDescendantForRange(
     sourceFile: ISourceFile,
     range: Range,
-  ): SyntaxNode {
+  ): Node {
     if (positionEquals(range.start, range.end)) {
       return this.getNamedDescendantForPosition(sourceFile.tree.rootNode, {
         character: range.start.character,
@@ -658,7 +652,7 @@ export class TreeUtils {
   public static getDescendantForRange(
     sourceFile: ISourceFile,
     range: Range,
-  ): SyntaxNode {
+  ): Node {
     if (positionEquals(range.start, range.end)) {
       return this.getDescendantForPosition(sourceFile.tree.rootNode, {
         character: range.start.character,
@@ -679,17 +673,17 @@ export class TreeUtils {
   }
 
   public static findPreviousNode(
-    node: SyntaxNode,
+    node: Node,
     position: Position,
-  ): SyntaxNode | undefined {
-    function nodeHasTokens(n: SyntaxNode): boolean {
+  ): Node | undefined {
+    function nodeHasTokens(n: Node): boolean {
       return n.endIndex - n.startIndex !== 0;
     }
 
     function findRightmostChildWithTokens(
-      childrenList: SyntaxNode[],
+      childrenList: Node[],
       startIndex: number,
-    ): SyntaxNode | undefined {
+    ): Node | undefined {
       for (let i = startIndex - 1; i >= 0; i--) {
         if (nodeHasTokens(childrenList[i])) {
           return childrenList[i];
@@ -697,7 +691,7 @@ export class TreeUtils {
       }
     }
 
-    function findRightmostNode(n: SyntaxNode): SyntaxNode | undefined {
+    function findRightmostNode(n: Node): Node | undefined {
       if (n.children.length === 0) {
         return n;
       }
@@ -743,9 +737,9 @@ export class TreeUtils {
   }
 
   public static getNamedDescendantForLineBeforePosition(
-    node: SyntaxNode,
+    node: Node,
     position: Position,
-  ): SyntaxNode {
+  ): Node {
     const previousLine = position.line === 0 ? 0 : position.line - 1;
 
     return node.namedDescendantForPosition({
@@ -755,9 +749,9 @@ export class TreeUtils {
   }
 
   public static getNamedDescendantForLineAfterPosition(
-    node: SyntaxNode,
+    node: Node,
     position: Position,
-  ): SyntaxNode {
+  ): Node {
     const followingLine = position.line + 1;
 
     return node.namedDescendantForPosition({
@@ -768,9 +762,9 @@ export class TreeUtils {
 
   public static findParentOfType(
     typeToLookFor: string,
-    node: SyntaxNode,
+    node: Node,
     topLevel = false,
-  ): SyntaxNode | undefined {
+  ): Node | undefined {
     if (
       node.type === typeToLookFor &&
       (!topLevel || node.parent?.type === "file")
@@ -782,14 +776,14 @@ export class TreeUtils {
     }
   }
 
-  public static getLastImportNode(tree: Tree): SyntaxNode | undefined {
+  public static getLastImportNode(tree: Tree): Node | undefined {
     const allImportNodes = this.findAllImportClauseNodes(tree);
     if (allImportNodes?.length) {
       return allImportNodes[allImportNodes.length - 1];
     }
   }
 
-  public static isReferenceFullyQualified(node: SyntaxNode): boolean {
+  public static isReferenceFullyQualified(node: Node): boolean {
     return (
       node.previousNamedSibling?.type === "dot" &&
       node.previousNamedSibling?.previousNamedSibling?.type ===
@@ -797,9 +791,7 @@ export class TreeUtils {
     );
   }
 
-  public static getTypeAnnotation(
-    valueDeclaration?: SyntaxNode,
-  ): SyntaxNode | undefined {
+  public static getTypeAnnotation(valueDeclaration?: Node): Node | undefined {
     if (valueDeclaration?.type !== "value_declaration") {
       return;
     }
@@ -819,9 +811,7 @@ export class TreeUtils {
     }
   }
 
-  public static getValueDeclaration(
-    typeAnnotation?: SyntaxNode,
-  ): SyntaxNode | undefined {
+  public static getValueDeclaration(typeAnnotation?: Node): Node | undefined {
     if (typeAnnotation?.type !== "type_annotation") {
       return;
     }
@@ -845,10 +835,7 @@ export class TreeUtils {
    * This gets a list of all ancestors of a type
    * in order from the closest declaration up to the top level declaration
    */
-  public static getAllAncestorsOfType(
-    type: string,
-    node: SyntaxNode,
-  ): SyntaxNode[] {
+  public static getAllAncestorsOfType(type: string, node: Node): Node[] {
     const declarations = [];
 
     while (node.type !== "file") {
@@ -869,7 +856,7 @@ export class TreeUtils {
   /**
    * @deprecated Should not be used due to performance. Use bindings instead
    */
-  public static findAllImportClauseNodes(tree: Tree): SyntaxNode[] | undefined {
+  public static findAllImportClauseNodes(tree: Tree): Node[] | undefined {
     const result = tree.rootNode.children.filter(
       (a) => a.type === "import_clause",
     );
@@ -877,21 +864,21 @@ export class TreeUtils {
     return result.length === 0 ? undefined : result;
   }
 
-  public static isIdentifier(node: SyntaxNode): boolean {
+  public static isIdentifier(node: Node): boolean {
     return (
       node.type === "lower_case_identifier" ||
       node.type === "upper_case_identifier"
     );
   }
 
-  public static isImport(node: SyntaxNode): boolean {
+  public static isImport(node: Node): boolean {
     return (
       node.parent?.firstNamedChild?.type === "import" ||
       node.parent?.parent?.firstNamedChild?.type === "import"
     );
   }
 
-  public static nextNode(node: SyntaxNode): SyntaxNode | undefined {
+  public static nextNode(node: Node): Node | undefined {
     // Move up until we have a sibling
     while (!node.nextNamedSibling && node.parent) {
       node = node.parent;

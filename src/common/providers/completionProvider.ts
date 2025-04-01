@@ -12,7 +12,7 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { Node, Tree } from "web-tree-sitter";
 import { IProgram } from "../../compiler/program";
 import { ISourceFile } from "../../compiler/forest";
 import { comparePosition, PositionUtil } from "../positionUtil";
@@ -473,7 +473,7 @@ export class CompletionProvider {
   private getExposedFromModule(
     program: IProgram,
     sourceFile: ISourceFile,
-    exposingListNode: SyntaxNode,
+    exposingListNode: Node,
     range: Range,
   ): CompletionItem[] | undefined {
     // Skip as clause to always get Module Name
@@ -755,7 +755,7 @@ export class CompletionProvider {
   }
 
   private getRecordCompletions(
-    node: SyntaxNode,
+    node: Node,
     sourceFile: ISourceFile,
     range: Range,
     program: IProgram,
@@ -847,7 +847,7 @@ export class CompletionProvider {
 
   private getRecordCompletionsUsingInference(
     checker: TypeChecker,
-    targetNode: SyntaxNode,
+    targetNode: Node,
     replaceRange: Range,
   ): CompletionItem[] {
     const result: CompletionItem[] = [];
@@ -972,7 +972,7 @@ export class CompletionProvider {
 
   private findDefinitionsForScope(
     checker: TypeChecker,
-    node: SyntaxNode,
+    node: Node,
     sourceFile: ISourceFile,
     range: Range,
   ): CompletionItem[] {
@@ -1190,7 +1190,7 @@ export class CompletionProvider {
   }
 
   private getSubmodulesOrValues(
-    node: SyntaxNode,
+    node: Node,
     sourceFile: ISourceFile,
     program: IProgram,
     range: Range,

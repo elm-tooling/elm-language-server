@@ -7,7 +7,7 @@ import {
   InitializeResult,
 } from "vscode-languageserver";
 
-import Parser from "web-tree-sitter";
+import { Parser, Language } from "web-tree-sitter";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { ASTProvider } from "./providers";
 import {
@@ -64,7 +64,7 @@ export function startCommonServer(
       connection.console.info(
         `Loading Elm tree-sitter syntax from ${pathToWasm}`,
       );
-      const language = await Parser.Language.load(pathToWasm);
+      const language = await Language.load(pathToWasm);
       const parser = container.resolve<Parser>("Parser");
       parser.setLanguage(language);
 

@@ -1,9 +1,9 @@
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { TreeUtils } from "./treeUtils";
 
 export class HintHelper {
   public static createHint(
-    node: SyntaxNode | undefined,
+    node: Node | undefined,
     typeString?: string,
   ): string | undefined {
     if (!node) {
@@ -43,7 +43,7 @@ export class HintHelper {
   }
 
   public static createHintFromFunctionParameter(
-    node: SyntaxNode | undefined,
+    node: Node | undefined,
     typeString?: string,
   ): string {
     const annotation = TreeUtils.getTypeOrTypeAliasOfFunctionParameter(node);
@@ -72,7 +72,7 @@ export class HintHelper {
   }
 
   public static createHintFromDefinitionInLet(
-    declaration: SyntaxNode | undefined,
+    declaration: Node | undefined,
     typeString?: string,
   ): string | undefined {
     if (declaration) {
@@ -95,7 +95,7 @@ export class HintHelper {
     }
   }
 
-  public static createHintFromFieldType(node: SyntaxNode): string {
+  public static createHintFromFieldType(node: Node): string {
     const typeAlias = TreeUtils.findParentOfType(
       "type_alias_declaration",
       node,
@@ -127,7 +127,7 @@ export class HintHelper {
   }
 
   private static createHintFromDefinition(
-    declaration: SyntaxNode | undefined,
+    declaration: Node | undefined,
     typeString?: string,
   ): string | undefined {
     if (!declaration) {
@@ -199,7 +199,7 @@ export class HintHelper {
   }
 
   private static createHintFromModule(
-    moduleNode: SyntaxNode | undefined,
+    moduleNode: Node | undefined,
   ): string | undefined {
     if (moduleNode) {
       let comment = "";

@@ -13,7 +13,7 @@ import {
   Parser,
   Query,
   QueryResult,
-  SyntaxNode,
+  Node,
   Tree,
 } from "web-tree-sitter";
 import { IProgram } from "../../../compiler/program";
@@ -654,7 +654,7 @@ export class ElmLsDiagnostics {
 
     const patternMatches = this.patternsQuery.matches(tree.rootNode);
 
-    const scopeCache = new SyntaxNodeMap<SyntaxNode, QueryResult[]>();
+    const scopeCache = new SyntaxNodeMap<Node, QueryResult[]>();
 
     patternMatches
       .filter(Utils.notUndefined)
@@ -1075,7 +1075,7 @@ export class ElmLsDiagnostics {
     return diagnostics;
   }
 
-  private getNodeRange(node: SyntaxNode): Range {
+  private getNodeRange(node: Node): Range {
     const end = PositionUtil.FROM_TS_POSITION(node.endPosition).toVSPosition();
     return {
       start: PositionUtil.FROM_TS_POSITION(node.startPosition).toVSPosition(),

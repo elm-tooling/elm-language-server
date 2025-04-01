@@ -4,7 +4,7 @@ import {
   DiagnosticTag,
   Range,
 } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { PositionUtil } from "../common/positionUtil";
 import { DiagnosticSource } from "../common/providers/diagnostics/diagnosticSource";
 import { getSpaces } from "../common/util/refactorEditUtils";
@@ -24,9 +24,9 @@ function format(text: string, ...args: (string | number)[]): string {
 }
 
 export function errorWithEndNode(
-  node: SyntaxNode,
+  node: Node,
   diagnostic: IDiagnosticMessage,
-  endNode?: SyntaxNode,
+  endNode?: Node,
   ...args: (string | number)[]
 ): Diagnostic {
   return {
@@ -45,7 +45,7 @@ export function errorWithEndNode(
 }
 
 export function error(
-  node: SyntaxNode,
+  node: Node,
   diagnostic: IDiagnosticMessage,
   ...args: (string | number)[]
 ): Diagnostic {

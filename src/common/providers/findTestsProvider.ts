@@ -1,6 +1,6 @@
 import { container } from "tsyringe";
 import { Connection, ResponseError } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { ISourceFile } from "../../compiler/forest";
 import { IProgram, Program } from "../../compiler/program";
 import { TypeChecker } from "../../compiler/typeChecker";
@@ -106,7 +106,7 @@ function rootSuite(
 
 // export for testing
 export function findTestFunctionCall(
-  node: SyntaxNode,
+  node: Node,
   typeChecker: TypeChecker,
 ): EFunctionCallExpr | undefined {
   const letIn = findChildExpr("LetInExpr", node);
@@ -214,7 +214,7 @@ const typeByNodeType: Map<keyof ExpressionNodeTypes, string> = new Map([
 
 function findExpr<K extends keyof ExpressionNodeTypes>(
   key: K,
-  node: SyntaxNode | undefined,
+  node: Node | undefined,
 ): ExpressionNodeTypes[K] | undefined {
   if (!node) {
     return undefined;
@@ -231,7 +231,7 @@ function findExpr<K extends keyof ExpressionNodeTypes>(
 
 function findChildExpr<K extends keyof ExpressionNodeTypes>(
   key: K,
-  node: SyntaxNode | undefined,
+  node: Node | undefined,
 ): ExpressionNodeTypes[K] | undefined {
   if (!node) {
     return undefined;
@@ -248,7 +248,7 @@ function findChildExpr<K extends keyof ExpressionNodeTypes>(
 
 function findAllExprs<K extends keyof ExpressionNodeTypes>(
   key: K,
-  node: SyntaxNode | undefined,
+  node: Node | undefined,
 ): ExpressionNodeTypes[K][] | undefined {
   if (!node) {
     return undefined;

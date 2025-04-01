@@ -1,4 +1,4 @@
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { Node, Tree } from "web-tree-sitter";
 import { Imports } from "./imports";
 import { TreeUtils } from "../common/util/treeUtils";
 import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
@@ -24,7 +24,7 @@ export interface ISourceFile {
 
   // Resolved during binding
   exposing?: IExposing;
-  symbolLinks?: SyntaxNodeMap<SyntaxNode, SymbolMap>;
+  symbolLinks?: SyntaxNodeMap<Node, SymbolMap>;
   nonShadowableNames?: Set<string>; // Top level function names
 
   // This is resolved while getting semantic diagnostics and defines whether we have loaded all import files

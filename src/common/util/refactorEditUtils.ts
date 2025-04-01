@@ -1,10 +1,10 @@
 import { Position, Range, TextEdit } from "vscode-languageserver";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { Node, Tree } from "web-tree-sitter";
 import { TreeUtils } from "./treeUtils";
 
 export class RefactorEditUtils {
   public static findLineNumberAfterCurrentFunction(
-    nodeAtPosition: SyntaxNode,
+    nodeAtPosition: Node,
   ): number | undefined {
     if (!nodeAtPosition.parent) {
       return undefined;
@@ -18,7 +18,7 @@ export class RefactorEditUtils {
   }
 
   public static findLineNumberBeforeCurrentFunction(
-    nodeAtPosition: SyntaxNode,
+    nodeAtPosition: Node,
   ): number | undefined {
     if (!nodeAtPosition.parent) {
       return undefined;
@@ -259,7 +259,7 @@ export class RefactorEditUtils {
   }
 
   public static changeQualifiedReferenceModule(
-    node: SyntaxNode,
+    node: Node,
     newModuleName: string,
   ): TextEdit | undefined {
     if (node.parent && node.parent.type === "value_qid") {
@@ -286,9 +286,7 @@ export class RefactorEditUtils {
     }
   }
 
-  public static removeQualifiedReference(
-    node: SyntaxNode,
-  ): TextEdit | undefined {
+  public static removeQualifiedReference(node: Node): TextEdit | undefined {
     if (node.parent && node.parent.type === "value_qid") {
       const moduleNode = TreeUtils.findFirstNamedChildOfType(
         "upper_case_identifier",
@@ -380,7 +378,7 @@ export class RefactorEditUtils {
     }
   }
 
-  public static removeRecordPatternValue(pattern: SyntaxNode): TextEdit {
+  public static removeRecordPatternValue(pattern: Node): TextEdit {
     let startPosition = pattern.startPosition;
     let endPosition = pattern.endPosition;
 
@@ -404,9 +402,7 @@ export class RefactorEditUtils {
     );
   }
 
-  public static removeFunction(
-    nodeAtPosition: SyntaxNode,
-  ): TextEdit | undefined {
+  public static removeFunction(nodeAtPosition: Node): TextEdit | undefined {
     const valueDeclaration = TreeUtils.findParentOfType(
       "value_declaration",
       nodeAtPosition,
@@ -439,7 +435,7 @@ export class RefactorEditUtils {
     }
   }
 
-  public static removeTypeAlias(node: SyntaxNode | null): TextEdit | undefined {
+  public static removeTypeAlias(node: Node | null): TextEdit | undefined {
     if (!node) {
       return undefined;
     }
@@ -464,9 +460,7 @@ export class RefactorEditUtils {
     );
   }
 
-  public static removeTypeValue(
-    nodeAtPosition: SyntaxNode,
-  ): TextEdit | undefined {
+  public static removeTypeValue(nodeAtPosition: Node): TextEdit | undefined {
     const unionVariants = TreeUtils.findParentOfType(
       "type_declaration",
       nodeAtPosition,
@@ -506,7 +500,7 @@ export class RefactorEditUtils {
     );
   }
 
-  public static removeType(node: SyntaxNode | null): TextEdit | undefined {
+  public static removeType(node: Node | null): TextEdit | undefined {
     if (!node) {
       return undefined;
     }
@@ -532,7 +526,7 @@ export class RefactorEditUtils {
   }
 
   public static addUnionVariant(
-    typeDeclaration: SyntaxNode,
+    typeDeclaration: Node,
     name: string,
     params: string[],
   ): TextEdit | undefined {
@@ -557,7 +551,7 @@ export class RefactorEditUtils {
   }
 
   private static removeValueFromExposingList(
-    exposedNodes: SyntaxNode[],
+    exposedNodes: Node[],
     valueName: string,
     forceRemoveLastComma = false,
   ): TextEdit | undefined {

@@ -1,6 +1,6 @@
 import { CodeAction, TextEdit } from "vscode-languageserver";
 import { Range } from "vscode-languageserver-textdocument";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { ISourceFile } from "../../../compiler/forest";
 import { ImportUtils, IPossibleImport } from "../../util/importUtils";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
@@ -149,7 +149,7 @@ function getEditFromPossibleImport(
 }
 
 function getValueToImport(
-  valueNode: SyntaxNode,
+  valueNode: Node,
   possibleImport: IPossibleImport,
 ): string | undefined {
   return valueNode.type !== "upper_case_qid" && valueNode.type !== "value_qid"
@@ -157,7 +157,7 @@ function getValueToImport(
     : undefined;
 }
 
-function getTargetModule(valueNode: SyntaxNode): string {
+function getTargetModule(valueNode: Node): string {
   return valueNode.namedChildren
     .slice(0, valueNode.namedChildren.length - 2) // Dots are also namedNodes
     .map((a) => a.text)

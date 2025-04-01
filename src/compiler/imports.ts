@@ -1,4 +1,4 @@
-import Parser, { SyntaxNode } from "web-tree-sitter";
+import Parser, { Node } from "web-tree-sitter";
 import { ISourceFile } from "./forest";
 import { TreeUtils } from "../common/util/treeUtils";
 import { container } from "tsyringe";
@@ -22,7 +22,7 @@ type FromModule = {
 
 export interface IImport extends ISymbol {
   fromModule: FromModule;
-  importNode?: SyntaxNode;
+  importNode?: Node;
 }
 
 function importModuleEqual(a: IImport, b: IImport): boolean {
@@ -87,7 +87,7 @@ export class Imports {
     return this.diagnostics;
   }
 
-  private static cachedVirtualImports: SyntaxNode[];
+  private static cachedVirtualImports: Node[];
 
   public static getImports(
     sourceFile: ISourceFile,
@@ -389,7 +389,7 @@ export class Imports {
     return result;
   }
 
-  public static getVirtualImports(): SyntaxNode[] {
+  public static getVirtualImports(): Node[] {
     if (this.cachedVirtualImports) {
       return this.cachedVirtualImports;
     }
@@ -416,9 +416,7 @@ export class Imports {
     return (this.cachedVirtualImports = importTree.rootNode.children);
   }
 
-  private static findImportAsClause(
-    importNode: SyntaxNode,
-  ): string | undefined {
+  private static findImportAsClause(importNode: Node): string | undefined {
     const asClause = TreeUtils.findFirstNamedChildOfType(
       "as_clause",
       importNode,

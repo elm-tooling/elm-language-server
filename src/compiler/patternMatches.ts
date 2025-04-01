@@ -1,4 +1,4 @@
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { TreeUtils } from "../common/util/treeUtils";
 import { Utils } from "../common/util/utils";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
@@ -49,7 +49,7 @@ type CanCtor = {
   arity: number;
 };
 
-function nodeToCanCtor(node: SyntaxNode): CanCtor {
+function nodeToCanCtor(node: Node): CanCtor {
   return {
     name: node.firstNamedChild!.text,
     arity: node.namedChildren
@@ -84,8 +84,8 @@ export class PatternMatches {
   ) {}
 
   public static check(
-    region: SyntaxNode,
-    patterns: SyntaxNode[],
+    region: Node,
+    patterns: Node[],
     program: IProgram,
   ): Diagnostic[] {
     return new PatternMatches(
@@ -94,14 +94,14 @@ export class PatternMatches {
     ).checkPatterns(region, patterns);
   }
 
-  public static missing(patterns: SyntaxNode[], program: IProgram): string[] {
+  public static missing(patterns: Node[], program: IProgram): string[] {
     return new PatternMatches(
       program,
       program.getSourceFile(patterns[0].tree.uri)!,
     ).getMissing(patterns);
   }
 
-  private getMissing(patterns: SyntaxNode[]): string[] {
+  private getMissing(patterns: Node[]): string[] {
     const result = this.toNonRedundantRows(patterns[0], patterns);
 
     if (!Array.isArray(result)) {
@@ -113,10 +113,7 @@ export class PatternMatches {
     }
   }
 
-  private checkPatterns(
-    region: SyntaxNode,
-    patterns: SyntaxNode[],
-  ): Diagnostic[] {
+  private checkPatterns(region: Node, patterns: Node[]): Diagnostic[] {
     const result = this.toNonRedundantRows(region, patterns);
 
     if (!Array.isArray(result)) {
@@ -193,16 +190,16 @@ export class PatternMatches {
   }
 
   private toNonRedundantRows(
-    region: SyntaxNode,
-    patterns: SyntaxNode[],
+    region: Node,
+    patterns: Node[],
   ): Pattern[][] | Diagnostic {
     return this.toSimplifiedUsefulRows(region, [], patterns);
   }
 
   private toSimplifiedUsefulRows(
-    overalRegion: SyntaxNode,
+    overalRegion: Node,
     checkedRows: Pattern[][],
-    uncheckedPatterns: SyntaxNode[],
+    uncheckedPatterns: Node[],
   ): Pattern[][] | Diagnostic {
     if (uncheckedPatterns.length === 0) {
       return checkedRows;
@@ -370,11 +367,11 @@ export class PatternMatches {
     return ctors;
   }
 
-  private cons(head: SyntaxNode, tail: Pattern): Pattern {
+  private cons(head: Node, tail: Pattern): Pattern {
     return Ctor(list, consName, [this.simplify(head), tail]);
   }
 
-  private simplify(pattern: SyntaxNode): Pattern {
+  private simplify(pattern: Node): Pattern {
     const patternAs = pattern.childForFieldName("patternAs");
     if (patternAs) {
       return this.simplify(pattern.childForFieldName("child") ?? patternAs);
@@ -391,6 +388,7 @@ export class PatternMatches {
 
       case "tuple_pattern": {
         const patterns = pattern.children
+          .filter((val) => val !== null)
           .filter((n) => n.type === "pattern")
           .map((n) => n.childForFieldName("child")!);
 
@@ -420,7 +418,8 @@ export class PatternMatches {
               "type_declaration",
               definition.symbol.node,
             )
-              ?.namedChildren.filter((n) => n.type === "union_variant")
+              ?.namedChildren.filter((val) => val !== null)
+              .filter((n) => n.type === "union_variant")
               .map(nodeToCanCtor) ?? []
           : [];
 
@@ -437,16 +436,20 @@ export class PatternMatches {
         return foldr(
           this.cons.bind(this),
           nil,
-          pattern.namedChildren.filter((n) => n.type === "pattern"),
+          pattern.namedChildren
+            .filter((val) => val !== null)
+            .filter((n) => n.type === "pattern"),
         );
 
       case "cons_pattern": {
-        const patterns = pattern.namedChildren.filter(
-          (n) =>
-            n.type.includes("pattern") ||
-            n.type.includes("constant") ||
-            n.type === "unit_expr",
-        );
+        const patterns = pattern.namedChildren
+          .filter((val) => val !== null)
+          .filter(
+            (n) =>
+              n.type.includes("pattern") ||
+              n.type.includes("constant") ||
+              n.type === "unit_expr",
+          );
         return this.cons(patterns[0], this.simplify(patterns[1]));
       }
 

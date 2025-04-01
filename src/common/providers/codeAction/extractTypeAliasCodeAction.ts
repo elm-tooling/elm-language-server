@@ -1,5 +1,5 @@
 import { CodeActionKind, Position, TextEdit } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import {
@@ -118,7 +118,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
   ): IRefactorEdit => {
     const edits: TextEdit[] = [];
 
-    const nodes: SyntaxNode[] = [];
+    const nodes: Node[] = [];
     if (action === "extract_type_alias_partial_type_expr") {
       const startNode = TreeUtils.getNamedDescendantForPosition(
         params.sourceFile.tree.rootNode,

@@ -7,7 +7,7 @@ import {
   SelectionRangeParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { Node, Tree } from "web-tree-sitter";
 import { PositionUtil } from "../positionUtil";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
@@ -59,7 +59,7 @@ export class SelectionRangeProvider {
   };
 
   private getParentNode(
-    node: SyntaxNode,
+    node: Node,
     previousRange: Range,
   ): SelectionRange | undefined {
     if (node.parent) {

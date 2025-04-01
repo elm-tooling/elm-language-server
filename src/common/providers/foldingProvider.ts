@@ -6,7 +6,7 @@ import {
   FoldingRangeParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { Node, Tree } from "web-tree-sitter";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { IFoldingRangeParams } from "./paramsExtensions";
 
@@ -36,9 +36,9 @@ export class FoldingRangeProvider {
     const folds: FoldingRange[] = [];
     const tree: Tree = param.sourceFile.tree;
 
-    const findLastIdenticalNamedSibling: (node: SyntaxNode) => SyntaxNode = (
-      node: SyntaxNode,
-    ): SyntaxNode => {
+    const findLastIdenticalNamedSibling: (node: Node) => Node = (
+      node: Node,
+    ): Node => {
       // eslint-disable-next-line no-constant-condition
       while (true) {
         const nextSibling = node.nextNamedSibling;

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { TreeUtils } from "../common/util/treeUtils";
 import { References } from "./references";
 import {
@@ -377,10 +377,10 @@ export function nthVarName(n: number): string {
 
 function typeMismatchError(
   checker: TypeChecker,
-  node: SyntaxNode,
+  node: Node,
   found: Type,
   expected: Type,
-  endNode?: SyntaxNode,
+  endNode?: Node,
   patternBinding = false,
   recordDiff?: RecordDiff,
 ): Diagnostic {
@@ -424,8 +424,8 @@ function typeMismatchError(
 }
 
 function parameterCountError(
-  node: SyntaxNode,
-  endNode: SyntaxNode,
+  node: Node,
+  endNode: Node,
   actual: number,
   expected: number,
   isType = false,
@@ -443,8 +443,8 @@ function parameterCountError(
 }
 
 function argumentCountError(
-  node: SyntaxNode,
-  endNode: SyntaxNode,
+  node: Node,
+  endNode: Node,
   actual: number,
   expected: number,
   isType = false,
@@ -495,10 +495,7 @@ export class InferenceScope {
     new SyntaxNodeMap();
   private diagnostics: Diagnostic[] = [];
 
-  private bindings: SyntaxNodeMap<SyntaxNode, Type> = new SyntaxNodeMap<
-    SyntaxNode,
-    Type
-  >();
+  private bindings: SyntaxNodeMap<Node, Type> = new SyntaxNodeMap<Node, Type>();
   private replacements: DisjointSet;
 
   private annotationVars: TVar[] = [];
