@@ -113,11 +113,16 @@ export class CodeActionProvider {
     if (this.settings.isCodeActionResolveSupported("edit")) {
       this.connection.onRequest(
         CodeActionResolveRequest.method,
-        new ElmWorkspaceMatcher((codeAction: IRefactorCodeAction) =>
-          URI.parse(codeAction.data.uri),
-        ).handleResolve((codeAction, program, sourceFile) =>
-          this.onCodeActionResolve(codeAction, program, sourceFile),
-        ),
+        (codeAction: IRefactorCodeAction) => {
+          if (!codeAction.data.uri) {
+            return codeAction;
+          }
+          return new ElmWorkspaceMatcher((codeAction: IRefactorCodeAction) =>
+            URI.parse(codeAction.data.uri),
+          ).handleResolve((codeAction, program, sourceFile) =>
+            this.onCodeActionResolve(codeAction, program, sourceFile),
+          )(codeAction);
+        },
       );
     }
 
