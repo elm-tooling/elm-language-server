@@ -1,5 +1,5 @@
 import { ISourceFile } from "./forest";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { MultiMap } from "../common/util/multiMap";
 import { NodeType, TreeUtils } from "../common/util/treeUtils";
 import { Utils } from "../common/util/utils";
@@ -16,11 +16,11 @@ export type IExposing = Map<string, ISymbol>;
 
 export interface ISymbol {
   name: string;
-  node: SyntaxNode;
+  node: Node;
   type: NodeType;
   constructors?: {
     name: string;
-    node: SyntaxNode;
+    node: Node;
     type: "UnionConstructor" | "TypeAlias";
   }[];
 }
@@ -30,10 +30,10 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     return;
   }
 
-  const symbolLinks = new SyntaxNodeMap<SyntaxNode, SymbolMap>();
+  const symbolLinks = new SyntaxNodeMap<Node, SymbolMap>();
   const nonShadowableNames = new Set<string>();
   let container: SymbolMap;
-  let parent: SyntaxNode;
+  let parent: Node;
   const treeCursor = sourceFile.tree.walk();
 
   bind();
@@ -99,7 +99,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     }
   }
 
-  function bindContainer(node: SyntaxNode): void {
+  function bindContainer(node: Node): void {
     const savedContainer = container;
     const savedParent = parent;
 
@@ -118,7 +118,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     parent = savedParent;
   }
 
-  function bindValueDeclaration(node: SyntaxNode): void {
+  function bindValueDeclaration(node: Node): void {
     // Bind the function name
     const functionDeclarationLeft = node.childForFieldName(
       "functionDeclarationLeft",
@@ -155,7 +155,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     bindContainer(node);
   }
 
-  function bindFunctionDeclarationLeft(node: SyntaxNode): void {
+  function bindFunctionDeclarationLeft(node: Node): void {
     node.descendantsOfType("lower_pattern").forEach((lowerPattern) => {
       container.set(lowerPattern.text, {
         name: lowerPattern.text,
@@ -165,7 +165,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     });
   }
 
-  function bindTypeDeclaration(node: SyntaxNode): void {
+  function bindTypeDeclaration(node: Node): void {
     const unionVariants =
       TreeUtils.findAllNamedChildrenOfType("union_variant", node)
         ?.map((unionVariant) => {
@@ -204,7 +204,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     bindContainer(node);
   }
 
-  function bindTypeAliasDeclaration(node: SyntaxNode): void {
+  function bindTypeAliasDeclaration(node: Node): void {
     const name = node.childForFieldName("name");
 
     if (name) {
@@ -226,11 +226,11 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     bindContainer(node);
   }
 
-  function bindLowerTypeName(node: SyntaxNode): void {
+  function bindLowerTypeName(node: Node): void {
     container.set(node.text, { name: node.text, node, type: "TypeVariable" });
   }
 
-  function bindPortAnnotation(node: SyntaxNode): void {
+  function bindPortAnnotation(node: Node): void {
     // TODO: Use field
     const name = TreeUtils.findFirstNamedChildOfType(
       "lower_case_identifier",
@@ -242,7 +242,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     }
   }
 
-  function bindInfixDeclaration(node: SyntaxNode): void {
+  function bindInfixDeclaration(node: Node): void {
     const operator = node.childForFieldName("operator");
     const name = node.lastNamedChild;
     if (operator && name) {
@@ -255,7 +255,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     }
   }
 
-  function bindPattern(node: SyntaxNode): void {
+  function bindPattern(node: Node): void {
     node.descendantsOfType("lower_pattern").forEach((lowerPattern) => {
       switch (parent.type) {
         case "anonymous_function_expr":
@@ -280,7 +280,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     Imports.getVirtualImports().forEach(bindImportClause);
   }
 
-  function bindImportClause(node: SyntaxNode): void {
+  function bindImportClause(node: Node): void {
     const asClause = node.childForFieldName("asClause");
 
     let name;

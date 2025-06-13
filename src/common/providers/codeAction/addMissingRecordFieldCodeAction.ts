@@ -1,5 +1,5 @@
 import { Range, TextEdit } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { CodeActionProvider, ICodeAction } from "..";
 import { ISourceFile } from "../../../compiler/forest";
 import { getSpaces } from "../../util/refactorEditUtils";
@@ -97,7 +97,7 @@ function getEdits(
 
 function createFields(
   fields: [string, Type][],
-  targetRecord: SyntaxNode,
+  targetRecord: Node,
   checker: TypeChecker,
   sourceFile: ISourceFile,
 ): { [uri: string]: TextEdit[] } {

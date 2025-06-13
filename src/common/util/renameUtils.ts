@@ -1,6 +1,6 @@
 import { IProgram } from "../../compiler/program";
 import { Position, ResponseError } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { References } from "../../compiler/references";
 import { TreeUtils } from "./treeUtils";
 
@@ -11,9 +11,9 @@ export class RenameUtils {
     position: Position,
   ):
     | {
-        originalNode: SyntaxNode;
+        originalNode: Node;
         references: {
-          node: SyntaxNode;
+          node: Node;
           uri: string;
         }[];
       }

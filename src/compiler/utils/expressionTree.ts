@@ -1,4 +1,4 @@
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { OperatorAssociativity } from "../operatorPrecedence";
 import { TreeUtils } from "../../common/util/treeUtils";
 import { Utils } from "../../common/util/utils";
@@ -63,205 +63,205 @@ export type Expression =
   | EValueDeclaration
   | EValueExpr;
 
-export interface EValueDeclaration extends SyntaxNode {
+export interface EValueDeclaration extends Node {
   nodeType: "ValueDeclaration";
   params: string[];
-  body?: SyntaxNode;
-  typeAnnotation?: SyntaxNode;
-  pattern?: SyntaxNode;
+  body?: Node;
+  typeAnnotation?: Node;
+  pattern?: Node;
 }
-export interface EFunctionCallExpr extends SyntaxNode {
+export interface EFunctionCallExpr extends Node {
   nodeType: "FunctionCallExpr";
   target: Expression;
   args: Expression[];
 }
-export interface EIfElseExpr extends SyntaxNode {
+export interface EIfElseExpr extends Node {
   nodeType: "IfElseExpr";
   exprList: Expression[];
 }
-export interface ELetInExpr extends SyntaxNode {
+export interface ELetInExpr extends Node {
   nodeType: "LetInExpr";
   valueDeclarations: EValueDeclaration[];
   body: Expression;
 }
-export interface ECaseOfExpr extends SyntaxNode {
+export interface ECaseOfExpr extends Node {
   nodeType: "CaseOfExpr";
   expr: Expression;
   branches: ECaseOfBranch[];
 }
-export interface ECaseOfBranch extends SyntaxNode {
+export interface ECaseOfBranch extends Node {
   nodeType: "CaseOfBranch";
   pattern: EPattern;
   expr: Expression;
 }
-export interface EAnonymousFunctionExpr extends SyntaxNode {
+export interface EAnonymousFunctionExpr extends Node {
   nodeType: "AnonymousFunctionExpr";
   params: EPattern[];
   expr: Expression;
 }
-export interface EUnionVariant extends SyntaxNode {
+export interface EUnionVariant extends Node {
   nodeType: "UnionVariant";
   name: string;
   params: Expression[];
 }
-export interface EUnionPattern extends SyntaxNode {
+export interface EUnionPattern extends Node {
   nodeType: "UnionPattern";
-  constructor: SyntaxNode;
+  constructor: Node;
   namedParams: Expression[];
   argPatterns: Expression[];
 }
-export interface EValueExpr extends SyntaxNode {
+export interface EValueExpr extends Node {
   nodeType: "ValueExpr";
   name: string;
 }
-export interface EBinOpExpr extends SyntaxNode {
+export interface EBinOpExpr extends Node {
   nodeType: "BinOpExpr";
   parts: Expression[];
 }
-export interface EOperator extends SyntaxNode {
+export interface EOperator extends Node {
   nodeType: "Operator";
 }
-export interface EOperatorAsFunctionExpr extends SyntaxNode {
+export interface EOperatorAsFunctionExpr extends Node {
   nodeType: "OperatorAsFunctionExpr";
   operator: EOperator;
 }
-export interface ENumberConstant extends SyntaxNode {
+export interface ENumberConstant extends Node {
   nodeType: "NumberConstant";
   isFloat: boolean;
 }
-export interface EStringConstant extends SyntaxNode {
+export interface EStringConstant extends Node {
   nodeType: "StringConstant";
 }
-export interface ETypeExpression extends SyntaxNode {
+export interface ETypeExpression extends Node {
   nodeType: "TypeExpression";
   segments: Expression[];
 }
-export interface ETypeRef extends SyntaxNode {
+export interface ETypeRef extends Node {
   nodeType: "TypeRef";
 }
-export interface ETypeDeclaration extends SyntaxNode {
+export interface ETypeDeclaration extends Node {
   nodeType: "TypeDeclaration";
   name: string;
   typeNames: Expression[];
 }
-export interface ETypeVariable extends SyntaxNode {
+export interface ETypeVariable extends Node {
   nodeType: "TypeVariable";
 }
-export interface ETypeAnnotation extends SyntaxNode {
+export interface ETypeAnnotation extends Node {
   nodeType: "TypeAnnotation";
   name: string;
   typeExpression?: ETypeExpression;
 }
-export interface EInfixDeclaration extends SyntaxNode {
+export interface EInfixDeclaration extends Node {
   nodeType: "InfixDeclaration";
   precedence: number;
   associativity: OperatorAssociativity;
 }
-export interface EFunctionDeclarationLeft extends SyntaxNode {
+export interface EFunctionDeclarationLeft extends Node {
   nodeType: "FunctionDeclarationLeft";
   params: Pattern[];
 }
 type Pattern = EPattern | ELowerPattern;
-export interface EPattern extends SyntaxNode {
+export interface EPattern extends Node {
   nodeType: "Pattern";
   patternAs?: ELowerPattern;
 }
-export interface ELowerPattern extends SyntaxNode {
+export interface ELowerPattern extends Node {
   nodeType: "LowerPattern";
 }
-export interface ELowerTypeName extends SyntaxNode {
+export interface ELowerTypeName extends Node {
   nodeType: "LowerTypeName";
 }
-export interface EUnitExpr extends SyntaxNode {
+export interface EUnitExpr extends Node {
   nodeType: "UnitExpr";
 }
-export interface ETupleExpr extends SyntaxNode {
+export interface ETupleExpr extends Node {
   nodeType: "TupleExpr";
   exprList: Expression[];
 }
-export interface EAnythingPattern extends SyntaxNode {
+export interface EAnythingPattern extends Node {
   nodeType: "AnythingPattern";
 }
-export interface ETuplePattern extends SyntaxNode {
+export interface ETuplePattern extends Node {
   nodeType: "TuplePattern";
   patterns: EPattern[];
 }
-export interface ETupleType extends SyntaxNode {
+export interface ETupleType extends Node {
   nodeType: "TupleType";
   typeExpressions: ETypeExpression[];
   unitExpr?: EUnitExpr;
 }
-export interface EListExpr extends SyntaxNode {
+export interface EListExpr extends Node {
   nodeType: "ListExpr";
   exprList: Expression[];
 }
-export interface EListPattern extends SyntaxNode {
+export interface EListPattern extends Node {
   nodeType: "ListPattern";
   parts: Expression[];
 }
-export interface EConsPattern extends SyntaxNode {
+export interface EConsPattern extends Node {
   nodeType: "ConsPattern";
   parts: Expression[];
 }
-export interface EFieldType extends SyntaxNode {
+export interface EFieldType extends Node {
   nodeType: "FieldType";
   name: string;
   typeExpression: ETypeExpression;
 }
-export interface ERecordType extends SyntaxNode {
+export interface ERecordType extends Node {
   nodeType: "RecordType";
   baseType: Expression;
   fieldTypes: EFieldType[];
 }
-export interface ETypeAliasDeclaration extends SyntaxNode {
+export interface ETypeAliasDeclaration extends Node {
   nodeType: "TypeAliasDeclaration";
-  name: SyntaxNode;
+  name: Node;
   typeVariables: Expression[];
   typeExpression: ETypeExpression;
 }
-export interface EField extends SyntaxNode {
+export interface EField extends Node {
   nodeType: "Field";
   name: Expression;
   expression: Expression;
 }
-export interface EFieldAccessExpr extends SyntaxNode {
+export interface EFieldAccessExpr extends Node {
   nodeType: "FieldAccessExpr";
   target: Expression;
 }
-export interface EFieldAccessorFunctionExpr extends SyntaxNode {
+export interface EFieldAccessorFunctionExpr extends Node {
   nodeType: "FieldAccessorFunctionExpr";
 }
-export interface ERecordPattern extends SyntaxNode {
+export interface ERecordPattern extends Node {
   nodeType: "RecordPattern";
   patternList: ELowerPattern[];
 }
-export interface ERecordExpr extends SyntaxNode {
+export interface ERecordExpr extends Node {
   nodeType: "RecordExpr";
-  baseRecord: SyntaxNode;
+  baseRecord: Node;
   fields: EField[];
 }
-export interface EPortAnnotation extends SyntaxNode {
+export interface EPortAnnotation extends Node {
   nodeType: "PortAnnotation";
   name: string;
   typeExpression: ETypeExpression;
 }
-export interface ECharConstantExpr extends SyntaxNode {
+export interface ECharConstantExpr extends Node {
   nodeType: "CharConstantExpr";
 }
-export interface EGlslCodeExpr extends SyntaxNode {
+export interface EGlslCodeExpr extends Node {
   nodeType: "GlslCodeExpr";
-  content: SyntaxNode;
+  content: Node;
 }
-export interface ENegateExpr extends SyntaxNode {
+export interface ENegateExpr extends Node {
   nodeType: "NegateExpr";
   expression: Expression;
 }
-export interface ENullaryConstructorArgumentPattern extends SyntaxNode {
+export interface ENullaryConstructorArgumentPattern extends Node {
   nodeType: "NullaryConstructorArgumentPattern";
 }
 
 export function mapSyntaxNodeToExpression(
-  node: SyntaxNode | null | undefined,
+  node: Node | null | undefined,
 ): Expression | undefined {
   if (!node) return;
 
@@ -571,7 +571,7 @@ export function mapSyntaxNodeToExpression(
       case "union_pattern": {
         const unionPattern = node as EUnionPattern;
         unionPattern.nodeType = "UnionPattern";
-        unionPattern.constructor = node.firstNamedChild as SyntaxNode;
+        unionPattern.constructor = node.firstNamedChild as Node;
         unionPattern.namedParams = node
           .descendantsOfType("lower_pattern")
           .map(mapSyntaxNodeToExpression)
@@ -673,9 +673,7 @@ export function mapSyntaxNodeToExpression(
       case "record_expr": {
         const recordExpr = node as ERecordExpr;
         recordExpr.nodeType = "RecordExpr";
-        recordExpr.baseRecord = node.childForFieldName(
-          "baseRecord",
-        ) as SyntaxNode;
+        recordExpr.baseRecord = node.childForFieldName("baseRecord") as Node;
         recordExpr.fields =
           (TreeUtils.findAllNamedChildrenOfType("field", node)
             ?.map(mapSyntaxNodeToExpression)
@@ -739,7 +737,7 @@ export function mapTypeAliasDeclaration(
 ): void {
   typeAliasDeclaration.name = typeAliasDeclaration.childForFieldName(
     "name",
-  ) as SyntaxNode;
+  ) as Node;
   typeAliasDeclaration.typeVariables =
     TreeUtils.findAllNamedChildrenOfType(
       "lower_type_name",
@@ -769,7 +767,7 @@ export function mapTypeAnnotation(typeAnnotation: ETypeAnnotation): void {
 }
 
 export function findDefinition(
-  e: SyntaxNode | undefined | null,
+  e: Node | undefined | null,
   program: IProgram,
 ): { expr?: Expression; diagnostics: Diagnostic[] } {
   if (!e) {

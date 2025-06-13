@@ -4,12 +4,12 @@ import {
   SymbolInformation,
   SymbolKind,
 } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 
 export class SymbolInformationTranslator {
   public static translateNodeToSymbolInformation(
     uri: string,
-    node: SyntaxNode,
+    node: Node,
   ): SymbolInformation | undefined {
     switch (node.type) {
       case "value_declaration":
@@ -78,7 +78,7 @@ export class SymbolInformationTranslator {
 
   private static createSymbolInformation(
     name: string,
-    node: SyntaxNode,
+    node: Node,
     symbolKind: SymbolKind,
     uri: string,
   ): SymbolInformation {

@@ -8,7 +8,7 @@ import {
   FileChangeType,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import Parser, { Edit, Point, SyntaxNode } from "web-tree-sitter";
+import Parser, { Edit, Point, Node } from "web-tree-sitter";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import {
   Position,
@@ -28,11 +28,11 @@ export class ASTProvider {
 
   private treeChangeEvent = new Emitter<{
     sourceFile: ISourceFile;
-    declaration?: SyntaxNode;
+    declaration?: Node;
   }>();
   readonly onTreeChange: Event<{
     sourceFile: ISourceFile;
-    declaration?: SyntaxNode;
+    declaration?: Node;
   }> = this.treeChangeEvent.event;
 
   private treeDeleteEvent = new Emitter<{ uri: string }>();
@@ -132,7 +132,7 @@ export class ASTProvider {
       hasContentChanges ? tree : undefined,
     );
 
-    let changedDeclaration: SyntaxNode | undefined;
+    let changedDeclaration: Node | undefined;
 
     tree
       ?.getChangedRanges(newTree)

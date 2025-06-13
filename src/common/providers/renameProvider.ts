@@ -12,7 +12,7 @@ import {
   WorkspaceEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { IProgram } from "../../compiler/program";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { RenameUtils } from "../util/renameUtils";
@@ -126,8 +126,8 @@ export class RenameProvider {
   public static getRenameEdits(
     affectedNodes:
       | {
-          originalNode: SyntaxNode;
-          references: { node: SyntaxNode; uri: string }[];
+          originalNode: Node;
+          references: { node: Node; uri: string }[];
         }
       | undefined,
     newName: string,
@@ -189,9 +189,9 @@ export class RenameProvider {
   private createModuleDeclarationRenameChange(
     affectedNodes:
       | {
-          originalNode: SyntaxNode;
+          originalNode: Node;
           references: {
-            node: SyntaxNode;
+            node: Node;
             uri: string;
           }[];
         }
@@ -223,8 +223,8 @@ export class RenameProvider {
     newName: string,
     affectedNodes:
       | {
-          originalNode: SyntaxNode;
-          references: { node: SyntaxNode; uri: string }[];
+          originalNode: Node;
+          references: { node: Node; uri: string }[];
         }
       | undefined,
   ): string {

@@ -29,10 +29,10 @@
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "1.0.11",
     "vscode-uri": "^3.0.8",
-    "web-tree-sitter": "^0.20.8"
+    "web-tree-sitter": "^0.25.3"
   },
   "devDependencies": {
-    "@elm-tooling/tree-sitter-elm": "^5.7.0",
+    "@elm-tooling/tree-sitter-elm": "^5.8.0",
     "@types/jest": "^29.5.11",
     "@types/node": "^20.10.5",
     "@typescript-eslint/eslint-plugin": "^6.15.0",
@@ -47,7 +47,7 @@
     "jest-diff": "^29.7.0",
     "jest-mock-extended": "^3.0.5",
     "prettier": "^3.1.1",
-    "tree-sitter-cli": "^0.20.8",
+    "tree-sitter-cli": "^0.25.3",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.2",
     "typescript": "5.3.3"
@@ -62,7 +62,7 @@
     "watch": "npm run copy-wasm && tsc -watch -p ./",
     "lint": "eslint -c .eslintrc.js --ext .ts src",
     "lint:fix": "eslint --fix -c .eslintrc.js --ext .ts src",
-    "build-tree-sitter": "tree-sitter build-wasm ./node_modules/@elm-tooling/tree-sitter-elm",
+    "build-tree-sitter": "tree-sitter build --wasm ./node_modules/@elm-tooling/tree-sitter-elm",
     "test": "jest --coverage",
     "generate-toc": "doctoc README.md"
   },

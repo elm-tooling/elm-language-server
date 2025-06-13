@@ -8,7 +8,7 @@ import {
   TextDocumentPositionParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { TreeUtils } from "../util/treeUtils";
 import { ITextDocumentPositionParams } from "./paramsExtensions";
@@ -59,7 +59,7 @@ export class DefinitionProvider {
   };
 
   private createLocationFromDefinition(
-    definitionNode: SyntaxNode | undefined,
+    definitionNode: Node | undefined,
     uri: string,
   ): Location | undefined {
     if (definitionNode) {

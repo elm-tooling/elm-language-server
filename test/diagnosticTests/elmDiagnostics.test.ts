@@ -1,5 +1,5 @@
 import { Utils as UriUtils } from "vscode-uri";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { convertFromCompilerDiagnostic } from "../../src/common/providers";
 import { diagnosticsEquals } from "../../src/common/providers/diagnostics/fileDiagnostics";
 import { TreeUtils } from "../../src/common/util/treeUtils";
@@ -78,7 +78,7 @@ describe("test elm diagnostics", () => {
       }
     });
 
-    let nodeAtPosition: SyntaxNode = undefined!;
+    let nodeAtPosition: Node = undefined!;
 
     if ("range" in result) {
       const rootNode = program.getSourceFile(testUri)!.tree.rootNode;
@@ -1545,11 +1545,11 @@ a =
 --@ Test.elm
 module Test exposing (..)
 
-type alias A appendable = 
+type alias A appendable =
     { a : appendable }
 
 a : A Int
-a = 
+a =
     { a = 0 }
     `;
     await testTypeInference(basicsSources + source3, []);
@@ -1560,10 +1560,10 @@ a =
 --@ Test.elm
 module Test exposing (..)
 
-type alias A appendable = 
+type alias A appendable =
     { a : appendable }
 
-a = 
+a =
     A 0
     --^
 `;
@@ -1575,7 +1575,7 @@ a =
 --@ Test.elm
 module Test exposing (..)
 
-type B appendable = 
+type B appendable =
     With appendable | Without
 
 b : B Int
@@ -1590,7 +1590,7 @@ b = With 0
 --@ Test.elm
 module Test exposing (..)
 
-type B appendable = 
+type B appendable =
     With appendable | Without
 
 b : B Int
@@ -1718,7 +1718,7 @@ oneOrMore parser =
         )
         parser
 
-        
+
 --@ Test.elm
 module Test exposing (..)
 
@@ -1727,7 +1727,7 @@ import Parser.Advanced as Parser exposing ((|.), (|=))
 test : Parser.Parser Never () ()
 test =
     Parser.succeed (\\_ -> ())
-        |= Parser.getOffset  
+        |= Parser.getOffset
 `;
 
     await testTypeInference(

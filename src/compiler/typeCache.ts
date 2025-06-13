@@ -1,4 +1,4 @@
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { MultiMap } from "../common/util/multiMap";
 import { TreeUtils } from "../common/util/treeUtils";
 import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
@@ -15,44 +15,26 @@ type CacheKey =
   | "PROJECT_UNION_VARIANT";
 
 export class TypeCache {
-  private packageTypeAnnotation: SyntaxNodeMap<SyntaxNode, InferenceResult>;
-  private packageTypeAndTypeAlias: SyntaxNodeMap<SyntaxNode, InferenceResult>;
-  private packageValueDeclaration: SyntaxNodeMap<SyntaxNode, InferenceResult>;
-  private packageUnionVariant: SyntaxNodeMap<SyntaxNode, InferenceResult>;
-  private projectTypeAnnotation: SyntaxNodeMap<SyntaxNode, InferenceResult>;
-  private projectTypeAndTypeAlias: SyntaxNodeMap<SyntaxNode, InferenceResult>;
-  private projectValueDeclaration: SyntaxNodeMap<SyntaxNode, InferenceResult>;
-  private projectUnionVariant: SyntaxNodeMap<SyntaxNode, InferenceResult>;
-  private declarationAnnotations: MultiMap<number, SyntaxNode>;
-  private typeUnionVariants: MultiMap<number, SyntaxNode>;
+  private packageTypeAnnotation: SyntaxNodeMap<Node, InferenceResult>;
+  private packageTypeAndTypeAlias: SyntaxNodeMap<Node, InferenceResult>;
+  private packageValueDeclaration: SyntaxNodeMap<Node, InferenceResult>;
+  private packageUnionVariant: SyntaxNodeMap<Node, InferenceResult>;
+  private projectTypeAnnotation: SyntaxNodeMap<Node, InferenceResult>;
+  private projectTypeAndTypeAlias: SyntaxNodeMap<Node, InferenceResult>;
+  private projectValueDeclaration: SyntaxNodeMap<Node, InferenceResult>;
+  private projectUnionVariant: SyntaxNodeMap<Node, InferenceResult>;
+  private declarationAnnotations: MultiMap<number, Node>;
+  private typeUnionVariants: MultiMap<number, Node>;
 
   constructor() {
-    this.packageTypeAnnotation = new SyntaxNodeMap<
-      SyntaxNode,
-      InferenceResult
-    >();
-    this.packageTypeAndTypeAlias = new SyntaxNodeMap<
-      SyntaxNode,
-      InferenceResult
-    >();
-    this.packageValueDeclaration = new SyntaxNodeMap<
-      SyntaxNode,
-      InferenceResult
-    >();
-    this.packageUnionVariant = new SyntaxNodeMap<SyntaxNode, InferenceResult>();
-    this.projectTypeAnnotation = new SyntaxNodeMap<
-      SyntaxNode,
-      InferenceResult
-    >();
-    this.projectTypeAndTypeAlias = new SyntaxNodeMap<
-      SyntaxNode,
-      InferenceResult
-    >();
-    this.projectValueDeclaration = new SyntaxNodeMap<
-      SyntaxNode,
-      InferenceResult
-    >();
-    this.projectUnionVariant = new SyntaxNodeMap<SyntaxNode, InferenceResult>();
+    this.packageTypeAnnotation = new SyntaxNodeMap<Node, InferenceResult>();
+    this.packageTypeAndTypeAlias = new SyntaxNodeMap<Node, InferenceResult>();
+    this.packageValueDeclaration = new SyntaxNodeMap<Node, InferenceResult>();
+    this.packageUnionVariant = new SyntaxNodeMap<Node, InferenceResult>();
+    this.projectTypeAnnotation = new SyntaxNodeMap<Node, InferenceResult>();
+    this.projectTypeAndTypeAlias = new SyntaxNodeMap<Node, InferenceResult>();
+    this.projectValueDeclaration = new SyntaxNodeMap<Node, InferenceResult>();
+    this.projectUnionVariant = new SyntaxNodeMap<Node, InferenceResult>();
 
     this.declarationAnnotations = new MultiMap();
     this.typeUnionVariants = new MultiMap();
@@ -60,7 +42,7 @@ export class TypeCache {
 
   public getOrSet(
     key: CacheKey,
-    node: SyntaxNode,
+    node: Node,
     setter: () => InferenceResult,
   ): InferenceResult {
     switch (key) {
@@ -90,18 +72,18 @@ export class TypeCache {
     this.projectUnionVariant.clear();
   }
 
-  public invalidateValueDeclaration(node: SyntaxNode): void {
+  public invalidateValueDeclaration(node: Node): void {
     this.projectValueDeclaration.delete(node);
     this.declarationAnnotations
       .getAll(node.id)
       ?.forEach((annotation) => this.projectTypeAnnotation.delete(annotation));
   }
 
-  public invalidateTypeAnnotation(node: SyntaxNode): void {
+  public invalidateTypeAnnotation(node: Node): void {
     this.projectTypeAnnotation.delete(node);
   }
 
-  public invalidateTypeOrTypeAlias(node: SyntaxNode): void {
+  public invalidateTypeOrTypeAlias(node: Node): void {
     this.projectTypeAndTypeAlias.delete(node);
     this.typeUnionVariants
       .getAll(node.id)
@@ -114,7 +96,7 @@ export class TypeCache {
    * We associate type annotations with its top level declaration
    * so we can clear its cache when we invalidate that declaration
    */
-  public trackTypeAnnotation(annotation: SyntaxNode): void {
+  public trackTypeAnnotation(annotation: Node): void {
     const declaration =
       annotation.parent?.type === "file"
         ? TreeUtils.getValueDeclaration(annotation)
@@ -129,7 +111,7 @@ export class TypeCache {
     }
   }
 
-  public trackUnionVariant(unionVariant: SyntaxNode): void {
+  public trackUnionVariant(unionVariant: Node): void {
     const typeDeclaration = TreeUtils.findParentOfType(
       "type_declaration",
       unionVariant,

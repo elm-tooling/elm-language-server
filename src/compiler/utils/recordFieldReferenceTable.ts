@@ -1,4 +1,4 @@
-import { SyntaxNode } from "web-tree-sitter";
+import { Node } from "web-tree-sitter";
 import { EFieldType } from "./expressionTree";
 import { SyntaxNodeSet } from "./syntaxNodeSet";
 
@@ -29,7 +29,7 @@ export class RecordFieldReferenceTable {
     return new RecordFieldReferenceTable(fieldRefs);
   }
 
-  public get(field: string): SyntaxNode[] {
+  public get(field: string): Node[] {
     return this.refsByField.get(field)?.toArray() ?? [];
   }
 
