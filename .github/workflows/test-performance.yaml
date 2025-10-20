@@ -29,7 +29,7 @@ jobs:
           # Relative path under $GITHUB_WORKSPACE to place the repository
           path: "ianmackenzie/elm-geometry"
       - name: Setup for ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
       - name: npm ci
