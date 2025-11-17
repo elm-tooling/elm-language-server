@@ -25,10 +25,8 @@ import {
   convertFromCompilerDiagnostic,
   IDiagnostic,
 } from "./diagnosticsProvider";
-import * as path from "path";
 import { SyntaxNodeMap } from "../../../compiler/utils/syntaxNodeMap";
 import {
-  IElmAnalyseJson,
   IElmAnalyseJsonService,
 } from "./elmAnalyseJsonService";
 import { Diagnostics } from "../../../compiler/diagnostics";
