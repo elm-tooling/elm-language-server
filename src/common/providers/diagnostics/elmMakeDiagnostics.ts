@@ -211,7 +211,7 @@ export class ElmMakeDiagnostics {
 
     const projectFiles = allFiles.filter(
       (file) =>
-        !file.isDependency ||
+        !file.isDependency &&
         !this.elmAnalyseJsonService.isFileExcluded(file.uri, workspaceRootPath),
     );
 
