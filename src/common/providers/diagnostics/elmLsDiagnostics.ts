@@ -26,9 +26,7 @@ import {
   IDiagnostic,
 } from "./diagnosticsProvider";
 import { SyntaxNodeMap } from "../../../compiler/utils/syntaxNodeMap";
-import {
-  IElmAnalyseJsonService,
-} from "./elmAnalyseJsonService";
+import { IElmAnalyseJsonService } from "./elmAnalyseJsonService";
 import { Diagnostics } from "../../../compiler/diagnostics";
 import type { ServerCancellationToken } from "../../cancellation";
 
