@@ -114,8 +114,8 @@ export class CodeLensProvider {
                   },
                 )
             : exposed
-              ? Command.create("exposed", "")
-              : Command.create("local", "");
+            ? Command.create("exposed", "")
+            : Command.create("local", "");
 
           break;
         }

@@ -60,9 +60,10 @@ export class ElmAnalyseJsonService implements IElmAnalyseJsonService {
 
     let elmAnalyseJson = {};
     try {
-      elmAnalyseJson = require(
-        path.join(workspacePath, "elm-analyse.json"),
-      ) as IElmAnalyseJson;
+      elmAnalyseJson = require(path.join(
+        workspacePath,
+        "elm-analyse.json",
+      )) as IElmAnalyseJson;
     } catch {
       this.connection.console.info(
         "No elm-analyse.json found, enabling all diagnostic checks.",

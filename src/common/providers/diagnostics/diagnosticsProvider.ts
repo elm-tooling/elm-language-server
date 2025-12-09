@@ -524,8 +524,9 @@ export class DiagnosticsProvider implements Disposable {
   private async getElmMakeDiagnostics(
     sourceFile: ISourceFile,
   ): Promise<boolean> {
-    const elmMakeDiagnostics =
-      await this.elmMakeDiagnostics.createDiagnostics(sourceFile);
+    const elmMakeDiagnostics = await this.elmMakeDiagnostics.createDiagnostics(
+      sourceFile,
+    );
 
     this.resetDiagnostics(elmMakeDiagnostics, DiagnosticKind.ElmMake);
 
