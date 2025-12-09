@@ -25,12 +25,8 @@ import {
   convertFromCompilerDiagnostic,
   IDiagnostic,
 } from "./diagnosticsProvider";
-import * as path from "path";
 import { SyntaxNodeMap } from "../../../compiler/utils/syntaxNodeMap";
-import {
-  IElmAnalyseJson,
-  IElmAnalyseJsonService,
-} from "./elmAnalyseJsonService";
+import { IElmAnalyseJsonService } from "./elmAnalyseJsonService";
 import { Diagnostics } from "../../../compiler/diagnostics";
 import type { ServerCancellationToken } from "../../cancellation";
 
@@ -396,32 +392,6 @@ export class ElmLsDiagnostics {
     );
   }
 
-  private excludedFolder(
-    sourceFile: ISourceFile,
-    program: IProgram,
-    elmAnalyseJson: IElmAnalyseJson,
-  ): boolean {
-    const uri = sourceFile.uri;
-    const rootPath = program.getRootPath().fsPath;
-
-    if (
-      elmAnalyseJson.excludedPaths?.some((excludedPath) => {
-        if (excludedPath.startsWith(rootPath)) {
-          // absolute path
-          return uri.startsWith(URI.file(excludedPath).toString());
-        } else {
-          // relative path
-          return uri.startsWith(
-            URI.file(path.join(rootPath, excludedPath)).toString(),
-          );
-        }
-      })
-    ) {
-      return true;
-    }
-    return false;
-  }
-
   public createDiagnostics = (
     sourceFile: ISourceFile,
     program: IProgram,
@@ -430,7 +400,12 @@ export class ElmLsDiagnostics {
       program.getRootPath().fsPath,
     );
 
-    if (this.excludedFolder(sourceFile, program, elmAnalyseJson)) {
+    if (
+      this.elmAnalyseJsonService.isFileExcluded(
+        sourceFile.uri,
+        program.getRootPath().fsPath,
+      )
+    ) {
       return [];
     }
 
@@ -499,7 +474,12 @@ export class ElmLsDiagnostics {
       program.getRootPath().fsPath,
     );
 
-    if (this.excludedFolder(sourceFile, program, elmAnalyseJson)) {
+    if (
+      this.elmAnalyseJsonService.isFileExcluded(
+        sourceFile.uri,
+        program.getRootPath().fsPath,
+      )
+    ) {
       return [];
     }
 

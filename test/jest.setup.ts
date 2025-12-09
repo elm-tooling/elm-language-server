@@ -29,6 +29,9 @@ container.registerSingleton<IElmAnalyseJsonService>(
     public getElmAnalyseJson(workspacePath: string): IElmAnalyseJson {
       return { checks: { SingleFieldRecord: true } };
     }
+    public isFileExcluded(fileUri: string, workspacePath: string): boolean {
+      return false;
+    }
   },
 );
 container.register(ElmMakeDiagnostics, {

@@ -27,6 +27,7 @@ import { ElmMakeDiagnostics } from "./elmMakeDiagnostics";
 import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics";
 import { ISourceFile } from "../../../compiler/forest";
 import { ElmReviewDiagnostics } from "./elmReviewDiagnostics";
+import { IElmAnalyseJsonService } from "./elmAnalyseJsonService";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -90,6 +91,7 @@ export class DiagnosticsProvider implements Disposable {
   private elmMakeDiagnostics: ElmMakeDiagnostics;
   private elmReviewDiagnostics: ElmReviewDiagnostics;
   private elmLsDiagnostics: ElmLsDiagnostics;
+  private elmAnalyseJsonService: IElmAnalyseJsonService;
   private currentDiagnostics: Map<string, FileDiagnostics>;
   private events: TextDocumentEvents;
   private connection: Connection;
@@ -112,6 +114,9 @@ export class DiagnosticsProvider implements Disposable {
     this.elmMakeDiagnostics = container.resolve(ElmMakeDiagnostics);
     this.elmReviewDiagnostics = container.resolve(ElmReviewDiagnostics);
     this.elmLsDiagnostics = container.resolve(ElmLsDiagnostics);
+    this.elmAnalyseJsonService = container.resolve<IElmAnalyseJsonService>(
+      "ElmAnalyseJsonService",
+    );
     this.documentEvents = container.resolve(TextDocumentEvents);
 
     this.connection = container.resolve("Connection");
@@ -442,6 +447,21 @@ export class DiagnosticsProvider implements Disposable {
             const sourceFile = program.getSourceFile(uri);
 
             if (!sourceFile) {
+              goNext();
+              return;
+            }
+
+            if (
+              this.elmAnalyseJsonService.isFileExcluded(
+                sourceFile.uri,
+                program.getRootPath().fsPath,
+              )
+            ) {
+              this.updateDiagnostics(uri, DiagnosticKind.ElmMake, []);
+              this.updateDiagnostics(uri, DiagnosticKind.Syntactic, []);
+              this.updateDiagnostics(uri, DiagnosticKind.Semantic, []);
+              this.updateDiagnostics(uri, DiagnosticKind.Suggestion, []);
+              this.updateDiagnostics(uri, DiagnosticKind.ElmLS, []);
               goNext();
               return;
             }

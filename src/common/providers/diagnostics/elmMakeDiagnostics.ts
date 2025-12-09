@@ -17,6 +17,7 @@ import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
 import { IProgram } from "../../../compiler/program";
 import { IFileSystemHost } from "../../types";
 import type { ExecaReturnValue } from "execa";
+import { IElmAnalyseJsonService } from "./elmAnalyseJsonService";
 
 const ELM_MAKE = "Elm";
 export const NAMING_ERROR = "NAMING ERROR";
@@ -61,11 +62,15 @@ export class ElmMakeDiagnostics {
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
   private settings: Settings;
   private connection: Connection;
+  private elmAnalyseJsonService: IElmAnalyseJsonService;
 
   constructor(private host: IFileSystemHost) {
     this.settings = container.resolve("Settings");
     this.connection = container.resolve<Connection>("Connection");
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
+    this.elmAnalyseJsonService = container.resolve<IElmAnalyseJsonService>(
+      "ElmAnalyseJsonService",
+    );
   }
 
   public canRun = (sourceFile: ISourceFile): boolean => {
@@ -204,7 +209,11 @@ export class ElmMakeDiagnostics {
       ? forestFiles
       : forestFiles.concat(sourceFile);
 
-    const projectFiles = allFiles.filter((file) => !file.isDependency);
+    const projectFiles = allFiles.filter(
+      (file) =>
+        !file.isDependency &&
+        !this.elmAnalyseJsonService.isFileExcluded(file.uri, workspaceRootPath),
+    );
 
     const testFilesForSure = projectFiles.filter((file) => file.isTestFile);
     const otherFiles = projectFiles.filter((file) => !file.isTestFile);

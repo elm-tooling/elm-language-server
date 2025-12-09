@@ -1,6 +1,7 @@
 import path from "path";
 import { container, injectable } from "tsyringe";
 import { Connection } from "vscode-languageserver";
+import { URI } from "vscode-uri";
 
 export interface IElmAnalyseJson {
   checks?: {
@@ -40,6 +41,7 @@ export interface IElmAnalyseJson {
 
 export interface IElmAnalyseJsonService {
   getElmAnalyseJson(workspacePath: string): IElmAnalyseJson;
+  isFileExcluded(fileUri: string, workspacePath: string): boolean;
 }
 
 @injectable()
@@ -71,5 +73,25 @@ export class ElmAnalyseJsonService implements IElmAnalyseJsonService {
 
     this.elmAnalyseJson.set(workspacePath, elmAnalyseJson);
     return elmAnalyseJson;
+  }
+
+  public isFileExcluded(fileUri: string, workspacePath: string): boolean {
+    const elmAnalyseJson = this.getElmAnalyseJson(workspacePath);
+
+    if (!elmAnalyseJson.excludedPaths) {
+      return false;
+    }
+
+    return elmAnalyseJson.excludedPaths.some((excludedPath) => {
+      if (excludedPath.startsWith(workspacePath)) {
+        // absolute path
+        return fileUri.startsWith(URI.file(excludedPath).toString());
+      } else {
+        // relative path
+        return fileUri.startsWith(
+          URI.file(path.join(workspacePath, excludedPath)).toString(),
+        );
+      }
+    });
   }
 }
