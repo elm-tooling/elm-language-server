@@ -566,9 +566,9 @@ export function createTypeChecker(program: IProgram): TypeChecker {
             isTypeUsage
               ? symbol.type === "Type" || symbol.type === "TypeAlias"
               : isConstructorUsage
-                ? symbol.type === "UnionConstructor" ||
-                  (symbol.type === "TypeAlias" && symbol.constructors?.length)
-                : symbol.type === "UnionConstructor",
+              ? symbol.type === "UnionConstructor" ||
+                (symbol.type === "TypeAlias" && symbol.constructors?.length)
+              : symbol.type === "UnionConstructor",
           ) ?? [];
 
       if (localSymbols.length > 0) {
@@ -675,14 +675,13 @@ export function createTypeChecker(program: IProgram): TypeChecker {
         nodeAtPosition,
         (node) => node.parent ?? undefined,
       )
-        .map(
-          (node) =>
-            sourceFile.symbolLinks
-              ?.get(node)
-              ?.get(
-                nodeAtPositionText,
-                (s) => s.node.type !== "infix_declaration",
-              ),
+        .map((node) =>
+          sourceFile.symbolLinks
+            ?.get(node)
+            ?.get(
+              nodeAtPositionText,
+              (s) => s.node.type !== "infix_declaration",
+            ),
         )
         .find(Utils.notUndefined);
 
