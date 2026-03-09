@@ -61,7 +61,8 @@ function getEdits(params: ICodeActionParams, range: Range): TextEdit[] {
     // If the branch is prefixed like this Foo.Bar.Biz ->
     // We need to prefix the other branches with the same prefix (Foo.Bar.) for it to compile
     const prefix = branches[0]
-      .descendantsOfType("upper_case_identifier")
+      .childForFieldName("pattern")
+      ?.descendantsOfType("upper_case_identifier")
       .slice(0, -1) // Don't take the last one since that's the variant
       .map((x) => x.text)
       .join(".");

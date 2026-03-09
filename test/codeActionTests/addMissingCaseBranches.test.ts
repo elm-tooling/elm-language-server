@@ -129,7 +129,7 @@ func a =
     );
   });
 
-  it("should prefix branch variant if needed", async () => {
+  it("should prefix branch variant if other branches are prefixed", async () => {
     const source = `
 --@ Foo.elm
 module Foo exposing (..)
@@ -175,6 +175,144 @@ test response =
             Debug.todo "branch 'Foo.Biz' not implemented"
 
     `;
+
+    await testCodeAction(
+      source,
+      [{ title: "Add missing case branches" }],
+      expectedSource,
+    );
+  });
+
+  it("should prefix case if other cases are prefixed 2", async () => {
+    const source = `
+--@ Foo.elm
+module Foo exposing (..)
+
+type Foo
+    = Bar
+    | Biz
+
+--@ Test.elm
+module Test exposing (..)
+
+import Foo
+
+test : Foo -> Html.Html msg
+test response =
+    case response of
+    --^
+        Foo.Bar ->
+            Html.text "x"
+`;
+
+    const expectedSource = `
+--@ Foo.elm
+module Foo exposing (..)
+
+type Foo
+    = Bar
+    | Biz
+
+--@ Test.elm
+module Test exposing (..)
+
+import Foo
+
+test : Foo -> Html.Html msg
+test response =
+    case response of
+        Foo.Bar ->
+            Html.text "x"
+
+        Foo.Biz ->
+            Debug.todo "branch 'Foo.Biz' not implemented"
+`;
+
+    await testCodeAction(
+      source,
+      [{ title: "Add missing case branches" }],
+      expectedSource,
+    );
+  });
+
+  it("should not prefix case if other cases are not prefixed", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type Foo
+    = Bar
+    | Biz
+
+test : Foo -> ()
+test response =
+    case response of
+    --^
+        Bar ->
+            ()
+
+    `;
+
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (..)
+
+type Foo
+    = Bar
+    | Biz
+
+test : Foo -> ()
+test response =
+    case response of
+        Bar ->
+            ()
+
+        Biz ->
+            Debug.todo "branch 'Biz' not implemented"
+
+    `;
+
+    await testCodeAction(
+      source,
+      [{ title: "Add missing case branches" }],
+      expectedSource,
+    );
+  });
+
+  it("should not prefix case if other cases are not prefixed 2", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type Foo
+    = Bar
+    | Biz
+
+test : Foo -> Html.Html msg
+test response =
+    case response of
+    --^
+        Bar ->
+            Html.text "x"
+`;
+
+    const expectedSource = `
+--@ Test.elm
+module Test exposing (..)
+
+type Foo
+    = Bar
+    | Biz
+
+test : Foo -> Html.Html msg
+test response =
+    case response of
+        Bar ->
+            Html.text "x"
+
+        Biz ->
+            Debug.todo "branch 'Biz' not implemented"
+`;
 
     await testCodeAction(
       source,
