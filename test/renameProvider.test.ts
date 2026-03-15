@@ -416,4 +416,129 @@ fooBarList =
     await testRename(source, "baz", expectedResult);
   });
 
+  it("Nested record field rename updates chained field access references", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Foo =
+  { foo : Bar
+  }
+
+
+type alias Bar =
+  { bar : Int }
+  --^
+
+
+getBar : Foo -> Int
+getBar value =
+  value.foo.bar
+
+
+incrementBar : Foo -> Int
+incrementBar value =
+  value.foo.bar + 1
+`;
+
+    const expectedResult = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Foo =
+  { foo : Bar
+  }
+
+
+type alias Bar =
+  { baz : Int }
+
+
+getBar : Foo -> Int
+getBar value =
+  value.foo.baz
+
+
+incrementBar : Foo -> Int
+incrementBar value =
+  value.foo.baz + 1
+`;
+
+    const renameRange = Range.create(
+      Position.create(8, 4),
+      Position.create(8, 7),
+    );
+
+    await testPrepareRename(source, renameRange);
+    await testRename(source, "baz", expectedResult);
+  });
+
+  it("Nested record field rename updates destructured references", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Foo =
+  { foo : Bar
+  }
+
+
+type alias Bar =
+  { bar : Int }
+  --^
+
+
+destructureBar : Foo -> Int
+destructureBar { foo } =
+  let
+    { bar } = foo
+  in
+  bar
+
+
+destructureBarAgain : Foo -> Int
+destructureBarAgain { foo } =
+  let
+    { bar } = foo
+  in
+  bar + 1
+`;
+
+    const expectedResult = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Foo =
+  { foo : Bar
+  }
+
+
+type alias Bar =
+  { baz : Int }
+
+
+destructureBar : Foo -> Int
+destructureBar { foo } =
+  let
+    { baz } = foo
+  in
+  baz
+
+
+destructureBarAgain : Foo -> Int
+destructureBarAgain { foo } =
+  let
+    { baz } = foo
+  in
+  baz + 1
+`;
+
+    const renameRange = Range.create(
+      Position.create(8, 4),
+      Position.create(8, 7),
+    );
+
+    await testPrepareRename(source, renameRange);
+    await testRename(source, "baz", expectedResult);
+  });
 });
