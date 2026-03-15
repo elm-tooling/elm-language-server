@@ -182,6 +182,7 @@ destructure { foo } =
 
     in
     field
+    --X
 `;
     await testBase.testReferences(source);
   });
