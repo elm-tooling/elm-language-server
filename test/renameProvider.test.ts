@@ -104,9 +104,11 @@ describe("renameProvider", () => {
 
     Object.entries(result.sources).forEach(([uri, source]) => {
       expect(
-        applyEditsToSource(
-          stripCommentLines(source),
-          renameEdit.changes![Utils.joinPath(srcUri, uri).toString()] ?? [],
+        stripCommentLines(
+          applyEditsToSource(
+            source,
+            renameEdit.changes![Utils.joinPath(srcUri, uri).toString()] ?? [],
+          ),
         ),
       ).toEqual(expectedSources[uri]);
     });
