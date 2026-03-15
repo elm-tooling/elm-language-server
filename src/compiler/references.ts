@@ -1,6 +1,6 @@
 import { IProgram } from "./program";
 import { ISourceFile } from "./forest";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { SyntaxNode } from "web-tree-sitter";
 import { TreeUtils } from "../common/util/treeUtils";
 import { Utils } from "../common/util/utils";
 import { Imports } from "./imports";
@@ -809,8 +809,11 @@ export class References {
     return TreeUtils.descendantsOfType(node, "record_base_identifier");
   }
 
-  private static findFieldUsages(tree: Tree, fieldName: string): SyntaxNode[] {
-    return tree.rootNode
+  private static findFieldUsages(
+    sourceFile: ISourceFile,
+    fieldName: string,
+  ): SyntaxNode[] {
+    return sourceFile.tree.rootNode
       .descendantsOfType([
         "field",
         "field_accessor_function_expr",
@@ -825,13 +828,22 @@ export class References {
           );
 
           if (lowerPattern) {
-            const declaration = TreeUtils.findParentOfType(
-              "value_declaration",
-              lowerPattern,
-            );
+            let scope: SyntaxNode | undefined = lowerPattern;
+            while (scope) {
+              const scopeSymbols = sourceFile.symbolLinks?.get(scope);
+              if (
+                scopeSymbols
+                  ?.getAll(fieldName)
+                  ?.some((symbol) => symbol.node.id === lowerPattern.id)
+              ) {
+                break;
+              }
+
+              scope = scope.parent ?? undefined;
+            }
 
             const patternRefs =
-              declaration
+              scope
                 ?.descendantsOfType("value_qid")
                 .filter((ref) => ref.text === fieldName) ?? [];
 
@@ -856,7 +868,7 @@ export class References {
   ): { node: SyntaxNode; uri: string }[] {
     const references: { node: SyntaxNode; uri: string }[] = [];
 
-    const fieldUsages = References.findFieldUsages(sourceFile.tree, fieldName);
+    const fieldUsages = References.findFieldUsages(sourceFile, fieldName);
 
     fieldUsages.forEach((field) => {
       const fieldDef = program
