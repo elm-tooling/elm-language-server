@@ -364,4 +364,56 @@ foo =
     await testPrepareRename(source, renameRange);
     await testRename(source, "NotOkay", expectedResult);
   });
+
+  it("Nested record field rename doesn't update all list elements", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Foo =
+    { foo : Bar
+    }
+
+
+type alias Bar =
+    { bar : Int }
+    --^
+
+
+fooBarList : List Foo
+fooBarList =
+    [ { foo = { bar = 0 } }
+    , { foo = { bar = 1 } }
+    ]
+`;
+
+    const expectedResult = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Foo =
+    { foo : Bar
+    }
+
+
+type alias Bar =
+    { baz : Int }
+
+
+fooBarList : List Foo
+fooBarList =
+    [ { foo = { baz = 0 } }
+    , { foo = { baz = 1 } }
+    ]
+`;
+
+    const renameRange = Range.create(
+      Position.create(8, 6),
+      Position.create(8, 9),
+    );
+
+    await testPrepareRename(source, renameRange);
+    await testRename(source, "baz", expectedResult);
+  });
+
 });
