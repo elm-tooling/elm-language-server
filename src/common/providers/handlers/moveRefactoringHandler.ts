@@ -65,8 +65,9 @@ export class MoveRefactoringHandler {
     }
 
     const tree = params.program.getSourceFile(params.sourceUri)?.tree;
-    const destinationTree = params.program.getSourceFile(params.destination.uri)
-      ?.tree;
+    const destinationTree = params.program.getSourceFile(
+      params.destination.uri,
+    )?.tree;
 
     if (tree && destinationTree) {
       const nodeAtPosition = TreeUtils.getNamedDescendantForPosition(
@@ -84,21 +85,21 @@ export class MoveRefactoringHandler {
           ? nodeAtPosition.parent?.parent?.previousNamedSibling
           : undefined
         : isTypeNode
-          ? nodeAtPosition.parent
-          : undefined;
+        ? nodeAtPosition.parent
+        : undefined;
 
       const declarationNode = isDeclarationNode
         ? nodeAtPosition.parent?.parent
         : isTypeNode
-          ? nodeAtPosition.parent?.nextNamedSibling
-          : undefined;
+        ? nodeAtPosition.parent?.nextNamedSibling
+        : undefined;
 
       const commentNode =
         typeNode?.previousNamedSibling?.type === "block_comment"
           ? typeNode.previousNamedSibling
           : declarationNode?.previousNamedSibling?.type === "block_comment"
-            ? declarationNode.previousNamedSibling
-            : undefined;
+          ? declarationNode.previousNamedSibling
+          : undefined;
 
       const functionName = nodeAtPosition.text;
 
