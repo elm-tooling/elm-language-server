@@ -29,6 +29,11 @@ export type NodeType =
 const functionNameRegex = new RegExp("[a-zA-Z0-9_]+");
 
 export class TreeUtils {
+  private static lineStartsCache = new WeakMap<
+    SyntaxNode,
+    { text: string; lineStarts: number[] }
+  >();
+
   public static getModuleNameNode(tree: Tree): SyntaxNode | undefined {
     const moduleDeclaration: SyntaxNode | undefined =
       this.findModuleDeclaration(tree);
@@ -580,9 +585,11 @@ export class TreeUtils {
   ): SyntaxNode {
     const previousCharColumn =
       position.character === 0 ? 0 : position.character - 1;
-    const charBeforeCursor = node.text
-      .split("\n")
-      [position.line].substring(previousCharColumn, position.character);
+    const charBeforeCursor = this.getTextAtPosition(
+      node,
+      position,
+      previousCharColumn,
+    );
 
     if (!functionNameRegex.test(charBeforeCursor)) {
       return node.namedDescendantForPosition({
@@ -609,9 +616,11 @@ export class TreeUtils {
   ): SyntaxNode {
     const previousCharColumn =
       position.character === 0 ? 0 : position.character - 1;
-    const charBeforeCursor = node.text
-      .split("\n")
-      [position.line].substring(previousCharColumn, position.character);
+    const charBeforeCursor = this.getTextAtPosition(
+      node,
+      position,
+      previousCharColumn,
+    );
 
     if (!functionNameRegex.test(charBeforeCursor)) {
       return node.descendantForPosition({
@@ -630,6 +639,42 @@ export class TreeUtils {
         },
       );
     }
+  }
+
+  private static getTextAtPosition(
+    node: SyntaxNode,
+    position: Position,
+    startCharacter: number,
+  ): string {
+    const lineStart = this.getLineStarts(node)[position.line];
+
+    if (lineStart === undefined) {
+      return "";
+    }
+
+    return node.text.substring(
+      lineStart + startCharacter,
+      lineStart + position.character,
+    );
+  }
+
+  private static getLineStarts(node: SyntaxNode): number[] {
+    const cached = this.lineStartsCache.get(node);
+
+    if (cached?.text === node.text) {
+      return cached.lineStarts;
+    }
+
+    const lineStarts = [0];
+    for (let i = 0; i < node.text.length; i++) {
+      if (node.text.charCodeAt(i) === 10) {
+        lineStarts.push(i + 1);
+      }
+    }
+
+    this.lineStartsCache.set(node, { text: node.text, lineStarts });
+
+    return lineStarts;
   }
 
   public static getNamedDescendantForRange(
