@@ -93,7 +93,8 @@ export class ElmReviewDiagnostics {
 
   public canRun(sourceFile: ISourceFile): boolean {
     return (
-      URI.parse(sourceFile.uri).scheme === "file" && !!this.host.execCmdSync
+      URI.parse(sourceFile.uri).scheme === "file" &&
+      (!!this.host.execCmd || !!this.host.execCmdSync)
     );
   }
 
@@ -134,20 +135,26 @@ export class ElmReviewDiagnostics {
     if (settings.elmFormatPath.trim().length > 0) {
       cmdArguments.push("--elm-format-path", settings.elmFormatPath);
     }
-    const options = {
-      cmdArguments: cmdArguments,
-      notFoundText:
-        "'elm-review' is not available. Install elm-review via 'npm install -g elm-review'.",
-    };
+    const notFoundText =
+      "'elm-review' is not available. Install elm-review via 'npm install -g elm-review'.";
 
     try {
       // Do nothing on success, but return that there were no errors
-      this.host.execCmdSync?.(
-        elmReviewCommand,
-        "elm-review",
-        options,
-        workspaceRootPath.fsPath,
-      );
+      if (this.host.execCmd) {
+        await this.host.execCmd(
+          [elmReviewCommand, cmdArguments],
+          [["elm-review", cmdArguments]],
+          { notFoundText },
+          workspaceRootPath.fsPath,
+        );
+      } else {
+        this.host.execCmdSync?.(
+          elmReviewCommand,
+          "elm-review",
+          { cmdArguments, notFoundText },
+          workspaceRootPath.fsPath,
+        );
+      }
       return fileErrors;
     } catch (error) {
       if (typeof error === "string") {
