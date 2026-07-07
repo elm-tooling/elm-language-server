@@ -11,7 +11,7 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver";
-import { URI } from "vscode-uri";
+import { URI, Utils } from "vscode-uri";
 import { SyntaxNode } from "web-tree-sitter";
 import { IProgram } from "../../compiler/program";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
@@ -252,8 +252,9 @@ export class RenameProvider {
       return;
     }
 
-    const newUri = `${sourceDir}/${moduleName.replace(/\./g, "/")}.elm`;
+    const modulePath = moduleName.split(".");
+    const fileName = `${modulePath.pop() ?? moduleName}.elm`;
 
-    return URI.file(newUri);
+    return Utils.joinPath(URI.parse(sourceDir), ...modulePath, fileName);
   }
 }
