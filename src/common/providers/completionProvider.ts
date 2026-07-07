@@ -803,7 +803,7 @@ export class CompletionProvider {
       if (recordType.baseType?.nodeType === "Record") {
         for (const field in recordType.baseType.fields) {
           const hint = HintHelper.createHintForTypeAliasReference(
-            checker.typeToString(recordType.fields[field]),
+            checker.typeToString(recordType.baseType.fields[field]),
             field,
             recordType.alias?.name ?? "",
           );
