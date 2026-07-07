@@ -174,6 +174,7 @@ export class FileEventsHandler {
 
   private onWillDeleteFile({ uri, program }: IDeleteFileParams): void {
     program.getForest().removeTree(uri);
+    program.markAsDirty();
   }
 
   private getModuleNameFromFile(
