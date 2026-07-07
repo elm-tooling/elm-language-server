@@ -20,6 +20,7 @@ import { TreeUtils } from "../util/treeUtils";
 import { ISourceFile } from "../../compiler/forest";
 import { FileChangeParams, IFileChangeParams } from "./paramsExtensions";
 import { Utils } from "../util/utils";
+import { IFileSystemHost } from "../types";
 
 export class ASTProvider {
   private connection: Connection;
@@ -40,7 +41,7 @@ export class ASTProvider {
 
   private pendingRenames = new Map<string, string>();
 
-  constructor() {
+  constructor(private host: IFileSystemHost) {
     this.parser = container.resolve("Parser");
     this.connection = container.resolve("Connection");
     this.documentEvents = container.resolve(TextDocumentEvents);
@@ -88,7 +89,9 @@ export class ASTProvider {
     this.pendingRenames.set(oldUri, newUri);
   }
 
-  protected handleChangeTextDocument = (params: IFileChangeParams): void => {
+  protected handleChangeTextDocument = async (
+    params: IFileChangeParams,
+  ): Promise<void> => {
     this.connection.console.info(
       `Changed text document, going to parse it. ${params.uri}`,
     );
@@ -97,7 +100,11 @@ export class ASTProvider {
     // Source file could be undefined here
     const sourceFile = <ISourceFile | undefined>params.sourceFile;
 
-    const newText = this.documentEvents.get(params.uri)?.getText() ?? "";
+    const newText = await this.getText(params.uri);
+
+    if (newText === undefined) {
+      return;
+    }
 
     if (
       sourceFile &&
@@ -213,6 +220,20 @@ export class ASTProvider {
       });
     }
   };
+
+  private async getText(uri: string): Promise<string | undefined> {
+    const documentText = this.documentEvents.get(uri)?.getText();
+
+    if (documentText !== undefined) {
+      return documentText;
+    }
+
+    try {
+      return await this.host.readFile(URI.parse(uri));
+    } catch {
+      this.connection.console.warn(`Unable to read changed file ${uri}`);
+    }
+  }
 
   private applyChangesToTree(
     tree: Parser.Tree,

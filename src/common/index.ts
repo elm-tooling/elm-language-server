@@ -90,7 +90,7 @@ export function startCommonServer(
       }
 
       container.register(ASTProvider, {
-        useValue: new ASTProvider(),
+        useValue: new ASTProvider(fileSystemHost),
       });
 
       return server.capabilities;
