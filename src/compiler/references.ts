@@ -429,6 +429,8 @@ export class References {
 
           case "Module":
             if (moduleNameNode) {
+              const modulePrefix = `${moduleNameNode.text}.`;
+
               if (definitionSourceFile.writeable) {
                 references.push({
                   node: moduleNameNode,
@@ -461,10 +463,14 @@ export class References {
                   sourceFileToCheck.tree.rootNode
                     .descendantsOfType("value_expr")
                     .forEach((valueNode) => {
+                      const firstValueChar = valueNode.text.charAt(
+                        modulePrefix.length,
+                      );
+
                       if (
-                        RegExp(`${moduleNameNode.text}.[a-z].*`).exec(
-                          valueNode.text,
-                        )
+                        valueNode.text.startsWith(modulePrefix) &&
+                        firstValueChar >= "a" &&
+                        firstValueChar <= "z"
                       ) {
                         references.push({ node: valueNode, uri });
                       }
