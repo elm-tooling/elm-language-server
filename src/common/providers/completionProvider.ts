@@ -1071,6 +1071,9 @@ export class CompletionProvider {
         possibleImportsCache.set(uri, possibleImports);
       }
 
+      const filterTextLower = filterText.toLowerCase();
+      const filterRegex = new RegExp(escapeStringRegexp(filterTextLower));
+
       // Filter out already imported values
       // Then sort by startsWith filter text, then matches filter text
       return possibleImports
@@ -1086,31 +1089,24 @@ export class CompletionProvider {
           const aValue = a.value.toLowerCase();
           const bValue = b.value.toLowerCase();
 
-          filterText = filterText.toLowerCase();
-
-          const aStartsWith = aValue.startsWith(filterText);
-          const bStartsWith = bValue.startsWith(filterText);
+          const aStartsWith = aValue.startsWith(filterTextLower);
+          const bStartsWith = bValue.startsWith(filterTextLower);
 
           if (aStartsWith && !bStartsWith) {
             return -1;
           } else if (!aStartsWith && bStartsWith) {
             return 1;
           } else {
-            const regex = new RegExp(escapeStringRegexp(filterText));
-            const aMatches = regex.exec(aValue);
-            const bMatches = regex.exec(bValue);
+            const aMatches = filterRegex.exec(aValue);
+            const bMatches = filterRegex.exec(bValue);
 
             if (aMatches && !bMatches) {
               return -1;
             } else if (!aMatches && bMatches) {
               return 1;
             } else {
-              const aModuleImported = !!checker
-                .getAllImports(sourceFile)
-                .getModule(a.module);
-              const bModuleImported = !!checker
-                .getAllImports(sourceFile)
-                .getModule(b.module);
+              const aModuleImported = !!allImportedValues.getModule(a.module);
+              const bModuleImported = !!allImportedValues.getModule(b.module);
 
               if (aModuleImported && !bModuleImported) {
                 return -1;
