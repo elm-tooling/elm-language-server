@@ -313,7 +313,8 @@ export class ASTProvider {
   private addPositions(pos1: Position, pos2: Position): Position {
     return {
       line: pos1.line + pos2.line,
-      character: pos1.character + pos2.character,
+      character:
+        pos2.line === 0 ? pos1.character + pos2.character : pos2.character,
     };
   }
 
