@@ -9,6 +9,7 @@ import {
   IElmAnalyseJson,
 } from "../src/common/providers/diagnostics/elmAnalyseJsonService";
 import {
+  ASTProvider,
   ElmMakeDiagnostics,
   ElmReviewDiagnostics,
 } from "../src/common/providers";
@@ -21,6 +22,12 @@ container.register("Settings", {
 });
 container.register("ClientSettings", {
   useValue: {},
+});
+container.register(ASTProvider, {
+  useValue: mockDeep<ASTProvider>({
+    onTreeChange: () => ({ dispose: () => {} }),
+    onTreeDelete: () => ({ dispose: () => {} }),
+  }),
 });
 container.registerSingleton("DocumentEvents", DocumentEvents);
 container.registerSingleton<IElmAnalyseJsonService>(
