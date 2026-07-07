@@ -78,6 +78,7 @@ export class ASTProvider {
           ).handle((params) => {
             const forest = params.program.getForest(false);
             forest.removeTree(params.uri);
+            params.program.markAsDirty();
             this.treeDeleteEvent.fire({ uri: params.uri });
           })(change);
         }

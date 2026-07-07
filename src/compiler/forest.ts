@@ -86,6 +86,11 @@ export class Forest implements IForest {
     project: ElmProject = this.rootProject,
     maintainerAndPackageName?: string,
   ): ISourceFile {
+    const existingSourceFile = this.sourceFiles.get(uri);
+    if (existingSourceFile) {
+      this.removeUriFromModuleMaps(existingSourceFile);
+    }
+
     // Kernel sources do not have trees
     if (tree) {
       tree.uri = uri;
@@ -109,7 +114,12 @@ export class Forest implements IForest {
   }
 
   public removeTree(uri: string): void {
-    this.sourceFiles.delete(uri);
+    const sourceFile = this.sourceFiles.get(uri);
+
+    if (sourceFile) {
+      this.removeUriFromModuleMaps(sourceFile);
+      this.sourceFiles.delete(uri);
+    }
   }
 
   public synchronize(): void {
@@ -197,5 +207,25 @@ export class Forest implements IForest {
     return sourceFile.isTestFile
       ? sourceFile.project.testModuleToUriMap
       : sourceFile.project.moduleToUriMap;
+  }
+
+  private removeUriFromModuleMaps(sourceFile: ISourceFile): void {
+    let removed = false;
+
+    const removeFromMap = (moduleMap: Map<string, string>): void => {
+      moduleMap.forEach((mappedUri, moduleName) => {
+        if (mappedUri === sourceFile.uri) {
+          moduleMap.delete(moduleName);
+          removed = true;
+        }
+      });
+    };
+
+    removeFromMap(sourceFile.project.moduleToUriMap);
+    removeFromMap(sourceFile.project.testModuleToUriMap);
+
+    if (removed) {
+      this.invalidateResolvedModules();
+    }
   }
 }
