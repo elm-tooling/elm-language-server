@@ -1250,9 +1250,6 @@ export class InferenceScope {
     for (const part of e.parts) {
       if (part.nodeType === "Operator") {
         const [type, precedence] = this.inferOperatorAndPrecedence(part);
-        if (type.nodeType !== "Function" || type.params.length < 2) {
-          throw new Error("Could not find operator function");
-        }
 
         if (
           precedence.associativity === "NON" &&
@@ -1263,7 +1260,9 @@ export class InferenceScope {
         }
 
         operatorPrecedences.set(part, precedence);
-        operatorTypes.set(part, type);
+        if (type.nodeType === "Function" && type.params.length >= 2) {
+          operatorTypes.set(part, type);
+        }
 
         lastPrecedence = precedence;
       }
@@ -1285,7 +1284,7 @@ export class InferenceScope {
           const func = operatorTypes.get(binaryTree.operator);
 
           if (!func) {
-            throw new Error("Missing function type for operator");
+            return { start: left.start, end: right.end, type: TUnknown };
           }
 
           const leftAssignable = this.isAssignable(
@@ -2259,11 +2258,33 @@ export class InferenceScope {
         );
       }
 
-      type1.fieldReferences.addAll(type2.fieldReferences);
-      type2.fieldReferences.addAll(type1.fieldReferences);
+      const sharedFieldReferences = this.mergeRecordFieldReferences(
+        type1.fieldReferences,
+        type2.fieldReferences,
+      );
+
+      type1.fieldReferences = sharedFieldReferences;
+      type2.fieldReferences = sharedFieldReferences;
+
+      const sharedAlias = type1.alias ?? type2.alias;
+      type1.alias = type2.alias = sharedAlias;
     }
 
     return result;
+  }
+
+  private mergeRecordFieldReferences(
+    type1FieldReferences: RecordFieldReferenceTable,
+    type2FieldReferences: RecordFieldReferenceTable,
+  ): RecordFieldReferenceTable {
+    // Unified records must keep one shared table instance so later field
+    // references remain visible through every equivalent record value.
+    if (type1FieldReferences.frozen) {
+      return type1FieldReferences.plus(type2FieldReferences);
+    }
+
+    type1FieldReferences.addAll(type2FieldReferences);
+    return type1FieldReferences;
   }
 
   private calculateRecordDiff(
