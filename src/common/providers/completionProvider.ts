@@ -31,10 +31,7 @@ import { ICompletionParams } from "./paramsExtensions";
 import { Utils } from "../util/utils";
 
 export type CompletionResult =
-  | CompletionItem[]
-  | CompletionList
-  | null
-  | undefined;
+  CompletionItem[] | CompletionList | null | undefined;
 
 interface ICompletionOptions {
   label: string;
@@ -461,7 +458,7 @@ export class CompletionProvider {
         return this.createModuleCompletion({
           label:
             (targetModule
-              ? moduleName?.slice(targetModule.length + 1) ?? moduleName
+              ? (moduleName?.slice(targetModule.length + 1) ?? moduleName)
               : moduleName) ?? "",
           sortPrefix: "b",
           range,

@@ -153,7 +153,7 @@ function getValueToImport(
   possibleImport: IPossibleImport,
 ): string | undefined {
   return valueNode.type !== "upper_case_qid" && valueNode.type !== "value_qid"
-    ? possibleImport.valueToImport ?? possibleImport.value
+    ? (possibleImport.valueToImport ?? possibleImport.value)
     : undefined;
 }
 

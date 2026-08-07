@@ -60,7 +60,7 @@ export class BinaryExprTree {
       const rightPrecedence =
         funcPrecedence?.associativity === "RIGHT"
           ? funcPrecedence.precedence - 1
-          : funcPrecedence?.precedence ?? BinaryExprTree.DEFAULT_PRECEDENCE;
+          : (funcPrecedence?.precedence ?? BinaryExprTree.DEFAULT_PRECEDENCE);
 
       const result = BinaryExprTree.parseExpression(
         expression,

@@ -896,11 +896,10 @@ export class ElmLsDiagnostics {
 
     const listConcats = this.unnecessaryListConcatQuery
       .matches(tree.rootNode)
-      .filter(
-        (match) =>
-          match.captures[2].node?.namedChildren.every(
-            (c) => c.type === "list_expr",
-          ),
+      .filter((match) =>
+        match.captures[2].node?.namedChildren.every(
+          (c) => c.type === "list_expr",
+        ),
       )
       .map((match) => match.captures[0].node)
       .filter(Utils.notUndefinedOrNull);

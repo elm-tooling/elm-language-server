@@ -14,10 +14,7 @@ import { ThrottledCancellationToken } from "../cancellation";
 import { IDocumentSymbolParams } from "./paramsExtensions";
 
 type DocumentSymbolResult =
-  | SymbolInformation[]
-  | DocumentSymbol[]
-  | null
-  | undefined;
+  SymbolInformation[] | DocumentSymbol[] | null | undefined;
 
 export class DocumentSymbolProvider {
   private connection: Connection;

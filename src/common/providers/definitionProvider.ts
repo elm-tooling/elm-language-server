@@ -14,11 +14,7 @@ import { TreeUtils } from "../util/treeUtils";
 import { ITextDocumentPositionParams } from "./paramsExtensions";
 
 export type DefinitionResult =
-  | Location
-  | Location[]
-  | LocationLink[]
-  | null
-  | undefined;
+  Location | Location[] | LocationLink[] | null | undefined;
 
 export class DefinitionProvider {
   private connection: Connection;
