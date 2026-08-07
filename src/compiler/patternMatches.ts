@@ -416,12 +416,12 @@ export class PatternMatches {
           .findDefinition(ctor, this.sourceFile);
 
         const unionVariants = definition.symbol
-          ? TreeUtils.findParentOfType(
+          ? (TreeUtils.findParentOfType(
               "type_declaration",
               definition.symbol.node,
             )
               ?.namedChildren.filter((n) => n.type === "union_variant")
-              .map(nodeToCanCtor) ?? []
+              .map(nodeToCanCtor) ?? [])
           : [];
 
         const numAlts = unionVariants.length;

@@ -190,9 +190,9 @@ export class ASTProvider {
       // Reuse old source file for most cases
       const isTestFile = params.sourceFile
         ? params.sourceFile.isTestFile
-        : params.program
+        : (params.program
             .getSourceDirectoryOfFile(params.uri)
-            ?.endsWith("tests") ?? false;
+            ?.endsWith("tests") ?? false);
 
       const isDependency = params.sourceFile
         ? params.sourceFile.isDependency
