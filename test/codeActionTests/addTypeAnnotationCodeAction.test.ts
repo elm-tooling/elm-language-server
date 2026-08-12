@@ -35,5 +35,5 @@ hello =
       [{ title: "Add inferred annotation" }],
       expectedSource,
     );
-  })
-})
+  });
+});

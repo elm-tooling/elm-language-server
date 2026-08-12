@@ -65,7 +65,7 @@ class FileBasedToken implements CancellationToken {
     try {
       fs.statSync(this._cancellationFilePath);
       return true;
-    } catch (e) {
+    } catch {
       return false;
     }
   }

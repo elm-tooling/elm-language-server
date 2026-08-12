@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { ISourceFile } from "../../../compiler/forest";
 import { container } from "tsyringe";
 import {

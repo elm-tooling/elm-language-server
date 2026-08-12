@@ -591,11 +591,8 @@ export class CompletionProvider {
       }
 
       if (element.fromModule.maintainerAndPackageName) {
-        const matchedRanking: string = (
-          RANKING_LIST as {
-            [index: string]: string;
-          }
-        )[element.fromModule.maintainerAndPackageName];
+        const matchedRanking: string =
+          RANKING_LIST[element.fromModule.maintainerAndPackageName];
 
         if (matchedRanking) {
           sortPrefix = `e${matchedRanking}`;

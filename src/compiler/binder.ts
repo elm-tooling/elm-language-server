@@ -185,7 +185,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
     unionVariants.forEach((variant) => {
       container.set(variant.name, {
         ...variant,
-        type: variant.type as NodeType,
+        type: variant.type,
       });
     });
 

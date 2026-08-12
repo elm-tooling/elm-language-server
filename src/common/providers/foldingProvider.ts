@@ -39,7 +39,6 @@ export class FoldingRangeProvider {
     const findLastIdenticalNamedSibling: (node: SyntaxNode) => SyntaxNode = (
       node: SyntaxNode,
     ): SyntaxNode => {
-      // eslint-disable-next-line no-constant-condition
       while (true) {
         const nextSibling = node.nextNamedSibling;
         if (nextSibling?.type === "import_clause") {

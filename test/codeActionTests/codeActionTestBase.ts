@@ -84,6 +84,7 @@ export async function testCodeAction(
   const treeParser = new SourceTreeParser();
   await treeParser.init();
   const codeActionProvider = new MockCodeActionsProvider();
+  codeActionProvider.dispose();
 
   const debug = process.argv.find((arg) => arg === "--debug");
 

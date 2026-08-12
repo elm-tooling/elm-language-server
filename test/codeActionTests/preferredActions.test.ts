@@ -1,35 +1,11 @@
-import { mockDeep } from "jest-mock-extended";
-import { container } from "tsyringe";
 import {
   CodeActionProvider,
   ICodeAction,
   IRefactorCodeAction,
 } from "../../src/common/providers/codeActionProvider";
-import Parser from "web-tree-sitter";
-import { createTestNodeFileSystemHost } from "../utils/sourceTreeParser";
-
-container.register<Parser>("Parser", {
-  useValue: mockDeep<Parser>(
-    {
-      funcPropSupport: true,
-    },
-    {
-      // @ts-ignore
-      getLanguage: () => ({
-        query: () => {
-          //
-        },
-      }),
-    },
-  ),
-});
 
 class MockCodeActionsProvider extends CodeActionProvider {
-  constructor() {
-    super(createTestNodeFileSystemHost());
-  }
-
-  public isPreferredFix(
+  public static isPreferredFix(
     action: ICodeAction | IRefactorCodeAction,
     allActions: (ICodeAction | IRefactorCodeAction)[],
   ): boolean {
@@ -78,17 +54,21 @@ describe("preferred code action tests", () => {
       },
     });
 
-    const mock = new MockCodeActionsProvider();
-
     const allActions: (ICodeAction | IRefactorCodeAction)[] = [
       { title: "Fix 1", data: { fixId: "fix1" } },
       { title: "Fix 2", data: { fixId: "fix2" } },
       { title: "Fix 3", data: { fixId: "fix3" } },
     ];
 
-    expect(mock.isPreferredFix(allActions[0], allActions)).toBe(false);
-    expect(mock.isPreferredFix(allActions[1], allActions)).toBe(true);
-    expect(mock.isPreferredFix(allActions[2], allActions)).toBe(false);
+    expect(
+      MockCodeActionsProvider.isPreferredFix(allActions[0], allActions),
+    ).toBe(false);
+    expect(
+      MockCodeActionsProvider.isPreferredFix(allActions[1], allActions),
+    ).toBe(true);
+    expect(
+      MockCodeActionsProvider.isPreferredFix(allActions[2], allActions),
+    ).toBe(false);
   });
 
   it("highest priority is set to preferred with refactor actions", () => {
@@ -112,15 +92,17 @@ describe("preferred code action tests", () => {
       getEditsForAction: () => ({}),
     });
 
-    const mock = new MockCodeActionsProvider();
-
     const allActions: (ICodeAction | IRefactorCodeAction)[] = [
       { title: "Fix 1", data: { fixId: "fix1" } },
       { title: "Refactor 1", data: { fixId: "refactor1" } },
     ];
 
-    expect(mock.isPreferredFix(allActions[0], allActions)).toBe(false);
-    expect(mock.isPreferredFix(allActions[1], allActions)).toBe(true);
+    expect(
+      MockCodeActionsProvider.isPreferredFix(allActions[0], allActions),
+    ).toBe(false);
+    expect(
+      MockCodeActionsProvider.isPreferredFix(allActions[1], allActions),
+    ).toBe(true);
   });
 
   it("not preferred if no preference", () => {
@@ -142,15 +124,17 @@ describe("preferred code action tests", () => {
       },
     });
 
-    const mock = new MockCodeActionsProvider();
-
     const allActions: (ICodeAction | IRefactorCodeAction)[] = [
       { title: "Fix 1", data: { fixId: "fix1" } },
       { title: "Fix 2", data: { fixId: "fix2" } },
     ];
 
-    expect(mock.isPreferredFix(allActions[0], allActions)).toBe(false);
-    expect(mock.isPreferredFix(allActions[1], allActions)).toBe(false);
+    expect(
+      MockCodeActionsProvider.isPreferredFix(allActions[0], allActions),
+    ).toBe(false);
+    expect(
+      MockCodeActionsProvider.isPreferredFix(allActions[1], allActions),
+    ).toBe(false);
   });
 
   it("not marked as preferred when there can only be one", () => {
@@ -167,14 +151,16 @@ describe("preferred code action tests", () => {
       },
     });
 
-    const mock = new MockCodeActionsProvider();
-
     const allActions: (ICodeAction | IRefactorCodeAction)[] = [
       { title: "Fix 1", data: { fixId: "fix1" } },
       { title: "Fix 1 - Another", data: { fixId: "fix1" } },
     ];
 
-    expect(mock.isPreferredFix(allActions[0], allActions)).toBe(false);
-    expect(mock.isPreferredFix(allActions[1], allActions)).toBe(false);
+    expect(
+      MockCodeActionsProvider.isPreferredFix(allActions[0], allActions),
+    ).toBe(false);
+    expect(
+      MockCodeActionsProvider.isPreferredFix(allActions[1], allActions),
+    ).toBe(false);
   });
 });

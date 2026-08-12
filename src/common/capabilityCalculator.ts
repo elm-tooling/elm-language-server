@@ -14,8 +14,6 @@ export class CapabilityCalculator {
   }
 
   get capabilities(): ServerCapabilities {
-    this.clientCapabilities;
-
     return {
       codeActionProvider: {
         resolveProvider: true,

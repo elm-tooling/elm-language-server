@@ -35,9 +35,7 @@ export function getCaretPositionFromSource(source: string): {
 }
 
 export type TestType =
-  | IUnresolvedTest
-  | IResolvedTest
-  | IResolvesToDifferentFileTest;
+  IUnresolvedTest | IResolvedTest | IResolvesToDifferentFileTest;
 
 interface IInvokeTest {
   sources: { [K: string]: string };

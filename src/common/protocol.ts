@@ -1,7 +1,6 @@
 import { CodeActionParams, RequestType } from "vscode-languageserver";
 import { IParams } from "./util/elmWorkspaceMatcher";
 
-// eslint-disable-next-line @typescript-eslint/no-namespace
 export const GetMoveDestinationRequest = new RequestType<
   IMoveParams,
   IMoveDestinationsResponse,

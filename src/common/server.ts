@@ -47,6 +47,7 @@ export class Server implements ILanguageServer {
   private connection: Connection;
   public initSuccessfull = false;
   private isVirtualFileSystem = false;
+  private codeActionProvider: CodeActionProvider | undefined;
 
   private disposables: Disposable[] = [];
 
@@ -212,7 +213,7 @@ export class Server implements ILanguageServer {
       });
     }
 
-    new CodeActionProvider(this.fileSystemHost);
+    this.codeActionProvider = new CodeActionProvider(this.fileSystemHost);
 
     new FoldingRangeProvider();
     new CompletionProvider();
@@ -234,6 +235,7 @@ export class Server implements ILanguageServer {
   }
 
   public dispose(): void {
+    this.codeActionProvider?.dispose();
     container.resolve(DiagnosticsProvider).dispose();
     container
       .resolve<IProgram[]>("ElmWorkspaces")

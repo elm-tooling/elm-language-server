@@ -164,7 +164,7 @@ export function createNodeFileSystemHost(
             { cmdArguments: ["make"] },
             rootPath.fsPath,
           );
-        } catch (error) {
+        } catch {
           // On application projects, this will give a NO INPUT error message, but will still download the dependencies
         }
 

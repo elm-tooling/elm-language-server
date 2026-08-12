@@ -77,10 +77,10 @@ export class SourceTreeParser {
                 UriUtils.joinPath(uri, sourceUri),
               )
             : uri.toString() === testsUri.toString()
-            ? Object.keys(testSources).map((testUri) =>
-                UriUtils.joinPath(uri, testUri),
-              )
-            : [],
+              ? Object.keys(testSources).map((testUri) =>
+                  UriUtils.joinPath(uri, testUri),
+                )
+              : [],
         ),
       fileExists: (): boolean => false,
       watchFile: (): Disposable => {

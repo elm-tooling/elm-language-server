@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { container } from "tsyringe";
 import {
   Connection,
@@ -164,7 +163,7 @@ export class ElmReviewDiagnostics {
         let errorObject: unknown;
         try {
           errorObject = JSON.parse(execaError.stdout);
-        } catch (error) {
+        } catch {
           this.connection.console.warn(
             "Received an invalid json, skipping error.",
           );

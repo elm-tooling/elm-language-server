@@ -14,12 +14,7 @@ import {
   Expression,
   ELetInExpr,
 } from "../../compiler/utils/expressionTree";
-import {
-  FindTestsRequest,
-  IFindTestsParams,
-  IFindTestsResponse,
-  TestSuite,
-} from "../protocol";
+import { FindTestsRequest, IFindTestsParams, TestSuite } from "../protocol";
 import { NoWorkspaceContainsError } from "../util/noWorkspaceContainsError";
 import { TreeUtils } from "../util/treeUtils";
 import { Utils } from "../util/utils";
@@ -53,7 +48,7 @@ export class FindTestsProvider {
             suites.length
           } top test suites in ${projectFolderUri.toString()}`,
         );
-        return <IFindTestsResponse>{ suites };
+        return { suites };
       } catch (error) {
         connection.console.error(`Error finding tests ${error}`);
         return new ResponseError(1, `Error finding tests ${error}`);
@@ -95,7 +90,7 @@ function rootSuite(
   const file = sourceFile.uri.toString();
   const label = sourceFile.moduleName;
   return label && topSuites.length > 0
-    ? <TestSuite>{
+    ? {
         label,
         tests: topSuites,
         file,
@@ -190,10 +185,10 @@ export function findTestSuite(
       .map((call) => findTestSuite(call, sourceFile, typeChecker))
       .filter(Utils.notUndefined);
     return tests && tests.length > 0
-      ? <TestSuite>{ label, tests, file, position }
+      ? { label, tests, file, position }
       : undefined;
   }
-  return label ? <TestSuite>{ label, file, position } : undefined;
+  return label ? { label, file, position } : undefined;
 }
 
 type ExpressionNodeTypes = {
