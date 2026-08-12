@@ -214,7 +214,7 @@ export class RenameProvider {
           kind: "rename",
           oldUri: params.textDocument.uri,
           newUri: newUri.toString(),
-        } as RenameFile;
+        };
       }
     }
   }

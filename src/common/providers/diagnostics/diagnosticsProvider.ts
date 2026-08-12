@@ -220,7 +220,6 @@ export class DiagnosticsProvider implements Disposable {
       void this.requestAllDiagnostics();
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     this.disposables.push(
       astProvider.onTreeChange(({ sourceFile }) => {
         if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {

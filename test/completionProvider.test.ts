@@ -36,9 +36,7 @@ describe("CompletionProvider", () => {
   async function testCompletions(
     source: string,
     expectedCompletions: (
-      | string
-      | CompletionItem
-      | { name: string; shouldNotExist: boolean }
+      string | CompletionItem | { name: string; shouldNotExist: boolean }
     )[],
     testExactCompletions: exactCompletions = "partialMatch",
     testDotCompletion: dotCompletions = "normal",

@@ -551,9 +551,9 @@ export class InferenceScope {
     recursionAllowed = false,
     cancellationToken?: ICancellationToken,
   ): InferenceResult {
-    const nonShadowableNames =
-      new Set(program.getSourceFile(uri)?.nonShadowableNames) ??
-      new Set<string>();
+    const nonShadowableNames = new Set(
+      program.getSourceFile(uri)?.nonShadowableNames,
+    );
 
     const setter = (): InferenceResult =>
       new InferenceScope(

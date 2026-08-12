@@ -83,6 +83,7 @@ export class CodeActionProvider {
   private settings: Settings;
   private elmMake: ElmMakeDiagnostics;
   private diagnosticsProvider: DiagnosticsProvider;
+  private packageCacheTimer: ReturnType<typeof setTimeout>;
 
   private static errorCodeToRegistrationMap = new MultiMap<
     string,
@@ -133,12 +134,16 @@ export class CodeActionProvider {
       new ExposeUnexposeHandler();
     }
 
-    setTimeout(() => {
+    this.packageCacheTimer = setTimeout(() => {
       void new ElmPackageCache(
         async (uri) => JSON.parse(await host.readFile(uri)) as ElmJson,
         host,
       ).loadAllPackageModules();
     }, 5000);
+  }
+
+  public dispose(): void {
+    clearTimeout(this.packageCacheTimer);
   }
 
   public static registerCodeAction(
@@ -382,7 +387,7 @@ export class CodeActionProvider {
     return [
       ...results.map((codeAction, _, allActions) => ({
         ...codeAction,
-        isPreferred: this.isPreferredFix(codeAction, allActions),
+        isPreferred: CodeActionProvider.isPreferredFix(codeAction, allActions),
       })),
       ...make,
     ];
@@ -427,7 +432,7 @@ export class CodeActionProvider {
     return codeAction;
   }
 
-  protected isPreferredFix(
+  protected static isPreferredFix(
     action: ICodeAction | IRefactorCodeAction,
     allActions: readonly (ICodeAction | IRefactorCodeAction)[],
   ): boolean {

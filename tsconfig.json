@@ -1,23 +1,18 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
     // If we want to use baseUrl, we need to use a path rewrite module because
     // Typescript does not rewrite import paths. This thread has some suggestions:
     // https://github.com/microsoft/TypeScript/issues/10866
     // "baseUrl": ".",
-    "target": "es6",
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "noEmit": false,
     "sourceMap": true,
     "outDir": "out",
     "rootDir": "src",
     "strict": true,
-    "lib": ["es2020", "WebWorker"],
+    "lib": ["ES2022", "WebWorker"],
     "resolveJsonModule": true,
-    "esModuleInterop": true,
-    "composite": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "typeRoots": ["./src/typings", "./node_modules/@types"]
+    "emitDecoratorMetadata": true
   },
   "include": ["src"],
   "exclude": ["node_modules", ".vscode-test", "**/*.test.ts"]

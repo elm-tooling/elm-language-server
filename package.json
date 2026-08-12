@@ -33,16 +33,16 @@
   },
   "devDependencies": {
     "@elm-tooling/tree-sitter-elm": "^5.9.4",
+    "@eslint/js": "^9.39.5",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.20.1",
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.21.0",
+    "@typescript-eslint/eslint-plugin": "^8.66.0",
+    "@typescript-eslint/parser": "^8.66.0",
     "copyfiles": "^2.4.1",
     "doctoc": "^2.5.0",
     "elm-format": "^0.8.8",
-    "eslint": "^8.57.1",
-    "eslint-config-prettier": "^9.1.2",
-    "eslint-plugin-prettier": "^5.5.6",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
     "jest": "^29.7.0",
     "jest-diff": "^29.7.0",
     "jest-mock-extended": "^3.0.7",
@@ -51,12 +51,7 @@
     "tree-sitter-cli": "^0.20.8",
     "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
-    "typescript": "5.3.3"
-  },
-  "overrides": {
-    "@typescript-eslint/typescript-estree": {
-      "minimatch": "9.0.7"
-    }
+    "typescript": "5.9.3"
   },
   "scripts": {
     "version-patch": "npm --no-git-tag-version version patch",
@@ -66,8 +61,12 @@
     "copy-wasm": "copyfiles ./tree-sitter-elm.wasm out",
     "compile": "npm run copy-wasm && tsc -p ./",
     "watch": "npm run copy-wasm && tsc -watch -p ./",
-    "lint": "eslint -c .eslintrc.js --ext .ts src",
-    "lint:fix": "eslint --fix -c .eslintrc.js --ext .ts src",
+    "typecheck": "tsc --build tsconfig.node.json tsconfig.browser.json --pretty false",
+    "lint": "eslint src test",
+    "lint:fix": "eslint src test --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"*.{js,json,mjs,yaml}\" \".github/workflows/*.{yml,yaml}\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"*.{js,json,mjs,yaml}\" \".github/workflows/*.{yml,yaml}\"",
+    "check": "npm run typecheck && npm run lint && npm run format:check",
     "build-tree-sitter": "tree-sitter build-wasm ./node_modules/@elm-tooling/tree-sitter-elm",
     "test": "jest --coverage",
     "generate-toc": "doctoc README.md"

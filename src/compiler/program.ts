@@ -546,7 +546,7 @@ export class Program implements IProgram {
         ),
         moduleToUriMap: new Map<string, string>(),
         testModuleToUriMap: new Map<string, string>(),
-      } as IElmApplication;
+      };
     } else {
       const deps = new Map(
         Object.entries(
@@ -586,7 +586,7 @@ export class Program implements IProgram {
         maintainerAndPackageName: elmJson.name,
         testModuleToUriMap: new Map<string, string>(),
         isDependency: false,
-      } as IElmPackage;
+      };
     }
   }
 
@@ -862,7 +862,7 @@ export class Program implements IProgram {
         isKernel,
         moduleName,
       };
-    } catch (e) {
+    } catch {
       // The module might be in another source directory
     }
   }

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import * as path from "path";
 import { container } from "tsyringe";
 import {
@@ -361,7 +360,7 @@ export class ElmMakeDiagnostics {
           let errorObject: unknown;
           try {
             errorObject = JSON.parse(line);
-          } catch (error) {
+          } catch {
             this.connection.console.warn(
               "Received an invalid json, skipping error.",
             );
