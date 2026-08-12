@@ -32,21 +32,11 @@ jobs:
         env:
           CI: true
       - name: Coveralls GitHub Action
+        if: matrix.os == 'ubuntu-latest' && matrix.node-version == 24
         uses: coverallsapp/github-action@v2.3.8
         with:
-          parallel: true
           github-token: ${{ secrets.github_token }}
       - name: run and print version
         run: |
           npm link
           elm-language-server --version
-
-  finish:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Close parallel build
-        uses: coverallsapp/github-action@v2.3.8
-        with:
-          parallel-finished: true
-          github-token: ${{ secrets.github_token }}
