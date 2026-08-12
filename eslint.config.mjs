@@ -20,6 +20,7 @@ export default [
       "no-prototype-builtins": "warn",
       "no-case-declarations": "warn",
       "no-use-before-define": "off",
+      "no-useless-assignment": "off",
       "no-async-promise-executor": "warn",
       "@typescript-eslint/no-misused-promises": "warn",
       "@typescript-eslint/unbound-method": "warn",
