@@ -369,17 +369,23 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       return importModuleGraph.get(sourceFile.uri) ?? [];
     }
 
-    const getAllDescendantImports = (source: ISourceFile): ISourceFile[] => {
-      const imports = importModuleGraph.get(source.uri) ?? [];
+    const importingModules: ISourceFile[] = [];
+    const visited = new Set<string>([sourceFile.uri]);
+    const modulesToVisit = [sourceFile];
 
-      imports.slice(0).forEach((directImport) => {
-        imports.push(...getAllDescendantImports(directImport));
+    for (let index = 0; index < modulesToVisit.length; index++) {
+      const source = modulesToVisit[index];
+
+      (importModuleGraph.get(source.uri) ?? []).forEach((importingModule) => {
+        if (!visited.has(importingModule.uri)) {
+          visited.add(importingModule.uri);
+          importingModules.push(importingModule);
+          modulesToVisit.push(importingModule);
+        }
       });
+    }
 
-      return imports;
-    };
-
-    return getAllDescendantImports(sourceFile);
+    return importingModules;
   }
 
   function findImport(
