@@ -1,5 +1,4 @@
 import fs from "fs";
-import globby from "globby";
 import util from "util";
 import chokidar from "chokidar";
 import {
@@ -64,21 +63,26 @@ export function createNodeFileSystemHost(
       }
 
       if (realUri.scheme === "file") {
-        const result =
-          depth === 1
-            ? await readDir(realUri.fsPath)
-            : await globby(
-                // Cleanup the path on windows, as globby does not like backslashes
-                Utils.joinPath(realUri, include ?? "**").fsPath.replace(
-                  /\\/g,
-                  "/",
-                ),
-                {
-                  suppressErrors: true,
-                },
-              );
+        if (depth === 1) {
+          return (await readDir(realUri.fsPath)).map((path) => URI.file(path));
+        }
 
-        return result.map((path) => URI.file(path));
+        try {
+          const result: URI[] = [];
+          for await (const entry of fs.promises.glob(include ?? "**", {
+            cwd: realUri.fsPath,
+            withFileTypes: true,
+          })) {
+            if (entry.isFile()) {
+              result.push(
+                Utils.joinPath(URI.file(entry.parentPath), entry.name),
+              );
+            }
+          }
+          return result;
+        } catch {
+          return [];
+        }
       } else {
         const result = await connection.sendRequest(
           ReadDirectoryRequest,
@@ -88,25 +92,24 @@ export function createNodeFileSystemHost(
       }
     },
     readDirectorySync: (uri, include, exclude, depth): URI[] => {
-      const result =
-        depth === 1
-          ? fs.readdirSync(uri.fsPath)
-          : globby.sync(
-              // Cleanup the path on windows, as globby does not like backslashes
-              [
-                ...(include?.map((path) =>
-                  Utils.joinPath(uri, path).fsPath.replace(/\\/g, "/"),
-                ) ?? []),
-                ...(exclude?.map(
-                  (path) =>
-                    `!${Utils.joinPath(uri, path).fsPath.replace(/\\/g, "/")}`,
-                ) ?? []),
-              ],
-              {
-                suppressErrors: true,
-              },
-            );
-      return result.map((path) => URI.file(path));
+      if (depth === 1) {
+        return fs.readdirSync(uri.fsPath).map((path) => URI.file(path));
+      }
+
+      try {
+        return fs
+          .globSync(include ?? [], {
+            cwd: uri.fsPath,
+            exclude,
+            withFileTypes: true,
+          })
+          .filter((entry) => entry.isFile())
+          .map((entry) =>
+            Utils.joinPath(URI.file(entry.parentPath), entry.name),
+          );
+      } catch {
+        return [];
+      }
     },
     fileExists: (uri): boolean =>
       uri.scheme === "file" && fs.existsSync(uri.fsPath),
