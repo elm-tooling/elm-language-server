@@ -1,7 +1,7 @@
 import { container } from "tsyringe";
 import { Connection, Disposable } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import Parser, { Tree } from "web-tree-sitter";
+import { Parser, Tree } from "web-tree-sitter";
 import type { ICancellationToken } from "../common/cancellation";
 import { ElmPackageCache, IElmPackageCache } from "./elmPackageCache";
 import { Forest, IForest, IKernelSourceFile, ISourceFile } from "./forest";
@@ -17,6 +17,8 @@ import { TypeCache } from "./typeCache";
 import { createTypeChecker, TypeChecker } from "./typeChecker";
 import { CommandManager } from "../common/commandManager";
 import { IFileSystemHost } from "../common/types";
+import { parseOrThrow } from "../common/util/treeSitter";
+import { TreeUtils } from "../common/util/treeUtils";
 
 interface IElmFile {
   path: URI;
@@ -730,7 +732,7 @@ export class Program implements IProgram {
 
       const promies = elmFile.tree.rootNode.children
         .filter((a) => a.type === "import_clause")
-        .map((imp) => imp.childForFieldName("moduleName"))
+        .map((imp) => TreeUtils.getModuleNameNodeFromImportClause(imp))
         .map(async (moduleNode) => {
           if (!moduleNode) {
             return;
@@ -858,7 +860,7 @@ export class Program implements IProgram {
         project,
         isTestFile: false,
         isDependency: true,
-        tree: isKernel ? undefined : this.parser.parse(fileContent),
+        tree: isKernel ? undefined : parseOrThrow(this.parser, fileContent),
         isKernel,
         moduleName,
       };
@@ -882,7 +884,7 @@ export class Program implements IProgram {
       } else {
         const tree =
           elmFile.tree ??
-          this.parser.parse(await this.host.readFile(elmFile.path));
+          parseOrThrow(this.parser, await this.host.readFile(elmFile.path));
         this.forest.setSourceFile(
           uri,
           elmFile.project === this.rootProject,

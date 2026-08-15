@@ -1,5 +1,5 @@
 import { CodeActionKind, Position, TextEdit } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";
 import { TreeUtils } from "../../util/treeUtils";
 import {
@@ -52,7 +52,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
           column: previousCharColumn,
         });
 
-        if (startNode.type === "(" && endNode.type === ")") {
+        if (endNode && startNode.type === "(" && endNode.type === ")") {
           const node = startNode.nextNamedSibling;
           canExtract =
             !!node &&

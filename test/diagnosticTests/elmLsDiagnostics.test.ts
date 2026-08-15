@@ -504,6 +504,19 @@ foo = 1
       await testDiagnostics(source, "unused_alias", []);
     });
 
+    it("incomplete previous import is not an alias", async () => {
+      const source = `
+module Foo exposing (..)
+
+import X as
+import Bar exposing (..)
+
+foo = 1
+			`;
+
+      await testDiagnostics(source, "unused_alias", []);
+    });
+
     it("used as qualified", async () => {
       const source = `
 module Foo exposing (..)

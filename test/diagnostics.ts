@@ -4,7 +4,7 @@ import { URI } from "vscode-uri";
 import { Program } from "../src/compiler/program";
 import * as path from "path";
 import { Settings } from "../src/common/util/settings";
-import Parser from "web-tree-sitter";
+import { Language, Parser } from "web-tree-sitter";
 import { spawnSync } from "child_process";
 import { readFileSync } from "fs";
 import { Diagnostic } from "../src/compiler/diagnostics";
@@ -44,7 +44,7 @@ async function initParser(): Promise<void> {
   const absolute = path.join(__dirname, "../tree-sitter-elm.wasm");
   const pathToWasm = path.relative(process.cwd(), absolute);
 
-  const language = await Parser.Language.load(pathToWasm);
+  const language = await Language.load(pathToWasm);
   container.registerSingleton("Parser", Parser);
   container.resolve<Parser>("Parser").setLanguage(language);
 }
@@ -69,7 +69,7 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
         continue;
       }
 
-      if (sourceFile.tree.rootNode.hasError()) {
+      if (sourceFile.tree.rootNode.hasError) {
         parsingErrors.add(sourceFile.maintainerAndPackageName);
         diagnostics = [];
         break;

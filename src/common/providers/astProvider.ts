@@ -8,19 +8,14 @@ import {
   FileChangeType,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import Parser, { Edit, Point, SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode, Parser } from "web-tree-sitter";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import {
-  Position,
-  Range,
-  TextDocumentContentChangeEvent,
-} from "vscode-languageserver-textdocument";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 import { TreeUtils } from "../util/treeUtils";
 import { ISourceFile } from "../../compiler/forest";
 import { FileChangeParams, IFileChangeParams } from "./paramsExtensions";
-import { Utils } from "../util/utils";
 import { IFileSystemHost } from "../types";
+import { applyChangesToTree, parseOrThrow } from "../util/treeSitter";
 
 export class ASTProvider {
   private connection: Connection;
@@ -121,7 +116,7 @@ export class ASTProvider {
       hasContentChanges = true;
 
       if (tree) {
-        this.applyChangesToTree(tree, params.contentChanges);
+        applyChangesToTree(tree, params.contentChanges);
       }
     }
 
@@ -135,7 +130,8 @@ export class ASTProvider {
 
     const oldNodes = tree?.rootNode.namedChildren ?? [];
 
-    const newTree = this.parser.parse(
+    const newTree = parseOrThrow(
+      this.parser,
       newText,
       hasContentChanges ? tree : undefined,
     );
@@ -234,92 +230,5 @@ export class ASTProvider {
     } catch {
       this.connection.console.warn(`Unable to read changed file ${uri}`);
     }
-  }
-
-  private applyChangesToTree(
-    tree: Parser.Tree,
-    changes: TextDocumentContentChangeEvent[],
-  ): void {
-    let text = tree.rootNode.text;
-
-    if (!text) {
-      return;
-    }
-
-    const multipleChanges = changes.length > 1;
-    for (const change of changes) {
-      const changeRecord = this.getChangeWithRange(change, text);
-      const edit = this.getEditFromChange(changeRecord, text);
-
-      tree?.edit(edit);
-
-      // If there are multiple changes, we also need to take care to apply each change to the
-      // rootNode text. Otherwise, the startIndex and endIndex for later changes will be off.
-      if (multipleChanges) {
-        text =
-          text.substring(0, edit.startIndex) +
-          change.text +
-          text.substring(edit.oldEndIndex);
-      }
-    }
-  }
-
-  private getChangeWithRange(
-    change: TextDocumentContentChangeEvent,
-    text: string,
-  ): { text: string; range: Range } {
-    if ("range" in change) {
-      return change;
-    } else {
-      const regex = new RegExp(/\r\n|\r|\n/);
-      const lines = text.split(regex);
-      const range = {
-        start: { line: 0, character: 0 },
-        end: { line: lines.length, character: 0 },
-      };
-      return { text: change.text, range: range };
-    }
-  }
-
-  private getEditFromChange(
-    change: { text: string; range: Range },
-    text: string,
-  ): Edit {
-    const [startIndex, endIndex] = Utils.getIndicesFromRange(
-      change.range,
-      text,
-    );
-
-    return {
-      startIndex,
-      oldEndIndex: endIndex,
-      newEndIndex: startIndex + change.text.length,
-      startPosition: this.toTSPoint(change.range.start),
-      oldEndPosition: this.toTSPoint(change.range.end),
-      newEndPosition: this.toTSPoint(
-        this.addPositions(change.range.start, this.textToPosition(change.text)),
-      ),
-    };
-  }
-
-  private textToPosition(text: string): Position {
-    const lines = text.split(/\r\n|\r|\n/);
-
-    return {
-      line: lines.length - 1,
-      character: lines[lines.length - 1].length,
-    };
-  }
-
-  private addPositions(pos1: Position, pos2: Position): Position {
-    return {
-      line: pos1.line + pos2.line,
-      character:
-        pos2.line === 0 ? pos1.character + pos2.character : pos2.character,
-    };
-  }
-
-  private toTSPoint(position: Position): Point {
-    return { row: position.line, column: position.character };
   }
 }

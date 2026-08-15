@@ -1,4 +1,4 @@
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { OperatorAssociativity } from "../operatorPrecedence";
 import { TreeUtils } from "../../common/util/treeUtils";
 import { Utils } from "../../common/util/utils";

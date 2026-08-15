@@ -13,7 +13,7 @@ import { inferTime, resetInferTime } from "../src/compiler/typeInference";
 import * as path from "path";
 import { argv } from "process";
 import { Settings } from "../src/common/util/settings";
-import Parser from "web-tree-sitter";
+import { Language, Parser } from "web-tree-sitter";
 import { replaceTime, resetReplaceTime } from "../src/compiler/typeReplacement";
 import {
   getCancellationFilePath,
@@ -53,7 +53,7 @@ async function initParser(): Promise<void> {
   const absolute = path.join(__dirname, "../tree-sitter-elm.wasm");
   const pathToWasm = path.relative(process.cwd(), absolute);
 
-  const language = await Parser.Language.load(pathToWasm);
+  const language = await Language.load(pathToWasm);
   container.registerSingleton("Parser", Parser);
   container.resolve<Parser>("Parser").setLanguage(language);
 }

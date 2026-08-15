@@ -1118,6 +1118,29 @@ import {-caret-}
     );
   });
 
+  it("Exposing completions survive a preceding incomplete import", async () => {
+    const source = `
+--@ Foo.elm
+module Foo exposing (..)
+
+fooOnly = ""
+
+--@ App.elm
+module App exposing (..)
+
+appOne = ""
+appTwo = ""
+
+--@ Test.elm
+module Test exposing (..)
+
+import Foo as
+import App exposing ({-caret-})
+`;
+
+    await testCompletions(source, ["appOne", "appTwo"], "exactMatch");
+  });
+
   it("Imported qualified modules should have value completions", async () => {
     const source = `
 --@ Module.elm

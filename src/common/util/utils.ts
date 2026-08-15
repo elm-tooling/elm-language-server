@@ -1,5 +1,5 @@
 import { Position, Range, TextEdit } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 
 export type NonEmptyArray<T> = [T, ...T[]];
 

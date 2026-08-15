@@ -1,4 +1,4 @@
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { Node as SyntaxNode, Tree } from "web-tree-sitter";
 import { Imports } from "./imports";
 import { TreeUtils } from "../common/util/treeUtils";
 import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
@@ -185,7 +185,8 @@ export class Forest implements IForest {
     const resolvedModules = new Map<string, string>();
 
     importClauses.forEach((importClause) => {
-      const moduleName = importClause.childForFieldName("moduleName")?.text;
+      const moduleName =
+        TreeUtils.getModuleNameNodeFromImportClause(importClause)?.text;
 
       if (moduleName) {
         let found = sourceFile.project.moduleToUriMap.get(moduleName);

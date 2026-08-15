@@ -1,6 +1,6 @@
 import { IProgram } from "./program";
 import { ISourceFile } from "./forest";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { TreeUtils } from "../common/util/treeUtils";
 import { Utils } from "../common/util/utils";
 import { Imports } from "./imports";
@@ -451,15 +451,17 @@ export class References {
 
                 const imported = checker
                   .getAllImports(sourceFileToCheck)
-                  .getModule(moduleNameNode.text)
-                  ?.importNode?.childForFieldName("moduleName");
+                  .getModule(moduleNameNode.text)?.importNode;
+                const importedModuleName = imported
+                  ? TreeUtils.getModuleNameNodeFromImportClause(imported)
+                  : undefined;
 
-                if (imported) {
-                  references.push({ node: imported, uri });
+                if (importedModuleName) {
+                  references.push({ node: importedModuleName, uri });
                 }
 
                 // Find all references in file
-                if (imported) {
+                if (importedModuleName) {
                   sourceFileToCheck.tree.rootNode
                     .descendantsOfType("value_expr")
                     .forEach((valueNode) => {

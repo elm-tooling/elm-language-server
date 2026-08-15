@@ -1,4 +1,4 @@
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { EFieldType } from "./expressionTree";
 import { SyntaxNodeSet } from "./syntaxNodeSet";
 

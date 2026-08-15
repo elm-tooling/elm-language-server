@@ -6,7 +6,7 @@ import {
   FoldingRangeParams,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { Node as SyntaxNode, Tree } from "web-tree-sitter";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { IFoldingRangeParams } from "./paramsExtensions";
 
@@ -52,8 +52,8 @@ export class FoldingRangeProvider {
     const treeCursor = tree.walk();
 
     const traverse: () => void = (): void => {
-      const node = treeCursor.currentNode();
-      if (node.parent?.lastChild && node.isNamed()) {
+      const node = treeCursor.currentNode;
+      if (node.parent?.lastChild && node.isNamed) {
         if ("import_clause" === node.type) {
           const previousSibling = node.previousNamedSibling;
           if (

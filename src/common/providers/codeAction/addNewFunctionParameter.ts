@@ -3,7 +3,7 @@ import { TreeUtils } from "../../util/treeUtils";
 import { Diagnostics } from "../../../compiler/diagnostics";
 import { CodeActionProvider, ICodeAction } from "../codeActionProvider";
 import { ICodeActionParams } from "../paramsExtensions";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 
 const errorCodes = [Diagnostics.MissingValue.code];
 const fixId = "add_new_function_parameter";

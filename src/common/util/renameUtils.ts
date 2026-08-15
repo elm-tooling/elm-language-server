@@ -1,6 +1,6 @@
 import { IProgram } from "../../compiler/program";
 import { Position, ResponseError } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { References } from "../../compiler/references";
 import { TreeUtils } from "./treeUtils";
 
