@@ -6,6 +6,10 @@ import { Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { createNodeFileSystemHost } from "../src/node/fileSystem";
 
+function toFileUris(paths: string[]): string[] {
+  return paths.map((filePath) => URI.file(filePath).toString()).sort();
+}
+
 describe("node file system", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "elm-language-server-"));
   const nested = path.join(root, "nested");
@@ -31,8 +35,8 @@ describe("node file system", () => {
   it("recursively reads matching files as absolute file URIs", async () => {
     const result = await host.readDirectory(URI.file(root), "**/*.elm");
 
-    expect(result.map((uri) => uri.fsPath).sort()).toEqual(
-      [ignoredElm, nestedElm, rootElm].sort(),
+    expect(result.map((uri) => uri.toString()).sort()).toEqual(
+      toFileUris([ignoredElm, nestedElm, rootElm]),
     );
     expect(result.every((uri) => uri.scheme === "file")).toBe(true);
   });
@@ -48,8 +52,8 @@ describe("node file system", () => {
       ["ignored/**"],
     );
 
-    expect(result.map((uri) => uri.fsPath).sort()).toEqual(
-      [nestedElm, rootElm].sort(),
+    expect(result.map((uri) => uri.toString()).sort()).toEqual(
+      toFileUris([nestedElm, rootElm]),
     );
   });
 
