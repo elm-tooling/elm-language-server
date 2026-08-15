@@ -15,9 +15,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
+      - name: Verify release version
+        run: |
+          package_version=$(node -p "require('./package.json').version")
+          test "$package_version" = "$GITHUB_REF_NAME"
       - run: npm ci
+      - run: npm run check
       - run: npm run compile
       - run: npm test
+      - run: npm pack --dry-run
 
   publish-npm:
     needs: build
