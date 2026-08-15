@@ -9,10 +9,10 @@ import {
 import { URI } from "vscode-uri";
 import {
   Language,
+  Node as SyntaxNode,
   Parser,
   Query,
-  QueryResult,
-  SyntaxNode,
+  QueryMatch,
   Tree,
 } from "web-tree-sitter";
 import { IProgram } from "../../../compiler/program";
@@ -58,14 +58,19 @@ export class ElmLsDiagnostics {
   private readonly patternReferencesQuery: Query;
 
   constructor() {
-    this.language = container.resolve<Parser>("Parser").getLanguage();
+    const language = container.resolve<Parser>("Parser").language;
+    if (!language) {
+      throw new Error("Tree-sitter parser language is not initialized.");
+    }
+    this.language = language;
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
     this.connection = container.resolve<Connection>("Connection");
     this.elmAnalyseJsonService = container.resolve<IElmAnalyseJsonService>(
       "ElmAnalyseJsonService",
     );
 
-    this.exposedValuesAndTypesQuery = this.language.query(
+    this.exposedValuesAndTypesQuery = new Query(
+      this.language,
       `
         (import_clause
           (exposing_list
@@ -80,7 +85,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.exposedValueAndTypeUsagesQuery = this.language.query(
+    this.exposedValueAndTypeUsagesQuery = new Query(
+      this.language,
       `
       (
         [
@@ -94,7 +100,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.moduleImportsQuery = this.language.query(
+    this.moduleImportsQuery = new Query(
+      this.language,
       `
         (import_clause
           (upper_case_qid) @moduleName
@@ -102,7 +109,8 @@ export class ElmLsDiagnostics {
     `,
     );
 
-    this.moduleReferencesQuery = this.language.query(
+    this.moduleReferencesQuery = new Query(
+      this.language,
       `
         (value_qid
           (
@@ -119,7 +127,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.importModuleAliasesQuery = this.language.query(
+    this.importModuleAliasesQuery = new Query(
+      this.language,
       `
         (import_clause
           (as_clause
@@ -129,7 +138,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.moduleAliasReferencesQuery = this.language.query(
+    this.moduleAliasReferencesQuery = new Query(
+      this.language,
       `
         (value_qid
           (
@@ -146,7 +156,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.patternsQuery = this.language.query(
+    this.patternsQuery = new Query(
+      this.language,
       `
         (value_declaration
           (function_declaration_left
@@ -183,7 +194,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.caseBranchesQuery = this.language.query(
+    this.caseBranchesQuery = new Query(
+      this.language,
       `
         (
           (case_of_branch
@@ -196,7 +208,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.booleanCaseExpressionsQuery = this.language.query(
+    this.booleanCaseExpressionsQuery = new Query(
+      this.language,
       `
         (
           (case_of_branch
@@ -211,7 +224,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.concatOfListsQuery = this.language.query(
+    this.concatOfListsQuery = new Query(
+      this.language,
       `
         (
           (list_expr) @startList
@@ -227,7 +241,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.consOfItemAndListQuery = this.language.query(
+    this.consOfItemAndListQuery = new Query(
+      this.language,
       `
         (bin_op_expr
           (_) @itemExpr
@@ -243,7 +258,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.useConsOverConcatQuery = this.language.query(
+    this.useConsOverConcatQuery = new Query(
+      this.language,
       `
         (bin_op_expr
           (list_expr
@@ -265,7 +281,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.singleFieldRecordTypesQuery = this.language.query(
+    this.singleFieldRecordTypesQuery = new Query(
+      this.language,
       `
         (record_type
           "{"
@@ -277,7 +294,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.unnecessaryListConcatQuery = this.language.query(
+    this.unnecessaryListConcatQuery = new Query(
+      this.language,
       `
         (
           (function_call_expr
@@ -297,7 +315,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.unusedPortModuleQuery = this.language.query(
+    this.unusedPortModuleQuery = new Query(
+      this.language,
       `
         (module_declaration
           (port)
@@ -307,7 +326,8 @@ export class ElmLsDiagnostics {
         `,
     );
 
-    this.operatorFunctionsQuery = this.language.query(
+    this.operatorFunctionsQuery = new Query(
+      this.language,
       `
         (function_call_expr
           target: (operator_as_function_expr)
@@ -319,7 +339,8 @@ export class ElmLsDiagnostics {
         `,
     );
 
-    this.typeAliasesQuery = this.language.query(
+    this.typeAliasesQuery = new Query(
+      this.language,
       `
         (type_alias_declaration
           (upper_case_identifier) @typeAlias
@@ -327,7 +348,8 @@ export class ElmLsDiagnostics {
         `,
     );
 
-    this.typeAliasUsagesQuery = this.language.query(
+    this.typeAliasUsagesQuery = new Query(
+      this.language,
       `
         (
           [
@@ -341,7 +363,8 @@ export class ElmLsDiagnostics {
         `,
     );
 
-    this.unionVariantsQuery = this.language.query(
+    this.unionVariantsQuery = new Query(
+      this.language,
       `
         (type_declaration
           (upper_case_identifier) @typeName
@@ -352,7 +375,8 @@ export class ElmLsDiagnostics {
         `,
     );
 
-    this.unionVariantUsagesQuery = this.language.query(
+    this.unionVariantUsagesQuery = new Query(
+      this.language,
       `
       (
         (exposed_type) @exposed.reference
@@ -371,7 +395,8 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.patternReferencesQuery = this.language.query(
+    this.patternReferencesQuery = new Query(
+      this.language,
       `
         (
           [
@@ -604,8 +629,14 @@ export class ElmLsDiagnostics {
       .map((match) => match.captures[0].node.text);
 
     moduleAliases.forEach((moduleAlias) => {
+      const importClause = moduleAlias.parent?.parent;
+
       // This case is handled by unused_import
-      if (!moduleAlias.parent?.parent?.childForFieldName("exposing")) {
+      if (
+        importClause?.type !== "import_clause" ||
+        !TreeUtils.getImportAliasNode(importClause) ||
+        !importClause.childForFieldName("exposing")
+      ) {
         return;
       }
 
@@ -633,7 +664,7 @@ export class ElmLsDiagnostics {
 
     const patternMatches = this.patternsQuery.matches(tree.rootNode);
 
-    const scopeCache = new SyntaxNodeMap<SyntaxNode, QueryResult[]>();
+    const scopeCache = new SyntaxNodeMap<SyntaxNode, QueryMatch[]>();
 
     patternMatches
       .filter(Utils.notUndefined)

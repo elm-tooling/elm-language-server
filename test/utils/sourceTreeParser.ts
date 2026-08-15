@@ -1,13 +1,14 @@
 import { container } from "tsyringe";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI, Utils as UriUtils } from "vscode-uri";
-import Parser from "web-tree-sitter";
+import { Language, Parser } from "web-tree-sitter";
 import { Program, IProgram } from "../../src/compiler/program";
 import * as path from "../../src/common/util/path";
 import { Utils } from "../../src/common/util/utils";
 import { Disposable } from "vscode-languageserver";
 import { createNodeFileSystemHost } from "../../src/node/fileSystem";
 import { IFileSystemHost } from "../../src/common/types";
+import { readFileSync } from "fs";
 
 export const baseUri = path.join(__dirname, "../sources/");
 export const srcUri = URI.file(path.join(baseUri, "src"));
@@ -23,9 +24,7 @@ export class SourceTreeParser {
 
     await Parser.init();
     const absolute = path.join(__dirname, "../../tree-sitter-elm.wasm");
-    const pathToWasm = path.relative(process.cwd(), absolute);
-
-    const language = await Parser.Language.load(pathToWasm);
+    const language = await Language.load(readFileSync(absolute));
     container.registerSingleton("Parser", Parser);
     container.resolve<Parser>("Parser").setLanguage(language);
   }

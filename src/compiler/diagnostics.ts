@@ -4,7 +4,7 @@ import {
   DiagnosticTag,
   Range,
 } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { PositionUtil } from "../common/positionUtil";
 import { DiagnosticSource } from "../common/providers/diagnostics/diagnosticSource";
 import { getSpaces } from "../common/util/refactorEditUtils";

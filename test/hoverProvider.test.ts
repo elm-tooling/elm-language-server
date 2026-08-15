@@ -61,7 +61,7 @@ describe("HoverProvider", () => {
 module Test exposing (..)
 
 type alias Foo = 
-		String
+    String
 
 foo : Foo
 foo = ""
@@ -79,7 +79,7 @@ bar = foo
 module Another exposing (..)
 
 type alias Foo = 
-		String
+    String
 
 foo : Foo
 foo = ""
@@ -102,7 +102,7 @@ bar = foo
 module Another exposing (..)
 
 type alias Foo = 
-		String
+    String
 
 foo : Foo
 foo = ""
@@ -125,7 +125,7 @@ bar = foo
 module Another exposing (..)
 
 type alias Foo = 
-		String
+    String
 
 foo : Foo
 foo = ""

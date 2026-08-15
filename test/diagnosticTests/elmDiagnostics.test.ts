@@ -1,5 +1,5 @@
 import { Utils as UriUtils } from "vscode-uri";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { convertFromCompilerDiagnostic } from "../../src/common/providers";
 import { diagnosticsEquals } from "../../src/common/providers/diagnostics/fileDiagnostics";
 import { TreeUtils } from "../../src/common/util/treeUtils";

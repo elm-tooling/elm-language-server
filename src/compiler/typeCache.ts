@@ -1,4 +1,4 @@
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { MultiMap } from "../common/util/multiMap";
 import { TreeUtils } from "../common/util/treeUtils";
 import { SyntaxNodeMap } from "./utils/syntaxNodeMap";

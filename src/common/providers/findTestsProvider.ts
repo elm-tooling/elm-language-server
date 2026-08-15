@@ -1,6 +1,6 @@
 import { container } from "tsyringe";
 import { Connection, ResponseError } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { ISourceFile } from "../../compiler/forest";
 import { IProgram, Program } from "../../compiler/program";
 import { TypeChecker } from "../../compiler/typeChecker";

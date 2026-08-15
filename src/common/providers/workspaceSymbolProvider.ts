@@ -4,7 +4,7 @@ import {
   SymbolInformation,
   WorkspaceSymbolParams,
 } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { IProgram } from "../../compiler/program";
 import { SymbolInformationTranslator } from "../util/symbolTranslator";
 

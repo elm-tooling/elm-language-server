@@ -1,5 +1,5 @@
 import { ISourceFile } from "./forest";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { MultiMap } from "../common/util/multiMap";
 import { NodeType, TreeUtils } from "../common/util/treeUtils";
 import { Utils } from "../common/util/utils";
@@ -56,7 +56,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
   }
 
   function bind(): void {
-    const node = treeCursor.currentNode();
+    const node = treeCursor.currentNode;
     switch (node.type) {
       case "file":
       case "let_in_expr":
@@ -281,18 +281,17 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
   }
 
   function bindImportClause(node: SyntaxNode): void {
-    const asClause = node.childForFieldName("asClause");
-
-    let name;
-    if (asClause) {
-      name = asClause.childForFieldName("name");
-    } else {
-      name = node.childForFieldName("moduleName");
-    }
+    const name =
+      TreeUtils.getImportAliasNode(node) ??
+      TreeUtils.getModuleNameNodeFromImportClause(node);
 
     if (name) {
       container.set(name.text, { name: name.text, node, type: "Import" });
     }
+
+    TreeUtils.descendantsOfType(node, "ERROR").forEach((errorNode) => {
+      sourceFile.parseDiagnostics.push(error(errorNode, Diagnostics.Parsing));
+    });
   }
 
   function bindExposing(): void {

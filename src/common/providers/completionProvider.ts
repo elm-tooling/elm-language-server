@@ -12,7 +12,7 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { Node as SyntaxNode, Tree } from "web-tree-sitter";
 import { IProgram } from "../../compiler/program";
 import { ISourceFile } from "../../compiler/forest";
 import { comparePosition, PositionUtil } from "../positionUtil";
@@ -134,7 +134,8 @@ export class CompletionProvider {
         );
       }
 
-      const isAfterDot = contextNode?.type === "dot";
+      const isAfterDot =
+        contextNode?.type === "dot" || contextNode?.type === ".";
 
       if (
         TreeUtils.findParentOfType("block_comment", nodeAtPosition) ||
@@ -473,17 +474,16 @@ export class CompletionProvider {
     exposingListNode: SyntaxNode,
     range: Range,
   ): CompletionItem[] | undefined {
-    // Skip as clause to always get Module Name
-    if (
-      exposingListNode.previousNamedSibling?.type === "as_clause" &&
-      exposingListNode.previousNamedSibling?.previousNamedSibling
-    ) {
-      exposingListNode = exposingListNode.previousNamedSibling;
-    }
+    const importClause = TreeUtils.findParentOfType(
+      "import_clause",
+      exposingListNode,
+    );
+    const moduleName = importClause
+      ? TreeUtils.getModuleNameNodeFromImportClause(importClause)?.text
+      : undefined;
 
-    if (exposingListNode.previousNamedSibling?.type === "upper_case_qid") {
+    if (moduleName) {
       const sortPrefix = "c";
-      const moduleName = exposingListNode.previousNamedSibling.text;
       const exposedByModule = program.getSourceFileOfImportableModule(
         sourceFile,
         moduleName,
@@ -1214,7 +1214,7 @@ export class CompletionProvider {
         ...imports
           .map((imp) => {
             const moduleName =
-              imp.node.childForFieldName("moduleName")?.text ?? "";
+              TreeUtils.getModuleNameNodeFromImportClause(imp.node)?.text ?? "";
 
             const importSourceFile = program.getSourceFileOfImportableModule(
               sourceFile,

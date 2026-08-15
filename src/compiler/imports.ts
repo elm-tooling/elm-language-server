@@ -1,4 +1,4 @@
-import Parser, { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode, Parser } from "web-tree-sitter";
 import { ISourceFile } from "./forest";
 import { TreeUtils } from "../common/util/treeUtils";
 import { container } from "tsyringe";
@@ -8,6 +8,7 @@ import { isCoreProject } from "./utils/elmUtils";
 import { Diagnostic, Diagnostics, error } from "./diagnostics";
 import { ISymbol } from "./binder";
 import { IProgram } from "./program";
+import { parseOrThrow } from "../common/util/treeSitter";
 
 export let importsTime = 0;
 export function resetImportsTime(): void {
@@ -102,7 +103,8 @@ export class Imports {
     ];
 
     importNodes.forEach((importNode) => {
-      const moduleName = importNode.childForFieldName("moduleName")?.text;
+      const moduleName =
+        TreeUtils.getModuleNameNodeFromImportClause(importNode)?.text;
       if (moduleName) {
         const uri = sourceFile.resolvedModules?.get(moduleName);
 
@@ -395,23 +397,23 @@ export class Imports {
     }
 
     const virtualImports = `
-  import Basics exposing (..)
-  import List exposing (List, (::))
-  import Maybe exposing (Maybe(..))
-  import Result exposing (Result(..))
-  import String exposing (String)
-  import Char exposing (Char)
-  import Tuple
+import Basics exposing (..)
+import List exposing (List, (::))
+import Maybe exposing (Maybe(..))
+import Result exposing (Result(..))
+import String exposing (String)
+import Char exposing (Char)
+import Tuple
 
-  import Debug
+import Debug
 
-  import Platform exposing ( Program )
-  import Platform.Cmd as Cmd exposing ( Cmd )
-  import Platform.Sub as Sub exposing ( Sub )
-      `;
+import Platform exposing ( Program )
+import Platform.Cmd as Cmd exposing ( Cmd )
+import Platform.Sub as Sub exposing ( Sub )
+`;
 
     const parser = container.resolve<Parser>("Parser");
-    const importTree = parser.parse(virtualImports);
+    const importTree = parseOrThrow(parser, virtualImports);
 
     return (this.cachedVirtualImports = importTree.rootNode.children);
   }
@@ -419,18 +421,6 @@ export class Imports {
   private static findImportAsClause(
     importNode: SyntaxNode,
   ): string | undefined {
-    const asClause = TreeUtils.findFirstNamedChildOfType(
-      "as_clause",
-      importNode,
-    );
-    if (asClause) {
-      const newName = TreeUtils.findFirstNamedChildOfType(
-        "upper_case_identifier",
-        asClause,
-      );
-      if (newName) {
-        return newName.text;
-      }
-    }
+    return TreeUtils.getImportAliasNode(importNode)?.text;
   }
 }

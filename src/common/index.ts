@@ -7,7 +7,7 @@ import {
   InitializeResult,
 } from "vscode-languageserver";
 
-import Parser from "web-tree-sitter";
+import { Language, Parser } from "web-tree-sitter";
 import { CapabilityCalculator } from "./capabilityCalculator";
 import { ASTProvider } from "./providers";
 import {
@@ -49,14 +49,14 @@ export function startCommonServer(
       const initializationOptions =
         <InitializationOptions>params.initializationOptions ?? {};
 
-      const options: object | undefined =
-        initializationOptions.treeSitterWasmUri
-          ? {
-              locateFile(): string | undefined {
-                return initializationOptions.treeSitterWasmUri;
-              },
-            }
-          : undefined;
+      const treeSitterWasmUri = initializationOptions.treeSitterWasmUri;
+      const options = treeSitterWasmUri
+        ? {
+            locateFile(): string {
+              return treeSitterWasmUri;
+            },
+          }
+        : undefined;
       await Parser.init(options);
       const pathToWasm =
         initializationOptions.treeSitterElmWasmUri ??
@@ -64,7 +64,7 @@ export function startCommonServer(
       connection.console.info(
         `Loading Elm tree-sitter syntax from ${pathToWasm}`,
       );
-      const language = await Parser.Language.load(pathToWasm);
+      const language = await Language.load(pathToWasm);
       const parser = container.resolve<Parser>("Parser");
       parser.setLanguage(language);
 

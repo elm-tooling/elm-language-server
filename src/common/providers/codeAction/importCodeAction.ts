@@ -1,6 +1,6 @@
 import { CodeAction, TextEdit } from "vscode-languageserver";
 import { Range } from "vscode-languageserver-textdocument";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { ISourceFile } from "../../../compiler/forest";
 import { ImportUtils, IPossibleImport } from "../../util/importUtils";
 import { RefactorEditUtils } from "../../util/refactorEditUtils";

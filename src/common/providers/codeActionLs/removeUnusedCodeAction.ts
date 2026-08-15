@@ -83,7 +83,7 @@ function getEditsForDiagnostic(
         diagnostic.range.end,
       );
 
-      const moduleName = node.childForFieldName("moduleName");
+      const moduleName = TreeUtils.getModuleNameNodeFromImportClause(node);
       return {
         title: `Remove unused import \`${moduleName?.text ?? node.text}\``,
         edits: [

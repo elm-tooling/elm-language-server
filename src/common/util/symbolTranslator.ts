@@ -4,7 +4,7 @@ import {
   SymbolInformation,
   SymbolKind,
 } from "vscode-languageserver";
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 
 export class SymbolInformationTranslator {
   public static translateNodeToSymbolInformation(

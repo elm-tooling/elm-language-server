@@ -28,10 +28,10 @@
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "1.0.12",
     "vscode-uri": "^3.1.0",
-    "web-tree-sitter": "^0.20.8"
+    "web-tree-sitter": "0.26.12"
   },
   "devDependencies": {
-    "@elm-tooling/tree-sitter-elm": "^5.9.4",
+    "@elm-tooling/tree-sitter-elm": "5.9.4",
     "@eslint/js": "^10.0.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.20.1",
@@ -46,7 +46,7 @@
     "jest-mock-extended": "^4.0.1",
     "node-gyp": "^12.4.0",
     "prettier": "^3.9.6",
-    "tree-sitter-cli": "^0.20.8",
+    "tree-sitter-cli": "0.26.12",
     "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
     "typescript": "5.9.3"
@@ -65,7 +65,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"*.{js,json,mjs,yaml}\" \".github/workflows/*.{yml,yaml}\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"*.{js,json,mjs,yaml}\" \".github/workflows/*.{yml,yaml}\"",
     "check": "npm run typecheck && npm run lint && npm run format:check",
-    "build-tree-sitter": "tree-sitter build-wasm ./node_modules/@elm-tooling/tree-sitter-elm",
+    "build-tree-sitter": "tree-sitter build --wasm ./node_modules/@elm-tooling/tree-sitter-elm",
     "test": "jest --coverage",
     "generate-toc": "doctoc README.md"
   },

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { SyntaxNode } from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { TreeUtils } from "../common/util/treeUtils";
 import {
   Expression,
@@ -527,7 +527,8 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       nodeParent.parent?.parent?.type === "import_clause"
     ) {
       const moduleName =
-        nodeParent.parent?.parent.childForFieldName("moduleName")?.text ?? "";
+        TreeUtils.getModuleNameNodeFromImportClause(nodeParent.parent.parent)
+          ?.text ?? "";
       const imports = findImport(
         sourceFile,
         nodeText,
@@ -933,9 +934,11 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     sourceFile: ISourceFile,
   ): SyntaxNode[] {
     // This will find an import based on module name only, not alias
-    const moduleImport = getAllImports(sourceFile)
-      .getModule(moduleNameOrAlias)
-      ?.importNode?.childForFieldName("moduleName");
+    const importNode =
+      getAllImports(sourceFile).getModule(moduleNameOrAlias)?.importNode;
+    const moduleImport = importNode
+      ? TreeUtils.getModuleNameNodeFromImportClause(importNode)
+      : undefined;
 
     // This will not find a module by name if it is aliased
     const moduleOrAliasImports =
@@ -943,7 +946,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
         ?.get(sourceFile.tree.rootNode)
         ?.getAll(moduleNameOrAlias)
         ?.filter((s) => s.type === "Import")
-        .map((s) => s.node.childForFieldName("moduleName"))
+        .map((s) => TreeUtils.getModuleNameNodeFromImportClause(s.node))
         .filter(Utils.notUndefinedOrNull) ?? [];
 
     if (
@@ -1045,7 +1048,8 @@ export function createTypeChecker(program: IProgram): TypeChecker {
   }
 
   function checkImportClause(importClause: SyntaxNode): void {
-    const moduleNameNode = importClause.childForFieldName("moduleName");
+    const moduleNameNode =
+      TreeUtils.getModuleNameNodeFromImportClause(importClause);
 
     if (moduleNameNode) {
       const moduleName = moduleNameNode.text;

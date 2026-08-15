@@ -1,5 +1,5 @@
 import { Position } from "vscode-languageserver";
-import { SyntaxNode, Tree } from "web-tree-sitter";
+import { Node as SyntaxNode, Tree } from "web-tree-sitter";
 import { ISourceFile } from "../../compiler/forest";
 import { comparePosition, positionEquals } from "../positionUtil";
 import { TRecord, Type } from "../../compiler/typeInference";
@@ -322,10 +322,9 @@ export class TreeUtils {
     const allImports = this.findAllImportClauseNodes(tree);
     if (allImports) {
       return allImports.find(
-        (a) =>
-          a.children.length > 1 &&
-          a.children[1].type === "upper_case_qid" &&
-          a.children[1].text === moduleName,
+        (importClause) =>
+          this.getModuleNameNodeFromImportClause(importClause)?.text ===
+          moduleName,
       );
     }
   }
@@ -592,20 +591,24 @@ export class TreeUtils {
     );
 
     if (!functionNameRegex.test(charBeforeCursor)) {
-      return node.namedDescendantForPosition({
-        column: position.character,
-        row: position.line,
-      });
-    } else {
-      return node.namedDescendantForPosition(
-        {
-          column: previousCharColumn,
-          row: position.line,
-        },
-        {
+      return this.requireDescendant(
+        node.namedDescendantForPosition({
           column: position.character,
           row: position.line,
-        },
+        }),
+      );
+    } else {
+      return this.requireDescendant(
+        node.namedDescendantForPosition(
+          {
+            column: previousCharColumn,
+            row: position.line,
+          },
+          {
+            column: position.character,
+            row: position.line,
+          },
+        ),
       );
     }
   }
@@ -623,20 +626,24 @@ export class TreeUtils {
     );
 
     if (!functionNameRegex.test(charBeforeCursor)) {
-      return node.descendantForPosition({
-        column: position.character,
-        row: position.line,
-      });
-    } else {
-      return node.descendantForPosition(
-        {
-          column: previousCharColumn,
-          row: position.line,
-        },
-        {
+      return this.requireDescendant(
+        node.descendantForPosition({
           column: position.character,
           row: position.line,
-        },
+        }),
+      );
+    } else {
+      return this.requireDescendant(
+        node.descendantForPosition(
+          {
+            column: previousCharColumn,
+            row: position.line,
+          },
+          {
+            column: position.character,
+            row: position.line,
+          },
+        ),
       );
     }
   }
@@ -687,15 +694,17 @@ export class TreeUtils {
         line: range.start.line,
       });
     } else {
-      return sourceFile.tree.rootNode.namedDescendantForPosition(
-        {
-          column: range.start.character,
-          row: range.start.line,
-        },
-        {
-          column: range.end.character,
-          row: range.end.line,
-        },
+      return this.requireDescendant(
+        sourceFile.tree.rootNode.namedDescendantForPosition(
+          {
+            column: range.start.character,
+            row: range.start.line,
+          },
+          {
+            column: range.end.character,
+            row: range.end.line,
+          },
+        ),
       );
     }
   }
@@ -710,15 +719,17 @@ export class TreeUtils {
         line: range.start.line,
       });
     } else {
-      return sourceFile.tree.rootNode.descendantForPosition(
-        {
-          column: range.start.character,
-          row: range.start.line,
-        },
-        {
-          column: range.end.character,
-          row: range.end.line,
-        },
+      return this.requireDescendant(
+        sourceFile.tree.rootNode.descendantForPosition(
+          {
+            column: range.start.character,
+            row: range.start.line,
+          },
+          {
+            column: range.end.character,
+            row: range.end.line,
+          },
+        ),
       );
     }
   }
@@ -744,6 +755,17 @@ export class TreeUtils {
 
     function findRightmostNode(n: SyntaxNode): SyntaxNode | undefined {
       if (n.children.length === 0) {
+        return n;
+      }
+
+      if (
+        n.isNamed &&
+        n.type !== "ERROR" &&
+        n.children.length === 1 &&
+        !n.children[0].isNamed &&
+        n.children[0].startIndex === n.startIndex &&
+        n.children[0].endIndex === n.endIndex
+      ) {
         return n;
       }
 
@@ -793,10 +815,12 @@ export class TreeUtils {
   ): SyntaxNode {
     const previousLine = position.line === 0 ? 0 : position.line - 1;
 
-    return node.namedDescendantForPosition({
-      column: 0,
-      row: previousLine,
-    });
+    return this.requireDescendant(
+      node.namedDescendantForPosition({
+        column: 0,
+        row: previousLine,
+      }),
+    );
   }
 
   public static getNamedDescendantForLineAfterPosition(
@@ -805,10 +829,20 @@ export class TreeUtils {
   ): SyntaxNode {
     const followingLine = position.line + 1;
 
-    return node.namedDescendantForPosition({
-      column: 0,
-      row: followingLine,
-    });
+    return this.requireDescendant(
+      node.namedDescendantForPosition({
+        column: 0,
+        row: followingLine,
+      }),
+    );
+  }
+
+  private static requireDescendant(node: SyntaxNode | null): SyntaxNode {
+    if (!node) {
+      throw new Error("Tree-sitter returned no descendant for the position.");
+    }
+
+    return node;
   }
 
   public static findParentOfType(
@@ -922,6 +956,40 @@ export class TreeUtils {
     return result.length === 0 ? undefined : result;
   }
 
+  public static getModuleNameNodeFromImportClause(
+    importClause: SyntaxNode,
+  ): SyntaxNode | undefined {
+    if (this.isMergedImportClause(importClause)) {
+      return (
+        importClause.childForFieldName("asClause")?.childForFieldName("name") ??
+        undefined
+      );
+    }
+
+    return importClause.childForFieldName("moduleName") ?? undefined;
+  }
+
+  public static getImportAliasNode(
+    importClause: SyntaxNode,
+  ): SyntaxNode | undefined {
+    if (this.isMergedImportClause(importClause)) {
+      return;
+    }
+
+    return (
+      importClause.childForFieldName("asClause")?.childForFieldName("name") ??
+      undefined
+    );
+  }
+
+  private static isMergedImportClause(importClause: SyntaxNode): boolean {
+    const asClause = importClause.childForFieldName("asClause");
+    return (
+      !!asClause?.childForFieldName("name") &&
+      asClause.descendantsOfType("ERROR").some((node) => node.text === "import")
+    );
+  }
+
   public static isIdentifier(node: SyntaxNode): boolean {
     return (
       node.type === "lower_case_identifier" ||
@@ -973,12 +1041,9 @@ export class TreeUtils {
   ): string | undefined {
     const importClause = TreeUtils.findImportClauseByName(tree, moduleName);
 
-    const asClause = importClause?.childForFieldName("asClause");
-
-    if (asClause) {
-      return asClause.childForFieldName("name")?.text;
-    } else {
-      return importClause?.childForFieldName("moduleName")?.text;
-    }
+    return importClause
+      ? (this.getImportAliasNode(importClause)?.text ??
+          this.getModuleNameNodeFromImportClause(importClause)?.text)
+      : undefined;
   }
 }
