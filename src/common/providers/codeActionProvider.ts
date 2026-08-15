@@ -78,6 +78,24 @@ export interface IRefactorRegistration {
   ): IRefactorEdit;
 }
 
+function isRefactorCodeAction(
+  codeAction: CodeAction,
+): codeAction is IRefactorCodeAction {
+  const data: unknown = codeAction.data;
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "uri" in data &&
+    typeof data.uri === "string" &&
+    "refactorName" in data &&
+    typeof data.refactorName === "string" &&
+    "actionName" in data &&
+    typeof data.actionName === "string" &&
+    "range" in data &&
+    Range.is(data.range)
+  );
+}
+
 export class CodeActionProvider {
   private connection: Connection;
   private settings: Settings;
@@ -114,8 +132,8 @@ export class CodeActionProvider {
     if (this.settings.isCodeActionResolveSupported("edit")) {
       this.connection.onRequest(
         CodeActionResolveRequest.method,
-        (codeAction: IRefactorCodeAction) => {
-          if (!codeAction.data.uri) {
+        (codeAction: CodeAction): CodeAction | Promise<CodeAction> => {
+          if (!isRefactorCodeAction(codeAction)) {
             return codeAction;
           }
           return new ElmWorkspaceMatcher((codeAction: IRefactorCodeAction) =>
