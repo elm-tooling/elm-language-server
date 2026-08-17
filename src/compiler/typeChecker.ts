@@ -98,37 +98,6 @@ export interface TypeChecker {
   getSymbolsInScope(node: SyntaxNode, sourceFile: ISourceFile): ISymbol[];
 }
 
-export function getTransitiveImportingModules<T extends { uri: string }>(
-  importModuleGraph: ReadonlyMap<string, readonly T[]>,
-  sourceFile: T,
-): T[] {
-  const findTransitiveImporters = (
-    modulesToVisit: readonly T[],
-    visited: ReadonlySet<T>,
-  ): T[][] => {
-    const candidateModules = ([] as T[]).concat(
-      ...modulesToVisit.map(
-        (source) => importModuleGraph.get(source.uri) ?? [],
-      ),
-    );
-    const importingModules = Array.from(new Set(candidateModules)).filter(
-      (module) => !visited.has(module),
-    );
-
-    if (importingModules.length === 0) {
-      return [];
-    }
-
-    const nextVisited = new Set([...visited, ...importingModules]);
-
-    return [importingModules].concat(
-      findTransitiveImporters(importingModules, nextVisited),
-    );
-  };
-
-  return findTransitiveImporters([sourceFile], new Set([sourceFile])).flat();
-}
-
 export function createTypeChecker(program: IProgram): TypeChecker {
   const imports = new Map<string, Imports>();
   let importModuleGraph: Map<string, ISourceFile[]>;
@@ -400,7 +369,23 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       return importModuleGraph.get(sourceFile.uri) ?? [];
     }
 
-    return getTransitiveImportingModules(importModuleGraph, sourceFile);
+    const importingModules: ISourceFile[] = [];
+    const visited = new Set<string>([sourceFile.uri]);
+    const modulesToVisit = [sourceFile];
+
+    for (let index = 0; index < modulesToVisit.length; index++) {
+      const source = modulesToVisit[index];
+
+      (importModuleGraph.get(source.uri) ?? []).forEach((importingModule) => {
+        if (!visited.has(importingModule.uri)) {
+          visited.add(importingModule.uri);
+          importingModules.push(importingModule);
+          modulesToVisit.push(importingModule);
+        }
+      });
+    }
+
+    return importingModules;
   }
 
   function findImport(
