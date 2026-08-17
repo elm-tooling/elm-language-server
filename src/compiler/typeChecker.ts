@@ -98,6 +98,29 @@ export interface TypeChecker {
   getSymbolsInScope(node: SyntaxNode, sourceFile: ISourceFile): ISymbol[];
 }
 
+export function getTransitiveImportingModules<T extends { uri: string }>(
+  importModuleGraph: ReadonlyMap<string, readonly T[]>,
+  sourceFile: T,
+): T[] {
+  const importingModules: T[] = [];
+  const visited = new Set<string>([sourceFile.uri]);
+  const modulesToVisit = [sourceFile];
+
+  for (let index = 0; index < modulesToVisit.length; index++) {
+    const source = modulesToVisit[index];
+
+    (importModuleGraph.get(source.uri) ?? []).forEach((importingModule) => {
+      if (!visited.has(importingModule.uri)) {
+        visited.add(importingModule.uri);
+        importingModules.push(importingModule);
+        modulesToVisit.push(importingModule);
+      }
+    });
+  }
+
+  return importingModules;
+}
+
 export function createTypeChecker(program: IProgram): TypeChecker {
   const imports = new Map<string, Imports>();
   let importModuleGraph: Map<string, ISourceFile[]>;
@@ -369,23 +392,7 @@ export function createTypeChecker(program: IProgram): TypeChecker {
       return importModuleGraph.get(sourceFile.uri) ?? [];
     }
 
-    const importingModules: ISourceFile[] = [];
-    const visited = new Set<string>([sourceFile.uri]);
-    const modulesToVisit = [sourceFile];
-
-    for (let index = 0; index < modulesToVisit.length; index++) {
-      const source = modulesToVisit[index];
-
-      (importModuleGraph.get(source.uri) ?? []).forEach((importingModule) => {
-        if (!visited.has(importingModule.uri)) {
-          visited.add(importingModule.uri);
-          importingModules.push(importingModule);
-          modulesToVisit.push(importingModule);
-        }
-      });
-    }
-
-    return importingModules;
+    return getTransitiveImportingModules(importModuleGraph, sourceFile);
   }
 
   function findImport(

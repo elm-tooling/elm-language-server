@@ -9,7 +9,7 @@ const NUMBER_OF_LAYERS = 24;
 const MODULES_PER_LAYER = 24;
 const WARMUP_ITERATIONS = 5;
 const BENCHMARK_ITERATIONS = 20;
-const FUNCTIONAL_TARGET_MS = 10;
+const MUTABLE_TARGET_MS = 10;
 const EXPECTED_MODULES = NUMBER_OF_LAYERS * MODULES_PER_LAYER;
 
 function createStressGraph(): {
@@ -68,22 +68,22 @@ function measure(
 }
 
 describe("transitive importing module traversal performance", () => {
-  it("stress tests the functional traversal", () => {
+  it("stress tests the mutable traversal", () => {
     const { importModuleGraph, sourceFile } = createStressGraph();
-    const functionalTraversal = (): IStressModule[] =>
+    const mutableTraversal = (): IStressModule[] =>
       getTransitiveImportingModules(importModuleGraph, sourceFile);
 
-    expect(functionalTraversal()).toHaveLength(EXPECTED_MODULES);
+    expect(mutableTraversal()).toHaveLength(EXPECTED_MODULES);
 
-    measure(functionalTraversal, WARMUP_ITERATIONS);
+    measure(mutableTraversal, WARMUP_ITERATIONS);
 
-    const functional = measure(functionalTraversal, BENCHMARK_ITERATIONS);
+    const mutable = measure(mutableTraversal, BENCHMARK_ITERATIONS);
 
-    expect(functional.visitedModules).toBe(
+    expect(mutable.visitedModules).toBe(
       EXPECTED_MODULES * BENCHMARK_ITERATIONS,
     );
 
-    console.info(`Functional: ${functional.elapsed.toFixed(2)}ms`);
-    expect(functional.elapsed).toBeLessThan(FUNCTIONAL_TARGET_MS);
+    console.info(`Mutable: ${mutable.elapsed.toFixed(2)}ms`);
+    expect(mutable.elapsed).toBeLessThan(MUTABLE_TARGET_MS);
   });
 });
