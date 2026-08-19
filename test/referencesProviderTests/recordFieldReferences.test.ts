@@ -3,6 +3,52 @@ import { ReferencesProviderTestBase } from "./referencesProviderTestBase";
 describe("recordFieldReferences", () => {
   const testBase = new ReferencesProviderTestBase();
 
+  it(`deduplicates record references through diamond-shaped imports`, async () => {
+    const source = `
+--@ Module.elm
+module Module exposing (Foo)
+
+type alias Foo = { field : String }
+                   --^
+
+--@ Left.elm
+module Left exposing (Left)
+
+import Module exposing (Foo)
+
+type alias Left =
+    { foo : Foo }
+
+--@ Right.elm
+module Right exposing (Right)
+
+import Module exposing (Foo)
+
+type alias Right =
+    { foo : Foo }
+
+--@ Combined.elm
+module Combined exposing (Combined, fields)
+
+import Left exposing (Left)
+import Right exposing (Right)
+
+type alias Combined =
+    { left : Left
+    , right : Right
+    }
+
+fields : Combined -> ( String, String )
+fields combined =
+    ( combined.left.foo.field
+                        --X
+    , combined.right.foo.field
+                         --X
+    )
+`;
+    await testBase.testReferences(source);
+  });
+
   it(`record used in the same module`, async () => {
     const source = `
 --@ Module.elm
