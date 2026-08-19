@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import {
   mkdtempSync,
   mkdirSync,
@@ -47,26 +47,15 @@ if (!languageServer.Protocol) throw new Error("Protocol export missing");
     stdio: "pipe",
   });
 
-  const cli = path.join(
+  const installedPackageDirectory = path.join(
     packageDirectory,
     "node_modules",
     "@elm-tooling",
     "elm-language-server",
-    "out",
-    "node",
-    "index.js",
   );
+  const cli = path.join(installedPackageDirectory, "out", "node", "index.js");
   const installedPackageJson = JSON.parse(
-    readFileSync(
-      path.join(
-        packageDirectory,
-        "node_modules",
-        "@elm-tooling",
-        "elm-language-server",
-        "package.json",
-      ),
-      "utf8",
-    ),
+    readFileSync(path.join(installedPackageDirectory, "package.json"), "utf8"),
   );
   const version = execFileSync(process.execPath, [cli, "--version"], {
     encoding: "utf8",
@@ -76,6 +65,115 @@ if (!languageServer.Protocol) throw new Error("Protocol export missing");
       `Expected CLI version ${installedPackageJson.version}, received ${version}`,
     );
   }
+
+  await initializeServer(cli, {});
+  await initializeServer(cli, {
+    treeSitterWasmUri: path.join(
+      packageDirectory,
+      "node_modules",
+      "web-tree-sitter",
+      "web-tree-sitter.wasm",
+    ),
+    treeSitterElmWasmUri: path.join(
+      installedPackageDirectory,
+      "out",
+      "tree-sitter-elm.wasm",
+    ),
+  });
 } finally {
   rmSync(temporaryDirectory, { recursive: true, force: true });
+}
+
+function initializeServer(cli, initializationOptions) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [cli], {
+      cwd: packageDirectory,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let output = Buffer.alloc(0);
+    let stdout = "";
+    let stderr = "";
+    let initialized = false;
+    const timeout = setTimeout(() => {
+      child.kill();
+      reject(
+        new Error(
+          `Language server initialization timed out.\nstdout: ${stdout}\nstderr: ${stderr}`,
+        ),
+      );
+    }, 15_000);
+
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk;
+    });
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk;
+      output = Buffer.concat([output, chunk]);
+      while (true) {
+        const headerEnd = output.indexOf("\r\n\r\n");
+        if (headerEnd === -1) {
+          return;
+        }
+        const header = output.subarray(0, headerEnd).toString();
+        const contentLength = Number(
+          /Content-Length: (\d+)/i.exec(header)?.[1],
+        );
+        const bodyStart = headerEnd + 4;
+        const messageEnd = bodyStart + contentLength;
+        if (output.length < messageEnd) {
+          return;
+        }
+        const response = JSON.parse(
+          output.subarray(bodyStart, messageEnd).toString(),
+        );
+        output = output.subarray(messageEnd);
+        if (response.id === 2 && initialized) {
+          child.stdin.write(lspMessage({ jsonrpc: "2.0", method: "exit" }));
+          child.stdin.end();
+          return;
+        }
+        if (response.id !== 1 || initialized) {
+          continue;
+        }
+
+        initialized = true;
+        child.stdin.write(
+          lspMessage({ jsonrpc: "2.0", id: 2, method: "shutdown" }),
+        );
+      }
+    });
+    child.once("error", reject);
+    child.once("close", (code) => {
+      clearTimeout(timeout);
+      if (!initialized || code !== 0) {
+        reject(
+          new Error(
+            `Language server initialization failed with code ${code}.\n${stderr}`,
+          ),
+        );
+      } else {
+        resolve();
+      }
+    });
+
+    child.stdin.write(
+      lspMessage({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          processId: null,
+          rootUri: null,
+          capabilities: {},
+          workspaceFolders: null,
+          initializationOptions: { elmJsonFiles: [], ...initializationOptions },
+        },
+      }),
+    );
+  });
+}
+
+function lspMessage(message) {
+  const body = JSON.stringify(message);
+  return `Content-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`;
 }

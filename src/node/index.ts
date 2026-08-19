@@ -1,14 +1,21 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { ProposedFeatures, createConnection } from "vscode-languageserver/node";
 import { startCommonServer } from "../common/index.js";
 import { getCancellationStrategyFromArgv } from "./cancellation.js";
 import { createNodeFileSystemHost } from "./fileSystem.js";
 
+const outDir =
+  typeof __dirname === "string"
+    ? __dirname
+    : fileURLToPath(new URL("..", import.meta.url));
+
 // Show version for `-v` or `--version` arguments
 if (process.argv[2] === "-v" || process.argv[2] === "--version") {
   const packageJson = JSON.parse(
-    readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+    readFileSync(path.join(outDir, "../package.json"), "utf8"),
   ) as { version: string };
   process.stdout.write(`${packageJson.version}\n`);
   process.exit(0);
@@ -26,7 +33,11 @@ export function startLanguageServer(): void {
     cancellationStrategy: getCancellationStrategyFromArgv(process.argv),
   });
 
-  startCommonServer(connection, createNodeFileSystemHost(connection));
+  startCommonServer(
+    connection,
+    createNodeFileSystemHost(connection),
+    path.join(outDir, "tree-sitter-elm.wasm"),
+  );
 
   // Don't die on unhandled Promise rejections
   process.on("unhandledRejection", (reason, p) => {

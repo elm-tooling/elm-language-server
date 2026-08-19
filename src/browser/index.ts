@@ -18,5 +18,9 @@ export function startLanguageServer(): void {
     messageWriter,
   );
 
-  startCommonServer(connection, createWebFileSystemHost(connection));
+  startCommonServer(
+    connection,
+    createWebFileSystemHost(connection),
+    "/tree-sitter-elm.wasm",
+  );
 }

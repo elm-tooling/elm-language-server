@@ -20,11 +20,11 @@ import { Settings } from "./util/settings.js";
 import { TextDocumentEvents } from "./util/textDocumentEvents.js";
 import { IFileSystemHost, InitializationOptions } from "./types.js";
 import { URI, Utils } from "vscode-uri";
-import { outDir } from "../directories.js";
 
 export function startCommonServer(
   connection: Connection,
   fileSystemHost: IFileSystemHost,
+  treeSitterElmWasmPath: string,
 ): void {
   // Composition root - be aware, there are some register calls that need to be done later
   container.register<Connection>("Connection", {
@@ -59,7 +59,7 @@ export function startCommonServer(
       await Parser.init(options);
       const pathToWasm =
         initializationOptions.treeSitterElmWasmUri ??
-        Path.relative(process.cwd(), Path.join(outDir, "tree-sitter-elm.wasm"));
+        Path.relative(process.cwd(), treeSitterElmWasmPath);
       connection.console.info(
         `Loading Elm tree-sitter syntax from ${pathToWasm}`,
       );
