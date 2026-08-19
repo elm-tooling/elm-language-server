@@ -10,6 +10,7 @@ import {
   CancellationToken,
   Emitter,
   Event,
+  IdCancellationReceiverStrategy,
 } from "vscode-languageserver";
 
 /**
@@ -120,7 +121,7 @@ export function getCancellationFilePath(
   );
 }
 
-class FileCancellationReceiverStrategy implements CancellationReceiverStrategy {
+class FileCancellationReceiverStrategy implements IdCancellationReceiverStrategy {
   constructor(readonly folderName: string) {}
 
   createCancellationTokenSource(

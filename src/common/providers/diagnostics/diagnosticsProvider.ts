@@ -44,7 +44,8 @@ export interface IElmIssue {
   file: string;
 }
 
-export interface IDiagnostic extends Omit<LspDiagnostic, "code"> {
+export interface IDiagnostic extends Omit<LspDiagnostic, "code" | "message"> {
+  message: string;
   source: DiagnosticSource;
   data: {
     uri: string;

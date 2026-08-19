@@ -1,4 +1,5 @@
-import { ClientCapabilities, Connection } from "vscode-languageserver";
+import { Connection } from "vscode-languageserver";
+import type { ClientCapabilities } from "vscode-languageserver";
 import { injectable, container } from "tsyringe";
 
 export interface IClientSettings {

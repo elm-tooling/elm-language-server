@@ -118,7 +118,7 @@ describe("fileEventsHandler", () => {
   it("handles file create event", async () => {
     await createProgram("");
     const newPath = uri("New/Module.elm");
-    createFilesHandler({ files: [{ uri: newPath }] });
+    await createFilesHandler({ files: [{ uri: newPath }] });
     await createFilesPromise;
 
     const edit = appliedWorkspaceEdit;
@@ -146,7 +146,7 @@ describe("fileEventsHandler", () => {
     await createProgram("");
     const newPath = uri("New/Module.elm");
     const newPath2 = uri("New/Another/Module.elm");
-    createFilesHandler({ files: [{ uri: newPath }, { uri: newPath2 }] });
+    await createFilesHandler({ files: [{ uri: newPath }, { uri: newPath2 }] });
     await createFilesPromise;
 
     const edit = appliedWorkspaceEdit;

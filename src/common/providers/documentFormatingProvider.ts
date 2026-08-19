@@ -11,7 +11,7 @@ import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
 import { Settings } from "../util/settings";
 import { TextDocumentEvents } from "../util/textDocumentEvents";
 import { IDocumentFormattingParams } from "./paramsExtensions";
-import { IFileSystemHost } from "../types";
+import type { IFileSystemHost } from "../types";
 
 type DocumentFormattingResult = Promise<TextEdit[] | undefined>;
 
