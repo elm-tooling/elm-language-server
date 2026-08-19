@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import {
   mkdtempSync,
   mkdirSync,
+  readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
@@ -55,11 +56,25 @@ if (!languageServer.Protocol) throw new Error("Protocol export missing");
     "node",
     "index.js",
   );
+  const installedPackageJson = JSON.parse(
+    readFileSync(
+      path.join(
+        packageDirectory,
+        "node_modules",
+        "@elm-tooling",
+        "elm-language-server",
+        "package.json",
+      ),
+      "utf8",
+    ),
+  );
   const version = execFileSync(process.execPath, [cli, "--version"], {
     encoding: "utf8",
   }).trim();
-  if (version !== "2.8.0") {
-    throw new Error(`Expected CLI version 2.8.0, received ${version}`);
+  if (version !== installedPackageJson.version) {
+    throw new Error(
+      `Expected CLI version ${installedPackageJson.version}, received ${version}`,
+    );
   }
 } finally {
   rmSync(temporaryDirectory, { recursive: true, force: true });

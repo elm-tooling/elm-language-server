@@ -1,4 +1,5 @@
 import { spawnSync } from "child_process";
+import { jest } from "@jest/globals";
 import { readFileSync } from "fs";
 import { createRequire } from "module";
 import { fileURLToPath } from "node:url";

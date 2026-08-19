@@ -5,6 +5,8 @@ import {
   IExecCmdOptions,
   IExecCmdSyncOptions,
   IFileSystemHost,
+  ExecResult,
+  ExecSyncResult,
 } from "../common/types.js";
 import { URI, Utils } from "vscode-uri";
 import requestLight, { XHRResponse } from "request-light";
@@ -17,7 +19,7 @@ import {
   virtualPackagesRoot,
 } from "../common/index.js";
 import os from "os";
-import { execa, execaSync, type Result, type SyncResult } from "execa";
+import { execa, execaSync } from "execa";
 import { NonEmptyArray } from "../common/util/utils.js";
 import { IClientSettings } from "../common/util/settings.js";
 
@@ -26,8 +28,6 @@ const readDir = util.promisify(fs.readdir);
 const writeFile = util.promisify(fs.writeFile);
 const mkdir = util.promisify(fs.mkdir);
 const { xhr, getErrorStatusDescription } = requestLight;
-type ExecaTextResult = Result<{ encoding: "utf8" }>;
-type ExecaSyncTextResult = SyncResult<{ encoding: "utf8" }>;
 
 export function createNodeFileSystemHost(
   connection: Connection,
@@ -245,7 +245,7 @@ export function execCmdSync(
   options: IExecCmdSyncOptions = {},
   cwd: string,
   input?: string,
-): ExecaSyncTextResult {
+): ExecSyncResult {
   const cmd = cmdFromUser === "" ? cmdStatic : cmdFromUser;
   const preferLocal = cmdFromUser === "";
 
@@ -286,7 +286,7 @@ export async function execCmd(
   options: IExecCmdOptions,
   cwd: string,
   input?: string,
-): Promise<ExecaTextResult> {
+): Promise<ExecResult> {
   const [cmd, args] = cmdFromUser[0] === "" ? cmdStatic[0] : cmdFromUser;
   const preferLocal = cmdFromUser[0] === "";
 

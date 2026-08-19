@@ -33,10 +33,9 @@ export function startCommonServer(
   container.registerSingleton<Parser>("Parser", Parser);
 
   container.registerSingleton("DocumentEvents", DocumentEvents);
-  container.registerSingleton<IElmAnalyseJsonService>(
-    "ElmAnalyseJsonService",
-    ElmAnalyseJsonService,
-  );
+  container.register<IElmAnalyseJsonService>("ElmAnalyseJsonService", {
+    useValue: new ElmAnalyseJsonService(fileSystemHost),
+  });
   container.register(TextDocumentEvents, {
     useValue: new TextDocumentEvents(),
   });

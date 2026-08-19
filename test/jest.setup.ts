@@ -1,5 +1,4 @@
 import "reflect-metadata";
-import { jest as jestObject } from "@jest/globals";
 import { container } from "tsyringe";
 import { Connection } from "vscode-languageserver";
 import { mockDeep } from "jest-mock-extended";
@@ -15,8 +14,6 @@ import {
   ElmReviewDiagnostics,
 } from "../src/common/providers/index.js";
 import { createTestNodeFileSystemHost } from "./utils/sourceTreeParser.js";
-
-Object.defineProperty(globalThis, "jest", { value: jestObject });
 
 container.register("Connection", { useValue: mockDeep<Connection>() });
 container.register("ElmWorkspaces", { useValue: [] });
