@@ -1,4 +1,4 @@
-import type { ExecaSyncReturnValue } from "execa";
+import type { SyncResult } from "execa";
 import { container } from "tsyringe";
 import { CodeAction, Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -79,7 +79,7 @@ export function register(host: IFileSystemHost): void {
           return;
         }
 
-        const result: ExecaSyncReturnValue = <ExecaSyncReturnValue>e;
+        const result = e as SyncResult<{ encoding: "utf8" }>;
 
         const message = result.stdout.replace("[Y/n]:", "").trim();
 

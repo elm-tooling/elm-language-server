@@ -15,7 +15,7 @@ import { IDiagnostic, IElmIssue } from "./diagnosticsProvider.js";
 import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper.js";
 import { IProgram } from "../../../compiler/program.js";
 import { IFileSystemHost } from "../../types.js";
-import type { ExecaReturnValue } from "execa";
+import type { Result } from "execa";
 import { IElmAnalyseJsonService } from "./elmAnalyseJsonService.js";
 
 const ELM_MAKE = "Elm";
@@ -355,7 +355,7 @@ export class ElmMakeDiagnostics {
       if (typeof error === "string") {
         continue;
       } else {
-        const execaError = error as ExecaReturnValue<string>;
+        const execaError = error as Result<{ encoding: "utf8" }>;
         execaError.stderr.split("\n").forEach((line: string) => {
           let errorObject: unknown;
           try {

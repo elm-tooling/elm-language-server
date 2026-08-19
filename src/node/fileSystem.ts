@@ -17,7 +17,7 @@ import {
   virtualPackagesRoot,
 } from "../common/index.js";
 import os from "os";
-import execa, { ExecaSyncReturnValue } from "execa";
+import { execa, execaSync, type Result, type SyncResult } from "execa";
 import { NonEmptyArray } from "../common/util/utils.js";
 import { IClientSettings } from "../common/util/settings.js";
 
@@ -26,6 +26,8 @@ const readDir = util.promisify(fs.readdir);
 const writeFile = util.promisify(fs.writeFile);
 const mkdir = util.promisify(fs.mkdir);
 const { xhr, getErrorStatusDescription } = requestLight;
+type ExecaTextResult = Result<{ encoding: "utf8" }>;
+type ExecaSyncTextResult = SyncResult<{ encoding: "utf8" }>;
 
 export function createNodeFileSystemHost(
   connection: Connection,
@@ -243,15 +245,16 @@ export function execCmdSync(
   options: IExecCmdSyncOptions = {},
   cwd: string,
   input?: string,
-): ExecaSyncReturnValue<string> {
+): ExecaSyncTextResult {
   const cmd = cmdFromUser === "" ? cmdStatic : cmdFromUser;
   const preferLocal = cmdFromUser === "";
 
   const cmdArguments = options ? options.cmdArguments : [];
 
   try {
-    return execa.sync(cmd, cmdArguments, {
+    return execaSync(cmd, cmdArguments, {
       cwd,
+      encoding: "utf8",
       input,
       preferLocal,
       stripFinalNewline: false,
@@ -283,13 +286,14 @@ export async function execCmd(
   options: IExecCmdOptions,
   cwd: string,
   input?: string,
-): Promise<ExecaSyncReturnValue<string>> {
+): Promise<ExecaTextResult> {
   const [cmd, args] = cmdFromUser[0] === "" ? cmdStatic[0] : cmdFromUser;
   const preferLocal = cmdFromUser[0] === "";
 
   try {
     return await execa(cmd, args, {
       cwd,
+      encoding: "utf8",
       input,
       preferLocal,
       stripFinalNewline: false,

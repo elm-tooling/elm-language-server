@@ -12,7 +12,7 @@ import { Settings } from "../../util/settings.js";
 import { IDiagnostic } from "./diagnosticsProvider.js";
 import { Range } from "vscode-languageserver-textdocument";
 import { IFileSystemHost } from "../../types.js";
-import type { ExecaReturnValue } from "execa";
+import type { Result } from "execa";
 
 export type IElmReviewDiagnostic = IDiagnostic & {
   data: {
@@ -159,7 +159,7 @@ export class ElmReviewDiagnostics {
       if (typeof error === "string") {
         return fileErrors;
       } else {
-        const execaError = error as ExecaReturnValue<string>;
+        const execaError = error as Result<{ encoding: "utf8" }>;
         let errorObject: unknown;
         try {
           errorObject = JSON.parse(execaError.stdout);
