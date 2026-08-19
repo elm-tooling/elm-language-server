@@ -1,4 +1,4 @@
-import { testCodeAction } from "./codeActionTestBase";
+import { testCodeAction } from "./codeActionTestBase.js";
 
 describe("add type annotation code action", () => {
   it("should annotate a type of functions", async () => {

@@ -1,5 +1,5 @@
-import { Expression } from "./utils/expressionTree";
-import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
+import { Expression } from "./utils/expressionTree.js";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap.js";
 
 export type OperatorAssociativity = "LEFT" | "RIGHT" | "NON";
 

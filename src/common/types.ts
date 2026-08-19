@@ -1,6 +1,6 @@
 import { URI } from "vscode-uri";
-import { IClientSettings } from "./util/settings";
-import { NonEmptyArray } from "./util/utils";
+import { IClientSettings } from "./util/settings.js";
+import { NonEmptyArray } from "./util/utils.js";
 import type { ExecaSyncReturnValue } from "execa";
 import { Disposable } from "vscode-languageserver";
 

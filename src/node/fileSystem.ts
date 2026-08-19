@@ -5,26 +5,27 @@ import {
   IExecCmdOptions,
   IExecCmdSyncOptions,
   IFileSystemHost,
-} from "../common/types";
+} from "../common/types.js";
 import { URI, Utils } from "vscode-uri";
-import { xhr, XHRResponse, getErrorStatusDescription } from "request-light";
-import { ReadDirectoryRequest, ReadFileRequest } from "../common/protocol";
+import requestLight, { XHRResponse } from "request-light";
+import { ReadDirectoryRequest, ReadFileRequest } from "../common/protocol.js";
 import { Connection } from "vscode-languageserver/node";
 import { Disposable } from "vscode-languageserver";
 import {
   convertToFileSystemUri,
   readFileWithCachedVirtualPackageFile,
   virtualPackagesRoot,
-} from "../common";
+} from "../common/index.js";
 import os from "os";
 import execa, { ExecaSyncReturnValue } from "execa";
-import { NonEmptyArray } from "../common/util/utils";
-import { IClientSettings } from "../common/util/settings";
+import { NonEmptyArray } from "../common/util/utils.js";
+import { IClientSettings } from "../common/util/settings.js";
 
 const readFile = util.promisify(fs.readFile);
 const readDir = util.promisify(fs.readdir);
 const writeFile = util.promisify(fs.writeFile);
 const mkdir = util.promisify(fs.mkdir);
+const { xhr, getErrorStatusDescription } = requestLight;
 
 export function createNodeFileSystemHost(
   connection: Connection,

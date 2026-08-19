@@ -1,13 +1,16 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import { ProposedFeatures, createConnection } from "vscode-languageserver/node";
-import { startCommonServer } from "../common";
-import { getCancellationStrategyFromArgv } from "./cancellation";
-import { createNodeFileSystemHost } from "./fileSystem";
+import { startCommonServer } from "../common/index.js";
+import { getCancellationStrategyFromArgv } from "./cancellation.js";
+import { createNodeFileSystemHost } from "./fileSystem.js";
 
 // Show version for `-v` or `--version` arguments
 if (process.argv[2] === "-v" || process.argv[2] === "--version") {
-  // require is used to avoid loading package if not necessary (~30ms time difference)
-  process.stdout.write(`${require("pjson").version}\n`);
+  const packageJson = JSON.parse(
+    readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+  ) as { version: string };
+  process.stdout.write(`${packageJson.version}\n`);
   process.exit(0);
 }
 

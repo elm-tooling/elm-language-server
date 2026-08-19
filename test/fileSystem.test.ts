@@ -4,7 +4,7 @@ import path from "path";
 import { mockDeep } from "jest-mock-extended";
 import { Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { createNodeFileSystemHost } from "../src/node/fileSystem";
+import { createNodeFileSystemHost } from "../src/node/fileSystem.js";
 
 function toFileUris(paths: string[]): string[] {
   return paths.map((filePath) => URI.file(filePath).toString()).sort();

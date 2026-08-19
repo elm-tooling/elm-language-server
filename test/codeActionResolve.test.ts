@@ -12,12 +12,12 @@ import { URI } from "vscode-uri";
 import {
   CodeActionProvider,
   IRefactorCodeAction,
-} from "../src/common/providers/codeActionProvider";
-import { DiagnosticsProvider } from "../src/common/providers/diagnostics/diagnosticsProvider";
-import { ElmMakeDiagnostics } from "../src/common/providers/diagnostics/elmMakeDiagnostics";
-import { Settings } from "../src/common/util/settings";
-import { ISourceFile } from "../src/compiler/forest";
-import { IProgram, IProgramHost } from "../src/compiler/program";
+} from "../src/common/providers/codeActionProvider.js";
+import { DiagnosticsProvider } from "../src/common/providers/diagnostics/diagnosticsProvider.js";
+import { ElmMakeDiagnostics } from "../src/common/providers/diagnostics/elmMakeDiagnostics.js";
+import { Settings } from "../src/common/util/settings.js";
+import { ISourceFile } from "../src/compiler/forest.js";
+import { IProgram, IProgramHost } from "../src/compiler/program.js";
 
 describe("code action resolve", () => {
   let resolveHandler: RequestHandler<CodeAction, CodeAction, void>;

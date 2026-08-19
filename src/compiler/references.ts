@@ -1,10 +1,10 @@
-import { IProgram } from "./program";
-import { ISourceFile } from "./forest";
+import { IProgram } from "./program.js";
+import { ISourceFile } from "./forest.js";
 import { Node as SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "../common/util/treeUtils";
-import { Utils } from "../common/util/utils";
-import { Imports } from "./imports";
-import { ISymbol } from "./binder";
+import { TreeUtils } from "../common/util/treeUtils.js";
+import { Utils } from "../common/util/utils.js";
+import { Imports } from "./imports.js";
+import { ISymbol } from "./binder.js";
 
 export class References {
   public static find(

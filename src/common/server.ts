@@ -7,8 +7,8 @@ import {
   InitializeResult,
 } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import { CapabilityCalculator } from "./capabilityCalculator";
-import { Program, IProgram, IProgramHost } from "../compiler/program";
+import { CapabilityCalculator } from "./capabilityCalculator.js";
+import { Program, IProgram, IProgramHost } from "../compiler/program.js";
 import {
   CodeActionProvider,
   CodeLensProvider,
@@ -25,16 +25,16 @@ import {
   RenameProvider,
   SelectionRangeProvider,
   WorkspaceSymbolProvider,
-} from "./providers";
-import { ElmLsDiagnostics } from "./providers/diagnostics/elmLsDiagnostics";
-import { FileEventsHandler } from "./providers/handlers/fileEventsHandler";
-import { Settings } from "./util/settings";
-import { TextDocumentEvents } from "./util/textDocumentEvents";
-import { FindTestsProvider } from "./providers/findTestsProvider";
-import { ElmReviewDiagnostics } from "./providers/diagnostics/elmReviewDiagnostics";
-import { VirtualFileProvider } from "./providers/virtualFileProvider";
-import { IFileSystemHost, InitializationOptions } from "./types";
-import * as installPackageCodeAction from "./providers/codeAction/installPackageCodeAction";
+} from "./providers/index.js";
+import { ElmLsDiagnostics } from "./providers/diagnostics/elmLsDiagnostics.js";
+import { FileEventsHandler } from "./providers/handlers/fileEventsHandler.js";
+import { Settings } from "./util/settings.js";
+import { TextDocumentEvents } from "./util/textDocumentEvents.js";
+import { FindTestsProvider } from "./providers/findTestsProvider.js";
+import { ElmReviewDiagnostics } from "./providers/diagnostics/elmReviewDiagnostics.js";
+import { VirtualFileProvider } from "./providers/virtualFileProvider.js";
+import { IFileSystemHost, InitializationOptions } from "./types.js";
+import * as installPackageCodeAction from "./providers/codeAction/installPackageCodeAction.js";
 
 export interface ILanguageServer extends Disposable {
   readonly capabilities: InitializeResult;

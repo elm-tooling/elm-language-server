@@ -1,1 +1,1 @@
-import "./removeUnusedCodeAction";
+import "./removeUnusedCodeAction.js";

@@ -1,19 +1,22 @@
 import "reflect-metadata";
+import { jest as jestObject } from "@jest/globals";
 import { container } from "tsyringe";
 import { Connection } from "vscode-languageserver";
 import { mockDeep } from "jest-mock-extended";
-import { Settings } from "../src/common/util/settings";
-import { DocumentEvents } from "../src/common/util/documentEvents";
+import { Settings } from "../src/common/util/settings.js";
+import { DocumentEvents } from "../src/common/util/documentEvents.js";
 import {
   IElmAnalyseJsonService,
   IElmAnalyseJson,
-} from "../src/common/providers/diagnostics/elmAnalyseJsonService";
+} from "../src/common/providers/diagnostics/elmAnalyseJsonService.js";
 import {
   ASTProvider,
   ElmMakeDiagnostics,
   ElmReviewDiagnostics,
-} from "../src/common/providers";
-import { createTestNodeFileSystemHost } from "./utils/sourceTreeParser";
+} from "../src/common/providers/index.js";
+import { createTestNodeFileSystemHost } from "./utils/sourceTreeParser.js";
+
+Object.defineProperty(globalThis, "jest", { value: jestObject });
 
 container.register("Connection", { useValue: mockDeep<Connection>() });
 container.register("ElmWorkspaces", { useValue: [] });

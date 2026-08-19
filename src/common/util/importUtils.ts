@@ -1,8 +1,8 @@
-import { comparePackageRanking } from "../providers/ranking";
-import { ISourceFile } from "../../compiler/forest";
-import { NodeType } from "./treeUtils";
+import { comparePackageRanking } from "../providers/ranking.js";
+import { ISourceFile } from "../../compiler/forest.js";
+import { NodeType } from "./treeUtils.js";
 import { Node as SyntaxNode } from "web-tree-sitter";
-import { IProgram } from "../../compiler/program";
+import { IProgram } from "../../compiler/program.js";
 
 export interface IPossibleImport {
   module: string;

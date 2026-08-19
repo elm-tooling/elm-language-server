@@ -1,12 +1,12 @@
 import { CodeActionKind } from "vscode-languageserver";
-import { RefactorEditUtils } from "../../util/refactorEditUtils";
-import { TreeUtils } from "../../util/treeUtils";
+import { RefactorEditUtils } from "../../util/refactorEditUtils.js";
+import { TreeUtils } from "../../util/treeUtils.js";
 import {
   CodeActionProvider,
   IRefactorCodeAction,
   IRefactorEdit,
-} from "../codeActionProvider";
-import { ICodeActionParams } from "../paramsExtensions";
+} from "../codeActionProvider.js";
+import { ICodeActionParams } from "../paramsExtensions.js";
 
 const refactorName = "expose_unexpose";
 CodeActionProvider.registerRefactorAction(refactorName, {

@@ -1,14 +1,14 @@
 import { Node as SyntaxNode, Parser } from "web-tree-sitter";
-import { ISourceFile } from "./forest";
-import { TreeUtils } from "../common/util/treeUtils";
+import { ISourceFile } from "./forest.js";
+import { TreeUtils } from "../common/util/treeUtils.js";
 import { container } from "tsyringe";
-import { MultiMap } from "../common/util/multiMap";
+import { MultiMap } from "../common/util/multiMap.js";
 import { performance } from "perf_hooks";
-import { isCoreProject } from "./utils/elmUtils";
-import { Diagnostic, Diagnostics, error } from "./diagnostics";
-import { ISymbol } from "./binder";
-import { IProgram } from "./program";
-import { parseOrThrow } from "../common/util/treeSitter";
+import { isCoreProject } from "./utils/elmUtils.js";
+import { Diagnostic, Diagnostics, error } from "./diagnostics.js";
+import { ISymbol } from "./binder.js";
+import { IProgram } from "./program.js";
+import { parseOrThrow } from "../common/util/treeSitter.js";
 
 export let importsTime = 0;
 export function resetImportsTime(): void {

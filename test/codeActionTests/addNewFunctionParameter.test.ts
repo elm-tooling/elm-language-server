@@ -1,4 +1,4 @@
-import { testCodeAction } from "./codeActionTestBase";
+import { testCodeAction } from "./codeActionTestBase.js";
 
 describe("add new function parameter", () => {
   it("can add parameter to function", async () => {

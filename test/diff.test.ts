@@ -1,11 +1,13 @@
 import "reflect-metadata";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { URI } from "vscode-uri";
-import { formatText } from "../src/common/util/diff";
+import { formatText } from "../src/common/util/diff.js";
 import { container } from "tsyringe";
-import { createTestNodeFileSystemHost } from "./utils/sourceTreeParser";
+import { createTestNodeFileSystemHost } from "./utils/sourceTreeParser.js";
 
 describe("test formatting", () => {
-  const pathUri = URI.file(__dirname);
+  const pathUri = URI.file(dirname(fileURLToPath(import.meta.url)));
 
   test("normal format gives correct result", () => {
     const result = formatText(

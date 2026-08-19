@@ -2,11 +2,11 @@ import { Utils } from "vscode-uri";
 import {
   ReferenceResult,
   ReferencesProvider,
-} from "../../src/common/providers";
-import { IReferenceParams } from "../../src/common/providers/paramsExtensions";
-import { TreeUtils } from "../../src/common/util/treeUtils";
-import { getReferencesTestFromSource } from "../utils/sourceParser";
-import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";
+} from "../../src/common/providers/index.js";
+import { IReferenceParams } from "../../src/common/providers/paramsExtensions.js";
+import { TreeUtils } from "../../src/common/util/treeUtils.js";
+import { getReferencesTestFromSource } from "../utils/sourceParser.js";
+import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser.js";
 
 class MockReferencesProvider extends ReferencesProvider {
   public handleReference(params: IReferenceParams): ReferenceResult {

@@ -4,12 +4,12 @@ import {
   Range,
 } from "vscode-languageserver";
 import { Utils as UriUtils } from "vscode-uri";
-import { IDiagnostic } from "../../src/common/providers/diagnostics/diagnosticsProvider";
-import { ElmLsDiagnostics } from "../../src/common/providers/diagnostics/elmLsDiagnostics";
-import { diagnosticsEquals } from "../../src/common/providers/diagnostics/fileDiagnostics";
-import { Utils } from "../../src/common/util/utils";
-import { getSourceFiles } from "../utils/sourceParser";
-import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";
+import { IDiagnostic } from "../../src/common/providers/diagnostics/diagnosticsProvider.js";
+import { ElmLsDiagnostics } from "../../src/common/providers/diagnostics/elmLsDiagnostics.js";
+import { diagnosticsEquals } from "../../src/common/providers/diagnostics/fileDiagnostics.js";
+import { Utils } from "../../src/common/util/utils.js";
+import { getSourceFiles } from "../utils/sourceParser.js";
+import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser.js";
 import { diff } from "jest-diff";
 import { describe, expect } from "@jest/globals";
 import { fail } from "assert";

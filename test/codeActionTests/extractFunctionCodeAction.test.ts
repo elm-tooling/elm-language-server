@@ -1,4 +1,4 @@
-import { testCodeAction } from "./codeActionTestBase";
+import { testCodeAction } from "./codeActionTestBase.js";
 
 describe("extract function code action", () => {
   it("should extract function and compute parameters", async () => {

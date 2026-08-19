@@ -8,19 +8,19 @@ import {
 } from "vscode-languageserver";
 
 import { Language, Parser } from "web-tree-sitter";
-import { CapabilityCalculator } from "./capabilityCalculator";
-import { ASTProvider } from "./providers";
+import { CapabilityCalculator } from "./capabilityCalculator.js";
+import { ASTProvider } from "./providers/index.js";
 import {
   ElmAnalyseJsonService,
   IElmAnalyseJsonService,
-} from "./providers/diagnostics/elmAnalyseJsonService";
-import { ILanguageServer } from "./server";
-import { DocumentEvents } from "./util/documentEvents";
-import { Settings } from "./util/settings";
-import { TextDocumentEvents } from "./util/textDocumentEvents";
-import { IFileSystemHost, InitializationOptions } from "./types";
+} from "./providers/diagnostics/elmAnalyseJsonService.js";
+import { ILanguageServer } from "./server.js";
+import { DocumentEvents } from "./util/documentEvents.js";
+import { Settings } from "./util/settings.js";
+import { TextDocumentEvents } from "./util/textDocumentEvents.js";
+import { IFileSystemHost, InitializationOptions } from "./types.js";
 import { URI, Utils } from "vscode-uri";
-import { outDir } from "../directories";
+import { outDir } from "../directories.js";
 
 export function startCommonServer(
   connection: Connection,

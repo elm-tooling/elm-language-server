@@ -1,4 +1,4 @@
-import { testCodeAction } from "./codeActionTestBase";
+import { testCodeAction } from "./codeActionTestBase.js";
 
 describe("expose unexpose code actions", () => {
   test("exposing a function is available", async () => {

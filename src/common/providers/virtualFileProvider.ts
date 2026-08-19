@@ -1,7 +1,7 @@
 import { container } from "tsyringe";
 import { Connection } from "vscode-languageserver";
-import { ProvideFileContentsRequest } from "../protocol";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
+import { ProvideFileContentsRequest } from "../protocol.js";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
 import { URI } from "vscode-uri";
 
 export class VirtualFileProvider {

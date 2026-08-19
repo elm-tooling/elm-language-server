@@ -1,21 +1,21 @@
 import { WorkspaceEdit, Range, Position } from "vscode-languageserver";
 import { Utils } from "vscode-uri";
-import { RenameProvider } from "../src/common/providers";
+import { RenameProvider } from "../src/common/providers/index.js";
 import {
   IPrepareRenameParams,
   IRenameParams,
-} from "../src/common/providers/paramsExtensions";
+} from "../src/common/providers/paramsExtensions.js";
 import {
   getSourceFiles,
   getTargetPositionFromSource,
-} from "./utils/sourceParser";
+} from "./utils/sourceParser.js";
 import {
   applyEditsToSource,
   SourceTreeParser,
   srcUri,
   stripCommentLines,
   trimTrailingWhitespace,
-} from "./utils/sourceTreeParser";
+} from "./utils/sourceTreeParser.js";
 
 class MockRenameProvider extends RenameProvider {
   public onPrepareRenameRequest(params: IPrepareRenameParams): Range | null {

@@ -3,11 +3,11 @@ import { Utils } from "vscode-uri";
 import {
   DefinitionProvider,
   DefinitionResult,
-} from "../../src/common/providers";
-import { ITextDocumentPositionParams } from "../../src/common/providers/paramsExtensions";
-import { TreeUtils } from "../../src/common/util/treeUtils";
-import { getInvokeAndTargetPositionFromSource } from "../utils/sourceParser";
-import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";
+} from "../../src/common/providers/index.js";
+import { ITextDocumentPositionParams } from "../../src/common/providers/paramsExtensions.js";
+import { TreeUtils } from "../../src/common/util/treeUtils.js";
+import { getInvokeAndTargetPositionFromSource } from "../utils/sourceParser.js";
+import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser.js";
 
 class MockDefinitionProvider extends DefinitionProvider {
   public handleDefinition(

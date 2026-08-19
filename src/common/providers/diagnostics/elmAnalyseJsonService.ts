@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import path from "path";
 import { container, injectable } from "tsyringe";
 import { Connection } from "vscode-languageserver";
@@ -62,8 +63,8 @@ export class ElmAnalyseJsonService implements IElmAnalyseJsonService {
 
     let elmAnalyseJson = {};
     try {
-      elmAnalyseJson = require(
-        path.join(workspacePath, "elm-analyse.json"),
+      elmAnalyseJson = JSON.parse(
+        readFileSync(path.join(workspacePath, "elm-analyse.json"), "utf8"),
       ) as IElmAnalyseJson;
     } catch {
       this.connection.console.info(

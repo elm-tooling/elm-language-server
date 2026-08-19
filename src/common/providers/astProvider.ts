@@ -9,13 +9,13 @@ import {
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { Node as SyntaxNode, Parser } from "web-tree-sitter";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { TextDocumentEvents } from "../util/textDocumentEvents";
-import { TreeUtils } from "../util/treeUtils";
-import { ISourceFile } from "../../compiler/forest";
-import { FileChangeParams, IFileChangeParams } from "./paramsExtensions";
-import { IFileSystemHost } from "../types";
-import { applyChangesToTree, parseOrThrow } from "../util/treeSitter";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { TextDocumentEvents } from "../util/textDocumentEvents.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { ISourceFile } from "../../compiler/forest.js";
+import { FileChangeParams, IFileChangeParams } from "./paramsExtensions.js";
+import { IFileSystemHost } from "../types.js";
+import { applyChangesToTree, parseOrThrow } from "../util/treeSitter.js";
 
 export class ASTProvider {
   private connection: Connection;

@@ -1,4 +1,4 @@
-import { testCodeAction } from "./codeActionTestBase";
+import { testCodeAction } from "./codeActionTestBase.js";
 
 describe("extract type alias code action", () => {
   it("should extract type alias of a record", async () => {

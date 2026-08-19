@@ -5,8 +5,8 @@ import {
   WorkspaceSymbolParams,
 } from "vscode-languageserver";
 import { Node as SyntaxNode } from "web-tree-sitter";
-import { IProgram } from "../../compiler/program";
-import { SymbolInformationTranslator } from "../util/symbolTranslator";
+import { IProgram } from "../../compiler/program.js";
+import { SymbolInformationTranslator } from "../util/symbolTranslator.js";
 
 type SymbolMatch = {
   position: number;

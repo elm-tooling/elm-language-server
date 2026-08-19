@@ -1,14 +1,14 @@
 import { Connection, Disposable } from "vscode-languageserver/browser";
-import { IFileSystemHost } from "../common/types";
-import { ReadDirectoryRequest, ReadFileRequest } from "../common/protocol";
+import { IFileSystemHost } from "../common/types.js";
+import { ReadDirectoryRequest, ReadFileRequest } from "../common/protocol.js";
 import {
   convertToFileSystemUri,
   readFileWithCachedVirtualPackageFile,
   virtualPackagesRoot,
-} from "../common";
+} from "../common/index.js";
 import { URI } from "vscode-uri";
 import { XHRResponse, getErrorStatusDescription, xhr } from "request-light";
-import { IndexedDB } from "./indexedDB";
+import { IndexedDB } from "./indexedDB.js";
 
 export function createWebFileSystemHost(
   connection: Connection,

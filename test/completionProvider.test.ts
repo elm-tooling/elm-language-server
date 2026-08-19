@@ -6,10 +6,13 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import { CompletionProvider, CompletionResult } from "../src/common/providers";
-import { ICompletionParams } from "../src/common/providers/paramsExtensions";
-import { getCaretPositionFromSource } from "./utils/sourceParser";
-import { baseUri, SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
+import {
+  CompletionProvider,
+  CompletionResult,
+} from "../src/common/providers/index.js";
+import { ICompletionParams } from "../src/common/providers/paramsExtensions.js";
+import { getCaretPositionFromSource } from "./utils/sourceParser.js";
+import { baseUri, SourceTreeParser, srcUri } from "./utils/sourceTreeParser.js";
 
 class MockCompletionProvider extends CompletionProvider {
   public handleCompletion(params: ICompletionParams): CompletionResult {

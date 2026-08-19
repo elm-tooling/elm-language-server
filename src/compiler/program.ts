@@ -2,23 +2,23 @@ import { container } from "tsyringe";
 import { Connection, Disposable } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
 import { Parser, Tree } from "web-tree-sitter";
-import type { ICancellationToken } from "../common/cancellation";
-import { ElmPackageCache, IElmPackageCache } from "./elmPackageCache";
-import { Forest, IForest, IKernelSourceFile, ISourceFile } from "./forest";
-import * as utils from "./utils/elmUtils";
-import { IVersion } from "./utils/elmUtils";
+import type { ICancellationToken } from "../common/cancellation.js";
+import { ElmPackageCache, IElmPackageCache } from "./elmPackageCache.js";
+import { Forest, IForest, IKernelSourceFile, ISourceFile } from "./forest.js";
+import * as utils from "./utils/elmUtils.js";
+import { IVersion } from "./utils/elmUtils.js";
 import {
   IPossibleImportsCache,
   PossibleImportsCache,
-} from "../common/util/possibleImportsCache";
-import { Settings } from "../common/util/settings";
-import { Diagnostic } from "./diagnostics";
-import { TypeCache } from "./typeCache";
-import { createTypeChecker, TypeChecker } from "./typeChecker";
-import { CommandManager } from "../common/commandManager";
-import { IFileSystemHost } from "../common/types";
-import { parseOrThrow } from "../common/util/treeSitter";
-import { TreeUtils } from "../common/util/treeUtils";
+} from "../common/util/possibleImportsCache.js";
+import { Settings } from "../common/util/settings.js";
+import { Diagnostic } from "./diagnostics.js";
+import { TypeCache } from "./typeCache.js";
+import { createTypeChecker, TypeChecker } from "./typeChecker.js";
+import { CommandManager } from "../common/commandManager.js";
+import { IFileSystemHost } from "../common/types.js";
+import { parseOrThrow } from "../common/util/treeSitter.js";
+import { TreeUtils } from "../common/util/treeUtils.js";
 
 interface IElmFile {
   path: URI;

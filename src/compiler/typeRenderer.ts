@@ -1,12 +1,12 @@
-import { ISourceFile } from "./forest";
-import { TypeChecker } from "./typeChecker";
+import { ISourceFile } from "./forest.js";
+import { TypeChecker } from "./typeChecker.js";
 import {
   getTypeclassName,
   getVarNames,
   TUnion,
   TVar,
   Type,
-} from "./typeInference";
+} from "./typeInference.js";
 
 export class TypeRenderer {
   private usedVarNames = new Map<TVar, string>();

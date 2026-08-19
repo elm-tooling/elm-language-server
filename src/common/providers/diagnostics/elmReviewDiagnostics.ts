@@ -6,12 +6,12 @@ import {
   DiagnosticTag,
 } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import { ISourceFile } from "../../../compiler/forest";
-import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { Settings } from "../../util/settings";
-import { IDiagnostic } from "./diagnosticsProvider";
+import { ISourceFile } from "../../../compiler/forest.js";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher.js";
+import { Settings } from "../../util/settings.js";
+import { IDiagnostic } from "./diagnosticsProvider.js";
 import { Range } from "vscode-languageserver-textdocument";
-import { IFileSystemHost } from "../../types";
+import { IFileSystemHost } from "../../types.js";
 import type { ExecaReturnValue } from "execa";
 
 export type IElmReviewDiagnostic = IDiagnostic & {

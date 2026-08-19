@@ -5,13 +5,13 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { DiagnosticsProvider } from ".";
-import { formatText } from "../util/diff";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { Settings } from "../util/settings";
-import { TextDocumentEvents } from "../util/textDocumentEvents";
-import { IDocumentFormattingParams } from "./paramsExtensions";
-import type { IFileSystemHost } from "../types";
+import { DiagnosticsProvider } from "./index.js";
+import { formatText } from "../util/diff.js";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { Settings } from "../util/settings.js";
+import { TextDocumentEvents } from "../util/textDocumentEvents.js";
+import { IDocumentFormattingParams } from "./paramsExtensions.js";
+import type { IFileSystemHost } from "../types.js";
 
 type DocumentFormattingResult = Promise<TextEdit[] | undefined>;
 

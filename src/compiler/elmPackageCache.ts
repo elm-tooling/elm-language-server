@@ -1,7 +1,7 @@
-import * as utils from "./utils/elmUtils";
-import { ElmJson, IProgramHost } from "./program";
-import { IConstraint, IVersion } from "./utils/elmUtils";
-import { MultiMap } from "../common/util/multiMap";
+import * as utils from "./utils/elmUtils.js";
+import { ElmJson, IProgramHost } from "./program.js";
+import { IConstraint, IVersion } from "./utils/elmUtils.js";
+import { MultiMap } from "../common/util/multiMap.js";
 import { URI, Utils } from "vscode-uri";
 
 export interface IPackage {
