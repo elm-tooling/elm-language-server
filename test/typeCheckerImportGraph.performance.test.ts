@@ -1,5 +1,5 @@
 import { performance } from "perf_hooks";
-import { getTransitiveImportingModules } from "../src/compiler/typeChecker";
+import { getTransitiveImportingModules } from "../src/compiler/typeChecker.js";
 
 interface IStressModule {
   uri: string;

@@ -1,7 +1,7 @@
 import diff from "fast-diff";
 import { Range, TextEdit } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { IFileSystemHost } from "../types";
+import { IFileSystemHost } from "../types.js";
 // Given two strings (`before`, `after`), return a list of all substrings
 // that appear in `after` but not in `before`, and the positions of each
 // of the substrings within `after`.

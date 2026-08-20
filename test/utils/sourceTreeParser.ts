@@ -1,16 +1,20 @@
 import { container } from "tsyringe";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { TextEdit } from "vscode-languageserver-textdocument";
 import { URI, Utils as UriUtils } from "vscode-uri";
 import { Language, Parser } from "web-tree-sitter";
-import { Program, IProgram } from "../../src/compiler/program";
-import * as path from "../../src/common/util/path";
-import { Utils } from "../../src/common/util/utils";
+import { Program, IProgram } from "../../src/compiler/program.js";
+import * as path from "../../src/common/util/path.js";
+import { Utils } from "../../src/common/util/utils.js";
 import { Disposable } from "vscode-languageserver";
-import { createNodeFileSystemHost } from "../../src/node/fileSystem";
-import { IFileSystemHost } from "../../src/common/types";
+import { createNodeFileSystemHost } from "../../src/node/fileSystem.js";
+import { IFileSystemHost } from "../../src/common/types.js";
 import { readFileSync } from "fs";
 
-export const baseUri = path.join(__dirname, "../sources/");
+const testUtilsDir = dirname(fileURLToPath(import.meta.url));
+
+export const baseUri = path.join(testUtilsDir, "../sources/");
 export const srcUri = URI.file(path.join(baseUri, "src"));
 export const testsUri = URI.file(path.join(baseUri, "tests"));
 
@@ -23,7 +27,7 @@ export class SourceTreeParser {
     }
 
     await Parser.init();
-    const absolute = path.join(__dirname, "../../tree-sitter-elm.wasm");
+    const absolute = path.join(testUtilsDir, "../../tree-sitter-elm.wasm");
     const language = await Language.load(readFileSync(absolute));
     container.registerSingleton("Parser", Parser);
     container.resolve<Parser>("Parser").setLanguage(language);

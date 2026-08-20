@@ -1,15 +1,19 @@
 import "reflect-metadata";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { container } from "tsyringe";
 import { URI } from "vscode-uri";
-import { Program } from "../src/compiler/program";
+import { Program } from "../src/compiler/program.js";
 import * as path from "path";
-import { Settings } from "../src/common/util/settings";
+import { Settings } from "../src/common/util/settings.js";
 import { Language, Parser } from "web-tree-sitter";
 import { spawnSync } from "child_process";
 import { readFileSync } from "fs";
-import { Diagnostic } from "../src/compiler/diagnostics";
+import { Diagnostic } from "../src/compiler/diagnostics.js";
 import { performance } from "perf_hooks";
-import { createTestNodeFileSystemHost } from "./utils/sourceTreeParser";
+import { createTestNodeFileSystemHost } from "./utils/sourceTreeParser.js";
+
+const testDir = dirname(fileURLToPath(import.meta.url));
 
 container.register("Connection", {
   useValue: {
@@ -41,7 +45,7 @@ container.register("Settings", {
 
 async function initParser(): Promise<void> {
   await Parser.init();
-  const absolute = path.join(__dirname, "../tree-sitter-elm.wasm");
+  const absolute = path.join(testDir, "../tree-sitter-elm.wasm");
   const pathToWasm = path.relative(process.cwd(), absolute);
 
   const language = await Language.load(pathToWasm);
@@ -94,7 +98,7 @@ export async function runDiagnosticTests(uri: string): Promise<void> {
     console.log();
 
     if (diagnostics.length === 0) {
-      // appendFileSync(path.join(__dirname, "complete.txt"), `${uri}\n`);
+      // appendFileSync(path.join(testDir, "complete.txt"), `${uri}\n`);
     } else {
       failed.push(path.basename(uri));
       // process.exitCode = 1;
@@ -125,7 +129,9 @@ function checkout(repo: string, url: string): void {
 
 console.log("Getting libs");
 
-const libsToParse = require("../script/search.json") as {
+const libsToParse = JSON.parse(
+  readFileSync(new URL("../script/search.json", import.meta.url), "utf8"),
+) as {
   name: string;
   summary: string;
   license: string;
@@ -173,7 +179,7 @@ const removedFromGithubFailures = [
 let completed: string[] = [];
 
 try {
-  completed = readFileSync(path.join(__dirname, "complete.txt"))
+  completed = readFileSync(path.join(testDir, "complete.txt"))
     .toString()
     .split("\n");
 } catch (e) {
@@ -190,12 +196,14 @@ const filteredLibs = libsToParse
       // !parsingFailures.includes(lib) &&
       !compilerFailures.includes(lib) &&
       !removedFromGithubFailures.includes(lib) &&
-      !completed.includes(path.join(__dirname, "../", `examples-full/${lib}`)),
+      !completed.includes(path.join(testDir, "../", `examples-full/${lib}`)),
   );
 
 console.log("Getting applications");
 
-const applications = require("../script/applications.json") as string[];
+const applications = JSON.parse(
+  readFileSync(new URL("../script/applications.json", import.meta.url), "utf8"),
+) as string[];
 
 async function testAll(): Promise<void> {
   await initParser();
@@ -209,7 +217,7 @@ async function testAll(): Promise<void> {
     try {
       checkout(dir, lib);
 
-      await runDiagnosticTests(path.join(__dirname, "../", dir));
+      await runDiagnosticTests(path.join(testDir, "../", dir));
     } catch (e) {
       console.log(e);
     } finally {

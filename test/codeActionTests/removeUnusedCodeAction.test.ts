@@ -1,4 +1,4 @@
-import { testCodeAction } from "./codeActionTestBase";
+import { testCodeAction } from "./codeActionTestBase.js";
 
 describe("remove unused code action", () => {
   it("removing an import at the start of exposing list", async () => {

@@ -1,8 +1,8 @@
 import { Node as SyntaxNode } from "web-tree-sitter";
-import { MultiMap } from "../common/util/multiMap";
-import { TreeUtils } from "../common/util/treeUtils";
-import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
-import { InferenceResult } from "./typeInference";
+import { MultiMap } from "../common/util/multiMap.js";
+import { TreeUtils } from "../common/util/treeUtils.js";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap.js";
+import { InferenceResult } from "./typeInference.js";
 
 type CacheKey =
   | "PACKAGE_TYPE_ANNOTATION"

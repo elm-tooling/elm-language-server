@@ -5,26 +5,29 @@ import {
   IExecCmdOptions,
   IExecCmdSyncOptions,
   IFileSystemHost,
-} from "../common/types";
+  ExecResult,
+  ExecSyncResult,
+} from "../common/types.js";
 import { URI, Utils } from "vscode-uri";
-import { xhr, XHRResponse, getErrorStatusDescription } from "request-light";
-import { ReadDirectoryRequest, ReadFileRequest } from "../common/protocol";
+import requestLight, { XHRResponse } from "request-light";
+import { ReadDirectoryRequest, ReadFileRequest } from "../common/protocol.js";
 import { Connection } from "vscode-languageserver/node";
 import { Disposable } from "vscode-languageserver";
 import {
   convertToFileSystemUri,
   readFileWithCachedVirtualPackageFile,
   virtualPackagesRoot,
-} from "../common";
+} from "../common/index.js";
 import os from "os";
-import execa, { ExecaSyncReturnValue } from "execa";
-import { NonEmptyArray } from "../common/util/utils";
-import { IClientSettings } from "../common/util/settings";
+import { execa, execaSync } from "execa";
+import { NonEmptyArray } from "../common/util/utils.js";
+import { IClientSettings } from "../common/util/settings.js";
 
 const readFile = util.promisify(fs.readFile);
 const readDir = util.promisify(fs.readdir);
 const writeFile = util.promisify(fs.writeFile);
 const mkdir = util.promisify(fs.mkdir);
+const { xhr, getErrorStatusDescription } = requestLight;
 
 export function createNodeFileSystemHost(
   connection: Connection,
@@ -242,15 +245,16 @@ export function execCmdSync(
   options: IExecCmdSyncOptions = {},
   cwd: string,
   input?: string,
-): ExecaSyncReturnValue<string> {
+): ExecSyncResult {
   const cmd = cmdFromUser === "" ? cmdStatic : cmdFromUser;
   const preferLocal = cmdFromUser === "";
 
   const cmdArguments = options ? options.cmdArguments : [];
 
   try {
-    return execa.sync(cmd, cmdArguments, {
+    return execaSync(cmd, cmdArguments, {
       cwd,
+      encoding: "utf8",
       input,
       preferLocal,
       stripFinalNewline: false,
@@ -282,13 +286,14 @@ export async function execCmd(
   options: IExecCmdOptions,
   cwd: string,
   input?: string,
-): Promise<ExecaSyncReturnValue<string>> {
+): Promise<ExecResult> {
   const [cmd, args] = cmdFromUser[0] === "" ? cmdStatic[0] : cmdFromUser;
   const preferLocal = cmdFromUser[0] === "";
 
   try {
     return await execa(cmd, args, {
       cwd,
+      encoding: "utf8",
       input,
       preferLocal,
       stripFinalNewline: false,

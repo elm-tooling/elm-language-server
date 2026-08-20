@@ -1,4 +1,4 @@
-import { ReferencesProviderTestBase } from "./referencesProviderTestBase";
+import { ReferencesProviderTestBase } from "./referencesProviderTestBase.js";
 
 describe("functionReferences", () => {
   const testBase = new ReferencesProviderTestBase();

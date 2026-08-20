@@ -1,28 +1,35 @@
 import "reflect-metadata";
 import { container } from "tsyringe";
 import { URI } from "vscode-uri";
-import { Program } from "../src/compiler/program";
-import { importsTime, resetImportsTime } from "../src/compiler/imports";
+import { Program } from "../src/compiler/program.js";
+import { importsTime, resetImportsTime } from "../src/compiler/imports.js";
 import {
   definitionTime,
   mappingTime,
   resetDefinitionAndMappingTime,
-} from "../src/compiler/utils/expressionTree";
-import { bindTime, resetBindTime } from "../src/compiler/typeChecker";
-import { inferTime, resetInferTime } from "../src/compiler/typeInference";
+} from "../src/compiler/utils/expressionTree.js";
+import { bindTime, resetBindTime } from "../src/compiler/typeChecker.js";
+import { inferTime, resetInferTime } from "../src/compiler/typeInference.js";
 import * as path from "path";
 import { argv } from "process";
-import { Settings } from "../src/common/util/settings";
+import { Settings } from "../src/common/util/settings.js";
 import { Language, Parser } from "web-tree-sitter";
-import { replaceTime, resetReplaceTime } from "../src/compiler/typeReplacement";
+import {
+  replaceTime,
+  resetReplaceTime,
+} from "../src/compiler/typeReplacement.js";
 import {
   getCancellationFilePath,
   FileBasedCancellationTokenSource,
   getCancellationFolderPath,
-} from "../src/node/cancellation";
+} from "../src/node/cancellation.js";
 import { randomBytes } from "crypto";
-import { ThrottledCancellationToken } from "../src/common/cancellation";
-import { createTestNodeFileSystemHost } from "./utils/sourceTreeParser";
+import { ThrottledCancellationToken } from "../src/common/cancellation.js";
+import { createTestNodeFileSystemHost } from "./utils/sourceTreeParser.js";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const testDir = dirname(fileURLToPath(import.meta.url));
 
 container.register("Connection", {
   useValue: {
@@ -50,7 +57,7 @@ container.register("Settings", {
 
 async function initParser(): Promise<void> {
   await Parser.init();
-  const absolute = path.join(__dirname, "../tree-sitter-elm.wasm");
+  const absolute = path.join(testDir, "../tree-sitter-elm.wasm");
   const pathToWasm = path.relative(process.cwd(), absolute);
 
   const language = await Language.load(pathToWasm);
@@ -129,7 +136,5 @@ export async function runPerformanceTests(uri: string): Promise<void> {
 
 const inputPath = argv[argv.length - 1];
 void runPerformanceTests(
-  path.isAbsolute(inputPath)
-    ? inputPath
-    : path.join(__dirname, "../", inputPath),
+  path.isAbsolute(inputPath) ? inputPath : path.join(testDir, "../", inputPath),
 );

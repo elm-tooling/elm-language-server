@@ -1,10 +1,10 @@
 import { Node as SyntaxNode } from "web-tree-sitter";
-import { OperatorAssociativity } from "../operatorPrecedence";
-import { TreeUtils } from "../../common/util/treeUtils";
-import { Utils } from "../../common/util/utils";
-import { IProgram } from "../program";
+import { OperatorAssociativity } from "../operatorPrecedence.js";
+import { TreeUtils } from "../../common/util/treeUtils.js";
+import { Utils } from "../../common/util/utils.js";
+import { IProgram } from "../program.js";
 import { performance } from "perf_hooks";
-import { Diagnostic } from "../diagnostics";
+import { Diagnostic } from "../diagnostics.js";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export let definitionTime = 0;

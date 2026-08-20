@@ -1,13 +1,13 @@
 import { container } from "tsyringe";
 import { CodeActionKind } from "vscode-languageserver";
-import { Settings } from "../../util/settings";
-import { TreeUtils } from "../../util/treeUtils";
+import { Settings } from "../../util/settings.js";
+import { TreeUtils } from "../../util/treeUtils.js";
 import {
   CodeActionProvider,
   IRefactorCodeAction,
   IRefactorEdit,
-} from "../codeActionProvider";
-import { ICodeActionParams } from "../paramsExtensions";
+} from "../codeActionProvider.js";
+import { ICodeActionParams } from "../paramsExtensions.js";
 
 const refactorName = "move_function";
 CodeActionProvider.registerRefactorAction(refactorName, {

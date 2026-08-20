@@ -8,15 +8,15 @@ import {
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { ISourceFile } from "../../../compiler/forest";
-import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { Settings } from "../../util/settings";
-import { IDiagnostic, IElmIssue } from "./diagnosticsProvider";
-import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper";
-import { IProgram } from "../../../compiler/program";
-import { IFileSystemHost } from "../../types";
-import type { ExecaReturnValue } from "execa";
-import { IElmAnalyseJsonService } from "./elmAnalyseJsonService";
+import { ISourceFile } from "../../../compiler/forest.js";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher.js";
+import { Settings } from "../../util/settings.js";
+import { IDiagnostic, IElmIssue } from "./diagnosticsProvider.js";
+import { ElmDiagnosticsHelper } from "./elmDiagnosticsHelper.js";
+import { IProgram } from "../../../compiler/program.js";
+import { IFileSystemHost } from "../../types.js";
+import type { ExecaError } from "execa";
+import { IElmAnalyseJsonService } from "./elmAnalyseJsonService.js";
 
 const ELM_MAKE = "Elm";
 export const NAMING_ERROR = "NAMING ERROR";
@@ -355,7 +355,7 @@ export class ElmMakeDiagnostics {
       if (typeof error === "string") {
         continue;
       } else {
-        const execaError = error as ExecaReturnValue<string>;
+        const execaError = error as ExecaError<{ encoding: "utf8" }>;
         execaError.stderr.split("\n").forEach((line: string) => {
           let errorObject: unknown;
           try {

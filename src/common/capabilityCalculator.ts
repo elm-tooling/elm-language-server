@@ -3,8 +3,8 @@ import {
   ServerCapabilities,
   TextDocumentSyncKind,
 } from "vscode-languageserver";
-import { CommandManager } from "./commandManager";
-import * as ElmMakeDiagnostics from "./providers/diagnostics/elmMakeDiagnostics";
+import { CommandManager } from "./commandManager.js";
+import * as ElmMakeDiagnostics from "./providers/diagnostics/elmMakeDiagnostics.js";
 
 export class CapabilityCalculator {
   private clientCapabilities: ClientCapabilities;

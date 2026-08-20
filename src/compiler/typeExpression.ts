@@ -11,7 +11,7 @@ import {
   TList,
   TRecord,
   Alias,
-} from "./typeInference";
+} from "./typeInference.js";
 import {
   Expression,
   ETypeExpression,
@@ -28,14 +28,14 @@ import {
   mapTypeDeclaration,
   mapTypeAliasDeclaration,
   mapTypeAnnotation,
-} from "./utils/expressionTree";
-import { TreeUtils } from "../common/util/treeUtils";
-import { TypeReplacement } from "./typeReplacement";
-import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
-import { Utils } from "../common/util/utils";
-import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable";
-import { IProgram } from "./program";
-import { Diagnostic, Diagnostics, error } from "./diagnostics";
+} from "./utils/expressionTree.js";
+import { TreeUtils } from "../common/util/treeUtils.js";
+import { TypeReplacement } from "./typeReplacement.js";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap.js";
+import { Utils } from "../common/util/utils.js";
+import { RecordFieldReferenceTable } from "./utils/recordFieldReferenceTable.js";
+import { IProgram } from "./program.js";
+import { Diagnostic, Diagnostics, error } from "./diagnostics.js";
 
 export class PerformanceTimer {
   public total = 0;

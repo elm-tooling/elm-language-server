@@ -14,4 +14,4 @@ jobs:
       - run: npm install -g elm
       - run: npm ci
       - run: npm run compile
-      - run: node -r ts-node/register --expose-gc ./test/diagnostics.ts
+      - run: node --loader ts-node/esm --expose-gc ./test/diagnostics.ts

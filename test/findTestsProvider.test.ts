@@ -1,11 +1,11 @@
-import { getSourceFiles } from "./utils/sourceParser";
-import { SourceTreeParser, testsUri } from "./utils/sourceTreeParser";
+import { getSourceFiles } from "./utils/sourceParser.js";
+import { SourceTreeParser, testsUri } from "./utils/sourceTreeParser.js";
 import { Utils } from "vscode-uri";
 import {
   findAllTestSuites,
   stringLiteralToLabel,
-} from "../src/common/providers/findTestsProvider";
-import { TestSuite } from "../src/common/protocol";
+} from "../src/common/providers/findTestsProvider.js";
+import { TestSuite } from "../src/common/protocol.js";
 
 const basicsSources = `
 --@ Basics.elm

@@ -2,7 +2,7 @@ import {
   CodeActionProvider,
   ICodeAction,
   IRefactorCodeAction,
-} from "../../src/common/providers/codeActionProvider";
+} from "../../src/common/providers/codeActionProvider.js";
 
 class MockCodeActionsProvider extends CodeActionProvider {
   public static isPreferredFix(

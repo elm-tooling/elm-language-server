@@ -8,10 +8,10 @@ import {
   Range,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
-import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher";
-import { TreeUtils } from "../util/treeUtils";
-import { Utils } from "../util/utils";
-import { ILinkedEditingRangeParams } from "./paramsExtensions";
+import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
+import { TreeUtils } from "../util/treeUtils.js";
+import { Utils } from "../util/utils.js";
+import { ILinkedEditingRangeParams } from "./paramsExtensions.js";
 
 export class LinkedEditingRangesProvider {
   private connection: Connection;

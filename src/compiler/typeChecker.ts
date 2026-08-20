@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { Node as SyntaxNode } from "web-tree-sitter";
-import { TreeUtils } from "../common/util/treeUtils";
+import { TreeUtils } from "../common/util/treeUtils.js";
 import {
   Expression,
   EValueDeclaration,
@@ -9,8 +9,8 @@ import {
   ETypeDeclaration,
   EUnionVariant,
   EPortAnnotation,
-} from "./utils/expressionTree";
-import { IProgram } from "./program";
+} from "./utils/expressionTree.js";
+import { IProgram } from "./program.js";
 import { container } from "tsyringe";
 import { Connection } from "vscode-languageserver";
 import {
@@ -18,17 +18,17 @@ import {
   TUnknown,
   InferenceScope,
   InferenceResult,
-} from "./typeInference";
-import { ISourceFile } from "./forest";
-import { IImport, Imports } from "./imports";
-import { TypeRenderer } from "./typeRenderer";
+} from "./typeInference.js";
+import { ISourceFile } from "./forest.js";
+import { IImport, Imports } from "./imports.js";
+import { TypeRenderer } from "./typeRenderer.js";
 import { performance } from "perf_hooks";
-import { bindTreeContainer, ISymbol } from "./binder";
-import { Sequence } from "../common/util/sequence";
-import { Utils } from "../common/util/utils";
-import { TypeExpression } from "./typeExpression";
-import type { ICancellationToken } from "../common/cancellation";
-import { Diagnostic, Diagnostics, error } from "./diagnostics";
+import { bindTreeContainer, ISymbol } from "./binder.js";
+import { Sequence } from "../common/util/sequence.js";
+import { Utils } from "../common/util/utils.js";
+import { TypeExpression } from "./typeExpression.js";
+import type { ICancellationToken } from "../common/cancellation.js";
+import { Diagnostic, Diagnostics, error } from "./diagnostics.js";
 
 export let bindTime = 0;
 export function resetBindTime(): void {

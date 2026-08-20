@@ -4,8 +4,8 @@ import {
   ProposedFeatures,
   createConnection,
 } from "vscode-languageserver/browser";
-import { startCommonServer } from "../common";
-import { createWebFileSystemHost } from "./fileSystem";
+import { startCommonServer } from "../common/index.js";
+import { createWebFileSystemHost } from "./fileSystem.js";
 
 startLanguageServer();
 
@@ -18,5 +18,9 @@ export function startLanguageServer(): void {
     messageWriter,
   );
 
-  startCommonServer(connection, createWebFileSystemHost(connection));
+  startCommonServer(
+    connection,
+    createWebFileSystemHost(connection),
+    "/tree-sitter-elm.wasm",
+  );
 }

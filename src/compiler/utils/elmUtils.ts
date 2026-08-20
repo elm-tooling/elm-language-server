@@ -1,8 +1,8 @@
-import * as path from "../../common/util/path";
+import * as path from "../../common/util/path.js";
 import { CompletionItemKind } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import { IElmPackageCache } from "../elmPackageCache";
-import { ElmProject } from "../program";
+import { IElmPackageCache } from "../elmPackageCache.js";
+import { ElmProject } from "../program.js";
 
 // Special type that has no core mock https://github.com/elm/compiler/blob/51e20357137ebc9c3f6136cf0a3fe21c24027f39/compiler/src/Canonicalize/Environment/Foreign.hs#L62
 export function getEmptyTypes(): {

@@ -1,20 +1,20 @@
 import { Utils as UriUtils } from "vscode-uri";
 import { Node as SyntaxNode } from "web-tree-sitter";
-import { convertFromCompilerDiagnostic } from "../../src/common/providers";
-import { diagnosticsEquals } from "../../src/common/providers/diagnostics/fileDiagnostics";
-import { TreeUtils } from "../../src/common/util/treeUtils";
+import { convertFromCompilerDiagnostic } from "../../src/common/providers/index.js";
+import { diagnosticsEquals } from "../../src/common/providers/diagnostics/fileDiagnostics.js";
+import { TreeUtils } from "../../src/common/util/treeUtils.js";
 import {
   Diagnostic,
   Diagnostics,
   error,
   IDiagnosticMessage,
-} from "../../src/compiler/diagnostics";
-import { Utils } from "../../src/common/util/utils";
+} from "../../src/compiler/diagnostics.js";
+import { Utils } from "../../src/common/util/utils.js";
 import {
   getSourceFiles,
   getTargetPositionFromSource,
-} from "../utils/sourceParser";
-import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser";
+} from "../utils/sourceParser.js";
+import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser.js";
 import { diff } from "jest-diff";
 import path from "path";
 import { describe, expect } from "@jest/globals";
@@ -23,7 +23,7 @@ import {
   listSources,
   parserSources,
   stringSources,
-} from "./sources";
+} from "./sources.js";
 
 describe("test elm diagnostics", () => {
   const treeParser = new SourceTreeParser();

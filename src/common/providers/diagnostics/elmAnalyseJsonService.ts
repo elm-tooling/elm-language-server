@@ -2,6 +2,7 @@ import path from "path";
 import { container, injectable } from "tsyringe";
 import { Connection } from "vscode-languageserver";
 import { URI } from "vscode-uri";
+import type { IFileSystemHost } from "../../types.js";
 
 export interface IElmAnalyseJson {
   checks?: {
@@ -49,7 +50,7 @@ export class ElmAnalyseJsonService implements IElmAnalyseJsonService {
   private connection: Connection;
   private elmAnalyseJson = new Map<string, IElmAnalyseJson>();
 
-  constructor() {
+  constructor(private host: IFileSystemHost) {
     this.connection = container.resolve<Connection>("Connection");
   }
 
@@ -62,8 +63,10 @@ export class ElmAnalyseJsonService implements IElmAnalyseJsonService {
 
     let elmAnalyseJson = {};
     try {
-      elmAnalyseJson = require(
-        path.join(workspacePath, "elm-analyse.json"),
+      elmAnalyseJson = JSON.parse(
+        this.host.readFileSync(
+          URI.file(path.join(workspacePath, "elm-analyse.json")),
+        ),
       ) as IElmAnalyseJson;
     } catch {
       this.connection.console.info(

@@ -1,4 +1,4 @@
-import { IPossibleImport } from "./importUtils";
+import { IPossibleImport } from "./importUtils.js";
 
 export interface IPossibleImportsCache {
   get(uri: string): IPossibleImport[] | undefined;

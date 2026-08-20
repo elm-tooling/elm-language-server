@@ -1,8 +1,11 @@
 import { URI } from "vscode-uri";
-import { IClientSettings } from "./util/settings";
-import { NonEmptyArray } from "./util/utils";
-import type { ExecaSyncReturnValue } from "execa";
+import { IClientSettings } from "./util/settings.js";
+import { NonEmptyArray } from "./util/utils.js";
+import type { Result, SyncResult } from "execa";
 import { Disposable } from "vscode-languageserver";
+
+export type ExecResult = Result<{ encoding: "utf8" }>;
+export type ExecSyncResult = SyncResult<{ encoding: "utf8" }>;
 
 export interface IFileSystemHost {
   readFile(uri: URI): Promise<string>;
@@ -23,14 +26,14 @@ export interface IFileSystemHost {
     options: IExecCmdSyncOptions,
     cwd: string,
     input?: string,
-  ): ExecaSyncReturnValue<string>;
+  ): ExecSyncResult;
   execCmd?(
     cmdFromUser: [string, string[]],
     cmdStatic: NonEmptyArray<[string, string[]]>,
     options: IExecCmdOptions,
     cwd: string,
     input?: string,
-  ): Promise<ExecaSyncReturnValue<string>>;
+  ): Promise<ExecResult>;
 }
 
 export type InitializationOptions = IClientSettings & {

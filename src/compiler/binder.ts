@@ -1,11 +1,11 @@
-import { ISourceFile } from "./forest";
+import { ISourceFile } from "./forest.js";
 import { Node as SyntaxNode } from "web-tree-sitter";
-import { MultiMap } from "../common/util/multiMap";
-import { NodeType, TreeUtils } from "../common/util/treeUtils";
-import { Utils } from "../common/util/utils";
-import { SyntaxNodeMap } from "./utils/syntaxNodeMap";
-import { Diagnostics, error } from "./diagnostics";
-import { Imports } from "./imports";
+import { MultiMap } from "../common/util/multiMap.js";
+import { NodeType, TreeUtils } from "../common/util/treeUtils.js";
+import { Utils } from "../common/util/utils.js";
+import { SyntaxNodeMap } from "./utils/syntaxNodeMap.js";
+import { Diagnostics, error } from "./diagnostics.js";
+import { Imports } from "./imports.js";
 
 export type SymbolMap = MultiMap<string, ISymbol>;
 function createSymbolMap(): SymbolMap {

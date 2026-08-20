@@ -29,6 +29,7 @@ jobs:
           npm run check
           npm run compile
           npm test
+          npm run test:package
         env:
           CI: true
       - name: Coveralls GitHub Action

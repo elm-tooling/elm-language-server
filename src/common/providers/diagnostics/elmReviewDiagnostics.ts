@@ -6,13 +6,13 @@ import {
   DiagnosticTag,
 } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import { ISourceFile } from "../../../compiler/forest";
-import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher";
-import { Settings } from "../../util/settings";
-import { IDiagnostic } from "./diagnosticsProvider";
+import { ISourceFile } from "../../../compiler/forest.js";
+import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher.js";
+import { Settings } from "../../util/settings.js";
+import { IDiagnostic } from "./diagnosticsProvider.js";
 import { Range } from "vscode-languageserver-textdocument";
-import { IFileSystemHost } from "../../types";
-import type { ExecaReturnValue } from "execa";
+import { IFileSystemHost } from "../../types.js";
+import type { ExecaError } from "execa";
 
 export type IElmReviewDiagnostic = IDiagnostic & {
   data: {
@@ -159,7 +159,7 @@ export class ElmReviewDiagnostics {
       if (typeof error === "string") {
         return fileErrors;
       } else {
-        const execaError = error as ExecaReturnValue<string>;
+        const execaError = error as ExecaError<{ encoding: "utf8" }>;
         let errorObject: unknown;
         try {
           errorObject = JSON.parse(execaError.stdout);

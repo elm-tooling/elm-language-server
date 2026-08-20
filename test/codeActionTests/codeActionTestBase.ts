@@ -1,20 +1,20 @@
 import { container } from "tsyringe";
 import { CodeAction } from "vscode-languageserver";
 import { Utils as UriUtils } from "vscode-uri";
-import { IProgram } from "../../src/compiler/program";
+import { IProgram } from "../../src/compiler/program.js";
 import {
   CodeActionProvider,
   convertFromCompilerDiagnostic,
   convertToCompilerDiagnostic,
   DiagnosticsProvider,
-} from "../../src/common/providers";
-import { ElmLsDiagnostics } from "../../src/common/providers/diagnostics/elmLsDiagnostics";
-import { ICodeActionParams } from "../../src/common/providers/paramsExtensions";
-import { Utils } from "../../src/common/util/utils";
+} from "../../src/common/providers/index.js";
+import { ElmLsDiagnostics } from "../../src/common/providers/diagnostics/elmLsDiagnostics.js";
+import { ICodeActionParams } from "../../src/common/providers/paramsExtensions.js";
+import { Utils } from "../../src/common/util/utils.js";
 import {
   getTargetPositionFromSource,
   getSourceFiles,
-} from "../utils/sourceParser";
+} from "../utils/sourceParser.js";
 import {
   SourceTreeParser,
   trimTrailingWhitespace,
@@ -22,7 +22,7 @@ import {
   stripCommentLines,
   srcUri,
   createTestNodeFileSystemHost,
-} from "../utils/sourceTreeParser";
+} from "../utils/sourceTreeParser.js";
 import { diff } from "jest-diff";
 import { expect } from "@jest/globals";
 

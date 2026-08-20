@@ -4,7 +4,7 @@ import {
   Range,
   TextDocumentContentChangeEvent,
 } from "vscode-languageserver-textdocument";
-import { Utils } from "./utils";
+import { Utils } from "./utils.js";
 
 export function parseOrThrow(
   parser: Parser,

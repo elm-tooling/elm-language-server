@@ -1,10 +1,10 @@
 import path from "path";
 import { MarkupContent } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
-import { HoverProvider, HoverResult } from "../src/common/providers";
-import { ITextDocumentPositionParams } from "../src/common/providers/paramsExtensions";
-import { getInvokePositionFromSource } from "./utils/sourceParser";
-import { baseUri, SourceTreeParser, srcUri } from "./utils/sourceTreeParser";
+import { HoverProvider, HoverResult } from "../src/common/providers/index.js";
+import { ITextDocumentPositionParams } from "../src/common/providers/paramsExtensions.js";
+import { getInvokePositionFromSource } from "./utils/sourceParser.js";
+import { baseUri, SourceTreeParser, srcUri } from "./utils/sourceTreeParser.js";
 
 class MockHoverProvider extends HoverProvider {
   handleHover = (params: ITextDocumentPositionParams): HoverResult => {

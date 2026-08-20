@@ -1,4 +1,4 @@
-import { DefinitionProviderTestBase } from "./definitionProviderTestBase";
+import { DefinitionProviderTestBase } from "./definitionProviderTestBase.js";
 
 describe("importDefinition", () => {
   const testBase = new DefinitionProviderTestBase();

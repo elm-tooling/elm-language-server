@@ -18,7 +18,7 @@ import {
   TextDocumentContentChangeEvent,
   TextDocumentPositionParams,
 } from "vscode-languageserver";
-import { IParams } from "../util/elmWorkspaceMatcher";
+import { IParams } from "../util/elmWorkspaceMatcher.js";
 
 export type ITextDocumentPositionParams = TextDocumentPositionParams & IParams;
 export type ICodeActionParams = CodeActionParams & IParams;

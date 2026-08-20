@@ -1,12 +1,13 @@
 import { spawnSync } from "child_process";
+import { jest } from "@jest/globals";
 import { readFileSync } from "fs";
 import { createRequire } from "module";
-import * as path from "path";
+import { fileURLToPath } from "node:url";
 import { Language, Parser, Query, Tree } from "web-tree-sitter";
 import {
   applyChangesToTree,
   parseOrThrow,
-} from "../src/common/util/treeSitter";
+} from "../src/common/util/treeSitter.js";
 
 describe("tree-sitter", () => {
   let language: Language;
@@ -15,7 +16,9 @@ describe("tree-sitter", () => {
   beforeAll(async () => {
     await Parser.init();
     language = await Language.load(
-      readFileSync(path.join(__dirname, "../tree-sitter-elm.wasm")),
+      readFileSync(
+        fileURLToPath(new URL("../tree-sitter-elm.wasm", import.meta.url)),
+      ),
     );
     parser = new Parser().setLanguage(language);
   });
@@ -52,12 +55,14 @@ describe("tree-sitter", () => {
   });
 
   it("loads custom core and grammar WASM locations", () => {
-    const coreWasmPath = createRequire(__filename).resolve(
+    const coreWasmPath = createRequire(import.meta.url).resolve(
       "web-tree-sitter/web-tree-sitter.wasm",
     );
-    const grammarWasmPath = path.join(__dirname, "../tree-sitter-elm.wasm");
+    const grammarWasmPath = fileURLToPath(
+      new URL("../tree-sitter-elm.wasm", import.meta.url),
+    );
     const script = `
-      const { Language, Parser } = require("web-tree-sitter");
+      import { Language, Parser } from "web-tree-sitter";
       (async () => {
         let coreLocated = false;
         await Parser.init({
@@ -77,9 +82,11 @@ describe("tree-sitter", () => {
       });
     `;
 
-    const result = spawnSync(process.execPath, ["-e", script], {
-      encoding: "utf8",
-    });
+    const result = spawnSync(
+      process.execPath,
+      ["--input-type=module", "-e", script],
+      { encoding: "utf8" },
+    );
 
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
