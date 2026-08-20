@@ -10,16 +10,21 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+const npmCli = process.env.npm_execpath;
+if (!npmCli) {
+  throw new Error("npm_execpath is required to run the package smoke test.");
+}
 const temporaryDirectory = mkdtempSync(
   path.join(tmpdir(), "elm-language-server-package-"),
 );
 const packageDirectory = path.join(temporaryDirectory, "package");
 
 try {
-  execFileSync(npm, ["pack", "--pack-destination", temporaryDirectory], {
-    stdio: "pipe",
-  });
+  execFileSync(
+    process.execPath,
+    [npmCli, "pack", "--pack-destination", temporaryDirectory],
+    { stdio: "pipe" },
+  );
   const archive = path.join(
     temporaryDirectory,
     readdirSync(temporaryDirectory).find((file) => file.endsWith(".tgz")),
@@ -31,8 +36,8 @@ try {
     JSON.stringify({ private: true, type: "module" }),
   );
   execFileSync(
-    npm,
-    ["install", "--ignore-scripts", "--no-audit", "--no-fund", archive],
+    process.execPath,
+    [npmCli, "install", "--ignore-scripts", "--no-audit", "--no-fund", archive],
     { cwd: packageDirectory, stdio: "pipe" },
   );
 
