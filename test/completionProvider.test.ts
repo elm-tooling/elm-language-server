@@ -1,5 +1,6 @@
 import { isDeepStrictEqual } from "util";
 import {
+  ClientCapabilities,
   CompletionContext,
   CompletionItem,
   Position,
@@ -11,8 +12,10 @@ import {
   CompletionResult,
 } from "../src/common/providers/index.js";
 import { ICompletionParams } from "../src/common/providers/paramsExtensions.js";
+import { Settings } from "../src/common/util/settings.js";
 import { getCaretPositionFromSource } from "./utils/sourceParser.js";
 import { baseUri, SourceTreeParser, srcUri } from "./utils/sourceTreeParser.js";
+import { container } from "tsyringe";
 
 class MockCompletionProvider extends CompletionProvider {
   public handleCompletion(params: ICompletionParams): CompletionResult {
@@ -43,8 +46,19 @@ describe("CompletionProvider", () => {
     )[],
     testExactCompletions: exactCompletions = "partialMatch",
     testDotCompletion: dotCompletions = "normal",
+    labelDetailsSupport = true,
   ) {
     await treeParser.init();
+    const clientCapabilities: ClientCapabilities = labelDetailsSupport
+      ? {
+          textDocument: {
+            completion: { completionItem: { labelDetailsSupport: true } },
+          },
+        }
+      : {};
+    container.register("Settings", {
+      useValue: new Settings({} as never, clientCapabilities),
+    });
     const completionProvider = new MockCompletionProvider();
 
     const { newSources, position, fileWithCaret } =
@@ -130,12 +144,14 @@ describe("CompletionProvider", () => {
             return (
               c.label === completion.label &&
               c.detail === completion.detail &&
-              c.additionalTextEdits &&
-              completion.additionalTextEdits &&
-              isDeepStrictEqual(
-                c.additionalTextEdits[0],
-                completion.additionalTextEdits[0],
-              )
+              (!completion.additionalTextEdits ||
+                (c.additionalTextEdits &&
+                  isDeepStrictEqual(
+                    c.additionalTextEdits[0],
+                    completion.additionalTextEdits[0],
+                  ))) &&
+              (!("labelDetails" in completion) ||
+                isDeepStrictEqual(c.labelDetails, completion.labelDetails))
             );
           }
         });
@@ -192,7 +208,11 @@ describe("CompletionProvider", () => {
 {-caret-}
   ""
     `;
-    await testCompletions(sourceModule, ["module"], "partialMatch");
+    await testCompletions(
+      sourceModule,
+      [{ label: "module", labelDetails: undefined }],
+      "partialMatch",
+    );
 
     const sourceModule2 = `
 --@ Test.elm
@@ -422,6 +442,25 @@ test param =
     await testCompletions(source2, ["val"]);
   });
 
+  it("Local values should have type label details", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type Name = Name
+
+value : Name
+value = Name
+
+test =
+  v{-caret-}
+`;
+
+    await testCompletions(source, [
+      { label: "value", labelDetails: { detail: " : Name" } },
+    ]);
+  });
+
   it("Imported values should have completions", async () => {
     const otherSource = `
 --@ OtherModule.elm
@@ -458,7 +497,13 @@ test param =
 `;
 
     await testCompletions(otherSource + source, [
-      "testFunction",
+      {
+        label: "testFunction",
+        labelDetails: {
+          detail: " : String",
+          description: "OtherModule",
+        },
+      },
       "OtherModule.testFunction",
     ]);
 
@@ -716,6 +761,10 @@ testFunc =
       {
         label: "testFunction",
         detail: "Auto import from module 'OtherModule'",
+        labelDetails: {
+          detail: " : String",
+          description: "OtherModule",
+        },
         additionalTextEdits: [
           TextEdit.insert(
             Position.create(1, 0),
@@ -804,6 +853,36 @@ testFunc =
     ]);
   });
 
+  it("Omits label details when the client does not support them", async () => {
+    const source = `
+--@ OtherModule.elm
+module OtherModule exposing (testFunction)
+
+testFunction : String
+testFunction = ""
+
+--@ Test.elm
+module Test exposing (..)
+
+test =
+  {-caret-}
+`;
+
+    await testCompletions(
+      source,
+      [
+        {
+          label: "testFunction",
+          detail: "Auto import from module 'OtherModule'",
+          labelDetails: undefined,
+        },
+      ],
+      "partialMatch",
+      "normal",
+      false,
+    );
+  });
+
   it("Imported modules should have fully qualified completions", async () => {
     const source = `
 --@ Data/User.elm
@@ -876,7 +955,11 @@ testFunction = ""
 
     await testCompletions(
       source,
-      ["Away", "Home", "Page"],
+      [
+        { label: "Away", labelDetails: { detail: " : Page.Page" } },
+        { label: "Home", labelDetails: { detail: " : Page.Page" } },
+        "Page",
+      ],
       "exactMatch",
       "triggeredByDot",
     );
@@ -2028,19 +2111,24 @@ port fbar : (String -> msg) -> Sub msg
 --@ Test.elm
 module Test exposing (..)
 
+type Name = Name
+
 type alias Model =
-  { prop1: String
-  , prop2: Int
+  { prop1: Name
+  , prop2: Name
   }
 
-view : Model -> String
+view : Model -> Name
 view model =
     m{-caret-}
 `;
 
     await testCompletions(
       source,
-      ["model.prop1", "model.prop2"],
+      [
+        { label: "model.prop1", labelDetails: { detail: " : Name" } },
+        { label: "model.prop2", labelDetails: { detail: " : Name" } },
+      ],
       "partialMatch",
     );
   });
