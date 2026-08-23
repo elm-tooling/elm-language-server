@@ -43,6 +43,13 @@ export class CapabilityCalculator {
       textDocumentSync: TextDocumentSyncKind.Incremental,
       workspaceSymbolProvider: true,
       workspace: {
+        ...(this.clientCapabilities.workspace?.textDocumentContent
+          ? {
+              textDocumentContent: {
+                schemes: ["elm-virtual-file"],
+              },
+            }
+          : {}),
         fileOperations: {
           didCreate: {
             filters: [
