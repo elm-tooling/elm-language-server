@@ -27,7 +27,7 @@ import { diff } from "jest-diff";
 import { expect } from "@jest/globals";
 
 function codeActionEquals(a: CodeAction, b: CodeAction): boolean {
-  return a.title === b.title;
+  return a.title === b.title && (a.kind === undefined || a.kind === b.kind);
 }
 
 const basicsSources = `
@@ -79,8 +79,11 @@ export async function testCodeAction(
   source: string,
   expectedCodeActions: CodeAction[],
   expectedResultAfterEdits?: string,
-  testFixAll = false,
-): Promise<void> {
+  {
+    testFixAll = false,
+    includeDiagnostics = true,
+  }: { testFixAll?: boolean; includeDiagnostics?: boolean } = {},
+): Promise<CodeAction[]> {
   const treeParser = new SourceTreeParser();
   await treeParser.init();
   const codeActionProvider = new MockCodeActionsProvider();
@@ -125,16 +128,18 @@ export async function testCodeAction(
       range: result.range,
       textDocument: { uri: testUri },
       context: {
-        diagnostics: [
-          ...program.getSyntacticDiagnostics(sourceFile),
-          ...program.getSemanticDiagnostics(sourceFile),
-          ...program.getSuggestionDiagnostics(sourceFile),
-          ...new ElmLsDiagnostics()
-            .createDiagnostics(sourceFile, program)
-            .map(convertToCompilerDiagnostic),
-        ]
-          .filter((diag) => Utils.rangeOverlaps(diag.range, result.range))
-          .map(convertFromCompilerDiagnostic),
+        diagnostics: includeDiagnostics
+          ? [
+              ...program.getSyntacticDiagnostics(sourceFile),
+              ...program.getSemanticDiagnostics(sourceFile),
+              ...program.getSuggestionDiagnostics(sourceFile),
+              ...new ElmLsDiagnostics()
+                .createDiagnostics(sourceFile, program)
+                .map(convertToCompilerDiagnostic),
+            ]
+              .filter((diag) => Utils.rangeOverlaps(diag.range, result.range))
+              .map(convertFromCompilerDiagnostic)
+          : [],
       },
     }) ?? [];
 
@@ -154,7 +159,7 @@ export async function testCodeAction(
     );
 
     const filteredCodeActions = codeActions.filter((codeAction) =>
-      expectedCodeActions.find((c) => codeActionEquals(codeAction, c)),
+      expectedCodeActions.find((c) => codeActionEquals(c, codeAction)),
     );
 
     if (filteredCodeActions.length === 0) {
@@ -176,4 +181,6 @@ export async function testCodeAction(
       }
     });
   }
+
+  return codeActions;
 }

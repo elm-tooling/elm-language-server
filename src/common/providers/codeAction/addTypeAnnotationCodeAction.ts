@@ -67,12 +67,17 @@ CodeActionProvider.registerRefactorAction(refactorName, {
       params.sourceFile.tree.rootNode,
       params.range.start,
     );
+    const hasMissingTypeAnnotationDiagnostic = params.context.diagnostics.some(
+      (diagnostic) =>
+        (diagnostic.data as { code?: string } | undefined)?.code ===
+        Diagnostics.MissingTypeAnnotation.code,
+    );
 
     if (
       nodeAtPosition.parent?.type === "function_declaration_left" &&
-      TreeUtils.findParentOfType("let_in_expr", nodeAtPosition) &&
       nodeAtPosition.parent.parent &&
-      !TreeUtils.getTypeAnnotation(nodeAtPosition.parent.parent)
+      !TreeUtils.getTypeAnnotation(nodeAtPosition.parent.parent) &&
+      !hasMissingTypeAnnotationDiagnostic
     ) {
       return [
         {
