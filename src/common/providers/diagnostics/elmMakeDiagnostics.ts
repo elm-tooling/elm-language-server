@@ -5,6 +5,7 @@ import {
   CodeActionKind,
   CodeActionParams,
   Connection,
+  Diagnostic,
   TextEdit,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
@@ -57,6 +58,65 @@ export interface IStyledString {
   string: string;
 }
 
+function escapeMarkdown(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/([\\`*_{}[\]()#+\-.!|])/g, "\\$1");
+}
+
+export function renderElmCompilerMessage(
+  messages: (string | IStyledString)[],
+): string {
+  return messages
+    .map((message): { value: string; styled: boolean } => {
+      if (typeof message === "string") {
+        return { value: escapeMarkdown(message), styled: false };
+      }
+
+      const match = /^(\s*)([\s\S]*?)(\s*)$/.exec(message.string);
+      const leadingWhitespace = match?.[1] ?? "";
+      const content = match?.[2] ?? message.string;
+      const trailingWhitespace = match?.[3] ?? "";
+      const styled =
+        content.length > 0 &&
+        (message.bold || message.underline || message.color.length > 0);
+
+      let result = escapeMarkdown(content);
+      if (content && message.color) {
+        result = `*${result}*`;
+      }
+      if (content && message.underline) {
+        result = `<u>${result}</u>`;
+      }
+      if (content && message.bold) {
+        result = `**${result}**`;
+      }
+
+      return {
+        value: `${escapeMarkdown(leadingWhitespace)}${result}${escapeMarkdown(
+          trailingWhitespace,
+        )}`,
+        styled,
+      };
+    })
+    .reduce(
+      (result, part) => {
+        if (part.value.length === 0) {
+          return result;
+        }
+        return {
+          value: `${result.value}${
+            result.previousWasStyled && part.styled ? "<!-- -->" : ""
+          }${part.value}`,
+          previousWasStyled: part.styled,
+        };
+      },
+      { value: "", previousWasStyled: false },
+    ).value;
+}
+
 export class ElmMakeDiagnostics {
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
   private settings: Settings;
@@ -93,8 +153,8 @@ export class ElmMakeDiagnostics {
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
     const { uri } = params.textDocument;
-    const elmMakeDiagnostics: IDiagnostic[] = this.filterElmMakeDiagnostics(
-      params.context.diagnostics as IDiagnostic[],
+    const elmMakeDiagnostics = this.filterElmMakeDiagnostics(
+      params.context.diagnostics,
     );
 
     return this.convertDiagnosticsToCodeActions(elmMakeDiagnostics, uri);
@@ -105,24 +165,25 @@ export class ElmMakeDiagnostics {
   }
 
   private convertDiagnosticsToCodeActions(
-    diagnostics: IDiagnostic[],
+    diagnostics: Diagnostic[],
     uri: string,
   ): CodeAction[] {
     const result: CodeAction[] = [];
 
     diagnostics.forEach((diagnostic) => {
+      const message = this.getPlainMessage(diagnostic);
       if (
-        diagnostic.message.startsWith(NAMING_ERROR) ||
-        diagnostic.message.startsWith("BAD IMPORT") ||
-        diagnostic.message.startsWith("UNKNOWN LICENSE") ||
-        diagnostic.message.startsWith("UNKNOWN PACKAGE") ||
-        diagnostic.message.startsWith("UNKNOWN EXPORT")
+        message.startsWith(NAMING_ERROR) ||
+        message.startsWith("BAD IMPORT") ||
+        message.startsWith("UNKNOWN LICENSE") ||
+        message.startsWith("UNKNOWN PACKAGE") ||
+        message.startsWith("UNKNOWN EXPORT")
       ) {
         // Offer the name suggestions from elm make to our users
         const regex = /^\s{4}#(.*)#$/gm;
         let matches;
 
-        while ((matches = regex.exec(diagnostic.message)) !== null) {
+        while ((matches = regex.exec(message)) !== null) {
           // This is necessary to avoid infinite loops with zero-width matches
           if (matches.index === regex.lastIndex) {
             regex.lastIndex++;
@@ -142,13 +203,13 @@ export class ElmMakeDiagnostics {
             });
         }
       } else if (
-        diagnostic.message.startsWith("MODULE NAME MISMATCH") ||
-        diagnostic.message.startsWith("UNEXPECTED SYMBOL")
+        message.startsWith("MODULE NAME MISMATCH") ||
+        message.startsWith("UNEXPECTED SYMBOL")
       ) {
         // Offer the name suggestions from elm make to our users
         const regex = /# -> #(.*)#$/gm;
 
-        const matches = regex.exec(diagnostic.message);
+        const matches = regex.exec(message);
         if (matches !== null) {
           result.push(
             this.createQuickFix(
@@ -167,7 +228,7 @@ export class ElmMakeDiagnostics {
   private createQuickFix(
     uri: string,
     replaceWith: string,
-    diagnostic: IDiagnostic,
+    diagnostic: Diagnostic,
     title: string,
   ): CodeAction {
     const map: {
@@ -185,8 +246,20 @@ export class ElmMakeDiagnostics {
     };
   }
 
-  private filterElmMakeDiagnostics(diagnostics: IDiagnostic[]): IDiagnostic[] {
+  private filterElmMakeDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
     return diagnostics.filter((diagnostic) => diagnostic.source === ELM_MAKE);
+  }
+
+  private getPlainMessage(diagnostic: Diagnostic): string {
+    if (typeof diagnostic.message === "string") {
+      return diagnostic.message;
+    }
+
+    const plainMessage = (diagnostic.data as { plainMessage?: unknown } | null)
+      ?.plainMessage;
+    return typeof plainMessage === "string"
+      ? plainMessage
+      : diagnostic.message.value;
   }
 
   private async checkForErrors(
@@ -382,6 +455,9 @@ export class ElmMakeDiagnostics {
                         : `#${message.string}#`,
                     )
                     .join(""),
+                  markupMessage: `${escapeMarkdown(
+                    `${problem.title} - `,
+                  )}${renderElmCompilerMessage(problem.message)}`,
                   file: error.path
                     ? path.isAbsolute(error.path)
                       ? path.relative(workspaceRootPath, error.path)
@@ -414,6 +490,9 @@ export class ElmMakeDiagnostics {
                   typeof message === "string" ? message : message.string,
                 )
                 .join(""),
+              markupMessage: `${escapeMarkdown(
+                `${error.title} - `,
+              )}${renderElmCompilerMessage(error.message)}`,
               // elm-test might supply absolute paths to files
               file: error.path
                 ? path.relative(workspaceRootPath, error.path)

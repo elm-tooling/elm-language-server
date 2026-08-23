@@ -66,6 +66,7 @@ export class ElmDiagnosticsHelper {
     return {
       range: lineRange,
       message: `${messagePrefix}${issue.details.replace(/\[\d+m/g, "")}`,
+      markupMessage: issue.markupMessage,
       severity: this.severityStringToDiagnosticSeverity(issue.type),
       source: "Elm",
       data: { uri: issue.file, code },
