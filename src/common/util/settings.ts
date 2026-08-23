@@ -90,4 +90,8 @@ export class Settings {
         ?.labelDetailsSupport === true
     );
   }
+
+  public isTextDocumentContentSupported(): boolean {
+    return this.clientCapabilities.workspace?.textDocumentContent !== undefined;
+  }
 }
