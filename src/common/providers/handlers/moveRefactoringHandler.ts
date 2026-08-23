@@ -270,7 +270,11 @@ export class MoveRefactoringHandler {
           }
         });
 
-        await this.connection.workspace.applyEdit({ changes });
+        await this.connection.workspace.applyEdit({
+          label: "Move Function",
+          edit: { changes },
+          metadata: { isRefactoring: true },
+        });
       }
     }
   }

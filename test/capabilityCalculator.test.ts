@@ -1,4 +1,5 @@
 import { CapabilityCalculator } from "../src/common/capabilityCalculator.js";
+import { CodeActionKind } from "vscode-languageserver";
 
 describe("CapabilityCalculator", () => {
   it("advertises virtual document content to supporting clients", () => {
@@ -15,5 +16,19 @@ describe("CapabilityCalculator", () => {
     const capabilities = new CapabilityCalculator({}).capabilities;
 
     expect(capabilities.workspace?.textDocumentContent).toBeUndefined();
+  });
+
+  it("advertises supported code action kinds", () => {
+    const capabilities = new CapabilityCalculator({}).capabilities;
+
+    expect(capabilities.codeActionProvider).toEqual({
+      resolveProvider: true,
+      codeActionKinds: [
+        CodeActionKind.QuickFix,
+        CodeActionKind.Refactor,
+        CodeActionKind.RefactorExtract,
+        CodeActionKind.RefactorMove,
+      ],
+    });
   });
 });

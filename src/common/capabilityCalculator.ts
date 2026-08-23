@@ -1,5 +1,6 @@
 import {
   ClientCapabilities,
+  CodeActionKind,
   ServerCapabilities,
   TextDocumentSyncKind,
 } from "vscode-languageserver";
@@ -16,6 +17,12 @@ export class CapabilityCalculator {
   get capabilities(): ServerCapabilities {
     return {
       codeActionProvider: {
+        codeActionKinds: [
+          CodeActionKind.QuickFix,
+          CodeActionKind.Refactor,
+          CodeActionKind.RefactorExtract,
+          CodeActionKind.RefactorMove,
+        ],
         resolveProvider: true,
       },
       codeLensProvider: {

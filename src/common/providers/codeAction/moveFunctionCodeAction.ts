@@ -43,7 +43,7 @@ CodeActionProvider.registerRefactorAction(refactorName, {
               functionName,
             ],
           },
-          kind: CodeActionKind.RefactorRewrite,
+          kind: CodeActionKind.RefactorMove,
           data: {
             actionName: "move_function",
             refactorName,
