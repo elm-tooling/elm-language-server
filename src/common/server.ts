@@ -24,6 +24,7 @@ import {
   ReferencesProvider,
   RenameProvider,
   SelectionRangeProvider,
+  TypeDefinitionProvider,
   WorkspaceSymbolProvider,
 } from "./providers/index.js";
 import { ElmLsDiagnostics } from "./providers/diagnostics/elmLsDiagnostics.js";
@@ -219,6 +220,7 @@ export class Server implements ILanguageServer {
     new CompletionProvider();
     new HoverProvider();
     new DefinitionProvider();
+    new TypeDefinitionProvider();
     new ReferencesProvider();
     new DocumentSymbolProvider();
     new WorkspaceSymbolProvider();

@@ -15,5 +15,6 @@ export * from "./referencesProvider.js";
 export * from "./renameProvider.js";
 export * from "./workspaceSymbolProvider.js";
 export * from "./linkedEditingRangesProvider.js";
+export * from "./typeDefinitionProvider.js";
 import "./codeAction/index.js";
 import "./codeActionLs/index.js";
