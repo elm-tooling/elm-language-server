@@ -31,4 +31,10 @@ describe("CapabilityCalculator", () => {
       ],
     });
   });
+
+  it("advertises type definition support", () => {
+    const capabilities = new CapabilityCalculator({}).capabilities;
+
+    expect(capabilities.typeDefinitionProvider).toBe(true);
+  });
 });

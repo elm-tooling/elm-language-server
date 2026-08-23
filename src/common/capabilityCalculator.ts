@@ -48,6 +48,7 @@ export class CapabilityCalculator {
       },
       selectionRangeProvider: true,
       textDocumentSync: TextDocumentSyncKind.Incremental,
+      typeDefinitionProvider: true,
       workspaceSymbolProvider: true,
       workspace: {
         ...(this.clientCapabilities.workspace?.textDocumentContent
