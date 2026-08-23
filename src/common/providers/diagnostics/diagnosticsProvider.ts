@@ -8,6 +8,7 @@ import {
   DidSaveTextDocumentParams,
   DidOpenTextDocumentParams,
   Disposable,
+  MarkupKind,
 } from "vscode-languageserver";
 import { URI } from "vscode-uri";
 import { ServerCancellationToken } from "../../cancellation.js";
@@ -16,7 +17,7 @@ import { GetDiagnosticsRequest } from "../../protocol.js";
 import { Delayer } from "../../util/delayer.js";
 import { ElmWorkspaceMatcher } from "../../util/elmWorkspaceMatcher.js";
 import { MultistepOperation } from "../../util/multistepOperation.js";
-import { IClientSettings } from "../../util/settings.js";
+import { IClientSettings, Settings } from "../../util/settings.js";
 import { TextDocumentEvents } from "../../util/textDocumentEvents.js";
 import { Diagnostic } from "../../../compiler/diagnostics.js";
 import { ASTProvider } from "../astProvider.js";
@@ -39,6 +40,7 @@ export interface IElmIssue {
   overview: string;
   subregion: string;
   details: string;
+  markupMessage?: string;
   region: IElmIssueRegion;
   type: string;
   file: string;
@@ -46,10 +48,30 @@ export interface IElmIssue {
 
 export interface IDiagnostic extends Omit<LspDiagnostic, "code" | "message"> {
   message: string;
+  markupMessage?: string;
   source: DiagnosticSource;
   data: {
     uri: string;
     code: string;
+    plainMessage?: string;
+  };
+}
+
+export function toLspDiagnostic(
+  diagnostic: IDiagnostic,
+  markupMessageSupport: boolean,
+): LspDiagnostic {
+  const { markupMessage, ...result } = diagnostic;
+  return {
+    ...result,
+    message:
+      markupMessageSupport && markupMessage
+        ? { kind: MarkupKind.Markdown, value: markupMessage }
+        : diagnostic.message,
+    data:
+      markupMessageSupport && markupMessage
+        ? { ...result.data, plainMessage: diagnostic.message }
+        : result.data,
   };
 }
 
@@ -96,6 +118,7 @@ export class DiagnosticsProvider implements Disposable {
   private currentDiagnostics: Map<string, FileDiagnostics>;
   private events: TextDocumentEvents;
   private connection: Connection;
+  private settings: Settings;
   private clientSettings: IClientSettings;
   private workspaces: IProgram[];
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
@@ -121,6 +144,7 @@ export class DiagnosticsProvider implements Disposable {
     this.documentEvents = container.resolve(TextDocumentEvents);
 
     this.connection = container.resolve("Connection");
+    this.settings = container.resolve("Settings");
     this.events = container.resolve(TextDocumentEvents);
     this.elmWorkspaceMatcher = new ElmWorkspaceMatcher((uri) => uri);
     this.diagnosticsOperation = new MultistepOperation(this.connection);
@@ -397,7 +421,16 @@ export class DiagnosticsProvider implements Disposable {
       const fileDiagnostics = this.currentDiagnostics.get(uri);
       void this.connection.sendDiagnostics({
         uri,
-        diagnostics: fileDiagnostics ? fileDiagnostics.get() : [],
+        diagnostics: fileDiagnostics
+          ? fileDiagnostics
+              .get()
+              .map((diagnostic) =>
+                toLspDiagnostic(
+                  diagnostic,
+                  this.settings.isDiagnosticMarkupMessageSupported(),
+                ),
+              )
+          : [],
       });
     }
   }

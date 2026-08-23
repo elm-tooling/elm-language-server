@@ -94,4 +94,11 @@ export class Settings {
   public isTextDocumentContentSupported(): boolean {
     return this.clientCapabilities.workspace?.textDocumentContent !== undefined;
   }
+
+  public isDiagnosticMarkupMessageSupported(): boolean {
+    return (
+      this.clientCapabilities.textDocument?.diagnostic?.markupMessageSupport ===
+      true
+    );
+  }
 }
