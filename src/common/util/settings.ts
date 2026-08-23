@@ -83,4 +83,11 @@ export class Settings {
     }
     return value;
   }
+
+  public isCompletionLabelDetailsSupported(): boolean {
+    return (
+      this.clientCapabilities.textDocument?.completion?.completionItem
+        ?.labelDetailsSupport === true
+    );
+  }
 }

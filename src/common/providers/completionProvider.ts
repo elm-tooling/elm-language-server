@@ -29,6 +29,7 @@ import escapeStringRegexp from "escape-string-regexp";
 import { TRecord } from "../../compiler/typeInference.js";
 import { ICompletionParams } from "./paramsExtensions.js";
 import { Utils } from "../util/utils.js";
+import { Settings } from "../util/settings.js";
 
 export type CompletionResult =
   CompletionItem[] | CompletionList | null | undefined;
@@ -50,10 +51,12 @@ export class CompletionProvider {
   private qidRegex = /[_\d\p{L}.]+/u;
   private connection: Connection;
   private diagnostics: DiagnosticsProvider;
+  private settings: Settings;
 
   constructor() {
     this.connection = container.resolve<Connection>("Connection");
     this.diagnostics = container.resolve(DiagnosticsProvider);
+    this.settings = container.resolve<Settings>("Settings");
     this.connection.onCompletion(
       this.diagnostics.interruptDiagnostics(() =>
         new ElmWorkspaceMatcher((params: CompletionParams) =>
@@ -481,6 +484,7 @@ export class CompletionProvider {
     const moduleName = importClause
       ? TreeUtils.getModuleNameNodeFromImportClause(importClause)?.text
       : undefined;
+    const checker = program.getTypeChecker();
 
     if (moduleName) {
       const sortPrefix = "c";
@@ -532,6 +536,11 @@ export class CompletionProvider {
                   label: a.name,
                   range,
                   sortPrefix,
+                  labelDetail: this.getTypeLabelDetail(
+                    checker,
+                    a.node,
+                    sourceFile,
+                  ),
                 }),
               ];
           }
@@ -609,6 +618,11 @@ export class CompletionProvider {
               sortPrefix,
               filterText,
               labelDescription,
+              labelDetail: this.getTypeLabelDetail(
+                checker,
+                element.node,
+                sourceFile,
+              ),
             }),
           );
           break;
@@ -620,6 +634,11 @@ export class CompletionProvider {
               sortPrefix,
               filterText,
               labelDescription,
+              labelDetail: this.getTypeLabelDetail(
+                checker,
+                element.node,
+                sourceFile,
+              ),
             }),
           );
           break;
@@ -696,6 +715,11 @@ export class CompletionProvider {
               label: symbol.name,
               range,
               sortPrefix,
+              labelDetail: this.getTypeLabelDetail(
+                checker,
+                symbol.node,
+                sourceFile,
+              ),
             }),
           );
         }
@@ -727,6 +751,11 @@ export class CompletionProvider {
                 label: unionVariant.name,
                 range,
                 sortPrefix,
+                labelDetail: this.getTypeLabelDetail(
+                  checker,
+                  unionVariant.node,
+                  sourceFile,
+                ),
               }),
             );
           });
@@ -803,7 +832,12 @@ export class CompletionProvider {
           );
 
           result.push(
-            this.createFieldOrParameterCompletion(hint, field, range),
+            this.createFieldOrParameterCompletion(
+              hint,
+              field,
+              range,
+              checker.typeToString(recordType.baseType.fields[field]),
+            ),
           );
         }
       }
@@ -814,7 +848,14 @@ export class CompletionProvider {
           recordType.alias?.name ?? "",
         );
 
-        result.push(this.createFieldOrParameterCompletion(hint, field, range));
+        result.push(
+          this.createFieldOrParameterCompletion(
+            hint,
+            field,
+            range,
+            checker.typeToString(recordType.fields[field]),
+          ),
+        );
       }
     }
 
@@ -831,7 +872,12 @@ export class CompletionProvider {
           typeName,
         );
         result.push(
-          this.createFieldOrParameterCompletion(hint, element.field, range),
+          this.createFieldOrParameterCompletion(
+            hint,
+            element.field,
+            range,
+            element.type,
+          ),
         );
       });
     }
@@ -856,7 +902,12 @@ export class CompletionProvider {
         );
 
         result.push(
-          this.createFieldOrParameterCompletion(hint, field, replaceRange),
+          this.createFieldOrParameterCompletion(
+            hint,
+            field,
+            replaceRange,
+            checker.typeToString(foundType.fields[field]),
+          ),
         );
       }
     }
@@ -882,12 +933,14 @@ export class CompletionProvider {
     markdownDocumentation: string | undefined,
     label: string,
     range: Range,
+    type?: string,
   ): CompletionItem {
     return this.createPreselectedCompletion(
       markdownDocumentation,
       CompletionItemKind.Field,
       label,
       range,
+      type && type !== "unknown" ? ` : ${type}` : undefined,
     );
   }
 
@@ -922,6 +975,33 @@ export class CompletionProvider {
     return this.createCompletion(options);
   }
 
+  private getTypeLabelDetail(
+    checker: TypeChecker,
+    node: SyntaxNode,
+    sourceFile: ISourceFile,
+  ): string | undefined {
+    const definitionNode =
+      node.type === "function_declaration_left" && node.parent
+        ? node.parent
+        : node;
+    const type = checker.findType(definitionNode);
+
+    if (type.nodeType !== "Unknown") {
+      const renderedType = checker.typeToString(type, sourceFile);
+      if (!renderedType.includes("unknown")) {
+        return ` : ${renderedType}`;
+      }
+    }
+
+    const typeExpression =
+      definitionNode.type === "port_annotation"
+        ? definitionNode.childForFieldName("typeExpression")
+        : TreeUtils.getTypeAnnotation(definitionNode)?.childForFieldName(
+            "typeExpression",
+          );
+    return typeExpression ? ` : ${typeExpression.text}` : undefined;
+  }
+
   private createCompletion(options: ICompletionOptions): CompletionItem {
     return {
       documentation: options.markdownDocumentation
@@ -937,10 +1017,10 @@ export class CompletionProvider {
       detail: options.detail,
       additionalTextEdits: options.additionalTextEdits,
       filterText: options.filterText,
-      labelDetails: {
-        description: options.labelDescription,
-        detail: options.labelDetail,
-      },
+      labelDetails: this.createLabelDetails(
+        options.labelDescription,
+        options.labelDetail,
+      ),
     };
   }
 
@@ -949,6 +1029,7 @@ export class CompletionProvider {
     kind: CompletionItemKind,
     label: string,
     range: Range,
+    labelDetail?: string,
   ): CompletionItem {
     return {
       documentation: markdownDocumentation
@@ -961,6 +1042,24 @@ export class CompletionProvider {
       label,
       preselect: true,
       textEdit: TextEdit.replace(range, label),
+      labelDetails: this.createLabelDetails(undefined, labelDetail),
+    };
+  }
+
+  private createLabelDetails(
+    description?: string,
+    detail?: string,
+  ): CompletionItem["labelDetails"] {
+    if (
+      !this.settings.isCompletionLabelDetailsSupported() ||
+      (!description && !detail)
+    ) {
+      return undefined;
+    }
+
+    return {
+      ...(description ? { description } : {}),
+      ...(detail ? { detail } : {}),
     };
   }
 
@@ -987,6 +1086,11 @@ export class CompletionProvider {
               label: symbol.name,
               range,
               sortPrefix: sortPrefix,
+              labelDetail: this.getTypeLabelDetail(
+                checker,
+                symbol.node,
+                sourceFile,
+              ),
             }),
           );
         }
@@ -1001,6 +1105,11 @@ export class CompletionProvider {
             label: symbol.name,
             range,
             sortPrefix,
+            labelDetail: this.getTypeLabelDetail(
+              checker,
+              symbol.node,
+              sourceFile,
+            ),
           }),
         );
       }
@@ -1017,6 +1126,11 @@ export class CompletionProvider {
             label: symbol.name,
             range,
             sortPrefix,
+            labelDetail: this.getTypeLabelDetail(
+              checker,
+              symbol.node,
+              sourceFile,
+            ),
           }),
         );
 
@@ -1035,6 +1149,7 @@ export class CompletionProvider {
                 hint,
                 `${symbol.name}.${field}`,
                 range,
+                checker.typeToString(parameterType.fields[field]),
               ),
             );
           }
@@ -1125,6 +1240,8 @@ export class CompletionProvider {
     filterText: string,
   ): { list: CompletionItem[]; isIncomplete: boolean } {
     const result: CompletionItem[] = [];
+    const sourceFile = program.getSourceFile(uri);
+    const checker = program.getTypeChecker();
     const possibleImports = this.getPossibleImportsFiltered(
       program,
       uri,
@@ -1157,7 +1274,18 @@ export class CompletionProvider {
         possibleImport.type === "Function" ||
         possibleImport.type === "Port"
       ) {
-        result.push(this.createFunctionCompletion(completionOptions));
+        result.push(
+          this.createFunctionCompletion({
+            ...completionOptions,
+            labelDetail: sourceFile
+              ? this.getTypeLabelDetail(
+                  checker,
+                  possibleImport.node,
+                  sourceFile,
+                )
+              : undefined,
+          }),
+        );
       } else if (possibleImport.type === "TypeAlias") {
         result.push(this.createTypeAliasCompletion(completionOptions));
       } else if (possibleImport.type === "Type") {
@@ -1171,6 +1299,13 @@ export class CompletionProvider {
             detail,
             additionalTextEdits: importTextEdit ? [importTextEdit] : undefined,
             labelDescription: possibleImport.module,
+            labelDetail: sourceFile
+              ? this.getTypeLabelDetail(
+                  checker,
+                  possibleImport.node,
+                  sourceFile,
+                )
+              : undefined,
           }),
         );
       }
@@ -1306,7 +1441,12 @@ export class CompletionProvider {
         switch (value.type) {
           case "Function":
           case "Port":
-            result.push(this.createFunctionCompletion(completionOptions));
+            result.push(
+              this.createFunctionCompletion({
+                ...completionOptions,
+                labelDetail: ` : ${typeString}`,
+              }),
+            );
             break;
           case "Type":
             result.push(this.createTypeCompletion(completionOptions));
@@ -1316,7 +1456,10 @@ export class CompletionProvider {
             break;
           case "UnionConstructor":
             result.push(
-              this.createUnionConstructorCompletion(completionOptions),
+              this.createUnionConstructorCompletion({
+                ...completionOptions,
+                labelDetail: ` : ${typeString}`,
+              }),
             );
             break;
         }
