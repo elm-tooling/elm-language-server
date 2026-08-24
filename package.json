@@ -43,7 +43,7 @@
     "jest": "^30.4.2",
     "jest-diff": "^30.4.1",
     "jest-mock-extended": "^4.0.1",
-    "node-gyp": "^12.4.0",
+    "node-gyp": "^13.0.1",
     "prettier": "^3.9.6",
     "tree-sitter-cli": "0.26.13",
     "ts-jest": "^29.4.12",
