@@ -2266,8 +2266,11 @@ export class InferenceScope {
       type1.fieldReferences = sharedFieldReferences;
       type2.fieldReferences = sharedFieldReferences;
 
-      const sharedAlias = type1.alias ?? type2.alias;
-      type1.alias = type2.alias = sharedAlias;
+      if (!type1.alias) {
+        type1.alias = type2.alias;
+      } else if (!type2.alias) {
+        type2.alias = type1.alias;
+      }
     }
 
     return result;

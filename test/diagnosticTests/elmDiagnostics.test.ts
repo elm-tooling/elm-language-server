@@ -140,6 +140,32 @@ concat comparators a b =
     await testTypeInference(basicsSources + source, []);
   });
 
+  test("fully applied type alias used through another alias", async () => {
+    const source = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias A a =
+    { val : a }
+
+createA : a -> A a
+createA a =
+    { val = a }
+
+type alias C =
+    A Int
+
+createC : Int -> C
+createC a =
+    createA a
+
+useC : C -> ()
+useC _ =
+    ()
+`;
+    await testTypeInference(basicsSources + source, []);
+  });
+
   test("missing import", async () => {
     const source = `
 --@ Test.elm
