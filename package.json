@@ -48,7 +48,7 @@
     "tree-sitter-cli": "0.26.13",
     "ts-jest": "^29.4.12",
     "ts-node": "^10.9.2",
-    "typescript": "5.9.3"
+    "typescript": "7.0.2"
   },
   "scripts": {
     "version-patch": "npm --no-git-tag-version version patch",
