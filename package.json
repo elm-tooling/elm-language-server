@@ -27,7 +27,7 @@
     "vscode-languageserver": "^10.1.0",
     "vscode-languageserver-textdocument": "1.0.14",
     "vscode-uri": "^3.1.0",
-    "web-tree-sitter": "0.26.13"
+    "web-tree-sitter": "0.27.0"
   },
   "devDependencies": {
     "@elm-tooling/tree-sitter-elm": "5.9.4",
