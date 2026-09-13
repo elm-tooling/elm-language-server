@@ -436,13 +436,21 @@ export class ElmLsDiagnostics {
     const uri = sourceFile.uri;
     const tree = sourceFile.tree;
     try {
+      // Usage analysis is needed for UnusedImport even when value warnings are disabled.
+      const unusedExposures = new Set<number>();
+      const unusedImportedValues =
+        elmAnalyseJson.checks?.UnusedImport === false &&
+        elmAnalyseJson.checks?.UnusedImportedVariable === false
+          ? []
+          : this.getUnusedImportValueAndTypeDiagnostics(tree, unusedExposures);
+
       return [
         ...(elmAnalyseJson.checks?.UnusedImport === false
           ? []
-          : this.getUnusedImportDiagnostics(tree)),
+          : this.getUnusedImportDiagnostics(tree, unusedExposures)),
         ...(elmAnalyseJson.checks?.UnusedImportedVariable === false
           ? []
-          : this.getUnusedImportValueAndTypeDiagnostics(tree)),
+          : unusedImportedValues),
         ...(elmAnalyseJson.checks?.UnusedImportAlias === false
           ? []
           : this.getUnusedImportAliasDiagnostics(tree)),
@@ -528,13 +536,28 @@ export class ElmLsDiagnostics {
     return [];
   };
 
-  private getUnusedImportDiagnostics(tree: Tree): IDiagnostic[] {
+  private getUnusedImportDiagnostics(
+    tree: Tree,
+    unusedExposures: Set<number>,
+  ): IDiagnostic[] {
     const diagnostics: IDiagnostic[] = [];
 
     const moduleImports = this.moduleImportsQuery
       .matches(tree.rootNode)
       .map((match) => match.captures[0].node)
-      .filter((node) => !node.parent?.childForFieldName("exposing"))
+      .filter((node) => {
+        const exposing = node.parent?.childForFieldName("exposing");
+        return (
+          !exposing ||
+          exposing.namedChildren.every(
+            (exposure) =>
+              exposure.type === "exposing" ||
+              exposure.type === "line_comment" ||
+              exposure.type === "block_comment" ||
+              unusedExposures.has(exposure.id),
+          )
+        );
+      })
       .map((node) => {
         const alias = node.parent
           ?.childForFieldName("asClause")
@@ -579,7 +602,10 @@ export class ElmLsDiagnostics {
     return diagnostics;
   }
 
-  private getUnusedImportValueAndTypeDiagnostics(tree: Tree): IDiagnostic[] {
+  private getUnusedImportValueAndTypeDiagnostics(
+    tree: Tree,
+    unusedExposures: Set<number>,
+  ): IDiagnostic[] {
     const diagnostics: IDiagnostic[] = [];
 
     const exposedValuesAndTypes = this.exposedValuesAndTypesQuery
@@ -599,6 +625,7 @@ export class ElmLsDiagnostics {
       );
 
       if (references.length === 0) {
+        unusedExposures.add(exposedValueOrType.id);
         diagnostics.push({
           range: this.getNodeRange(exposedValueOrType),
           message: `Unused imported ${
