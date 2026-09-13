@@ -1,4 +1,4 @@
-import { Connection } from "vscode-languageserver";
+import { Connection, MarkupKind } from "vscode-languageserver";
 import type { ClientCapabilities } from "vscode-languageserver";
 import { injectable, container } from "tsyringe";
 
@@ -88,6 +88,16 @@ export class Settings {
     return (
       this.clientCapabilities.textDocument?.completion?.completionItem
         ?.labelDetailsSupport === true
+    );
+  }
+
+  public isHoverMarkdownSupported(): boolean {
+    // Hover has no separate linkSupport capability. Definition linkSupport
+    // concerns LocationLink responses, not links inside Markdown.
+    return (
+      this.clientCapabilities.textDocument?.hover?.contentFormat?.includes(
+        MarkupKind.Markdown,
+      ) === true
     );
   }
 

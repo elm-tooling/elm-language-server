@@ -1,10 +1,11 @@
-import path from "path";
-import { MarkupContent } from "vscode-languageserver";
+import { container } from "tsyringe";
+import { ClientCapabilities, MarkupContent } from "vscode-languageserver";
 import { URI, Utils } from "vscode-uri";
 import { HoverProvider, HoverResult } from "../src/common/providers/index.js";
 import { ITextDocumentPositionParams } from "../src/common/providers/paramsExtensions.js";
 import { getInvokePositionFromSource } from "./utils/sourceParser.js";
 import { baseUri, SourceTreeParser, srcUri } from "./utils/sourceTreeParser.js";
+import { Settings } from "../src/common/util/settings.js";
 
 class MockHoverProvider extends HoverProvider {
   handleHover = (params: ITextDocumentPositionParams): HoverResult => {
@@ -15,7 +16,14 @@ class MockHoverProvider extends HoverProvider {
 describe("HoverProvider", () => {
   const treeParser = new SourceTreeParser();
 
-  async function testHover(source: string, expectContains: string) {
+  async function testHover(
+    source: string,
+    expectContains: string,
+    capabilities: ClientCapabilities = {},
+  ): Promise<string | undefined> {
+    container.register("Settings", {
+      useValue: new Settings({} as never, capabilities),
+    });
     await treeParser.init();
     const hoverProvider = new MockHoverProvider();
 
@@ -50,10 +58,141 @@ describe("HoverProvider", () => {
 
     if (MarkupContent.is(hover.contents)) {
       expect(hover.contents.value).toContain(expectContains);
+      return hover.contents.value;
     } else {
       expect(MarkupContent.is(hover.contents)).toBeTruthy();
     }
   }
+
+  const markdownCapabilities: ClientCapabilities = {
+    textDocument: {
+      hover: { contentFormat: ["markdown"] },
+      typeDefinition: { linkSupport: false },
+    },
+  };
+  const parameterSource = `
+--@ Test.elm
+module Test exposing (..)
+
+type alias Person = { firstname : String }
+
+getFirstname : Person -> String
+getFirstname person =
+    person.firstname
+  --^
+`;
+
+  it("links an annotated parameter to its alias beneath the hover text", async () => {
+    const value = await testHover(
+      parameterSource,
+      "person : Person",
+      markdownCapabilities,
+    );
+    expect(value).toContain(
+      `\n\n[Go to Person](<${Utils.joinPath(srcUri, "Test.elm").toString()}#L3>)`,
+    );
+  });
+
+  it.each([{}, { textDocument: { hover: { contentFormat: ["plaintext"] } } }])(
+    "omits links without advertised Markdown hover support: %j",
+    async (capabilities) => {
+      const value = await testHover(
+        parameterSource,
+        "person : Person",
+        capabilities as ClientCapabilities,
+      );
+      expect(value).not.toContain("[Go to");
+    },
+  );
+
+  it("links an inferred case-pattern parameter", async () => {
+    const value = await testHover(
+      `
+--@ Models.elm
+module Models exposing (Person, Msg(..))
+
+type alias Person = { firstname : String }
+type Msg = Selected Person
+
+--@ Test.elm
+module Test exposing (..)
+import Models exposing (Msg(..))
+
+update msg =
+    case msg of
+        Selected person ->
+            person
+          --^
+`,
+      "person : Models.Person",
+      markdownCapabilities,
+    );
+    expect(value).toContain(
+      `[Go to Person](<${Utils.joinPath(srcUri, "Models.elm").toString()}#L3>)`,
+    );
+  });
+
+  it("links an unannotated function parameter inferred from a constructor", async () => {
+    const value = await testHover(
+      `
+--@ Test.elm
+module Test exposing (..)
+type Status = Ready
+type Msg = Selected Status
+select status = Selected status
+                       --^
+`,
+      "status : Status",
+      markdownCapabilities,
+    );
+    expect(value).toContain(
+      `[Go to Status](<${Utils.joinPath(srcUri, "Test.elm").toString()}#L2>)`,
+    );
+  });
+
+  it("links an inferred anonymous function parameter", async () => {
+    const value = await testHover(
+      `
+--@ Test.elm
+module Test exposing (..)
+type Status = Ready
+type Msg = Selected Status
+select = \\status -> Selected status
+                            --^
+`,
+      "status : Status",
+      markdownCapabilities,
+    );
+    expect(value).toContain("[Go to Status]");
+  });
+
+  it.each([
+    ["identity value = value", "value : a"],
+    ["name person = person.firstname", "person : { a | firstname : b }"],
+    ["broken : Missing -> Missing\nbroken value = value", "Local parameter"],
+  ])(
+    "keeps hover text for unresolved or unnamed types: %s",
+    async (body, hint) => {
+      const value = await testHover(
+        `\n--@ Test.elm\nmodule Test exposing (..)\n${body}\n${" ".repeat((body.split("\n").at(-1) ?? "").lastIndexOf(" ") + 1)}--^\n`,
+        hint,
+        markdownCapabilities,
+      );
+      expect(value).not.toContain("[Go to");
+    },
+  );
+
+  it("links a parameter at its declaration", async () => {
+    const value = await testHover(
+      parameterSource.replace(
+        "getFirstname person =\n    person.firstname\n  --^",
+        "getFirstname person =\n           --^\n    person.firstname",
+      ),
+      "person : Person",
+      markdownCapabilities,
+    );
+    expect(value).toContain("[Go to Person]");
+  });
 
   it("type should not have module prefix if it from the current module", async () => {
     const source = `
