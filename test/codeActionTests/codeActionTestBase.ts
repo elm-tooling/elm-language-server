@@ -82,7 +82,12 @@ export async function testCodeAction(
   {
     testFixAll = false,
     includeDiagnostics = true,
-  }: { testFixAll?: boolean; includeDiagnostics?: boolean } = {},
+    configureProgram,
+  }: {
+    testFixAll?: boolean;
+    includeDiagnostics?: boolean;
+    configureProgram?: (program: IProgram) => void;
+  } = {},
 ): Promise<CodeAction[]> {
   const treeParser = new SourceTreeParser();
   await treeParser.init();
@@ -104,6 +109,7 @@ export async function testCodeAction(
   result.sources["Test.elm"] = stripCommentLines(result.sources["Test.elm"]);
 
   const program = await treeParser.getProgram(result.sources);
+  configureProgram?.(program);
   const sourceFile = program.getSourceFile(testUri);
 
   if (!sourceFile) throw new Error("Getting tree failed");
