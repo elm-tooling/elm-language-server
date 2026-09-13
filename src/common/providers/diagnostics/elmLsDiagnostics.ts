@@ -28,6 +28,7 @@ import { SyntaxNodeMap } from "../../../compiler/utils/syntaxNodeMap.js";
 import { IElmAnalyseJsonService } from "./elmAnalyseJsonService.js";
 import { Diagnostics } from "../../../compiler/diagnostics.js";
 import type { ServerCancellationToken } from "../../cancellation.js";
+import { References } from "../../../compiler/references.js";
 
 export class ElmLsDiagnostics {
   private language: Language;
@@ -481,6 +482,9 @@ export class ElmLsDiagnostics {
         ...(elmAnalyseJson.checks?.UnnecessaryPortModule === false
           ? []
           : this.getUnnecessaryPortModuleDiagnostics(tree)),
+        ...(elmAnalyseJson.checks?.UnusedIncomingPort === false
+          ? []
+          : this.getUnusedIncomingPortDiagnostics(tree, program)),
         ...(elmAnalyseJson.checks?.NoUncurriedPrefix === false
           ? []
           : this.getFullyAppliedOperatorAsPrefixDiagnostics(tree)),
@@ -535,6 +539,62 @@ export class ElmLsDiagnostics {
     }
     return [];
   };
+
+  private getUnusedIncomingPortDiagnostics(
+    tree: Tree,
+    program: IProgram,
+  ): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
+    const checker = program.getTypeChecker();
+
+    for (const port of tree.rootNode.children.filter(
+      (node) => node.type === "port_annotation",
+    )) {
+      const name = port.childForFieldName("name");
+      const type = checker.findType(port);
+      if (
+        !name ||
+        type.nodeType !== "Function" ||
+        type.return.nodeType !== "Union" ||
+        type.return.module !== "Platform.Sub" ||
+        type.return.name !== "Sub"
+      ) {
+        continue;
+      }
+
+      // Declarations and exposing lists are references for navigation, but
+      // do not use a port. Any value reference counts, even in unreachable code.
+      const used = References.find(
+        { name: name.text, node: port, type: "Port" },
+        program,
+      ).some(({ node, uri }) => {
+        const sourceFile = program.getSourceFile(uri);
+        if (!sourceFile || !TreeUtils.findParentOfType("value_expr", node)) {
+          return false;
+        }
+
+        const symbol = checker.findDefinition(node, sourceFile).symbol;
+        return (
+          symbol?.type === "Port" &&
+          symbol.node.tree.uri === tree.uri &&
+          symbol.node.id === port.id
+        );
+      });
+
+      if (!used) {
+        diagnostics.push({
+          range: this.getNodeRange(name),
+          message: `Incoming port \`${name.text}\` is never referenced in Elm code.`,
+          severity: DiagnosticSeverity.Warning,
+          source: "ElmLS",
+          tags: [DiagnosticTag.Unnecessary],
+          data: { uri: tree.uri, code: "unused_incoming_port" },
+        });
+      }
+    }
+
+    return diagnostics;
+  }
 
   private getUnusedImportDiagnostics(
     tree: Tree,

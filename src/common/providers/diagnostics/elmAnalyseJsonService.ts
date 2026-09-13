@@ -29,6 +29,7 @@ export interface IElmAnalyseJson {
     UnusedImport?: boolean;
     UnusedImportAlias?: boolean;
     UnusedImportedVariable?: boolean;
+    UnusedIncomingPort?: boolean;
     UnusedPatternVariable?: boolean;
     UnusedTopLevel?: boolean;
     UnusedTypeAlias?: boolean;

@@ -26,6 +26,7 @@ This is the default configuration, with all checks enabled:
     "UnusedImport": true,
     "UnusedImportAlias": true,
     "UnusedImportedVariable": true,
+    "UnusedIncomingPort": true,
     "UnusedPatternVariable": true,
     "UnusedTopLevel": true,
     "UnusedTypeAlias": true,
@@ -53,6 +54,27 @@ You can exclude certain files and folders from being linted by adding their path
 ```
 
 ## Checks
+
+### `UnusedIncomingPort`
+
+Warns when an incoming port has no value references in the project's Elm code.
+Declaring, exporting, or importing the port without using it does not count as a
+value reference. References in other modules count, including qualified and
+aliased imports. Outgoing ports are not checked.
+
+```elm
+port module Main exposing (..)
+
+port inPort : (String -> msg) -> Sub msg
+
+subscriptions _ =
+    Sub.none
+```
+
+This check uses references, not reachability analysis. A reference in an unused
+function suppresses the warning; it does not prove that the application actually
+subscribes to the port. Ports whose incoming type cannot be resolved are skipped.
+Set `checks.UnusedIncomingPort` to `false` to disable this warning.
 
 ### `BooleanCase`
 
