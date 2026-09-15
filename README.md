@@ -128,6 +128,8 @@ Supports Elm 0.19 and up
 | workspaceSymbols | Identifies all symbols in the current workspace                                                                                                      |
 | selectionRange   | Enables navigation by selectionRange (extend selection for e.g.)                                                                                     |
 
+Parameter hovers include a link to the inferred type's declaration when the client advertises Markdown hover support. This includes function, anonymous function, and case-pattern parameters. Resolution prefers a type alias over its underlying type; unnamed or unresolved types have no link. Links use document URIs with one-based `#L` line fragments, without editor-specific commands. Clients must support opening the document URI, and exact-line navigation depends on the client because LSP does not standardize these fragments.
+
 Virtual Elm package files use the LSP 3.18 `workspace/textDocumentContent` request when the client advertises support. Implementations include [vscode-languageclient 10](https://github.com/microsoft/vscode-languageserver-node/blob/main/client/src/common/textDocumentContent.ts), [coc.nvim](https://github.com/neoclide/coc.nvim/blob/master/src/language-client/textDocumentContent.ts), and [Sublime LSP 2.13](https://github.com/sublimelsp/LSP/blob/4070-2.13.0/docs/src/client_configuration.md). Elm clients that do not support the standard request can continue to use `elm/provideFileContents` during the migration.
 
 ## Server Settings

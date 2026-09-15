@@ -10,6 +10,7 @@ import { URI } from "vscode-uri";
 import { Node as SyntaxNode } from "web-tree-sitter";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
 import { TreeUtils } from "../util/treeUtils.js";
+import { findTypeDefinition } from "../util/typeDefinition.js";
 import { ITextDocumentPositionParams } from "./paramsExtensions.js";
 
 export class TypeDefinitionProvider {
@@ -34,26 +35,11 @@ export class TypeDefinitionProvider {
       params.position,
     );
     const type = params.program.getTypeChecker().findType(nodeAtPosition);
-    const namedType =
-      type.alias ??
-      (type.nodeType === "Union"
-        ? { module: type.module, name: type.name }
-        : undefined);
-
-    if (!namedType) {
-      return;
-    }
-
-    const typeSourceFile = params.program.getSourceFileOfImportableModule(
+    const definition = findTypeDefinition(
+      type,
       params.sourceFile,
-      namedType.module,
+      params.program,
     );
-    const definition = typeSourceFile?.symbolLinks
-      ?.get(typeSourceFile.tree.rootNode)
-      ?.get(
-        namedType.name,
-        (symbol) => symbol.type === "Type" || symbol.type === "TypeAlias",
-      );
 
     return this.createLocation(definition?.node);
   };

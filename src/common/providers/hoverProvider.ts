@@ -12,6 +12,8 @@ import { getEmptyTypes } from "../../compiler/utils/elmUtils.js";
 import { ElmWorkspaceMatcher } from "../util/elmWorkspaceMatcher.js";
 import { HintHelper } from "../util/hintHelper.js";
 import { TreeUtils } from "../util/treeUtils.js";
+import { Settings } from "../util/settings.js";
+import { findTypeDefinition } from "../util/typeDefinition.js";
 import { ITextDocumentPositionParams } from "./paramsExtensions.js";
 
 export type HoverResult = Hover | null | undefined;
@@ -67,9 +69,24 @@ export class HoverProvider {
           sourceFile,
         );
 
+        const isParameter =
+          definitionNode.type === "FunctionParameter" ||
+          definitionNode.type === "AnonymousFunctionParameter" ||
+          definitionNode.type === "CasePattern";
+        const typeDefinition =
+          isParameter &&
+          container.resolve<Settings>("Settings").isHoverMarkdownSupported()
+            ? findTypeDefinition(
+                checker.findType(nodeAtPosition),
+                sourceFile,
+                params.program,
+              )
+            : undefined;
+
         return this.createMarkdownHoverFromDefinition(
           definitionNode,
           typeString,
+          typeDefinition,
         );
       } else {
         const specialMatch = getEmptyTypes().find(
@@ -90,9 +107,10 @@ export class HoverProvider {
   private createMarkdownHoverFromDefinition(
     definitionNode: ISymbol | undefined,
     typeString: string,
+    typeDefinition?: ISymbol,
   ): Hover | undefined {
     if (definitionNode) {
-      const value =
+      let value =
         definitionNode.type === "FunctionParameter" ||
         definitionNode.type === "AnonymousFunctionParameter" ||
         definitionNode.type === "CasePattern"
@@ -103,6 +121,15 @@ export class HoverProvider {
           : HintHelper.createHint(definitionNode.node, typeString);
 
       if (value) {
+        if (typeDefinition) {
+          const node = typeDefinition.node;
+          // Document URI links need no editor-specific command. The one-based
+          // line fragment is a client convention, not an LSP guarantee.
+          const uri = URI.parse(node.tree.uri)
+            .with({ fragment: `L${node.startPosition.row + 1}` })
+            .toString();
+          value += `\n\n[Go to ${typeDefinition.name}](<${uri}>)`;
+        }
         return {
           contents: {
             kind: MarkupKind.Markdown,
