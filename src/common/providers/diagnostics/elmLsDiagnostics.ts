@@ -484,7 +484,7 @@ export class ElmLsDiagnostics {
           : this.getUnnecessaryPortModuleDiagnostics(tree)),
         ...(elmAnalyseJson.checks?.UnusedIncomingPort === false
           ? []
-          : this.getUnusedIncomingPortDiagnostics(tree, program)),
+          : this.getUnusedIncomingPortDiagnostics(sourceFile, program)),
         ...(elmAnalyseJson.checks?.NoUncurriedPrefix === false
           ? []
           : this.getFullyAppliedOperatorAsPrefixDiagnostics(tree)),
@@ -541,15 +541,14 @@ export class ElmLsDiagnostics {
   };
 
   private getUnusedIncomingPortDiagnostics(
-    tree: Tree,
+    sourceFile: ISourceFile,
     program: IProgram,
   ): IDiagnostic[] {
     const diagnostics: IDiagnostic[] = [];
     const checker = program.getTypeChecker();
+    const tree = sourceFile.tree;
 
-    for (const port of tree.rootNode.children.filter(
-      (node) => node.type === "port_annotation",
-    )) {
+    for (const port of sourceFile.portAnnotations ?? []) {
       const name = port.childForFieldName("name");
       const type = checker.findType(port);
       if (

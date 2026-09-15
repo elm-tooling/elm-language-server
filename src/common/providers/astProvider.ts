@@ -25,14 +25,22 @@ export class ASTProvider {
   private treeChangeEvent = new Emitter<{
     sourceFile: ISourceFile;
     declaration?: SyntaxNode;
+    previousDependencies?: readonly string[];
   }>();
   readonly onTreeChange: Event<{
     sourceFile: ISourceFile;
     declaration?: SyntaxNode;
+    previousDependencies?: readonly string[];
   }> = this.treeChangeEvent.event;
 
-  private treeDeleteEvent = new Emitter<{ uri: string }>();
-  readonly onTreeDelete: Event<{ uri: string }> = this.treeDeleteEvent.event;
+  private treeDeleteEvent = new Emitter<{
+    uri: string;
+    previousDependencies?: readonly string[];
+  }>();
+  readonly onTreeDelete: Event<{
+    uri: string;
+    previousDependencies?: readonly string[];
+  }> = this.treeDeleteEvent.event;
 
   private pendingRenames = new Map<string, string>();
 
@@ -72,9 +80,13 @@ export class ASTProvider {
             URI.parse(params.uri),
           ).handle((params) => {
             const forest = params.program.getForest(false);
+            const previousDependencies = forest.getDependencyUris(params.uri);
             forest.removeTree(params.uri);
             params.program.markAsDirty();
-            this.treeDeleteEvent.fire({ uri: params.uri });
+            this.treeDeleteEvent.fire({
+              uri: params.uri,
+              previousDependencies,
+            });
           })(change);
         }
       });
@@ -92,6 +104,7 @@ export class ASTProvider {
       `Changed text document, going to parse it. ${params.uri}`,
     );
     const forest = params.program.getForest(false); // Don't synchronize the forest, we are only looking at the tree
+    const previousDependencies = forest.getDependencyUris(params.uri);
 
     // Source file could be undefined here
     const sourceFile = <ISourceFile | undefined>params.sourceFile;
@@ -212,6 +225,7 @@ export class ASTProvider {
           this.treeChangeEvent.fire({
             sourceFile,
             declaration: changedDeclaration,
+            previousDependencies,
           });
         }
       });

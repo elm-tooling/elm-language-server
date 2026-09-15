@@ -29,7 +29,7 @@ import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics.js";
 import { ISourceFile } from "../../../compiler/forest.js";
 import { ElmReviewDiagnostics } from "./elmReviewDiagnostics.js";
 import { IElmAnalyseJsonService } from "./elmAnalyseJsonService.js";
-import { TreeUtils } from "../../util/treeUtils.js";
+import { bindTreeContainer } from "../../../compiler/binder.js";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -132,10 +132,7 @@ export class DiagnosticsProvider implements Disposable {
   private changeSeq = 0;
 
   private disposables: Disposable[] = [];
-  private portDiagnosticDependencies = new Map<
-    string,
-    { program: IProgram; moduleName: string; importers: Set<string> }
-  >();
+  private pendingPortDiagnostics = new Map<string, Set<string>>();
 
   constructor() {
     this.clientSettings = container.resolve("ClientSettings");
@@ -200,7 +197,7 @@ export class DiagnosticsProvider implements Disposable {
         this.updateDiagnostics(
           sourceFile.uri,
           DiagnosticKind.ElmLS,
-          this.createElmLsDiagnostics(sourceFile, program),
+          this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
         );
         this.requestAffectedPortDiagnostics(sourceFile.uri);
       }
@@ -238,7 +235,7 @@ export class DiagnosticsProvider implements Disposable {
                 this.updateDiagnostics(
                   sourceFile.uri,
                   DiagnosticKind.ElmLS,
-                  this.createElmLsDiagnostics(sourceFile, program),
+                  this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
                 );
               }
             });
@@ -252,7 +249,8 @@ export class DiagnosticsProvider implements Disposable {
     }
 
     this.disposables.push(
-      astProvider.onTreeChange(({ sourceFile }) => {
+      astProvider.onTreeChange(({ sourceFile, previousDependencies = [] }) => {
+        this.queuePortDiagnostics(sourceFile.uri, previousDependencies);
         if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
           this.requestDiagnostics(sourceFile.uri);
         }
@@ -260,10 +258,10 @@ export class DiagnosticsProvider implements Disposable {
     );
 
     this.disposables.push(
-      astProvider.onTreeDelete(({ uri }) => {
+      astProvider.onTreeDelete(({ uri, previousDependencies = [] }) => {
         this.deleteDiagnostics(uri);
-        this.portDiagnosticDependencies.delete(uri);
         this.pendingDiagnostics.delete(uri);
+        this.queuePortDiagnostics(uri, previousDependencies);
         this.requestAffectedPortDiagnostics(uri);
       }),
     );
@@ -336,7 +334,7 @@ export class DiagnosticsProvider implements Disposable {
     this.updateDiagnostics(
       sourceFile.uri,
       DiagnosticKind.ElmLS,
-      this.createElmLsDiagnostics(sourceFile, program),
+      this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
     );
   }
 
@@ -349,64 +347,42 @@ export class DiagnosticsProvider implements Disposable {
     this.triggerDiagnostics();
   }
 
-  private createElmLsDiagnostics(
-    sourceFile: ISourceFile,
-    program: IProgram,
-  ): IDiagnostic[] {
-    const moduleName = TreeUtils.getModuleNameNode(sourceFile.tree)?.text;
-    if (
-      moduleName &&
-      sourceFile.tree.rootNode.children.some(
-        (node) => node.type === "port_annotation",
-      )
-    ) {
-      // Keep the previous importers so removing an import or deleting a caller
-      // still invalidates this module's project-wide unused-port diagnostics.
-      this.portDiagnosticDependencies.set(sourceFile.uri, {
-        program,
-        moduleName,
-        importers: new Set(
-          program
-            .getSourceFiles()
-            .filter(
-              (file) =>
-                file.writeable &&
-                TreeUtils.findImportClauseByName(file.tree, moduleName),
-            )
-            .map((file) => file.uri),
-        ),
-      });
-    } else {
-      this.portDiagnosticDependencies.delete(sourceFile.uri);
-    }
-    return this.elmLsDiagnostics.createDiagnostics(sourceFile, program);
+  private queuePortDiagnostics(
+    uri: string,
+    previousDependencies: readonly string[],
+  ): void {
+    const pending = this.pendingPortDiagnostics.get(uri) ?? new Set<string>();
+    previousDependencies.forEach((dependency) => pending.add(dependency));
+    this.pendingPortDiagnostics.set(uri, pending);
   }
 
   private getAffectedPortDiagnosticUris(uri: string): string[] {
+    const previousDependencies = this.pendingPortDiagnostics.get(uri) ?? [];
+    this.pendingPortDiagnostics.delete(uri);
     if (this.clientSettings.disableElmLSDiagnostics) {
       return [];
     }
 
+    const program = this.elmWorkspaceMatcher.getProgramFor(URI.parse(uri));
+    if (
+      this.elmAnalyseJsonService.getElmAnalyseJson(program.getRootPath().fsPath)
+        .checks?.UnusedIncomingPort === false
+    ) {
+      return [];
+    }
+
+    const forest = program.getForest();
     const affected: string[] = [];
-    for (const [portUri, dependency] of this.portDiagnosticDependencies) {
-      if (
-        this.elmAnalyseJsonService.getElmAnalyseJson(
-          dependency.program.getRootPath().fsPath,
-        ).checks?.UnusedIncomingPort === false
-      ) {
-        continue;
-      }
-      const sourceFile = dependency.program.getSourceFile(uri);
-      if (
-        portUri !== uri &&
-        (dependency.importers.has(uri) ||
-          (sourceFile &&
-            TreeUtils.findImportClauseByName(
-              sourceFile.tree,
-              dependency.moduleName,
-            )))
-      ) {
-        affected.push(portUri);
+    for (const dependency of new Set([
+      ...previousDependencies,
+      ...forest.getDependencyUris(uri),
+    ])) {
+      const sourceFile = forest.getByUri(dependency);
+      if (dependency !== uri && sourceFile?.writeable) {
+        bindTreeContainer(sourceFile);
+        if (sourceFile.portAnnotations?.length) {
+          affected.push(dependency);
+        }
       }
     }
     return affected;
@@ -639,7 +615,10 @@ export class DiagnosticsProvider implements Disposable {
                       this.updateDiagnostics(
                         uri,
                         DiagnosticKind.ElmLS,
-                        this.createElmLsDiagnostics(sourceFile, program),
+                        this.elmLsDiagnostics.createDiagnostics(
+                          sourceFile,
+                          program,
+                        ),
                       );
 
                       goNext();

@@ -35,8 +35,14 @@ port inPort : (String -> msg) -> Sub msg`,
 port otherPort : (String -> msg) -> Sub msg`,
     "Main.elm": unused,
   });
-  const changes = new Emitter<{ sourceFile: ISourceFile }>();
-  const deletions = new Emitter<{ uri: string }>();
+  const changes = new Emitter<{
+    sourceFile: ISourceFile;
+    previousDependencies: readonly string[];
+  }>();
+  const deletions = new Emitter<{
+    uri: string;
+    previousDependencies: readonly string[];
+  }>();
   container.register("ElmWorkspaces", { useValue: [program] });
   container.register(ASTProvider, {
     useValue: mockDeep<ASTProvider>({
@@ -67,6 +73,7 @@ port otherPort : (String -> msg) -> Sub msg`,
       .getCurrentDiagnostics(portUri)
       .some((diagnostic) => diagnostic.data.code === "unused_incoming_port");
   const changeMain = (text: string): void => {
+    const previousDependencies = program.getForest().getDependencyUris(mainUri);
     const tree = container.resolve<Parser>("Parser").parse(text);
     if (!tree) throw new Error("Failed to parse Main.elm");
     const sourceFile = program
@@ -81,7 +88,7 @@ port otherPort : (String -> msg) -> Sub msg`,
       );
     program.getTypeCache().invalidateProject();
     program.markAsDirty();
-    changes.fire({ sourceFile });
+    changes.fire({ sourceFile, previousDependencies });
   };
 
   try {
@@ -110,10 +117,11 @@ port otherPort : (String -> msg) -> Sub msg`,
     await jest.runAllTimersAsync();
     expect(hasWarning()).toBe(false);
 
+    const previousDependencies = program.getForest().getDependencyUris(mainUri);
     program.getForest(false).removeTree(mainUri);
     program.getTypeCache().invalidateProject();
     program.markAsDirty();
-    deletions.fire({ uri: mainUri });
+    deletions.fire({ uri: mainUri, previousDependencies });
     await jest.runAllTimersAsync();
     expect(hasWarning()).toBe(true);
 
