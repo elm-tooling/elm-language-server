@@ -11,7 +11,9 @@ import { Utils } from "../../src/common/util/utils.js";
 import { getSourceFiles } from "../utils/sourceParser.js";
 import { SourceTreeParser, srcUri } from "../utils/sourceTreeParser.js";
 import { diff } from "jest-diff";
-import { describe, expect } from "@jest/globals";
+import { describe, expect, jest } from "@jest/globals";
+import { container } from "tsyringe";
+import { IElmAnalyseJsonService } from "../../src/common/providers/diagnostics/elmAnalyseJsonService.js";
 import { fail } from "assert";
 
 describe("ElmLsDiagnostics", () => {
@@ -374,7 +376,7 @@ type alias Thing = { name : Bar.Name }
       await testDiagnostics(source, "unused_import", []);
     });
 
-    it("unused but has exposing", async () => {
+    it("unused with all exposures unused", async () => {
       const source = `
 module Foo exposing (..)
 
@@ -383,8 +385,88 @@ import Bar exposing (baz)
 foo = 1
 			`;
 
-      await testDiagnostics(source, "unused_import", []);
+      await testDiagnostics(source, "unused_import", [
+        diagnosticWithRangeAndName(Range.create(3, 0, 3, 25), "Bar"),
+      ]);
     });
+
+    it.each([
+      ["Bar exposing (baz, Thing)", "foo = 1", "Bar"],
+      ["Bar as B exposing (baz, Thing)", "foo = 1", "B"],
+      ["Foo.Bar exposing (baz)", "foo = 1", "Foo.Bar"],
+      ["Bar exposing (baz, {- comment -} Thing)", "foo = 1", "Bar"],
+    ])("detects wholly unused %s", async (clause, usage, name) => {
+      await testDiagnostics(
+        `module Main exposing (..)\nimport ${clause}\n${usage}`,
+        "unused_import",
+        [
+          diagnosticWithRangeAndName(
+            Range.create(1, 0, 1, 7 + clause.length),
+            name,
+          ),
+        ],
+      );
+    });
+
+    it.each([
+      ["Bar exposing (baz, Thing)", "foo = baz"],
+      ["Bar exposing (baz, Thing)", "foo : Thing\nfoo = 1"],
+      ["Bar exposing (baz)", "foo = Bar.other"],
+      ["Foo.Bar exposing (baz)", "foo = Foo.Bar.other"],
+      ["Bar as B exposing (baz)", "foo = B.other"],
+      ["Bar as B exposing (baz)", "foo : B.Thing\nfoo = 1"],
+      ["Bar exposing (baz)", "foo x = case x of\n    Bar.Thing -> 1"],
+      ["Bar exposing (..)", "foo = 1"],
+      ["Bar exposing (baz, Thing(..))", "foo = 1"],
+      ["Bar exposing (baz, (</>))", "foo = 1 </> 2"],
+    ])("preserves %s used by %s", async (clause, usage) => {
+      await testDiagnostics(
+        `module Main exposing (..)\nimport ${clause}\n${usage}`,
+        "unused_import",
+        [],
+      );
+    });
+
+    it.each([
+      [false, true, ["unused_imported_value", "unused_alias"]],
+      [true, false, ["unused_import", "unused_alias"]],
+      [false, false, ["unused_alias"]],
+    ])(
+      "respects UnusedImport=%s and UnusedImportedVariable=%s",
+      async (unusedImport, unusedImportedVariable, expectedCodes) => {
+        const service = container.resolve<IElmAnalyseJsonService>(
+          "ElmAnalyseJsonService",
+        );
+        const settings = jest
+          .spyOn(service, "getElmAnalyseJson")
+          .mockReturnValue({
+            checks: {
+              UnusedImport: unusedImport,
+              UnusedImportedVariable: unusedImportedVariable,
+            },
+          });
+        try {
+          await treeParser.init();
+          const program = await treeParser.getProgram({
+            "Main.elm":
+              "module Main exposing (..)\nimport Bar as B exposing (baz)\nfoo = 1",
+          });
+          const sourceFile = program.getSourceFile(uri);
+          if (!sourceFile) {
+            fail("Expected Main.elm");
+          }
+          const diagnostics = new ElmLsDiagnostics().createDiagnostics(
+            sourceFile,
+            program,
+          );
+          expect(diagnostics.map((diagnostic) => diagnostic.data.code)).toEqual(
+            expectedCodes,
+          );
+        } finally {
+          settings.mockRestore();
+        }
+      },
+    );
 
     it("unused import", async () => {
       const source = `

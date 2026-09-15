@@ -80,10 +80,17 @@ function getEditsForDiagnostic(
     case "unused_import": {
       const node = TreeUtils.getNamedDescendantForPosition(
         sourceFile.tree.rootNode,
-        diagnostic.range.end,
+        diagnostic.range.start,
       );
 
-      const moduleName = TreeUtils.getModuleNameNodeFromImportClause(node);
+      const importClause = TreeUtils.findParentOfType(
+        "import_clause",
+        node,
+        true,
+      );
+      const moduleName = importClause
+        ? TreeUtils.getModuleNameNodeFromImportClause(importClause)
+        : undefined;
       return {
         title: `Remove unused import \`${moduleName?.text ?? node.text}\``,
         edits: [
