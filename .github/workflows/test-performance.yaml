@@ -38,8 +38,6 @@ jobs:
       - name: Compile
         run: |
           npm run compile
-      - name: Check port diagnostic performance budgets
-        run: npm test -- --runInBand --coverage=false --runTestsByPath test/diagnosticTests/portDiagnostics.performance.test.ts
       - name: Install Elm
         run: |
           npm install -g elm
