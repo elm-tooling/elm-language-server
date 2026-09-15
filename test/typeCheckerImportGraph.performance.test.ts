@@ -71,7 +71,10 @@ describe("transitive importing module traversal performance", () => {
   it("stress tests the mutable traversal", () => {
     const { importModuleGraph, sourceFile } = createStressGraph();
     const mutableTraversal = (): IStressModule[] =>
-      getTransitiveImportingModules(importModuleGraph, sourceFile);
+      getTransitiveImportingModules(
+        (uri) => importModuleGraph.get(uri) ?? [],
+        sourceFile,
+      );
 
     expect(mutableTraversal()).toHaveLength(EXPECTED_MODULES);
 
