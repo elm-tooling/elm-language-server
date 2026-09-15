@@ -99,7 +99,7 @@ export interface TypeChecker {
 }
 
 export function getTransitiveImportingModules<T extends { uri: string }>(
-  importModuleGraph: ReadonlyMap<string, readonly T[]>,
+  getImportingModules: (uri: string) => readonly T[],
   sourceFile: T,
 ): T[] {
   const importingModules: T[] = [];
@@ -109,7 +109,7 @@ export function getTransitiveImportingModules<T extends { uri: string }>(
   for (let index = 0; index < modulesToVisit.length; index++) {
     const source = modulesToVisit[index];
 
-    (importModuleGraph.get(source.uri) ?? []).forEach((importingModule) => {
+    getImportingModules(source.uri).forEach((importingModule) => {
       if (!visited.has(importingModule.uri)) {
         visited.add(importingModule.uri);
         importingModules.push(importingModule);
@@ -123,7 +123,6 @@ export function getTransitiveImportingModules<T extends { uri: string }>(
 
 export function createTypeChecker(program: IProgram): TypeChecker {
   const imports = new Map<string, Imports>();
-  let importModuleGraph: Map<string, ISourceFile[]>;
 
   const diagnostics = new DiagnosticsCollection();
   const suggestionDiagnostics = new DiagnosticsCollection();
@@ -366,33 +365,15 @@ export function createTypeChecker(program: IProgram): TypeChecker {
     sourceFile: ISourceFile,
     directImportOnly?: boolean,
   ): ISourceFile[] {
-    if (!importModuleGraph) {
-      importModuleGraph = new Map<string, ISourceFile[]>();
-
-      program.getSourceFiles().forEach((sourceFile) => {
-        if (sourceFile.writeable) {
-          getAllImports(sourceFile)
-            .getModules()
-            .forEach((module) => {
-              const existingGraph = importModuleGraph.get(
-                module.fromModule.uri,
-              );
-
-              if (existingGraph) {
-                existingGraph.push(sourceFile);
-              } else {
-                importModuleGraph.set(module.fromModule.uri, [sourceFile]);
-              }
-            });
-        }
-      });
-    }
+    const forest = program.getForest();
+    const getDirectImporters = (uri: string): ISourceFile[] =>
+      forest.getImportingModules(uri).filter((file) => file.writeable);
 
     if (directImportOnly) {
-      return importModuleGraph.get(sourceFile.uri) ?? [];
+      return getDirectImporters(sourceFile.uri);
     }
 
-    return getTransitiveImportingModules(importModuleGraph, sourceFile);
+    return getTransitiveImportingModules(getDirectImporters, sourceFile);
   }
 
   function findImport(

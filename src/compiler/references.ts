@@ -21,12 +21,16 @@ export class References {
       );
 
       if (definitionSourceFile) {
-        const imports: { [uri: string]: Imports } = {};
-        program.getSourceFiles().forEach((sourceFile) => {
-          if (sourceFile.writeable) {
-            imports[sourceFile.uri] = checker.getAllImports(sourceFile);
-          }
-        });
+        let imports: { [uri: string]: Imports } | undefined;
+        const getImports = (): { [uri: string]: Imports } =>
+          (imports ??= Object.fromEntries(
+            checker
+              .getImportingModules(definitionSourceFile, true)
+              .map((sourceFile) => [
+                sourceFile.uri,
+                checker.getAllImports(sourceFile),
+              ]),
+          ));
 
         const moduleNameNode = TreeUtils.getModuleNameNode(
           definitionSourceFile.tree,
@@ -107,7 +111,7 @@ export class References {
                   if (isExposedFunction && moduleNameNode) {
                     const moduleName = moduleNameNode.text;
 
-                    for (const uri in imports) {
+                    for (const uri in getImports()) {
                       if (uri === definitionNode.node.tree.uri) {
                         continue;
                       }
@@ -118,13 +122,13 @@ export class References {
                         continue;
                       }
 
+                      const allImports = getImports()[uri];
+                      const importNode =
+                        allImports.getModule(moduleName)?.importNode;
                       const importedModuleAlias =
-                        TreeUtils.findImportAliasOfModule(
-                          moduleName,
-                          otherSourceFile.tree,
-                        ) ?? moduleName;
-
-                      const allImports = imports[uri];
+                        (importNode &&
+                          TreeUtils.getImportAliasNode(importNode)?.text) ??
+                        moduleName;
 
                       // Find the function in the other module's imports
                       const found = [
@@ -231,7 +235,7 @@ export class References {
                   if (isExposedPort && moduleNameNode) {
                     const moduleName = moduleNameNode.text;
 
-                    for (const uri in imports) {
+                    for (const uri in getImports()) {
                       if (uri === definitionNode.node.tree.uri) {
                         continue;
                       }
@@ -242,13 +246,13 @@ export class References {
                         continue;
                       }
 
+                      const allImports = getImports()[uri];
+                      const importNode =
+                        allImports.getModule(moduleName)?.importNode;
                       const importedModuleAlias =
-                        TreeUtils.findImportAliasOfModule(
-                          moduleName,
-                          otherSourceFile.tree,
-                        ) ?? moduleName;
-
-                      const allImports = imports[uri];
+                        (importNode &&
+                          TreeUtils.getImportAliasNode(importNode)?.text) ??
+                        moduleName;
 
                       // Find the function in the other module's imports
                       const found = [
@@ -357,7 +361,7 @@ export class References {
 
                   if (isExposed && moduleNameNode) {
                     const moduleName = moduleNameNode.text;
-                    for (const uri in imports) {
+                    for (const uri in getImports()) {
                       if (uri === definitionNode.node.tree.uri) {
                         continue;
                       }
@@ -368,13 +372,13 @@ export class References {
                         continue;
                       }
 
+                      const allImports = getImports()[uri];
+                      const importNode =
+                        allImports.getModule(moduleName)?.importNode;
                       const importedModuleAlias =
-                        TreeUtils.findImportAliasOfModule(
-                          moduleName,
-                          otherSourceFile.tree,
-                        ) ?? moduleName;
-
-                      const allImports = imports[uri];
+                        (importNode &&
+                          TreeUtils.getImportAliasNode(importNode)?.text) ??
+                        moduleName;
 
                       // Find the type or type alias in the other module's imports
                       const found = [
@@ -438,7 +442,7 @@ export class References {
                 });
               }
 
-              for (const uri in imports) {
+              for (const uri in getImports()) {
                 if (uri === definitionNode.node.tree.uri) {
                   continue;
                 }
@@ -601,7 +605,7 @@ export class References {
                 }
               }
 
-              for (const uri in imports) {
+              for (const uri in getImports()) {
                 if (uri === definitionNode.node.tree.uri) {
                   continue;
                 }
@@ -614,13 +618,12 @@ export class References {
 
                 const moduleName = moduleNameNode.text;
 
+                const allImports = getImports()[uri];
+                const importNode = allImports.getModule(moduleName)?.importNode;
                 const importedModuleAlias =
-                  TreeUtils.findImportAliasOfModule(
-                    moduleName,
-                    otherSourceFile.tree,
-                  ) ?? moduleName;
-
-                const allImports = imports[uri];
+                  (importNode &&
+                    TreeUtils.getImportAliasNode(importNode)?.text) ??
+                  moduleName;
                 const found =
                   allImports.getConstructor(nameNode.text, moduleName)[0] ??
                   allImports.getConstructor(

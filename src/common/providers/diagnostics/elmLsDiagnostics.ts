@@ -28,6 +28,8 @@ import { SyntaxNodeMap } from "../../../compiler/utils/syntaxNodeMap.js";
 import { IElmAnalyseJsonService } from "./elmAnalyseJsonService.js";
 import { Diagnostics } from "../../../compiler/diagnostics.js";
 import type { ServerCancellationToken } from "../../cancellation.js";
+import { References } from "../../../compiler/references.js";
+import { bindTreeContainer } from "../../../compiler/binder.js";
 
 export class ElmLsDiagnostics {
   private language: Language;
@@ -49,7 +51,6 @@ export class ElmLsDiagnostics {
   private readonly useConsOverConcatQuery: Query;
   private readonly singleFieldRecordTypesQuery: Query;
   private readonly unnecessaryListConcatQuery: Query;
-  private readonly unusedPortModuleQuery: Query;
   private readonly operatorFunctionsQuery: Query;
   private readonly typeAliasesQuery: Query;
   private readonly typeAliasUsagesQuery: Query;
@@ -315,17 +316,6 @@ export class ElmLsDiagnostics {
       `,
     );
 
-    this.unusedPortModuleQuery = new Query(
-      this.language,
-      `
-        (module_declaration
-          (port)
-        ) @portModule
-
-        (port_annotation) @portAnnotation
-        `,
-    );
-
     this.operatorFunctionsQuery = new Query(
       this.language,
       `
@@ -480,7 +470,10 @@ export class ElmLsDiagnostics {
           : this.getUnnecessaryListConcatDiagnostics(tree)),
         ...(elmAnalyseJson.checks?.UnnecessaryPortModule === false
           ? []
-          : this.getUnnecessaryPortModuleDiagnostics(tree)),
+          : this.getUnnecessaryPortModuleDiagnostics(sourceFile)),
+        ...(elmAnalyseJson.checks?.UnusedIncomingPort === false
+          ? []
+          : this.getUnusedIncomingPortDiagnostics(sourceFile, program)),
         ...(elmAnalyseJson.checks?.NoUncurriedPrefix === false
           ? []
           : this.getFullyAppliedOperatorAsPrefixDiagnostics(tree)),
@@ -535,6 +528,61 @@ export class ElmLsDiagnostics {
     }
     return [];
   };
+
+  private getUnusedIncomingPortDiagnostics(
+    sourceFile: ISourceFile,
+    program: IProgram,
+  ): IDiagnostic[] {
+    const diagnostics: IDiagnostic[] = [];
+    const checker = program.getTypeChecker();
+    const tree = sourceFile.tree;
+
+    for (const port of sourceFile.portAnnotations ?? []) {
+      const name = port.childForFieldName("name");
+      const type = checker.findType(port);
+      if (
+        !name ||
+        type.nodeType !== "Function" ||
+        type.return.nodeType !== "Union" ||
+        type.return.module !== "Platform.Sub" ||
+        type.return.name !== "Sub"
+      ) {
+        continue;
+      }
+
+      // Declarations and exposing lists are references for navigation, but
+      // do not use a port. Any value reference counts, even in unreachable code.
+      const used = References.find(
+        { name: name.text, node: port, type: "Port" },
+        program,
+      ).some(({ node, uri }) => {
+        const sourceFile = program.getSourceFile(uri);
+        if (!sourceFile || !TreeUtils.findParentOfType("value_expr", node)) {
+          return false;
+        }
+
+        const symbol = checker.findDefinition(node, sourceFile).symbol;
+        return (
+          symbol?.type === "Port" &&
+          symbol.node.tree.uri === tree.uri &&
+          symbol.node.id === port.id
+        );
+      });
+
+      if (!used) {
+        diagnostics.push({
+          range: this.getNodeRange(name),
+          message: `Incoming port \`${name.text}\` is never referenced in Elm code.`,
+          severity: DiagnosticSeverity.Warning,
+          source: "ElmLS",
+          tags: [DiagnosticTag.Unnecessary],
+          data: { uri: tree.uri, code: "unused_incoming_port" },
+        });
+      }
+    }
+
+    return diagnostics;
+  }
 
   private getUnusedImportDiagnostics(
     tree: Tree,
@@ -974,25 +1022,28 @@ export class ElmLsDiagnostics {
     return diagnostics;
   }
 
-  private getUnnecessaryPortModuleDiagnostics(tree: Tree): IDiagnostic[] {
-    const diagnostics: IDiagnostic[] = [];
-
-    const unusedPortMatches = this.unusedPortModuleQuery.matches(tree.rootNode);
-
-    if (
-      unusedPortMatches[0]?.captures[0].name === "portModule" &&
-      !unusedPortMatches[1]
-    ) {
-      diagnostics.push({
-        range: this.getNodeRange(unusedPortMatches[0].captures[0].node),
-        message: `Module is defined as a \`port\` module, but does not define any ports.`,
-        severity: DiagnosticSeverity.Warning,
-        source: "ElmLS",
-        data: { uri: tree.uri, code: "unnecessary_port_module" },
-      });
+  private getUnnecessaryPortModuleDiagnostics(
+    sourceFile: ISourceFile,
+  ): IDiagnostic[] {
+    bindTreeContainer(sourceFile);
+    if (sourceFile.portAnnotations?.length) {
+      return [];
     }
 
-    return diagnostics;
+    const moduleDeclaration = TreeUtils.findModuleDeclaration(sourceFile.tree);
+    if (moduleDeclaration?.children.some((node) => node.type === "port")) {
+      return [
+        {
+          range: this.getNodeRange(moduleDeclaration),
+          message: `Module is defined as a \`port\` module, but does not define any ports.`,
+          severity: DiagnosticSeverity.Warning,
+          source: "ElmLS",
+          data: { uri: sourceFile.uri, code: "unnecessary_port_module" },
+        },
+      ];
+    }
+
+    return [];
   }
 
   private getFullyAppliedOperatorAsPrefixDiagnostics(

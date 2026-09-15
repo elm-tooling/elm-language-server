@@ -32,6 +32,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
 
   const symbolLinks = new SyntaxNodeMap<SyntaxNode, SymbolMap>();
   const nonShadowableNames = new Set<string>();
+  const portAnnotations: SyntaxNode[] = [];
   let container: SymbolMap;
   let parent: SyntaxNode;
   const treeCursor = sourceFile.tree.walk();
@@ -39,6 +40,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
   bind();
   sourceFile.symbolLinks = symbolLinks;
   sourceFile.nonShadowableNames = nonShadowableNames;
+  sourceFile.portAnnotations = portAnnotations;
 
   // Bind exposing must happen after symbolLinks is bound
   bindExposing();
@@ -231,6 +233,7 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
   }
 
   function bindPortAnnotation(node: SyntaxNode): void {
+    portAnnotations.push(node);
     // TODO: Use field
     const name = TreeUtils.findFirstNamedChildOfType(
       "lower_case_identifier",

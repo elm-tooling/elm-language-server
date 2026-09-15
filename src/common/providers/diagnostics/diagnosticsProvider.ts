@@ -29,6 +29,7 @@ import { DiagnosticKind, FileDiagnostics } from "./fileDiagnostics.js";
 import { ISourceFile } from "../../../compiler/forest.js";
 import { ElmReviewDiagnostics } from "./elmReviewDiagnostics.js";
 import { IElmAnalyseJsonService } from "./elmAnalyseJsonService.js";
+import { bindTreeContainer } from "../../../compiler/binder.js";
 
 export interface IElmIssueRegion {
   start: { line: number; column: number };
@@ -131,6 +132,7 @@ export class DiagnosticsProvider implements Disposable {
   private changeSeq = 0;
 
   private disposables: Disposable[] = [];
+  private pendingPortDiagnostics = new Map<string, Set<string>>();
 
   constructor() {
     this.clientSettings = container.resolve("ClientSettings");
@@ -197,6 +199,7 @@ export class DiagnosticsProvider implements Disposable {
           DiagnosticKind.ElmLS,
           this.elmLsDiagnostics.createDiagnostics(sourceFile, program),
         );
+        this.requestAffectedPortDiagnostics(sourceFile.uri);
       }
     };
 
@@ -246,7 +249,8 @@ export class DiagnosticsProvider implements Disposable {
     }
 
     this.disposables.push(
-      astProvider.onTreeChange(({ sourceFile }) => {
+      astProvider.onTreeChange(({ sourceFile, previousDependencies = [] }) => {
+        this.queuePortDiagnostics(sourceFile.uri, previousDependencies);
         if (!clientInitiatedDiagnostics && !disableDiagnosticsOnChange) {
           this.requestDiagnostics(sourceFile.uri);
         }
@@ -254,8 +258,11 @@ export class DiagnosticsProvider implements Disposable {
     );
 
     this.disposables.push(
-      astProvider.onTreeDelete(({ uri }) => {
+      astProvider.onTreeDelete(({ uri, previousDependencies = [] }) => {
         this.deleteDiagnostics(uri);
+        this.pendingDiagnostics.delete(uri);
+        this.queuePortDiagnostics(uri, previousDependencies);
+        this.requestAffectedPortDiagnostics(uri);
       }),
     );
 
@@ -338,6 +345,57 @@ export class DiagnosticsProvider implements Disposable {
   private requestDiagnostics(uri: string): void {
     this.pendingDiagnostics.set(uri, Date.now());
     this.triggerDiagnostics();
+  }
+
+  private queuePortDiagnostics(
+    uri: string,
+    previousDependencies: readonly string[],
+  ): void {
+    const pending = this.pendingPortDiagnostics.get(uri) ?? new Set<string>();
+    previousDependencies.forEach((dependency) => pending.add(dependency));
+    this.pendingPortDiagnostics.set(uri, pending);
+  }
+
+  private getAffectedPortDiagnosticUris(uri: string): string[] {
+    const previousDependencies = this.pendingPortDiagnostics.get(uri) ?? [];
+    this.pendingPortDiagnostics.delete(uri);
+    if (this.clientSettings.disableElmLSDiagnostics) {
+      return [];
+    }
+
+    const program = this.elmWorkspaceMatcher.getProgramFor(URI.parse(uri));
+    if (
+      this.elmAnalyseJsonService.getElmAnalyseJson(program.getRootPath().fsPath)
+        .checks?.UnusedIncomingPort === false
+    ) {
+      return [];
+    }
+
+    const forest = program.getForest();
+    const affected: string[] = [];
+    for (const dependency of new Set([
+      ...previousDependencies,
+      ...forest.getDependencyUris(uri),
+    ])) {
+      const sourceFile = forest.getByUri(dependency);
+      if (dependency !== uri && sourceFile?.writeable) {
+        bindTreeContainer(sourceFile);
+        if (sourceFile.portAnnotations?.length) {
+          affected.push(dependency);
+        }
+      }
+    }
+    return affected;
+  }
+
+  private requestAffectedPortDiagnostics(uri: string): void {
+    const affected = this.getAffectedPortDiagnosticUris(uri);
+    affected.forEach((portUri) =>
+      this.pendingDiagnostics.set(portUri, Date.now()),
+    );
+    if (affected.length) {
+      this.triggerDiagnostics();
+    }
   }
 
   private async requestAllDiagnostics(): Promise<void> {
@@ -448,6 +506,14 @@ export class DiagnosticsProvider implements Disposable {
     delay: number,
     cancellationToken: CancellationToken,
   ): Promise<void> {
+    // Client-initiated requests also need to refresh closed port modules.
+    files = [
+      ...new Set(
+        files.concat(
+          files.flatMap((uri) => this.getAffectedPortDiagnosticUris(uri)),
+        ),
+      ),
+    ];
     const followMs = Math.min(delay, 200);
     const serverCancellationToken = new ServerCancellationToken(
       cancellationToken,

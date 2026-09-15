@@ -26,6 +26,7 @@ export interface ISourceFile {
   exposing?: IExposing;
   symbolLinks?: SyntaxNodeMap<SyntaxNode, SymbolMap>;
   nonShadowableNames?: Set<string>; // Top level function names
+  portAnnotations?: readonly SyntaxNode[];
 
   // This is resolved while getting semantic diagnostics and defines whether we have loaded all import files
   resolvedImports?: boolean;
@@ -42,6 +43,8 @@ export interface IForest {
   readonly sourceFiles: Map<string, ISourceFile>;
   getTree(uri: string): Tree | undefined;
   getByUri(uri: string): ISourceFile | undefined;
+  getDependencyUris(uri: string): readonly string[];
+  getImportingModules(uri: string): ISourceFile[];
   setSourceFile(
     uri: string,
     writeable: boolean,
@@ -66,6 +69,8 @@ export interface IForest {
 export class Forest implements IForest {
   public sourceFiles = new Map<string, ISourceFile>();
   private kernelSourceFiles = new Map<string, IKernelSourceFile>();
+  private dependencies = new Map<string, Set<string>>();
+  private importingModules = new Map<string, Set<string>>();
 
   constructor(private rootProject: ElmProject) {}
 
@@ -75,6 +80,18 @@ export class Forest implements IForest {
 
   public getByUri(uri: string): ISourceFile | undefined {
     return this.sourceFiles.get(uri);
+  }
+
+  // Keep the last synchronized edges available while a changed tree is unbound.
+  public getDependencyUris(uri: string): readonly string[] {
+    return [...(this.dependencies.get(uri) ?? [])];
+  }
+
+  public getImportingModules(uri: string): ISourceFile[] {
+    return [...(this.importingModules.get(uri) ?? [])].flatMap((importer) => {
+      const sourceFile = this.sourceFiles.get(importer);
+      return sourceFile ? [sourceFile] : [];
+    });
   }
 
   public setSourceFile(
@@ -119,18 +136,16 @@ export class Forest implements IForest {
     if (sourceFile) {
       this.removeUriFromModuleMaps(sourceFile);
       this.sourceFiles.delete(uri);
+      this.updateDependencies(uri, new Set());
+      this.dependencies.delete(uri);
     }
   }
 
   public synchronize(): void {
+    let moduleMapsChanged = false;
     this.sourceFiles.forEach((sourceFile) => {
       if (!sourceFile.tree) {
         return;
-      }
-
-      // Resolve import modules
-      if (!sourceFile.resolvedModules) {
-        sourceFile.resolvedModules = this.resolveModules(sourceFile);
       }
 
       if (!sourceFile.moduleName) {
@@ -144,10 +159,46 @@ export class Forest implements IForest {
             !this.getModuleMap(sourceFile).has(moduleName)
           ) {
             this.getModuleMap(sourceFile).set(moduleName, sourceFile.uri);
+            moduleMapsChanged = true;
           }
         }
       }
     });
+
+    if (moduleMapsChanged) {
+      this.invalidateResolvedModules();
+    }
+
+    // Register all module names before resolving imports, including new files.
+    this.sourceFiles.forEach((sourceFile) => {
+      if (sourceFile.tree && !sourceFile.resolvedModules) {
+        sourceFile.resolvedModules = this.resolveModules(sourceFile);
+        this.updateDependencies(
+          sourceFile.uri,
+          new Set(sourceFile.resolvedModules.values()),
+        );
+      }
+    });
+  }
+
+  private updateDependencies(uri: string, dependencies: Set<string>): void {
+    for (const previous of this.dependencies.get(uri) ?? []) {
+      const importers = this.importingModules.get(previous);
+      importers?.delete(uri);
+      if (importers?.size === 0) {
+        this.importingModules.delete(previous);
+      }
+    }
+
+    this.dependencies.set(uri, dependencies);
+    for (const dependency of dependencies) {
+      let importers = this.importingModules.get(dependency);
+      if (!importers) {
+        importers = new Set();
+        this.importingModules.set(dependency, importers);
+      }
+      importers.add(uri);
+    }
   }
 
   public invalidateResolvedModules(): void {
