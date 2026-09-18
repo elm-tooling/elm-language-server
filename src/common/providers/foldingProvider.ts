@@ -19,7 +19,10 @@ export class FoldingRangeProvider {
     "record_expr",
     "case_of_branch",
   ]);
+  private readonly REGION_START_COMMENT_REGEX = /^\s*--\s*#?region\b/;
+  private readonly REGION_END_COMMENT_REGEX = /^\s*--\s*#?endregion\b/;
   private connection: Connection;
+
   constructor() {
     this.connection = container.resolve<Connection>("Connection");
     this.connection.onFoldingRanges(
@@ -34,6 +37,7 @@ export class FoldingRangeProvider {
   ): FoldingRange[] => {
     this.connection.console.info(`Folding ranges were requested`);
     const folds: FoldingRange[] = [];
+    const regionCommentStarts: SyntaxNode[] = [];
     const tree: Tree = param.sourceFile.tree;
 
     const findLastIdenticalNamedSibling: (node: SyntaxNode) => SyntaxNode = (
@@ -54,7 +58,26 @@ export class FoldingRangeProvider {
     const traverse: () => void = (): void => {
       const node = treeCursor.currentNode;
       if (node.parent?.lastChild && node.isNamed) {
-        if ("import_clause" === node.type) {
+        if ("line_comment" === node.type) {
+          if (this.REGION_END_COMMENT_REGEX.test(node.text)) {
+            const startNode = regionCommentStarts.pop();
+
+            if (
+              startNode &&
+              startNode.startPosition.row < node.endPosition.row
+            ) {
+              folds.push({
+                endCharacter: node.endPosition.column,
+                endLine: node.endPosition.row,
+                kind: FoldingRangeKind.Region,
+                startCharacter: startNode.startPosition.column,
+                startLine: startNode.startPosition.row,
+              });
+            }
+          } else if (this.REGION_START_COMMENT_REGEX.test(node.text)) {
+            regionCommentStarts.push(node);
+          }
+        } else if ("import_clause" === node.type) {
           const previousSibling = node.previousNamedSibling;
           if (
             previousSibling === null ||
