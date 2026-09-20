@@ -25,12 +25,17 @@ import {
   IRenameFileParams,
 } from "../paramsExtensions.js";
 import { RenameProvider } from "../renameProvider.js";
+import { IFileSystemHost } from "../../types.js";
+import { TextDocumentEvents } from "../../util/textDocumentEvents.js";
 
 export class FileEventsHandler {
   private connection: Connection;
   private astProvider: ASTProvider;
 
-  constructor(didCreateFile?: (uri: string) => void) {
+  constructor(
+    private host: IFileSystemHost,
+    didCreateFile?: (uri: string) => void,
+  ) {
     this.connection = container.resolve<Connection>("Connection");
     this.astProvider = container.resolve(ASTProvider);
 
@@ -98,13 +103,30 @@ export class FileEventsHandler {
     );
   }
 
-  private onDidCreateFile({
+  private async onDidCreateFile({
     uri,
     program,
-  }: ICreateFileParams): TextEdit[] | undefined {
+  }: ICreateFileParams): Promise<TextEdit[] | undefined> {
     const moduleName = this.getModuleNameFromFile(uri, program);
 
     if (moduleName) {
+      // A create notification also covers copied files, which may not have
+      // reached the file watcher yet. Only scaffold a known-empty document.
+      let text = container.resolve(TextDocumentEvents).get(uri)?.getText();
+      if (text === undefined) {
+        try {
+          text = await this.host.readFile(URI.parse(uri));
+        } catch {
+          return;
+        }
+        // Prefer an editor buffer opened or changed while the read was pending.
+        text =
+          container.resolve(TextDocumentEvents).get(uri)?.getText() ?? text;
+      }
+      if (text !== "") {
+        return;
+      }
+
       const addModuleDefinitionEdit =
         RefactorEditUtils.addModuleDeclaration(moduleName);
       return [addModuleDefinitionEdit];
@@ -156,11 +178,21 @@ export class FileEventsHandler {
 
       if (sourceFile.moduleName) {
         if (!sourceFile.isTestFile) {
-          sourceFile.project.moduleToUriMap.delete(sourceFile.moduleName);
+          if (
+            sourceFile.project.moduleToUriMap.get(sourceFile.moduleName) ===
+            oldUri
+          ) {
+            sourceFile.project.moduleToUriMap.delete(sourceFile.moduleName);
+          }
           sourceFile.project.moduleToUriMap.set(newModuleName, newUri);
         }
 
-        sourceFile.project.testModuleToUriMap.delete(sourceFile.moduleName);
+        if (
+          sourceFile.project.testModuleToUriMap.get(sourceFile.moduleName) ===
+          oldUri
+        ) {
+          sourceFile.project.testModuleToUriMap.delete(sourceFile.moduleName);
+        }
         sourceFile.project.testModuleToUriMap.set(newModuleName, newUri);
       }
 
@@ -188,7 +220,15 @@ export class FileEventsHandler {
       return;
     }
 
-    return getModuleName(uri, sourceDir);
+    const filePath = URI.parse(uri).path;
+    if (!filePath.endsWith(".elm")) {
+      return;
+    }
+
+    const moduleName = getModuleName(filePath, URI.parse(sourceDir).path);
+    if (/^\p{Lu}[\p{L}\d_]*(?:\.\p{Lu}[\p{L}\d_]*)*$/u.test(moduleName)) {
+      return moduleName;
+    }
   }
 
   private mergeWorkspaceEdit(

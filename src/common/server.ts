@@ -227,7 +227,7 @@ export class Server implements ILanguageServer {
     new CodeLensProvider();
     new SelectionRangeProvider();
     new RenameProvider();
-    new FileEventsHandler();
+    new FileEventsHandler(this.fileSystemHost);
     new LinkedEditingRangesProvider();
 
     new FindTestsProvider();
