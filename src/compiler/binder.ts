@@ -37,7 +37,11 @@ export function bindTreeContainer(sourceFile: ISourceFile): void {
   let parent: SyntaxNode;
   const treeCursor = sourceFile.tree.walk();
 
-  bind();
+  try {
+    bind();
+  } finally {
+    treeCursor.delete();
+  }
   sourceFile.symbolLinks = symbolLinks;
   sourceFile.nonShadowableNames = nonShadowableNames;
   sourceFile.portAnnotations = portAnnotations;
