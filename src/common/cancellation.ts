@@ -1,6 +1,14 @@
-import { CancellationToken } from "vscode-languageserver";
+import {
+  CancellationToken,
+  LSPErrorCodes,
+  ResponseError,
+} from "vscode-languageserver";
 
-export class OperationCanceledException {}
+export class OperationCanceledException extends ResponseError<void> {
+  constructor() {
+    super(LSPErrorCodes.RequestCancelled, "Request cancelled");
+  }
+}
 
 export interface ICancellationToken {
   isCancellationRequested(): boolean;
