@@ -24,6 +24,14 @@ export const NAMING_ERROR = "NAMING ERROR";
 const RANDOM_ID = Date.now().toString();
 export const CODE_ACTION_ELM_MAKE = `elmLS.elmMakeFixer-${RANDOM_ID}`;
 
+interface IPendingCompilation {
+  files: Map<string, ISourceFile>;
+  waiters: Array<{
+    resolve: (issues: IElmIssue[]) => void;
+    reject: (error: unknown) => void;
+  }>;
+}
+
 export interface IElmCompilerError {
   type: string;
   errors: IError[];
@@ -118,6 +126,7 @@ export function renderElmCompilerMessage(
 }
 
 export class ElmMakeDiagnostics {
+  private readonly compilations = new Map<IProgram, IPendingCompilation>();
   private elmWorkspaceMatcher: ElmWorkspaceMatcher<URI>;
   private settings: Settings;
   private connection: Connection;
@@ -141,15 +150,56 @@ export class ElmMakeDiagnostics {
   ): Promise<Map<string, IDiagnostic[]>> => {
     const filePath = URI.parse(sourceFile.uri);
     const program = this.elmWorkspaceMatcher.getProgramFor(filePath);
-    return await this.checkForErrors(program, sourceFile).then((issues) => {
-      return issues.length === 0
-        ? new Map([[filePath.toString(), []]])
-        : ElmDiagnosticsHelper.issuesToDiagnosticMap(
-            issues,
-            program.getRootPath(),
-          );
-    });
+    return await this.scheduleCompilation(program, sourceFile).then(
+      (issues) => {
+        return issues.length === 0
+          ? new Map([[filePath.toString(), []]])
+          : ElmDiagnosticsHelper.issuesToDiagnosticMap(
+              issues,
+              program.getRootPath(),
+            );
+      },
+    );
   };
+
+  private scheduleCompilation(
+    program: IProgram,
+    sourceFile: ISourceFile,
+  ): Promise<IElmIssue[]> {
+    let pending = this.compilations.get(program);
+    const start = !pending;
+    if (!pending) {
+      pending = { files: new Map(), waiters: [] };
+      this.compilations.set(program, pending);
+    }
+    pending.files.set(sourceFile.uri, sourceFile);
+    const result = new Promise<IElmIssue[]>((resolve, reject) => {
+      pending.waiters.push({ resolve, reject });
+    });
+    if (start) void this.compilePending(program, pending);
+    return result;
+  }
+
+  private async compilePending(
+    program: IProgram,
+    pending: IPendingCompilation,
+  ): Promise<void> {
+    try {
+      while (pending.files.size) {
+        const files = [...pending.files.values()];
+        const waiters = pending.waiters.splice(0);
+        pending.files.clear();
+        try {
+          const issues = await this.checkForErrors(program, files);
+          waiters.forEach(({ resolve }) => resolve(issues));
+        } catch (error) {
+          waiters.forEach(({ reject }) => reject(error));
+        }
+      }
+    } finally {
+      this.compilations.delete(program);
+    }
+  }
 
   public onCodeAction(params: CodeActionParams): CodeAction[] {
     const { uri } = params.textDocument;
@@ -264,7 +314,7 @@ export class ElmMakeDiagnostics {
 
   private async checkForErrors(
     program: IProgram,
-    sourceFile: ISourceFile,
+    sourceFiles: readonly ISourceFile[],
   ): Promise<IElmIssue[]> {
     const settings = await this.settings.getClientSettings();
 
@@ -273,13 +323,17 @@ export class ElmMakeDiagnostics {
     const fileToRelativePath = (file: ISourceFile): string =>
       path.relative(workspaceRootPath, URI.parse(file.uri).fsPath);
 
-    const sourceFilePath = fileToRelativePath(sourceFile);
+    const sourceFilePath = fileToRelativePath(sourceFiles[0]);
 
     const forestFiles = program.getSourceFiles();
 
-    const allFiles = forestFiles.some((file) => file.uri === sourceFile.uri)
-      ? forestFiles
-      : forestFiles.concat(sourceFile);
+    // New files may not yet be in the forest. A coalesced batch must compile
+    // every requested file, not just the last document opened or saved.
+    const allFiles = [
+      ...new Map(
+        [...sourceFiles, ...forestFiles].map((file) => [file.uri, file]),
+      ).values(),
+    ];
 
     const projectFiles = allFiles.filter(
       (file) =>
@@ -419,6 +473,20 @@ export class ElmMakeDiagnostics {
 
     const lines: IElmIssue[] = [];
     const linesSet = new Set<string>();
+    const addIssue = (issue: IElmIssue, hasPath: boolean): void => {
+      // A project-level error without a path used to be attached to each
+      // requesting document. Preserve that behavior for coalesced requests.
+      for (const file of hasPath
+        ? [issue.file]
+        : sourceFiles.map(fileToRelativePath)) {
+        const located = { ...issue, file };
+        const key = JSON.stringify(located);
+        if (!linesSet.has(key)) {
+          lines.push(located);
+          linesSet.add(key);
+        }
+      }
+    };
 
     for (const result of results) {
       if (result.status === "fulfilled") {
@@ -469,11 +537,7 @@ export class ElmMakeDiagnostics {
                   tag: "error",
                   type: "error",
                 };
-                const issueString = JSON.stringify(issue);
-                if (!linesSet.has(issueString)) {
-                  lines.push(issue);
-                  linesSet.add(issueString);
-                }
+                addIssue(issue, !!error.path);
               });
             });
           } else if (
@@ -513,12 +577,7 @@ export class ElmMakeDiagnostics {
               type: "error",
             };
 
-            lines.push(issue);
-            const issueString = JSON.stringify(issue);
-            if (!linesSet.has(issueString)) {
-              lines.push(issue);
-              linesSet.add(issueString);
-            }
+            addIssue(issue, !!error.path);
           }
         });
       }
