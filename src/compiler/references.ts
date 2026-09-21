@@ -433,8 +433,6 @@ export class References {
 
           case "Module":
             if (moduleNameNode) {
-              const modulePrefix = `${moduleNameNode.text}.`;
-
               if (definitionSourceFile.writeable) {
                 references.push({
                   node: moduleNameNode,
@@ -464,21 +462,22 @@ export class References {
                   references.push({ node: importedModuleName, uri });
                 }
 
-                // Find all references in file
-                if (importedModuleName) {
+                // Explicit aliases remain valid when the imported module moves.
+                if (
+                  importedModuleName &&
+                  imported &&
+                  !TreeUtils.getImportAliasNode(imported)
+                ) {
                   sourceFileToCheck.tree.rootNode
-                    .descendantsOfType("value_expr")
-                    .forEach((valueNode) => {
-                      const firstValueChar = valueNode.text.charAt(
-                        modulePrefix.length,
-                      );
-
+                    .descendantsOfType(["value_qid", "upper_case_qid"])
+                    .forEach((node) => {
                       if (
-                        valueNode.text.startsWith(modulePrefix) &&
-                        firstValueChar >= "a" &&
-                        firstValueChar <= "z"
+                        node.parent?.type !== "import_clause" &&
+                        node.parent?.type !== "module_declaration" &&
+                        node.text.slice(0, node.text.lastIndexOf(".")) ===
+                          moduleNameNode.text
                       ) {
-                        references.push({ node: valueNode, uri });
+                        references.push({ node, uri });
                       }
                     });
                 }
