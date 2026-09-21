@@ -160,7 +160,11 @@ export class FoldingRangeProvider {
       }
     };
 
-    traverse();
+    try {
+      traverse();
+    } finally {
+      treeCursor.delete();
+    }
 
     this.connection.console.info(`Returned ${folds.length} folding ranges`);
     return folds;
