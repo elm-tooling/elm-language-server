@@ -1,5 +1,13 @@
 # Change Log
 
+## 2.9.0
+
+- Add go to type definition, inferred annotations, and richer completion type details
+- Render compiler diagnostics as Markdown and support virtual document content
+- Improve move-function refactoring, code actions, workspace symbols, and reference handling
+- Migrate the language server to native ES modules and update the Node.js toolchain and dependencies
+- Update Tree-sitter and the Language Server Protocol implementation
+
 ## 2.8.0
 
 - Fix AST getting out of sync with the document, when the client sends multiple content changes at once. Mostly affecting non vscode clients
