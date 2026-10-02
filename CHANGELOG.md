@@ -1,5 +1,13 @@
 # Change Log
 
+## 2.10.0
+
+- Add diagnostics for unused incoming ports and improve unused-code actions, including removing unused parameters and imports
+- Support go to type definition and `#region` folding markers
+- Improve diagnostics across document edits and serialize compiler diagnostics per Elm project
+- Fix file-operation safety, cancellation responses, and parser resource handling
+- Update dependencies
+
 ## 2.8.0
 
 - Fix AST getting out of sync with the document, when the client sends multiple content changes at once. Mostly affecting non vscode clients
