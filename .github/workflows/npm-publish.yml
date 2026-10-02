@@ -6,19 +6,29 @@ name: Node.js Package
 on:
   release:
     types: [created]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version tag to publish, for example 2.10.0
+        required: true
+        type: string
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.version || github.ref }}
       - uses: actions/setup-node@v7
         with:
           node-version: 24
       - name: Verify release version
+        env:
+          RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
         run: |
           package_version=$(node -p "require('./package.json').version")
-          test "$package_version" = "$GITHUB_REF_NAME"
+          test "$package_version" = "$RELEASE_VERSION"
       - run: npm ci
       - run: npm run check
       - run: npm run compile
@@ -30,15 +40,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.version || github.ref }}
       - uses: actions/setup-node@v7
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org/
+          package-manager-cache: false
       - run: npm ci
       - run: npm run compile
       - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+    permissions:
+      contents: read
+      id-token: write
 
   publish-gpr:
     needs: build
